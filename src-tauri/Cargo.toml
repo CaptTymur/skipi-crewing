@@ -1,0 +1,50 @@
+[package]
+name = "skipi-crewing"
+version = "0.4.77"
+description = "Skipi Crewing — vacancy posting and applications inbox for verified employers"
+authors = ["Tymur Rudov"]
+license = "Proprietary"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.3", features = ["devtools"] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+reqwest = { version = "0.12", features = ["blocking", "json", "multipart"] }
+dirs = "6"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+printpdf = { version = "0.7", default-features = false }
+base64 = "0.22"
+crypto_box = { version = "0.9", features = ["std"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+sha2 = "0.10"
+data-encoding = "2"
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+incremental = false
+opt-level = "s"
+strip = true

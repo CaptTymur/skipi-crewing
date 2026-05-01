@@ -1,0 +1,2135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Skipi Crewing</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #1a1f26;
+  --panel2: #232932;
+  --text: #e6e8ec;
+  --text2: #8a93a3;
+  --accent: #4f8ef7;
+  --accent2: #2563eb;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --border: #2a313c;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; display: flex; flex-direction: column; }
+/* Top horizontal modules bar (Files / Dashboard / etc. style) */
+.modules-bar { display: flex; align-items: center; height: 36px; background: var(--panel);
+  border-bottom: 1px solid var(--border); padding: 0 8px; gap: 2px; flex-shrink: 0; }
+.modules-bar .mod-tab { display: flex; align-items: center; gap: 6px; height: 28px; min-width: 100px;
+  padding: 0 14px; border-radius: 5px; cursor: pointer; color: var(--text2); font-size: 13px; }
+.modules-bar .mod-tab:hover { color: var(--text); background: var(--panel2); }
+.modules-bar .mod-tab.active { color: #fff; background: var(--accent); font-weight: 600; }
+.modules-bar .mb-spacer { flex: 1; }
+.modules-bar .mb-vault { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 5px;
+  cursor: pointer; color: var(--text); font-size: 12px; background: var(--bg); border: 1px solid var(--border);
+  max-width: 220px; overflow: hidden; }
+.modules-bar .mb-vault:hover { border-color: var(--accent); }
+.modules-bar .mb-vault-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modules-bar .mb-gear { width: 30px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; cursor: pointer; color: var(--text2); font-size: 16px; margin-left: 4px; }
+.modules-bar .mb-gear:hover { color: var(--text); background: var(--panel2); }
+/* App layout below the modules bar — flex so main expands when left panel is hidden */
+.app { display: flex; flex: 1; min-height: 0; }
+/* Left panel — tree + sort selector */
+.left-panel { width: 280px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+.panel-header { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.panel-header .title { font-size: 13px; font-weight: 600; color: var(--text); }
+.panel-header .badge { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; padding: 0 6px;
+  border-radius: 9px; background: var(--err); color: #fff; font-size: 11px; font-weight: 700; text-align: center; margin-left: 6px; }
+.panel-search { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.panel-search select, .panel-search input { width: 100%; padding: 6px 10px; background: var(--panel2);
+  color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+.panel-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+.tree-folder { cursor: pointer; }
+.tree-folder-header { height: 26px; display: flex; align-items: center; padding: 0 12px; gap: 6px;
+  font-size: 11px; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+.tree-folder-header:hover { background: var(--panel2); }
+.tree-folder-header .arrow { font-size: 9px; width: 12px; transition: transform 0.12s; }
+.tree-folder-header .arrow.open { transform: rotate(90deg); }
+.tree-folder-header .cnt { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--text2); }
+.tree-items { display: none; }
+.tree-items.open { display: block; }
+.tree-item { padding: 6px 12px 6px 28px; font-size: 13px; cursor: pointer; color: var(--text);
+  display: flex; align-items: center; gap: 6px; border-left: 3px solid transparent; }
+.tree-item:hover { background: var(--panel2); }
+.tree-item.active { background: var(--panel2); border-left-color: var(--accent); }
+.tree-item .ti-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-item .ti-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.tree-item .new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); flex-shrink: 0; }
+.tree-item .st { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tree-item .req-mark { color: #f6c453; font-size: 10px; margin-right: 2px; }
+.tree-folder-header .dot { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; margin-right: 4px; }
+.tree-empty { text-align: center; padding: 30px 16px; color: var(--text2); font-size: 12px; }
+main { padding: 24px 32px; overflow-y: auto; min-height: 0; }
+main > h1, main > .sub, main > .card, main > .toolbar, main > .empty,
+main > h2, main > h3, main > div { max-width: 760px; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.row.full { grid-template-columns: 1fr; }
+label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%; padding: 8px 10px; background: var(--panel2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-family: inherit;
+}
+textarea { min-height: 100px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+button { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 4px;
+  cursor: pointer; font-size: 13px; font-weight: 600; }
+button:hover { background: var(--accent2); }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button.ghost:hover { background: var(--panel2); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 6px;
+  background: var(--panel2); border: 1px solid var(--border); max-width: 400px; font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 1000; }
+.toast.success { border-color: var(--ok); }
+.toast.error { border-color: var(--err); }
+.toast.warn { border-color: var(--warn); }
+.empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+.empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+.vac-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 14px;
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+.vac-row.clickable { cursor: pointer; transition: border-color 0.1s; }
+.vac-row.clickable:hover { border-color: var(--accent); }
+/* ------------- Settings modal (Obsidian-style — seafarer parity) ------------- */
+.settings-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; }
+.settings-modal { width: min(860px, 90vw); height: min(600px, 85vh); background: var(--panel);
+  border-radius: 12px; display: flex; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  border: 1px solid var(--border); position: relative; }
+.settings-nav { width: 210px; background: var(--bg); border-right: 1px solid var(--border);
+  padding: 12px 0; overflow-y: auto; flex-shrink: 0; }
+.settings-nav-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text2); padding: 12px 16px 4px; font-weight: 600; }
+.settings-nav-item { padding: 7px 16px; font-size: 13px; cursor: pointer; color: var(--text);
+  display: flex; align-items: center; gap: 8px; }
+.settings-nav-item:hover { background: var(--panel2); }
+.settings-nav-item.active { background: rgba(79,142,247,0.18); color: var(--accent); }
+.settings-nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; opacity: 0.7; }
+.settings-body { flex: 1; overflow-y: auto; padding: 28px 32px; }
+.settings-section { margin-bottom: 32px; }
+.settings-section h3 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.settings-section .section-desc { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.setting-row:first-of-type { border-radius: 8px 8px 0 0; }
+.setting-row:last-of-type { border-bottom: none; border-radius: 0 0 8px 8px; }
+.setting-row:only-of-type { border-radius: 8px; }
+.setting-info { flex: 1; margin-right: 16px; min-width: 0; }
+.setting-info .setting-label { font-size: 13px; font-weight: 500; }
+.setting-info .setting-desc { font-size: 11px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+.setting-control { flex-shrink: 0; }
+.setting-control input[type="text"], .setting-control input[type="password"],
+.setting-control input[type="date"], .setting-control input[type="number"] {
+  padding: 6px 10px; background: var(--panel2); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-size: 12px; width: 240px; }
+.setting-control select { padding: 6px 10px; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text); font-size: 12px; cursor: pointer; }
+.setting-control input:focus, .setting-control select:focus { border-color: var(--accent); outline: none; }
+.settings-close { position: absolute; top: 12px; right: 16px; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px;
+  color: var(--text2); font-size: 18px; z-index: 201; }
+.settings-close:hover { background: var(--panel2); color: var(--text); }
+.settings-actions-bar { position: absolute; bottom: 0; left: 210px; right: 0; padding: 12px 32px;
+  border-top: 1px solid var(--border); background: var(--panel); display: flex;
+  justify-content: flex-end; gap: 8px; }
+/* sidebar badge for new applications */
+.nav-badge { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; padding: 0 6px;
+  border-radius: 9px; background: var(--err); color: #fff; font-size: 11px; font-weight: 700;
+  text-align: center; margin-left: auto; }
+nav .item { display: flex; align-items: center; }
+.vac-row .new-badge { display: inline-block; padding: 2px 8px; background: var(--err); color: #fff;
+  border-radius: 10px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.toolbar select { width: auto; min-width: 200px; }
+/* update banner — top of viewport, gradient, dismiss-able */
+.update-banner { position: fixed; top: 0; left: 0; right: 0; padding: 10px 18px;
+  background: linear-gradient(90deg, var(--accent), #5b4fd6); color: #fff; font-size: 13px;
+  z-index: 90; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.update-banner .ub-msg { flex: 1; font-weight: 600; }
+.update-banner button { padding: 4px 12px; border: 1px solid rgba(255,255,255,0.5); background: transparent;
+  color: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.update-banner button:hover { background: rgba(255,255,255,0.15); }
+.update-banner .ub-close { cursor: pointer; opacity: 0.6; font-size: 18px; padding: 0 4px; }
+.update-banner .ub-close:hover { opacity: 1; }
+.vac-row .meta { color: var(--text2); font-size: 12px; margin-top: 4px; }
+.tag { display: inline-block; padding: 2px 8px; background: var(--border); color: var(--text2);
+  border-radius: 10px; font-size: 11px; margin-right: 4px; }
+.tag.ok { background: rgba(34,197,94,0.2); color: var(--ok); }
+.tag.warn { background: rgba(245,158,11,0.2); color: var(--warn); }
+.checkbox-row { display: flex; align-items: center; gap: 8px; }
+.checkbox-row input { width: 16px; height: 16px; }
+.checkbox-row label { margin: 0; font-size: 13px; color: var(--text); }
+code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+/* WhatsApp-like chat */
+.chat-pane { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; max-height: 440px; min-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.chat-empty { color: var(--text2); text-align: center; font-size: 12px; padding: 16px; }
+.msg { display: flex; margin-top: 2px; }
+.msg.mine { justify-content: flex-end; }
+.msg.other { justify-content: flex-start; }
+.msg-bubble { max-width: 70%; padding: 6px 10px 16px; border-radius: 8px; position: relative; font-size: 13px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 0.5px rgba(0,0,0,0.25); }
+.msg.mine .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 2px; }
+.msg.other .msg-bubble { background: var(--panel); color: var(--text); border-bottom-left-radius: 2px; }
+.msg-text { white-space: pre-wrap; }
+.msg-meta { position: absolute; bottom: 3px; right: 8px; font-size: 10px; opacity: 0.7; display: inline-flex; gap: 3px; align-items: center; }
+.msg.pending .msg-bubble { opacity: 0.65; }
+.msg.failed .msg-bubble { background: rgba(239,68,68,0.25); color: var(--err); }
+.chat-composer { display: flex; gap: 8px; padding: 6px 6px 6px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 22px; margin-top: 8px; align-items: flex-end; }
+.chat-composer textarea { flex: 1; border: none; background: transparent; resize: none; outline: none; color: var(--text); font-family: inherit; font-size: 14px; min-height: 32px; max-height: 120px; padding: 6px 0; line-height: 1.4; }
+.chat-composer .btn-send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; border: none; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; flex-shrink: 0; padding: 0; }
+.chat-composer .btn-send:hover { filter: brightness(1.1); }
+.chat-composer .btn-icon { width: 32px; height: 32px; border-radius: 50%; background: transparent; color: var(--text2); border: none; cursor: pointer; flex-shrink: 0; padding: 0; font-size: 14px; }
+.chat-composer .btn-icon:hover { color: var(--text); }
+.chat-status { font-size: 10px; color: var(--text2); padding: 4px 12px 0; display: flex; justify-content: space-between; align-items: center; }
+.chat-day-sep { display: flex; justify-content: center; margin: 8px 0; }
+.chat-day-sep span { background: var(--panel2); color: var(--text2); font-size: 11px; padding: 3px 10px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="modules-bar">
+  <div class="mod-tab active" id="mt-vacancies" onclick="showView('vacancies')" title="My posted vacancies">
+    <span>⚓</span><span>My vacancies</span><span id="nav-vacancies-badge" class="nav-badge" style="display:none;">0</span>
+  </div>
+  <div class="mod-tab" id="mt-documents" onclick="showView('documents')" title="Crewing documents (templates, checklists, license, MLC cert)">
+    <span>📄</span><span>Documents</span>
+  </div>
+  <div class="mb-spacer"></div>
+  <div class="mb-vault" id="mb-vault" onclick="openSettings('vaults')" title="Switch vault"><span>📁</span><span class="mb-vault-name" id="mb-vault-name">Vault</span></div>
+  <div class="mb-gear" onclick="openSettings()" title="Settings">⚙</div>
+</div>
+<div class="app">
+  <div class="left-panel" id="left-panel"></div>
+  <main id="main"></main>
+</div>
+<div id="update-banner-host"></div>
+<div id="modal-host"></div>
+<div id="toast-container"></div>
+
+<script>
+var invoke = window.__TAURI__.core.invoke;
+
+// Window title comes from tauri.conf.json statically ("Skipi Crewing X.Y.Z").
+// Direct JS setTitle is blocked by Tauri ACL — would surface a red error bar.
+
+var state = {
+  view: 'vacancies',
+  settings: null,
+  vacancies: [],
+  sortBy: 'open_first',
+  selectedVacancy: null,
+  applications: [],
+  // Per-vacancy cache so switching is instant; refreshed in background.
+  applicationsByVacancy: {},
+  // Per-application messages cache for last-message preview + instant chat open.
+  messagesByApp: {},
+  documents: [],
+  selectedDocument: null,
+  pendingUpdate: null,
+  // Phase 2 messaging
+  myIdentity: null,
+  inboxThreads: [],
+  selectedThread: null,
+  threadMessages: [],
+  appVersion: '0.4.77',
+};
+
+// ------------- toasts -------------
+function showToast(msg, kind) {
+  var t = document.createElement('div');
+  t.className = 'toast ' + (kind || '');
+  t.textContent = msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(function(){ t.remove(); }, 4500);
+}
+
+function cleanVaultFolderPart(value, fallback) {
+  var s = (value || '').toString().trim();
+  if (!s) s = fallback || 'Vault';
+  s = s.replace(/[<>:"/\\|?*\x00-\x1F]/g, ' ');
+  s = s.replace(/\s+/g, ' ').trim();
+  s = s.replace(/[. ]+$/g, '');
+  if (!s) s = fallback || 'Vault';
+  return s.length > 64 ? s.slice(0, 64).trim() : s;
+}
+function joinFolderPath(base, child) {
+  var sep = (base && base.indexOf('\\') !== -1 && base.indexOf('/') === -1) ? '\\' : '/';
+  return (base || '').replace(/[\\\/]+$/, '') + sep + child;
+}
+function suggestedCrewingVaultName() {
+  var s = state.settings || {};
+  var p = s.profile || {};
+  var company = s.company_name || p.legal_name || p.slug || 'Company';
+  return 'Skipi Crewing - ' + cleanVaultFolderPart(company, 'Company');
+}
+
+// ------------- nav -------------
+function showView(v) {
+  state.view = v;
+  // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
+  var topTab = (v==='new') ? 'vacancies' : v;
+  ['vacancies','documents'].forEach(function(k){
+    var el = document.getElementById('mt-'+k);
+    if (el) el.classList.toggle('active', k===topTab);
+  });
+  if (v==='vacancies') {
+    document.getElementById('left-panel').style.display = '';
+    renderVacanciesTree();
+    if (state.selectedVacancy) renderVacancyDetail();
+    else renderVacanciesEmptyMain();
+    return;
+  }
+  if (v==='new') {
+    document.getElementById('left-panel').style.display = '';
+    renderVacanciesTree();
+    renderNewVacancy();
+    return;
+  }
+  if (v==='documents') {
+    document.getElementById('left-panel').style.display = '';
+    renderDocumentsTree();
+    if (state.selectedDocument) renderDocumentDetail();
+    else renderDocumentsEmptyMain();
+    return;
+  }
+  // 'inbox' view removed in 0.1.21 — conversations now live inside each
+  // vacancy's detail (one chat thread per applicant).
+}
+
+// ------------- Inbox (E2E messages) -------------
+async function renderInboxThreadsTree() {
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">Conversations</span>'
+    + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderInboxThreadsTree()" title="Refresh">↻</button></span>'
+    + '</div>'
+    + '<div class="panel-tree" id="panel-tree"><div class="tree-empty">Loading...</div></div>';
+
+  // Build threads from existing applications across vacancies.
+  var threads = [];
+  try {
+    if (!state.vacancies.length) {
+      try { state.vacancies = await invoke('fetch_my_vacancies'); } catch(e){}
+    }
+    for (var i = 0; i < state.vacancies.length; i++) {
+      var v = state.vacancies[i];
+      try {
+        var apps = await invoke('fetch_applications_for_vacancy', { vacancyId: v.id });
+        apps.forEach(function(a){
+          var sUid = a.seafarer_user_id;
+          if (!sUid && a.contact_for_reply && a.contact_for_reply.indexOf('@e2e.skipi.app') > 0) {
+            sUid = a.contact_for_reply.split('@')[0];
+          }
+          threads.push({
+            application_id: a.id,
+            vacancy_id: v.id,
+            vacancy_title: v.title || (v.rank+' · '+v.vessel_type),
+            applicant_summary: a.summary || a.applicant_summary || {},
+            seafarer_user_id: sUid,
+            contact_for_reply: a.contact_for_reply,
+            received_at: a.received_at,
+          });
+        });
+      } catch(e){}
+    }
+  } catch(e) {}
+  state.inboxThreads = threads;
+
+  var tree = document.getElementById('panel-tree');
+  if (!threads.length) {
+    tree.innerHTML = '<div class="tree-empty">No conversations yet.<br><br>'
+      + 'A conversation appears here when a seafarer applies to one of your vacancies.<br><br>'
+      + '<span style="font-size:11px;color:var(--ok);">🔒 End-to-end encrypted. Skipi server cannot read messages.</span></div>';
+    updateInboxBadge(0);
+    return;
+  }
+  var html = '';
+  threads.forEach(function(t){
+    var active = state.selectedThread && state.selectedThread.application_id === t.application_id;
+    var sum = t.applicant_summary || {};
+    var name = sum.redacted_initials || '(anonymous)';
+    var meta = (sum.rank?sum.rank:'')+(sum.total_sea_time_months?' · '+sum.total_sea_time_months+'mo at sea':'');
+    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openThread(\''+escapeAttr(t.application_id)+'\')">';
+    html += '<span style="font-size:11px;color:var(--text2);">📨</span>';
+    html += '<div class="ti-title"><div>'+escapeHtml(name)+'</div>';
+    html += '<div class="ti-meta">'+escapeHtml(t.vacancy_title)+(meta?' · '+escapeHtml(meta):'')+'</div></div>';
+    html += '</div>';
+  });
+  tree.innerHTML = html;
+}
+
+function updateInboxBadge(n) {
+  var b = document.getElementById('nav-inbox-badge');
+  if (!b) return;
+  if (n > 0) { b.textContent = n; b.style.display = 'inline-block'; }
+  else b.style.display = 'none';
+}
+
+function renderInboxEmptyMain() {
+  document.getElementById('main').innerHTML =
+    '<div class="empty" style="margin-top:80px;">'
+    + '<div class="icon" style="font-size:64px;">📨</div>'
+    + '<div style="font-size:16px;margin-top:8px;">Select a conversation to view messages.</div>'
+    + '<div style="font-size:12px;color:var(--text2);margin-top:14px;max-width:480px;margin-left:auto;margin-right:auto;">'
+    + '🔒 All messages end-to-end encrypted. Skipi servers store opaque ciphertext only — nobody but you and the seafarer can read what is sent.'
+    + '</div></div>';
+}
+
+function openThread(applicationId) {
+  state.selectedThread = state.inboxThreads.find(function(t){return t.application_id===applicationId;});
+  state.threadMessages = [];
+  renderInboxThreadsTree();
+  renderThreadDetail();
+}
+
+async function renderThreadDetail() {
+  var t = state.selectedThread;
+  if (!t) { renderInboxEmptyMain(); return; }
+  var sum = t.applicant_summary || {};
+  var name = sum.redacted_initials || '(anonymous)';
+
+  document.getElementById('main').innerHTML =
+    '<h1 style="margin:0 0 4px;">'+escapeHtml(name)+'</h1>'
+    + '<div class="sub">'+escapeHtml(t.vacancy_title)+' · application <code>'+escapeHtml(t.application_id.slice(0,8))+'</code>'
+    + ' · <span style="color:var(--ok);">🔒 end-to-end encrypted</span></div>'
+    + '<div id="thread-msgs" style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:14px;min-height:300px;max-height:60vh;overflow-y:auto;margin-bottom:12px;">'
+    + '<div style="text-align:center;color:var(--text2);font-size:12px;">Loading messages...</div></div>'
+    + '<div class="card">'
+    + '<div class="row full"><div><label>Reply</label>'
+    + '<textarea id="thread-compose" placeholder="Type your reply — encrypted on this device before sending" style="min-height:80px;"></textarea></div></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+    + '<span id="thread-send-status" style="font-size:11px;color:var(--text2);"></span>'
+    + '<button onclick="sendThreadReply()">Send 🔒</button>'
+    + '</div></div>';
+  loadThreadMessages();
+}
+
+async function loadThreadMessages() {
+  var t = state.selectedThread;
+  if (!t) return;
+  try {
+    state.threadMessages = await invoke('fetch_messages', { applicationId: t.application_id });
+    renderThreadMessages();
+  } catch (e) {
+    var host = document.getElementById('thread-msgs');
+    if (host) host.innerHTML = '<div style="color:var(--err);text-align:center;">Failed to load: '+escapeHtml(''+e)+'</div>';
+  }
+}
+
+function renderThreadMessages() {
+  var host = document.getElementById('thread-msgs');
+  if (!host) return;
+  var msgs = state.threadMessages || [];
+  if (!msgs.length) {
+    host.innerHTML = '<div style="text-align:center;color:var(--text2);font-size:12px;padding:40px 20px;">No messages yet.<br><br>'
+      + 'When the seafarer\'s app receives the message, they\'ll see it instantly.<br>'
+      + '<span style="font-size:11px;">🔒 Skipi server only sees opaque ciphertext.</span></div>';
+    return;
+  }
+  var myUserId = state.myIdentity ? state.myIdentity.user_id : '';
+  var html = '';
+  msgs.forEach(function(m){
+    var mine = m.from_user_id === myUserId;
+    var bg = mine ? 'var(--accent)' : 'var(--panel)';
+    var color = mine ? '#fff' : 'var(--text)';
+    var align = mine ? 'flex-end' : 'flex-start';
+    html += '<div style="display:flex;justify-content:'+align+';margin-bottom:8px;">';
+    html += '<div style="max-width:75%;padding:8px 12px;border-radius:12px;background:'+bg+';color:'+color+';">';
+    html += '<div style="white-space:pre-wrap;font-size:13px;">'+escapeHtml(m.plaintext)+'</div>';
+    html += '<div style="font-size:10px;opacity:0.7;margin-top:4px;text-align:right;">'+escapeHtml(m.sent_at.slice(0,16).replace('T',' '))+'</div>';
+    html += '</div></div>';
+  });
+  host.innerHTML = html;
+  host.scrollTop = host.scrollHeight;
+}
+
+async function sendThreadReply() {
+  var t = state.selectedThread;
+  if (!t) return;
+  var input = document.getElementById('thread-compose');
+  var text = (input && input.value || '').trim();
+  if (!text) return;
+  // Recipient = whoever is the OTHER party in this thread (from existing
+  // messages). For first reply when seafarer hasn't messaged yet — we
+  // need apply-side handshake; for now require seafarer to have written first.
+  var msgs = state.threadMessages || [];
+  var myUserId = state.myIdentity ? state.myIdentity.user_id : '';
+  var counterpart = null;
+  for (var i = 0; i < msgs.length; i++) {
+    var m = msgs[i];
+    if (m.from_user_id !== myUserId) { counterpart = m.from_user_id; break; }
+    if (m.to_user_id !== myUserId) { counterpart = m.to_user_id; break; }
+  }
+  // First-reply path: thread has no messages yet — pull seafarer's user_id
+  // from the application record.
+  if (!counterpart) {
+    if (t.seafarer_user_id) counterpart = t.seafarer_user_id;
+    else if (t.contact_for_reply && t.contact_for_reply.indexOf('@e2e.skipi.app') > 0) {
+      counterpart = t.contact_for_reply.split('@')[0];
+    }
+  }
+  if (!counterpart) {
+    showToast('Cannot reply: seafarer\'s pubkey not registered yet.', 'warn');
+    return;
+  }
+  var status = document.getElementById('thread-send-status');
+  if (status) { status.textContent = 'Encrypting…'; status.style.color = 'var(--text2)'; }
+  try {
+    await invoke('send_encrypted_message', {
+      applicationId: t.application_id,
+      toUserId: counterpart,
+      plaintext: text,
+    });
+    if (input) input.value = '';
+    if (status) { status.textContent = 'Sent ✓'; status.style.color = 'var(--ok)'; }
+    await loadThreadMessages();
+  } catch (e) {
+    if (status) { status.textContent = 'Send failed: '+e; status.style.color = 'var(--err)'; }
+  }
+}
+
+// ------------- vacancies tree (left panel) -------------
+async function renderVacanciesTree(opts) {
+  opts = opts || {};
+  var force = opts.force === true;
+  var lp = document.getElementById('left-panel');
+  var sortOptions = [
+    ['open_first',   'Открытые сначала'],
+    ['with_replies', 'С откликами сначала'],
+    ['stale',        'Зависшие (без откликов)'],
+    ['newest',       'От новых к старым'],
+    ['oldest',       'От старых к новым'],
+  ];
+  var sortHtml = '<select id="vac-sort" onchange="state.sortBy=this.value;renderVacanciesTreeBody();">'
+    + sortOptions.map(function(o){return '<option value="'+o[0]+'"'+(state.sortBy===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')
+    + '</select>';
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">My vacancies</span>'
+    + '<span class="actions" style="display:flex;gap:4px;">'
+    + '<button onclick="showView(\'new\')" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">＋ New</button>'
+    + '</span>'
+    + '</div>'
+    + '<div class="panel-search">'+sortHtml+'</div>'
+    + '<div class="panel-tree" id="panel-tree">'
+    + (state.vacancies && state.vacancies.length ? '' : '<div class="tree-empty">Loading...</div>')
+    + '</div>';
+
+  // Render cached list immediately — no spinner if we have data.
+  if (state.vacancies && state.vacancies.length) renderVacanciesTreeBody();
+
+  // Skip network on cached navigation; refresh only on explicit ↻ or first load.
+  if (!force && state.vacancies && state.vacancies.length) return;
+
+  try {
+    state.vacancies = await invoke('fetch_my_vacancies');
+  } catch (e) {
+    document.getElementById('panel-tree').innerHTML =
+      '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
+    updateSidebarBadge(0);
+    return;
+  }
+  renderVacanciesTreeBody();
+}
+
+function renderVacanciesTreeBody() {
+  updateSidebarBadge((state.vacancies||[]).reduce(function(a,v){return a+(v.new_applications_count||0);}, 0));
+
+  var tree = document.getElementById('panel-tree');
+  if (!tree) return;
+  if (!state.vacancies || !state.vacancies.length) {
+    tree.innerHTML = '<div class="tree-empty">No vacancies posted yet.<br><br><button onclick="showView(\'new\')">＋ Post one</button></div>';
+    return;
+  }
+
+  var sorted = state.vacancies.slice().sort(sortComparator(state.sortBy));
+  var html = '';
+  sorted.forEach(function(v){
+    var newCount = v.new_applications_count || 0;
+    var titleStr = v.title || (v.rank+' · '+v.vessel_type);
+    var isActive = state.selectedVacancy && state.selectedVacancy.id === v.id;
+    var statusGlyph = v.status==='active' ? '⚓' : (v.status==='closed' ? '✓' : '⌛');
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openVacancyById(\''+escapeAttr(v.id)+'\')">';
+    html += '<span style="font-size:11px;color:var(--text2);">'+statusGlyph+'</span>';
+    html += '<div class="ti-title"><div>'+escapeHtml(titleStr)+'</div>';
+    html += '<div class="ti-meta">'+escapeHtml(v.rank||'?')+' · '+escapeHtml(v.vessel_type||'?')
+         + ' · '+escapeHtml(v.published_at.slice(0,10))
+         + (v.reply_count?' · '+v.reply_count+' applied':'')
+         + '</div>';
+    if (v.client_name) html += '<div class="ti-meta" style="color:var(--accent);">★ '+escapeHtml(v.client_name)+'</div>';
+    html += '</div>';
+    if (newCount>0) html += '<span class="new-dot" title="'+newCount+' new"></span>';
+    html += '</div>';
+  });
+  tree.innerHTML = html;
+}
+
+// ------------- documents tree (seafarer-style) -------------
+// Categories the user actually picks when adding a custom document. The
+// pre-seeded required templates use these same names so they group together.
+var DOC_CATEGORIES = ['Licences', 'Certifications', 'Insurance', 'Templates', 'Checklists', 'Tax & Compliance', 'Other'];
+// Map doc_type → category for the "Add document" form (legacy field still
+// lets us pick a sensible default).
+var DOC_TYPES = [
+  ['license',   'License / permit',           'Licences'],
+  ['mlc_cert',  'MLC certificate',            'Certifications'],
+  ['other',     'Insurance / P&I',            'Insurance'],
+  ['template',  'Template (info pack)',       'Templates'],
+  ['checklist', 'Checklist (joining etc.)',   'Checklists'],
+  ['other',     'Tax / compliance',           'Tax & Compliance'],
+  ['other',     'Other',                       'Other'],
+];
+
+function docStatusColor(d) {
+  // Required template missing its file → red.
+  var isReq = !!d.template_id;
+  if (!d.original_filename && isReq) return 'var(--err)';
+  if (!d.has_expiry || !d.valid_to) return 'var(--text2)';
+  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  if (dl < 0) return 'var(--err)';
+  if (dl < 30) return 'var(--warn)';
+  if (dl < 90) return '#d4a017';
+  if (dl < 180) return '#eac94f';
+  if (dl < 365) return '#f7e38d';
+  return 'var(--ok)';
+}
+function docStatusRank(d) {
+  var isReq = !!d.template_id;
+  if (!d.original_filename && isReq) return 6;
+  if (!d.has_expiry || !d.valid_to) return 0;
+  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  if (dl < 0) return 7;
+  if (dl < 30) return 5;
+  if (dl < 90) return 4;
+  if (dl < 180) return 3;
+  if (dl < 365) return 2;
+  return 1;
+}
+
+async function renderDocumentsTree() {
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">Documents</span>'
+    + '<span class="actions" style="display:flex;gap:4px;">'
+    + '<button onclick="openAddDocument()" style="padding:4px 10px;font-size:11px;" title="Add a custom document">＋ Add</button>'
+    + '<button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderDocumentsTree()" title="Refresh">↻</button>'
+    + '</span>'
+    + '</div>'
+    + '<div class="panel-search"><input type="text" id="docs-search" placeholder="Search..." oninput="state.docsSearch=this.value.toLowerCase();renderDocumentsTreeOnly();"></div>'
+    + '<div class="panel-tree" id="panel-tree"><div class="tree-empty">Loading...</div></div>';
+  try {
+    state.documents = await invoke('list_documents');
+  } catch (e) {
+    document.getElementById('panel-tree').innerHTML =
+      '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
+    return;
+  }
+  renderDocumentsTreeOnly();
+}
+
+function renderDocumentsTreeOnly() {
+  var tree = document.getElementById('panel-tree');
+  if (!tree) return;
+  var docs = state.documents || [];
+  var search = state.docsSearch || '';
+  if (search) docs = docs.filter(function(d){return d.name.toLowerCase().indexOf(search) !== -1;});
+  if (!docs.length) {
+    tree.innerHTML = '<div class="tree-empty">'+(search?'No matches.':'No documents yet.<br><br>'
+      + 'Add your agency licence, MLC certificate, info packs, or checklists.'
+      + '<br><br><button onclick="seedDemo()" style="font-size:12px;padding:7px 14px;">Seed demo (License + MLC)</button>'
+      + '<div style="margin-top:6px;font-size:10px;color:var(--text2);">Generates two synthetic PDFs so you can try the module quickly.</div>')+'</div>';
+    return;
+  }
+  // Group by category, then sort within
+  var cats = {};
+  docs.forEach(function(d){
+    if (!cats[d.category]) cats[d.category] = { docs: [], worstRank: -1, worstColor: 'var(--text2)' };
+    cats[d.category].docs.push(d);
+    var r = docStatusRank(d);
+    if (r > cats[d.category].worstRank) {
+      cats[d.category].worstRank = r;
+      cats[d.category].worstColor = docStatusColor(d);
+    }
+  });
+  var html = '';
+  var order = DOC_CATEGORIES.filter(function(c){return cats[c];}).concat(
+    Object.keys(cats).filter(function(c){return DOC_CATEGORIES.indexOf(c) === -1;})
+  );
+  order.forEach(function(cat){
+    var data = cats[cat];
+    // Required templates first, then by status urgency.
+    data.docs.sort(function(a, b){
+      var aReq = a.template_id ? 0 : 1;
+      var bReq = b.template_id ? 0 : 1;
+      if (aReq !== bReq) return aReq - bReq;
+      return docStatusRank(b) - docStatusRank(a);
+    });
+    html += '<div class="tree-folder">'
+      + '<div class="tree-folder-header" onclick="toggleFolder(this)">'
+      + '<span class="arrow open">▶</span>'+escapeHtml(cat)
+      + '<span class="dot" style="background:'+data.worstColor+';"></span>'
+      + '<span class="cnt">'+data.docs.length+'</span></div>'
+      + '<div class="tree-items open">';
+    data.docs.forEach(function(d){
+      var active = state.selectedDocument && state.selectedDocument.id===d.id;
+      var col = docStatusColor(d);
+      var icon = d.original_filename ? '📄' : '📃';
+      var req = d.template_id ? '<span class="req-mark" title="Required template">⭐</span>' : '';
+      html += '<div class="tree-item'+(active?' active':'')+'" onclick="openDocumentById(\''+escapeAttr(d.id)+'\')">'
+        + '<span style="font-size:11px;color:var(--text2);">'+icon+'</span>'
+        + '<div class="ti-title"><div>'+req+escapeHtml(d.name)+'</div></div>'
+        + '<span class="st" style="background:'+col+';"></span>'
+        + '</div>';
+    });
+    html += '</div></div>';
+  });
+  tree.innerHTML = html;
+}
+
+function toggleFolder(headerEl) {
+  var arrow = headerEl.querySelector('.arrow');
+  var items = headerEl.nextElementSibling;
+  if (arrow && items) {
+    arrow.classList.toggle('open');
+    items.classList.toggle('open');
+  }
+}
+
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return Math.round(bytes/1024) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function openDocumentById(id) {
+  state.selectedDocument = state.documents.find(function(d){return d.id===id;});
+  renderDocumentsTree();
+  renderDocumentDetail();
+}
+
+function renderDocumentsEmptyMain() {
+  document.getElementById('main').innerHTML =
+    '<div class="empty" style="margin-top:80px;">'
+    + '<div class="icon" style="font-size:64px;">📄</div>'
+    + '<div style="font-size:16px;margin-top:8px;">Select a document on the left, or add a new one.</div>'
+    + '</div>';
+}
+
+function classifyDoc(d) {
+  if (d.template_id && !d.original_filename) return 'expired';
+  if (!d.has_expiry || !d.valid_to) return 'none';
+  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  if (dl < 0) return 'expired';
+  if (dl < 30) return 'critical';
+  if (dl < 90) return 'warning';
+  return 'valid';
+}
+function daysUntil(d) {
+  if (!d.has_expiry || !d.valid_to) return null;
+  return Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+}
+
+async function renderDocumentDetail() {
+  var d = state.selectedDocument;
+  if (!d) { renderDocumentsEmptyMain(); return; }
+  var s = classifyDoc(d);
+  var dl = daysUntil(d);
+  var statusLabel = {expired:'Expired',critical:'Expiring soon',warning:'Attention',valid:'Valid',none:'No expiry'}[s];
+  var statusColor = {expired:'var(--err)',critical:'var(--warn)',warning:'#d4a017',valid:'var(--ok)',none:'var(--text2)'}[s];
+  var dlt = (dl !== null) ? (dl < 0 ? Math.abs(dl)+'d overdue' : dl+'d left') : '';
+  var hasFile = !!d.original_filename;
+
+  var html =
+    '<div style="display:flex;align-items:center;gap:10px;margin:0 0 4px;">'
+    + (d.template_id?'<span style="color:#f6c453;" title="Required template">⭐</span>':'')
+    + '<h1 style="margin:0;">'+escapeHtml(d.name)+'</h1></div>'
+    + '<div class="sub" style="display:flex;align-items:center;gap:10px;">'
+    + escapeHtml(d.category||'')
+    + ' <span style="display:inline-block;padding:2px 10px;background:'+statusColor+';color:#fff;border-radius:10px;font-size:11px;font-weight:700;">'+statusLabel+'</span>'
+    + (dlt ? '<span style="color:var(--text2);font-size:12px;">'+dlt+'</span>' : '')
+    + '</div>'
+
+    + '<div class="card">'
+    + '<div class="row full"><div><label>Title</label><input type="text" id="doc-name" value="'+escapeAttr(d.name)+'" onchange="autoSaveDoc()"></div></div>'
+    + '<div class="row"><div><label>Issuer / authority</label><input type="text" id="doc-issuer" value="'+escapeAttr(d.issuer||'')+'" placeholder="e.g. Maritime Authority of Cyprus" onchange="autoSaveDoc()"></div>'
+    + '<div><label>Certificate / document number</label><input type="text" id="doc-cert" value="'+escapeAttr(d.cert_number||'')+'" onchange="autoSaveDoc()"></div></div>'
+    + '<div class="row"><div><label>Issue date</label><input type="date" id="doc-issue" value="'+escapeAttr(d.issue_date||'')+'" onchange="autoSaveDoc()"></div>'
+    + '<div><label>Valid to</label><input type="date" id="doc-valid" value="'+escapeAttr(d.valid_to||'')+'" onchange="autoSaveDoc()"></div></div>'
+    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="doc-has-expiry"'+(d.has_expiry?' checked':'')+' onchange="autoSaveDoc()"><label for="doc-has-expiry">This document has an expiry date</label></div></div>'
+    + '<div class="row full"><div><label>Notes</label><textarea id="doc-notes" placeholder="Internal notes — not sent to seafarers" onchange="autoSaveDoc()">'+escapeHtml(d.notes||'')+'</textarea></div></div>'
+    + '<div style="font-size:11px;color:var(--text2);text-align:right;" id="doc-save-status">Changes save automatically</div>'
+    + '</div>'
+
+    + (hasFile
+        ? '<div class="card" id="file-card">'
+          + '<div id="file-info-row" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--panel2);border-radius:6px;margin-bottom:10px;" title="Drop a file here to replace">'
+          + '<span style="font-weight:600;">📄 '+escapeHtml(d.original_filename)+'</span>'
+          + '<span style="font-size:11px;color:var(--text2);">'+humanSize(d.size_bytes)+' · drop a file here to replace</span>'
+          + '<span style="margin-left:auto;display:flex;gap:6px;">'
+            + '<button onclick="openDoc(\''+escapeAttr(d.id)+'\')">Open</button>'
+            + '<button class="ghost" onclick="attachFile(\''+escapeAttr(d.id)+'\')">Replace...</button>'
+            + '<button class="ghost" onclick="sendDocStub()" title="Coming soon">Send ✉</button>'
+          + '</span></div>'
+          + '<div class="file-preview" id="fprev" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;min-height:300px;display:flex;align-items:center;justify-content:center;"><span style="color:var(--text2);">Loading preview...</span></div>'
+          + '</div>'
+        : '<div class="card" id="file-card">'
+          + '<div class="file-drop" id="file-drop-zone" onclick="attachFile(\''+escapeAttr(d.id)+'\')" style="border:2px dashed var(--border);border-radius:6px;padding:40px;text-align:center;cursor:pointer;color:var(--text2);">'
+          + '<div style="font-size:32px;">📂</div>'
+          + '<div style="margin-top:8px;">Click to attach file, or drag &amp; drop here</div>'
+          + '<div style="font-size:11px;margin-top:4px;">PDF, JPG, PNG, DOC, DOCX</div>'
+          + '</div>'
+          + (d.template_id
+              ? '<div style="margin-top:12px;text-align:center;">'
+                + '<button class="ghost" onclick="useDemoSample(\''+escapeAttr(d.template_id)+'\')">Use sample PDF</button>'
+                + '<div style="font-size:10px;color:var(--text2);margin-top:4px;">Generates a synthetic placeholder so you can demo the workflow.</div></div>'
+              : '')
+          + '</div>'
+      )
+
+    + (d.template_id ? '' : '<div style="margin-top:10px;text-align:right;">'
+        + '<button class="ghost" style="color:var(--err);" onclick="deleteDoc(\''+escapeAttr(d.id)+'\')">Delete document</button></div>');
+
+  document.getElementById('main').innerHTML = html;
+
+  // Inline preview for PDF / image
+  if (hasFile) {
+    try {
+      var r = await invoke('read_document_file_base64', { docId: d.id });
+      var b64 = r[0], mime = r[1];
+      var el = document.getElementById('fprev');
+      if (!el) return;
+      if (mime.indexOf('image/') === 0) {
+        el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
+      } else if (mime === 'application/pdf') {
+        var bin = atob(b64);
+        var arr = new Uint8Array(bin.length);
+        for (var i=0; i<bin.length; i++) arr[i] = bin.charCodeAt(i);
+        var blob = new Blob([arr], { type: 'application/pdf' });
+        var burl = URL.createObjectURL(blob);
+        el.innerHTML = '<iframe src="'+burl+'" style="width:100%;height:70vh;border:none;"></iframe>';
+      } else {
+        el.innerHTML = '<span style="color:var(--text2);padding:20px;">Preview not available for '+escapeHtml(mime)+'. Use Open to view in default app.</span>';
+      }
+    } catch (e) {
+      var pe = document.getElementById('fprev');
+      if (pe) pe.innerHTML = '<span style="color:var(--err);padding:12px;">Preview failed: '+escapeHtml(''+e)+'</span>';
+    }
+  }
+}
+
+var saveTimer = null;
+function autoSaveDoc() {
+  var st = document.getElementById('doc-save-status');
+  if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--text2)'; }
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveDocMetaInline, 400);
+}
+
+async function saveDocMetaInline() {
+  var d = state.selectedDocument;
+  if (!d) return;
+  try {
+    var updated = await invoke('update_document', {
+      docId: d.id,
+      meta: {
+        name: val('doc-name') || d.name,
+        issuer: val('doc-issuer') || null,
+        issue_date: val('doc-issue') || null,
+        valid_to: val('doc-valid') || null,
+        cert_number: val('doc-cert') || null,
+        notes: val('doc-notes') || null,
+        has_expiry: document.getElementById('doc-has-expiry').checked,
+      },
+    });
+    state.selectedDocument = updated;
+    var st = document.getElementById('doc-save-status');
+    if (st) { st.textContent = 'Saved ✓'; st.style.color = 'var(--ok)'; }
+    // Re-render tree to reflect updated colors / sort.
+    var docsBefore = state.documents.findIndex(function(x){return x.id===updated.id;});
+    if (docsBefore !== -1) state.documents[docsBefore] = updated;
+    renderDocumentsTreeOnly();
+  } catch (e) {
+    var st2 = document.getElementById('doc-save-status');
+    if (st2) { st2.textContent = 'Save failed: '+e; st2.style.color = 'var(--err)'; }
+  }
+}
+
+async function saveDocMeta() {
+  var d = state.selectedDocument;
+  if (!d) return;
+  try {
+    var updated = await invoke('update_document', {
+      docId: d.id,
+      meta: {
+        name: val('doc-name') || d.name,
+        issuer: val('doc-issuer') || null,
+        issue_date: val('doc-issue') || null,
+        valid_to: val('doc-valid') || null,
+        cert_number: val('doc-cert') || null,
+        notes: val('doc-notes') || null,
+        has_expiry: document.getElementById('doc-has-expiry').checked,
+      },
+    });
+    state.selectedDocument = updated;
+    showToast('Saved ✓', 'success');
+    await renderDocumentsTree();
+    renderDocumentDetail();
+  } catch (e) {
+    showToast('Save failed: '+e, 'error');
+  }
+}
+
+async function attachFile(docId) {
+  try {
+    var picked = await window.__TAURI__.dialog.open({ multiple: false, directory: false });
+    if (!picked) return;
+    var updated = await invoke('attach_file_to_document', { docId: docId, sourcePath: picked });
+    state.selectedDocument = updated;
+    showToast('File attached ✓', 'success');
+    await renderDocumentsTree();
+    renderDocumentDetail();
+  } catch (e) {
+    showToast('Attach failed: '+e, 'error');
+  }
+}
+
+async function deleteDoc(docId) {
+  if (!confirm('Delete this document? The file will be removed from the vault.')) return;
+  try {
+    await invoke('delete_document', { docId: docId });
+    state.selectedDocument = null;
+    showToast('Deleted', 'success');
+    await renderDocumentsTree();
+    renderDocumentsEmptyMain();
+  } catch (e) {
+    showToast('Delete failed: '+e, 'error');
+  }
+}
+
+async function openDoc(id) {
+  try { await invoke('open_document', { docId: id }); }
+  catch (e) { showToast('Open failed: '+e, 'error'); }
+}
+
+async function seedDemo() {
+  showToast('Generating synthetic PDFs for all required templates...', 'info');
+  var templates = ['crew-licence','mlc-cert','pi-insurance','joining-checklist','info-pack'];
+  var ok = 0, fail = 0;
+  for (var i=0; i<templates.length; i++) {
+    try {
+      await invoke('attach_demo_to_template', { templateId: templates[i] });
+      ok++;
+    } catch (e) {
+      fail++;
+      console.log('seed', templates[i], e);
+    }
+  }
+  showToast('Attached sample PDFs to '+ok+' template(s)'+(fail?' ('+fail+' failed)':''), ok?'success':'error');
+  await renderDocumentsTree();
+  if (state.selectedDocument) {
+    var refreshed = state.documents.find(function(d){return d.id === state.selectedDocument.id;});
+    if (refreshed) state.selectedDocument = refreshed;
+    renderDocumentDetail();
+  }
+}
+
+async function useDemoSample(templateId) {
+  showToast('Generating sample PDF...', 'info');
+  try {
+    var updated = await invoke('attach_demo_to_template', { templateId: templateId });
+    state.selectedDocument = updated;
+    showToast('Sample PDF attached ✓', 'success');
+    await renderDocumentsTree();
+    renderDocumentDetail();
+  } catch (e) {
+    showToast('Failed: '+e, 'error');
+  }
+}
+
+function sendDocStub() {
+  showToast('Send-to-seafarer flow arrives in v0.2.x — bundle picker, SMTP/WhatsApp routing.', 'info');
+}
+
+async function openAddDocument() {
+  // Modal with name + type + file picker
+  var html =
+    '<div class="settings-overlay" onclick="if(event.target===this)closeAddDocument()">'
+    + '<div class="settings-modal" style="height:auto;max-height:600px;width:480px;">'
+    + '<div class="settings-close" onclick="closeAddDocument()">×</div>'
+    + '<div class="settings-body" style="padding:24px 28px 16px;">'
+    + '<h3 style="margin:0 0 4px;font-size:18px;">Add document</h3>'
+    + '<div class="section-desc" style="margin-bottom:16px;">Copies the file into the vault and indexes it. Original file stays where it is.</div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px;">Name*</label>'
+    + '<input type="text" id="ad-name" placeholder="e.g. Joining checklist 2026" style="width:100%;padding:8px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;"></div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px;">Type*</label>'
+    + '<select id="ad-type" style="width:100%;padding:8px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;">'
+    + DOC_TYPES.map(function(t){return '<option value="'+t[0]+'">'+escapeHtml(t[1])+'</option>';}).join('')
+    + '</select></div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px;">File*</label>'
+    + '<div style="display:flex;gap:8px;"><input type="text" id="ad-path" readonly placeholder="No file selected" style="flex:1;padding:8px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;">'
+    + '<button class="ghost" onclick="pickDocFile()">Browse...</button></div></div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px;">Notes (optional)</label>'
+    + '<textarea id="ad-notes" placeholder="Internal notes" style="width:100%;min-height:60px;padding:8px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:13px;font-family:inherit;"></textarea></div>'
+    + '</div>'
+    + '<div class="settings-actions-bar" style="left:0;">'
+    + '<button class="ghost" onclick="closeAddDocument()">Cancel</button>'
+    + '<button onclick="submitAddDocument()">Add</button>'
+    + '</div></div></div>';
+  document.getElementById('modal-host').innerHTML = html;
+}
+
+function closeAddDocument() {
+  document.getElementById('modal-host').innerHTML = '';
+}
+
+async function pickDocFile() {
+  try {
+    var picked = await window.__TAURI__.dialog.open({ multiple: false, directory: false });
+    if (picked) document.getElementById('ad-path').value = picked;
+  } catch (e) { showToast('Could not open file picker: '+e, 'error'); }
+}
+
+async function submitAddDocument() {
+  var name = val('ad-name');
+  var type = val('ad-type');
+  var path = val('ad-path');
+  var notes = val('ad-notes');
+  if (!name || !type || !path) {
+    showToast('Name, type and file are required', 'error');
+    return;
+  }
+  try {
+    var doc = await invoke('add_document', {
+      meta: { name: name, doc_type: type, notes: notes },
+      sourcePath: path,
+    });
+    showToast('Document added ✓', 'success');
+    state.selectedDocument = doc;
+    closeAddDocument();
+    renderDocumentsTree();
+    renderDocumentDetail();
+  } catch (e) {
+    showToast('Add failed: '+e, 'error');
+  }
+}
+
+function renderVacanciesEmptyMain() {
+  document.getElementById('main').innerHTML =
+    '<div class="empty" style="margin-top:80px;">'
+    + '<div class="icon" style="font-size:64px;">⚓</div>'
+    + '<div style="font-size:16px;margin-top:8px;">Select a vacancy on the left to view details and applications.</div>'
+    + '</div>';
+}
+
+function updateSidebarBadge(n) {
+  var b = document.getElementById('nav-vacancies-badge');
+  if (!b) return;
+  if (n > 0) { b.textContent = n; b.style.display = 'inline-block'; }
+  else b.style.display = 'none';
+}
+
+function sortComparator(mode) {
+  if (mode==='open_first') {
+    // Active first, then by newest published
+    return function(a,b){
+      var as = a.status==='active' ? 0 : 1;
+      var bs = b.status==='active' ? 0 : 1;
+      if (as !== bs) return as - bs;
+      return (b.published_at||'').localeCompare(a.published_at||'');
+    };
+  }
+  if (mode==='with_replies') {
+    return function(a,b){
+      var d=(b.new_applications_count||0)-(a.new_applications_count||0);
+      if (d!==0) return d;
+      d=(b.reply_count||0)-(a.reply_count||0);
+      if (d!==0) return d;
+      return (b.published_at||'').localeCompare(a.published_at||'');
+    };
+  }
+  if (mode==='stale') {
+    // Active, no replies, oldest first.
+    return function(a,b){
+      var aWaiting = (a.status==='active' && (a.reply_count||0)===0) ? 0 : 1;
+      var bWaiting = (b.status==='active' && (b.reply_count||0)===0) ? 0 : 1;
+      if (aWaiting !== bWaiting) return aWaiting - bWaiting;
+      return (a.published_at||'').localeCompare(b.published_at||'');
+    };
+  }
+  if (mode==='oldest') {
+    return function(a,b){ return (a.published_at||'').localeCompare(b.published_at||''); };
+  }
+  // 'newest' — default
+  return function(a,b){ return (b.published_at||'').localeCompare(a.published_at||''); };
+}
+
+function openVacancyById(id) {
+  state.selectedVacancy = state.vacancies.find(function(v){return v.id===id;});
+  // Cheap selection update: toggle .active class on tree items in place
+  // instead of rebuilding the left panel — feels native.
+  var items = document.querySelectorAll('#panel-tree .tree-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.remove('active');
+  }
+  // Find the clicked one by onclick attribute (best match within a fast loop).
+  var sel = Array.prototype.find.call(items, function(el){
+    return (el.getAttribute('onclick')||'').indexOf("'"+id+"'") !== -1;
+  });
+  if (sel) sel.classList.add('active');
+  renderVacancyDetail();
+}
+
+function escapeAttr(s){ return (s||'').replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
+
+async function renderVacancyDetail() {
+  var m = document.getElementById('main');
+  var v = state.selectedVacancy;
+  if (!v) { showView('vacancies'); return; }
+  var titleStr = v.title || (v.rank+' · '+v.vessel_type);
+  var head = '<h1 style="margin:0 0 8px;">'+escapeHtml(titleStr)+'</h1>';
+  var sub = '<div class="sub">'+escapeHtml(v.rank||'?')+' · '+escapeHtml(v.vessel_type||'?')
+    +' · posted '+escapeHtml(v.published_at.slice(0,10))
+    + (v.client_name ? ' · client <span style="color:var(--accent);">★ '+escapeHtml(v.client_name)+'</span>' : '')
+    +' · <code>'+escapeHtml(v.id)+'</code></div>';
+  var salaryStr = v.salary_min ? (v.salary_currency||'USD')+' '+v.salary_min
+              + (v.salary_max&&v.salary_max!==v.salary_min?'-'+v.salary_max:'')+'/mo' : '—';
+  var applyClicks = v.apply_click_count || 0;
+  var hideCount = v.hide_count || 0;
+  var replyCount = v.reply_count || 0;
+  var conversion = applyClicks ? Math.round(replyCount / applyClicks * 100) : 0;
+  var engagement = '<div class="card" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px;">'
+    + '<div><label>Apply clicks</label><div style="font-size:18px;font-weight:700;">'+applyClicks+'</div></div>'
+    + '<div><label>Applications</label><div style="font-size:18px;font-weight:700;">'+replyCount+'</div></div>'
+    + '<div><label>Hidden</label><div style="font-size:18px;font-weight:700;">'+hideCount+'</div></div>'
+    + '<div><label>Click → apply</label><div style="font-size:18px;font-weight:700;">'+(applyClicks?conversion+'%':'—')+'</div></div>'
+    + '</div>';
+  var details = '<div class="card">'
+    + '<div class="row"><div><label>Vessel</label><div>'+escapeHtml(v.vessel_name||'—')+(v.vessel_imo?' (IMO '+v.vessel_imo+')':'')+'</div></div>'
+    + '<div><label>Flag</label><div>'+escapeHtml(v.flag||'—')+'</div></div></div>'
+    + '<div class="row"><div><label>Join date / port</label><div>'+(v.joining_window_from?escapeHtml(v.joining_window_from.slice(0,10)):'—')+(v.join_port?' · '+escapeHtml(v.join_port):'')+'</div></div>'
+    + '<div><label>Contract</label><div>'+(v.contract_months?v.contract_months+' months':'—')+'</div></div></div>'
+    + '<div class="row"><div><label>Salary</label><div>'+salaryStr+'</div></div>'
+    + '<div><label>Trading area</label><div>'+escapeHtml(v.trading_area||'—')+(v.russia_trading?' · Russia OK':'')+'</div></div></div>'
+    + (v.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(v.description)+'</div></div></div>':'')
+    + '</div>';
+  m.innerHTML = head + sub + engagement + details
+    + '<h2 style="margin:24px 0 4px;font-size:18px;">Applications</h2>'
+    + '<div class="sub">Replies received from seafarers via Skipi Package Link</div>'
+    + '<div id="apps-list"></div>';
+
+  // Cache-first paint: show cached applications instantly, then refresh in
+  // background. Switching between vacancies should feel native.
+  var cached = state.applicationsByVacancy[v.id];
+  if (cached) {
+    state.applications = cached;
+    paintApplicationsList(cached);
+  } else {
+    document.getElementById('apps-list').innerHTML =
+      '<div class="empty"><div style="color:var(--text2);font-size:12px;">Loading…</div></div>';
+  }
+
+  invoke('fetch_applications_for_vacancy', { vacancyId: v.id })
+    .then(function(apps){
+      state.applicationsByVacancy[v.id] = apps;
+      // Only repaint if user is still viewing this vacancy.
+      if (state.selectedVacancy && state.selectedVacancy.id === v.id) {
+        state.applications = apps;
+        paintApplicationsList(apps);
+      }
+    })
+    .catch(function(e){
+      // Only surface error if we had nothing cached to show.
+      if (!cached && state.selectedVacancy && state.selectedVacancy.id === v.id) {
+        var listEl = document.getElementById('apps-list');
+        if (listEl) listEl.innerHTML =
+          '<div class="empty"><div style="color:var(--err);">Failed to load applications: '+escapeHtml(''+e)+'</div></div>';
+      }
+    });
+}
+
+function paintApplicationsList(apps) {
+  var list = document.getElementById('apps-list');
+  if (!list) return;
+  // Warm up message cache for every application asynchronously so opening
+  // the chat is instant. Sequential — Tauri's blocking client + WebKit
+  // worker pool gets unhappy with many parallel invokes.
+  prefetchApplicationsMessages(apps);
+  if (!apps.length) {
+    list.innerHTML = '<div class="empty"><div class="icon">✉</div><div>No applications yet.</div></div>';
+    return;
+  }
+  var html = '';
+  apps.forEach(function(a){
+    var sum = a.summary || {};
+    var sUid = a.seafarer_user_id || ((a.contact_for_reply||'').indexOf('@e2e.skipi.app')>0
+        ? (a.contact_for_reply||'').split('@')[0] : null);
+    var preview = lastMessagePreview(a.id, a.message);
+    var initials = (sum.redacted_initials || '?').slice(0, 2);
+    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
+    html += '<div style="display:flex;align-items:center;gap:12px;">';
+    // Avatar
+    html += '<div style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;">'+escapeHtml(initials)+'</div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">';
+    html += '<div style="font-weight:600;font-size:14px;">'+escapeHtml(sum.redacted_initials||'(redacted)')+(sum.rank?' · '+escapeHtml(sum.rank):'')+'</div>';
+    html += '<div style="font-size:11px;color:var(--text2);flex-shrink:0;">'+escapeHtml(formatChatRowTime(preview.time || a.received_at))+'</div>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:3px;">';
+    html += '<div class="meta" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12px;color:var(--text2);">'
+         +    (preview.text ? (preview.mine?'<span style="color:var(--text2);">You: </span>':'')+escapeHtml(preview.text) : escapeHtml((a.message||'').slice(0,80) || sumLineMeta(sum)))
+         + '</div>';
+    html += '<span class="tag '+(a.status==='new'?'ok':'')+'" style="flex-shrink:0;font-size:10px;">'+escapeHtml(a.status)+'</span>';
+    html += '</div>';
+    html += '</div></div>';
+    // Inline thread (stops click bubbling so clicks inside don't re-toggle).
+    html += '<div id="appthread-'+escapeAttr(a.id)+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);" onclick="event.stopPropagation()"></div>';
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+async function prefetchApplicationsMessages(apps) {
+  for (var i = 0; i < apps.length; i++) {
+    var a = apps[i];
+    if (state.messagesByApp[a.id]) continue; // already cached
+    try {
+      var msgs = await invoke('fetch_messages', { applicationId: a.id });
+      state.messagesByApp[a.id] = msgs;
+      // Repaint the row so its preview reflects the just-fetched last message.
+      var card = document.getElementById('app-card-'+a.id);
+      if (card && state.applications) repaintApplicationRowPreview(a, card);
+    } catch (e) { /* ignore */ }
+  }
+}
+
+function repaintApplicationRowPreview(a, card) {
+  var preview = lastMessagePreview(a.id, a.message);
+  // Find the meta div (1st child with .meta class) and update text.
+  var meta = card.querySelector('.meta');
+  if (meta) {
+    var sum = a.summary || {};
+    meta.innerHTML = preview.text
+      ? (preview.mine?'<span style="color:var(--text2);">You: </span>':'')+escapeHtml(preview.text)
+      : escapeHtml((a.message||'').slice(0,80) || sumLineMeta(sum));
+  }
+}
+
+function lastMessagePreview(applicationId, fallbackText) {
+  var msgs = state.messagesByApp[applicationId];
+  if (msgs && msgs.length) {
+    var last = msgs[msgs.length-1];
+    var myId = state.myIdentity ? state.myIdentity.user_id : '';
+    return {text: (last.plaintext||'').slice(0,80), time: last.sent_at, mine: last.from_user_id === myId};
+  }
+  return {text: '', time: '', mine: false};
+}
+
+function sumLineMeta(sum) {
+  var parts = [];
+  if (sum.nationality) parts.push(sum.nationality);
+  if (sum.total_sea_time_months) parts.push(sum.total_sea_time_months+' mo at sea');
+  if (sum.salary_expectation) parts.push('expects '+(sum.salary_currency||'USD')+' '+sum.salary_expectation);
+  if (sum.available_from) parts.push('avail '+sum.available_from);
+  return parts.join(' · ');
+}
+
+function formatChatRowTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var today = new Date();
+  if (d.toDateString() === today.toDateString()) return iso.slice(11,16);
+  var yest = new Date(); yest.setDate(yest.getDate()-1);
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString(undefined, {day:'numeric', month:'short'});
+}
+
+// Toggle inline E2E thread under an application card. Crewing-side mirror
+// of seafarer's toggleVacancyThread — same UX, opposite participant.
+async function toggleApplicationChat(applicationId, seafarerUserId) {
+  var host = document.getElementById('appthread-'+applicationId);
+  if (!host) return;
+  if (host.style.display !== 'none' && host.dataset.loaded === '1') {
+    host.style.display = 'none';
+    host.dataset.loaded = '';
+    return;
+  }
+  host.style.display = 'block';
+  host.innerHTML = '<div class="chat-empty">Loading…</div>';
+  // Register pubkey in background — don't await, no need to block UI on it.
+  invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }).catch(function(){});
+
+  // Cache-first: render any previously-loaded messages instantly while we
+  // refresh in the background.
+  var cachedMsgs = state.messagesByApp[applicationId];
+  var msgs = cachedMsgs || [];
+  if (!cachedMsgs) {
+    try { msgs = await invoke('fetch_messages', { applicationId: applicationId }); }
+    catch(e){
+      host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+e+'</div>';
+      return;
+    }
+    state.messagesByApp[applicationId] = msgs;
+  } else {
+    // Background refresh (no flicker — soft refresh hits the existing DOM later).
+    setTimeout(function(){ refreshApplicationChat(applicationId, seafarerUserId, true); }, 0);
+  }
+  var msgsHtml = '<div id="app-msgs-'+applicationId+'" class="chat-pane">'
+              + renderApplicationMessages(msgs)
+              + '</div>';
+  msgsHtml += '<div class="chat-composer">';
+  msgsHtml += '<textarea id="app-compose-'+applicationId+'" rows="1" placeholder="Type a message" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\');}"></textarea>';
+  msgsHtml += '<button class="btn-send" onclick="sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')" title="Send">▶</button>';
+  msgsHtml += '</div>';
+  msgsHtml += '<div class="chat-status">'
+           +    '<span id="app-status-'+applicationId+'">🔒 End-to-end encrypted</span>'
+           +    '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')">📄 Request documents</button>'
+           +  '</div>';
+  host.innerHTML = msgsHtml;
+  host.dataset.loaded = '1';
+  host.dataset.seafarerUserId = seafarerUserId || '';
+  // Resolve and cache counterpart from existing messages so sending doesn't
+  // need to fetch_messages first.
+  var myId = state.myIdentity ? state.myIdentity.user_id : '';
+  for (var i = 0; i < msgs.length; i++) {
+    var mm = msgs[i];
+    var c = mm.from_user_id !== myId ? mm.from_user_id : mm.to_user_id;
+    if (c && c !== myId) { host.dataset.counterpartId = c; break; }
+  }
+  if (!host.dataset.counterpartId && seafarerUserId) {
+    host.dataset.counterpartId = seafarerUserId;
+  }
+
+  var box = document.getElementById('app-msgs-'+applicationId);
+  if (box) {
+    box.dataset.msgCount = String(msgs.length);
+    // Two RAFs — first lets layout commit, second pins to bottom after
+    // bubbles paint. WebKit's scrollHeight is 0 in the same tick as
+    // innerHTML assignment for tall content.
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        var b = document.getElementById('app-msgs-'+applicationId);
+        if (b) b.scrollTop = b.scrollHeight;
+      });
+    });
+  }
+
+  // Auto-poll for new messages while the panel is open. Stops when the
+  // panel is collapsed, while the textarea is focused/has draft, or when
+  // another vacancy is opened. fetch_messages on the Rust side does per-
+  // message HTTP lookups; polling during typing freezes input.
+  if (host.dataset.pollId) clearInterval(parseInt(host.dataset.pollId, 10));
+  var pollId = setInterval(function(){
+    var h = document.getElementById('appthread-'+applicationId);
+    if (!h || h.dataset.loaded !== '1' || h.style.display === 'none') {
+      clearInterval(pollId);
+      if (h) h.dataset.pollId = '';
+      return;
+    }
+    var ta = document.getElementById('app-compose-'+applicationId);
+    if (ta && (document.activeElement === ta || (ta.value||'').length > 0)) return;
+    refreshApplicationChat(applicationId, seafarerUserId, /*silent=*/true);
+  }, 15000);
+  host.dataset.pollId = String(pollId);
+}
+
+function renderApplicationMessages(msgs) {
+  if (!msgs.length) {
+    return '<div class="chat-empty">No messages yet. Send the first reply to start the conversation.</div>';
+  }
+  var myId = state.myIdentity ? state.myIdentity.user_id : '';
+  var html = '';
+  var lastDay = '';
+  msgs.forEach(function(m){
+    var dt = m.sent_at || '';
+    var day = dt.slice(0,10);
+    if (day && day !== lastDay) {
+      html += '<div class="chat-day-sep"><span>'+escapeHtml(formatDayLabel(day))+'</span></div>';
+      lastDay = day;
+    }
+    html += renderMessageBubble(m, m.from_user_id === myId);
+  });
+  return html;
+}
+
+function renderMessageBubble(m, mine, opts) {
+  opts = opts || {};
+  var raw = m.plaintext || '';
+  var time = (m.sent_at||'').slice(11,16);
+  var classes = 'msg ' + (mine ? 'mine' : 'other');
+  if (opts.pending) classes += ' pending';
+  if (opts.failed) classes += ' failed';
+  var idAttr = opts.tempId ? ' id="'+escapeAttr(opts.tempId)+'"' : '';
+  var ticks = mine ? (opts.pending ? '⌛' : '✓') : '';
+
+  // Marker-based rich messages. mine=true means "we sent this" — crewing
+  // sees "You requested documents". The seafarer-side renderer mirrors this
+  // and shows an action button.
+  if (raw.indexOf('[skipi:request_docs]') === 0) {
+    var note = raw.replace('[skipi:request_docs]','').trim()
+            || 'Documents requested. Awaiting candidate response.';
+    var label = mine
+      ? '📄 You requested documents'
+      : '📄 Crewing requested documents';
+    return '<div class="'+classes+'"'+idAttr+'>'
+         +   '<div class="msg-bubble" style="border:1px solid var(--accent);">'
+         +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">'+label+'</div>'
+         +     '<div class="msg-text" style="font-size:12px;opacity:0.9;">'+escapeHtml(note)+'</div>'
+         +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
+         +   '</div>'
+         + '</div>';
+  }
+  if (raw.indexOf('[skipi:docs_response]') === 0) {
+    var note2 = raw.replace('[skipi:docs_response]','').trim()
+             || 'Documents sent.';
+    return '<div class="'+classes+'"'+idAttr+'>'
+         +   '<div class="msg-bubble" style="border:1px solid var(--ok);">'
+         +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">📎 Documents sent</div>'
+         +     '<div class="msg-text" style="font-size:12px;opacity:0.9;">'+escapeHtml(note2)+'</div>'
+         +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
+         +   '</div>'
+         + '</div>';
+  }
+  if (raw.indexOf('[skipi:file_attached]') === 0) {
+    var jsonStr = raw.replace('[skipi:file_attached]','').trim();
+    var info = {};
+    try { info = JSON.parse(jsonStr); } catch(e){}
+    var sizeKb = info.size ? Math.round(info.size/1024)+' KB' : '';
+    var fname = info.filename || 'file';
+    var myId = state.myIdentity ? state.myIdentity.user_id : '';
+    var counterpartId = (myId === m.from_user_id) ? m.to_user_id : m.from_user_id;
+    var dlBtn = info.id
+      ? '<button onclick="downloadCrewingAttachment(\''+info.id+'\',\''+counterpartId+'\',\''+escapeAttr(fname)+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>'
+      : '';
+    return '<div class="'+classes+'"'+idAttr+'>'
+         +   '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:300px;">'
+         +     '<div style="display:flex;align-items:center;gap:8px;">'
+         +       '<div style="font-size:24px;">📎</div>'
+         +       '<div style="flex:1;min-width:0;">'
+         +         '<div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(fname)+'</div>'
+         +         '<div style="font-size:11px;opacity:0.7;">'+escapeHtml(sizeKb)+'</div>'
+         +       '</div>'
+         +     '</div>'
+         +     dlBtn
+         +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
+         +   '</div>'
+         + '</div>';
+  }
+
+  return '<div class="'+classes+'"'+idAttr+'>'
+       +   '<div class="msg-bubble">'
+       +     '<div class="msg-text">'+escapeHtml(raw)+'</div>'
+       +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
+       +   '</div>'
+       + '</div>';
+}
+
+async function downloadCrewingAttachment(attachmentId, counterpartId, filename) {
+  showToast('Downloading and decrypting…', 'info');
+  try {
+    var path = await invoke('download_encrypted_attachment', {
+      attachmentId: attachmentId,
+      counterpartUserId: counterpartId,
+      originalFilename: filename,
+    });
+    showToast('Saved: '+path, 'success');
+    try { await invoke('open_path_with_default', { path: path }); } catch(e){}
+  } catch (e) {
+    showToast('Download failed: '+e, 'error');
+  }
+}
+
+async function requestDocs(applicationId, seafarerUserId) {
+  var host = document.getElementById('appthread-'+applicationId);
+  if (!host) return;
+  var counterpart = host.dataset.counterpartId || seafarerUserId || host.dataset.seafarerUserId;
+  if (!counterpart) {
+    showToast('No counterpart yet — wait for the candidate to apply first.', 'error');
+    return;
+  }
+  var box = document.getElementById('app-msgs-'+applicationId);
+  var status = document.getElementById('app-status-'+applicationId);
+  var marker = '[skipi:request_docs] Please send your documents (CV + relevant certificates) for review.';
+  var tempId = 'tmp-'+Date.now();
+  var nowIso = new Date().toISOString();
+  if (box) {
+    var emptyEl = box.querySelector('.chat-empty');
+    if (emptyEl) emptyEl.remove();
+    box.insertAdjacentHTML('beforeend', renderMessageBubble(
+      {plaintext: marker, sent_at: nowIso}, true,
+      {pending: true, tempId: tempId}
+    ));
+    box.scrollTop = box.scrollHeight;
+  }
+  await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
+  try {
+    await invoke('send_encrypted_message', {
+      applicationId: applicationId,
+      toUserId: counterpart,
+      plaintext: marker,
+    });
+    var pendingEl = document.getElementById(tempId);
+    if (pendingEl) pendingEl.classList.remove('pending');
+    var tickSpan = pendingEl ? pendingEl.querySelector('.msg-meta span') : null;
+    if (tickSpan) tickSpan.textContent = '✓';
+    setTimeout(function(){ refreshApplicationChat(applicationId, counterpart, true); }, 0);
+  } catch (e) {
+    var pendingEl = document.getElementById(tempId);
+    if (pendingEl) { pendingEl.classList.remove('pending'); pendingEl.classList.add('failed'); }
+    if (status) { status.textContent = 'Send failed: '+e; status.style.color = 'var(--err)'; }
+  }
+}
+
+function formatDayLabel(dayIso) {
+  if (!dayIso) return '';
+  var today = new Date().toISOString().slice(0,10);
+  if (dayIso === today) return 'Today';
+  var d = new Date(dayIso+'T00:00:00');
+  var yest = new Date(); yest.setDate(yest.getDate()-1);
+  if (dayIso === yest.toISOString().slice(0,10)) return 'Yesterday';
+  return d.toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'});
+}
+
+// Soft-refresh: fetches messages and patches only the messages container.
+// Does not rebuild the textarea/status/poll timer, so no flicker, no
+// composer wipe.
+async function refreshApplicationChat(applicationId, seafarerUserId, silent) {
+  var msgsBox = document.getElementById('app-msgs-'+applicationId);
+  if (!msgsBox) return;
+  var msgs;
+  try { msgs = await invoke('fetch_messages', { applicationId: applicationId }); }
+  catch (e) {
+    if (!silent) {
+      var st = document.getElementById('app-status-'+applicationId);
+      if (st) { st.textContent = 'Refresh failed: '+e; st.style.color = 'var(--err)'; }
+    }
+    return;
+  }
+  state.messagesByApp[applicationId] = msgs;
+  // Skip DOM update if nothing changed — avoids scroll jumps during typing.
+  var pendingCount = msgsBox.querySelectorAll('.msg.pending').length;
+  var newCount = msgs.length + pendingCount;
+  var prevCount = parseInt(msgsBox.dataset.msgCount || '-1', 10);
+  if (newCount === prevCount) return;
+  // Preserve scroll-at-bottom intent.
+  var nearBottom = (msgsBox.scrollHeight - msgsBox.scrollTop - msgsBox.clientHeight) < 30;
+  msgsBox.innerHTML = renderApplicationMessages(msgs);
+  msgsBox.dataset.msgCount = String(msgs.length);
+  if (nearBottom) msgsBox.scrollTop = msgsBox.scrollHeight;
+}
+
+async function sendApplicationReply(applicationId, seafarerUserId) {
+  var host = document.getElementById('appthread-'+applicationId);
+  var input = document.getElementById('app-compose-'+applicationId);
+  var status = document.getElementById('app-status-'+applicationId);
+  var box = document.getElementById('app-msgs-'+applicationId);
+  if (!host || !input) return;
+  var text = (input.value||'').trim();
+  if (!text) return;
+
+  // Resolve counterpart from cached state — no network round-trip on send.
+  var counterpart = host.dataset.counterpartId || seafarerUserId || host.dataset.seafarerUserId;
+  if (!counterpart) {
+    if (status) { status.textContent = 'No counterpart yet.'; status.style.color = 'var(--err)'; }
+    return;
+  }
+
+  // Optimistic UI: clear input + append "pending" bubble immediately.
+  input.value = '';
+  input.style.height = 'auto';
+  var tempId = 'tmp-'+Date.now();
+  var nowIso = new Date().toISOString();
+  if (box) {
+    // Remove the empty-state placeholder if present.
+    var emptyEl = box.querySelector('.chat-empty');
+    if (emptyEl) emptyEl.remove();
+    box.insertAdjacentHTML('beforeend', renderMessageBubble(
+      {plaintext: text, sent_at: nowIso}, true,
+      {pending: true, tempId: tempId}
+    ));
+    box.scrollTop = box.scrollHeight;
+  }
+  input.focus();
+  // Yield to the renderer so the bubble actually paints before we run the
+  // (potentially slow) Tauri invoke. Without this, WebKit batches the DOM
+  // mutation with the post-await microtasks and the bubble appears only
+  // after invoke returns.
+  await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
+
+  try {
+    await invoke('send_encrypted_message', {
+      applicationId: applicationId,
+      toUserId: counterpart,
+      plaintext: text,
+    });
+    var pendingEl = document.getElementById(tempId);
+    if (pendingEl) pendingEl.classList.remove('pending');
+    var tickSpan = pendingEl ? pendingEl.querySelector('.msg-meta span') : null;
+    if (tickSpan) tickSpan.textContent = '✓';
+    // Pull authoritative state on next idle tick — non-blocking.
+    setTimeout(function(){ refreshApplicationChat(applicationId, counterpart, true); }, 0);
+  } catch (e) {
+    var pendingEl = document.getElementById(tempId);
+    if (pendingEl) { pendingEl.classList.remove('pending'); pendingEl.classList.add('failed'); }
+    if (status) { status.textContent = 'Send failed: '+e; status.style.color = 'var(--err)'; }
+    // Restore text so user can retry.
+    input.value = text;
+  }
+}
+
+// ------------- new vacancy -------------
+function renderNewVacancy() {
+  var m = document.getElementById('main');
+  m.innerHTML = '<h1>New vacancy</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
+    + '<div class="card">'
+    + '<div class="row full"><div><label>Client (who requested this search)</label>'
+    + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions">'
+    + '<datalist id="client-suggestions">'
+    + (state.vacancies||[]).map(function(v){return v.client_name;})
+        .filter(function(c,i,a){return c && a.indexOf(c)===i;})
+        .map(function(c){return '<option value="'+escapeAttr(c)+'">';}).join('')
+    + '</datalist>'
+    + '</div></div>'
+    + '<div class="row"><div><label>Title*</label><input type="text" id="f-title" placeholder="e.g. Chief Officer for Aframax"></div>'
+    + '<div><label>Rank*</label><select id="f-rank">'
+      + ['','Master','Chief Officer','2nd Officer','3rd Officer','Chief Engineer','2nd Engineer','3rd Engineer','4th Engineer','Bosun','AB','OS','Cook','Electro-Technical Officer','Cadet']
+        .map(function(r){return '<option>'+r+'</option>';}).join('')
+    + '</select></div></div>'
+    + '<div class="row"><div><label>Vessel type*</label><select id="f-vtype">'
+      + ['','Bulk Carrier','Tanker (Crude)','Tanker (Product)','Tanker (Chemical)','LNG Carrier','LPG Carrier','Container','General Cargo','RoRo','Reefer','Offshore','Cruise','Other']
+        .map(function(t){return '<option>'+t+'</option>';}).join('')
+    + '</select></div>'
+    + '<div><label>Vessel name (optional)</label><input type="text" id="f-vname" placeholder="MV ..."></div></div>'
+    + '<div class="row"><div><label>IMO (optional)</label><input type="text" id="f-imo" placeholder="9XXXXXX"></div>'
+    + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"></div></div>'
+    + '<div class="row"><div><label>Join date (optional)</label><input type="date" id="f-jdate"></div>'
+    + '<div><label>Join port (optional)</label><input type="text" id="f-jport"></div></div>'
+    + '<div class="row"><div><label>Contract months</label><input type="number" id="f-months" min="1" max="12"></div>'
+    + '<div><label>Currency</label><select id="f-cur">'+['USD','EUR','GBP'].map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div></div>'
+    + '<div class="row"><div><label>Salary min/mo</label><input type="number" id="f-smin" min="0"></div>'
+    + '<div><label>Salary max/mo</label><input type="number" id="f-smax" min="0"></div></div>'
+    + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."></div></div>'
+    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
+    + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements"></textarea></div></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
+    + '</div>';
+}
+
+async function submitVacancy() {
+  var draft = {
+    title: val('f-title'),
+    rank: val('f-rank'),
+    vessel_type: val('f-vtype'),
+    vessel_name: val('f-vname') || null,
+    vessel_imo: val('f-imo') || null,
+    flag: val('f-flag') || null,
+    join_date: val('f-jdate') || null,
+    join_port: val('f-jport') || null,
+    contract_months: parseIntOrNull('f-months'),
+    salary_min: parseFloatOrNull('f-smin'),
+    salary_max: parseFloatOrNull('f-smax'),
+    salary_currency: val('f-cur') || null,
+    trading_area: val('f-trade') || null,
+    trading_russia_ok: document.getElementById('f-russia').checked,
+    description: val('f-desc') || null,
+    client_name: val('f-client') || null,
+  };
+  if (!draft.title || !draft.rank || !draft.vessel_type) {
+    showToast('Title, Rank and Vessel type are required', 'error');
+    return;
+  }
+  try {
+    var posted = await invoke('post_vacancy', { draft: draft });
+    showToast('Posted ✓ id '+posted.id, 'success');
+    showView('vacancies');
+  } catch (e) {
+    showToast(''+e, 'error');
+  }
+}
+
+function val(id){ var el=document.getElementById(id); return el ? (el.value||'').trim() : ''; }
+function parseIntOrNull(id){ var v=val(id); return v===''?null:parseInt(v,10); }
+function parseFloatOrNull(id){ var v=val(id); return v===''?null:parseFloat(v); }
+
+// ------------- settings (Obsidian-style modal) -------------
+var settingsTab = 'connection';
+
+async function openSettings(tab) {
+  if (tab) settingsTab = tab;
+  if (!state.settings) state.settings = await invoke('get_settings');
+  renderSettingsModal();
+}
+
+function closeSettings() {
+  document.getElementById('modal-host').innerHTML = '';
+  showView(state.view);
+}
+
+// Build a setting-row: label + description + control on the right.
+function settingRow(label, desc, controlHtml) {
+  return '<div class="setting-row">'
+    + '<div class="setting-info">'
+    + '<div class="setting-label">'+escapeHtml(label)+'</div>'
+    + (desc ? '<div class="setting-desc">'+desc+'</div>' : '')
+    + '</div>'
+    + '<div class="setting-control">'+controlHtml+'</div>'
+    + '</div>';
+}
+
+function inputCtrl(id, value, type, placeholder, width) {
+  return '<input type="'+(type||'text')+'" id="'+id+'" value="'+escapeAttr(value||'')+'"'
+    + (placeholder ? ' placeholder="'+escapeAttr(placeholder)+'"' : '')
+    + (width ? ' style="width:'+width+';"' : '') + '>';
+}
+
+function selectCtrl(id, value, options) {
+  // options: [[v, label, disabled?], ...]
+  return '<select id="'+id+'">'
+    + options.map(function(o){
+        return '<option value="'+escapeAttr(o[0])+'"'
+          + (value===o[0]?' selected':'')
+          + (o[2]?' disabled':'')
+          + '>'+escapeHtml(o[1])+'</option>';
+      }).join('')
+    + '</select>';
+}
+
+function renderSettingsModal() {
+  var s = state.settings || {};
+  var p = s.profile || {};
+  var iface = s.interface || {};
+
+  var navItem = function(id, icon, label) {
+    return '<div class="settings-nav-item'+(settingsTab===id?' active':'')
+      + '" onclick="openSettings(\''+id+'\')">'
+      + '<span class="nav-icon">'+icon+'</span> '+label+'</div>';
+  };
+
+  var nav =
+    '<div class="settings-nav-title">Crewing app</div>'
+    + navItem('connection', '🔌', 'Connection')
+    + navItem('profile',    '🏢', 'Crewing profile')
+    + navItem('vaults',     '📁', 'Vaults')
+    + '<div class="settings-nav-title">Interface</div>'
+    + navItem('appearance', '🎨', 'Appearance')
+    + '<div class="settings-nav-title">Help</div>'
+    + navItem('about',      'ⓘ', 'About Skipi Crewing');
+
+  var body = '';
+  if (settingsTab==='connection') {
+    body = '<div class="settings-section"><h3>Connection</h3>'
+      + '<div class="section-desc">Server endpoint and credentials issued by Skipi after company verification.</div>'
+      + settingRow('Server URL', 'Default <code>http://127.0.0.1:8000</code> for dev. <code>https://api.skipi.app</code> for prod.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
+      + settingRow('Bearer token', 'Authenticates write actions against the server.', inputCtrl('s-token', s.bearer_token, 'password', 'Paste token', '240px'))
+      + settingRow('Crewing ID', 'Server-side UUID of your crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
+      + settingRow('Company display name', 'Shown in the app title only — not sent to the server.', inputCtrl('s-company', s.company_name, 'text', 'e.g. Marlow Crewing Ltd', '240px'))
+      + settingRow('Reply-to email (optional)', 'Override for application replies. Falls back to the crewing contact email if blank.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@yourcompany.com', '240px'))
+      + '</div>';
+  } else if (settingsTab==='profile') {
+    body = '<div class="settings-section"><h3>Crewing profile</h3>'
+      + '<div class="section-desc">Public-facing details of your crewing company. Sent to Skipi during the verification ladder (<code>email_verified → company_verified → industry_verified</code>). Not shown to seafarers until <code>company_verified</code>.</div>'
+      + settingRow('Legal name', 'Full registered name as it appears on your incorporation paperwork.', inputCtrl('p-legal', p.legal_name, 'text', 'Marlow Navigation Co. Ltd', '240px'))
+      + settingRow('Public slug', 'URL-safe identifier used in the public crewing profile (later).', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
+      + settingRow('Jurisdiction', 'ISO 3166 country code where the company is registered.', inputCtrl('p-jur', p.jurisdiction, 'text', 'CY / GR / GE...', '120px'))
+      + settingRow('Registration number', 'Company number issued by the registrar.', inputCtrl('p-reg', p.registration_number, 'text', 'HE 12345', '240px'))
+      + settingRow('MLC certificate number', 'Maritime Labour Convention certificate identifier.', inputCtrl('p-mlc', p.mlc_cert_number, 'text', 'MLC-CY-2025-0042', '240px'))
+      + settingRow('MLC valid to', 'Expiry date of the MLC certificate.', inputCtrl('p-mlc-to', p.mlc_cert_valid_to, 'date', '', '160px'))
+      + settingRow('Contact email', 'Reaches the crewing — e.g. for verification correspondence.', inputCtrl('p-email', p.contact_email, 'text', 'hr@marlow.cy', '240px'))
+      + settingRow('Contact phone', 'Optional. Used only on company_verified profiles.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+      + '</div>';
+  } else if (settingsTab==='vaults' || settingsTab==='vault') {
+    var current = s.vault_path || '(default — ~/.local/share/skipi-crewing)';
+    var recent = (s.recent_vaults || []).filter(function(v){return v && v !== s.vault_path;});
+    var suggested = suggestedCrewingVaultName();
+    var recentHtml = '';
+    if (recent.length) {
+      recentHtml = '<div class="settings-section"><h3>Recent vaults</h3>'
+        + '<div class="section-desc">Vault folders you have used recently. Click "Switch" to point Skipi Crewing at one of them.</div>'
+        + recent.map(function(p){
+            return '<div class="setting-row">'
+              + '<div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(p)+'</div></div>'
+              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(p)+'\')">Switch</button>'
+              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(p)+'\')" title="Remove from recent list">Forget</button></div>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+    body = '<div class="settings-section"><h3>Vaults</h3>'
+      + '<div class="section-desc">Each vault is a clearly named folder containing the Skipi Crewing database and uploaded documents. Suggested name: <code>'+escapeHtml(suggested)+'</code>. <strong>For multi-user crewing teams</strong> point the vault at a shared network folder (SMB / NFS) so all HR managers work against the same data.</div>'
+      + '<div class="setting-row"><div class="setting-info">'
+      + '<div class="setting-label">Current vault</div>'
+      + '<div class="setting-desc" style="font-family:monospace;font-size:11px;word-break:break-all;">'+escapeHtml(current)+'</div></div>'
+      + '<div class="setting-control"></div></div>'
+      + '<div class="setting-row"><div class="setting-info">'
+      + '<div class="setting-label">Create/select named vault</div>'
+      + '<div class="setting-desc">Pick a parent folder. Skipi Crewing will use <code>'+escapeHtml(suggested)+'</code> inside it, so the vault is easy to find in your file manager.</div></div>'
+      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="createNamedCrewingVault()">Create named…</button></div></div>'
+      + '<div class="setting-row"><div class="setting-info">'
+      + '<div class="setting-label">Open existing vault folder</div>'
+      + '<div class="setting-desc">Pick an existing named folder, for example <code>Skipi Crewing - Marlow Navigation</code>. The switch takes effect on next app start.</div></div>'
+      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openVaultPickerInline()">Open existing…</button></div></div>'
+      + '<div class="setting-row"><div class="setting-info">'
+      + '<div class="setting-label">Reset to default</div>'
+      + '<div class="setting-desc">Drop the current vault path so the per-user default location is used.</div></div>'
+      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\'\')">Reset</button></div></div>'
+      + '</div>'
+      + recentHtml;
+  } else if (settingsTab==='appearance') {
+    body = '<div class="settings-section"><h3>Appearance</h3>'
+      + '<div class="section-desc">Visual preferences. More options arrive as the app grows.</div>'
+      + settingRow('Theme', 'Light theme arrives in a future release.', selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
+      + settingRow('Language', 'Russian arrives in a future release.', selectCtrl('i-lang', iface.language||'en', [['en','English'],['ru','Русский (coming soon)',true]]))
+      + '</div>';
+  } else if (settingsTab==='about') {
+    body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
+      + '<div class="section-desc">The employer-side companion to <a href="https://skipi.app" style="color:var(--accent);">Skipi</a>, the seafarer document vault.</div>'
+      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Version</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check for updates</div><div class="setting-desc">Ask the server now whether a newer version is available.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Check now</button></div></div>'
+      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Maintainer</div></div><div class="setting-control">Tymur Rudov</div></div>'
+      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">License</div></div><div class="setting-control">Proprietary</div></div>'
+      + '</div>';
+  }
+
+  var html =
+    '<div class="settings-overlay" onclick="if(event.target===this)closeSettings()">'
+    + '<div class="settings-modal">'
+    + '<div class="settings-close" onclick="closeSettings()" title="Close">×</div>'
+    + '<div class="settings-nav">'+nav+'</div>'
+    + '<div class="settings-body" style="padding-bottom:64px;">'+body+'</div>'
+    + '<div class="settings-actions-bar">'
+    + '<button class="ghost" onclick="closeSettings()">Cancel</button>'
+    + '<button onclick="saveSettings()">Save</button>'
+    + '</div>'
+    + '</div></div>';
+
+  document.getElementById('modal-host').innerHTML = html;
+
+  // Fill version label after DOM mounts.
+  if (settingsTab==='about') {
+    var av = document.getElementById('about-version');
+    if (av) av.textContent = (state.settings && state.settings._app_version) || '0.1.x';
+  }
+}
+
+async function pickVaultFolder() {
+  try {
+    var dlg = window.__TAURI__.dialog;
+    var picked = await dlg.open({ directory: true, multiple: false, title: 'Select Skipi Crewing vault folder' });
+    if (picked) {
+      var inp = document.getElementById('v-path');
+      if (inp) inp.value = picked;
+    }
+  } catch (e) {
+    showToast('Could not open folder picker: '+e, 'error');
+  }
+}
+
+async function createNamedCrewingVault() {
+  try {
+    var folder = suggestedCrewingVaultName();
+    var picked = await window.__TAURI__.dialog.open({ directory: true, multiple: false, title: 'Choose parent folder for '+folder });
+    if (!picked) return;
+    var path = joinFolderPath(picked, folder);
+    if (!confirm('Skipi Crewing will use this vault folder after restart:\n\n'+path+'\n\nThe clear folder name makes it easier to find in your file manager.')) return;
+    await invoke('ensure_vault_folder', { path: path });
+    await switchToVault(path);
+  } catch (e) {
+    showToast('Folder pick failed: '+e, 'error');
+  }
+}
+
+async function openVaultPickerInline() {
+  try {
+    var picked = await window.__TAURI__.dialog.open({ directory: true, multiple: false, title: 'Select existing Skipi Crewing vault folder' });
+    if (!picked) return;
+    await switchToVault(picked);
+  } catch (e) {
+    showToast('Folder pick failed: '+e, 'error');
+  }
+}
+
+async function switchToVault(path) {
+  var s = state.settings || {};
+  var recent = (s.recent_vaults || []).filter(Boolean);
+  if (s.vault_path && !recent.includes(s.vault_path)) recent.unshift(s.vault_path);
+  recent = recent.filter(function(p){return p !== path;}).slice(0, 8);
+  var newSettings = Object.assign({}, s, { vault_path: path, recent_vaults: recent });
+  try {
+    await invoke('save_settings', { newSettings: newSettings });
+    state.settings = newSettings;
+    updateVaultLabel();
+    showToast('Vault set. Restart Skipi Crewing to apply.', 'success');
+    renderSettingsModal();
+  } catch (e) {
+    showToast('Could not save: '+e, 'error');
+  }
+}
+
+async function forgetVault(path) {
+  var s = state.settings || {};
+  var recent = (s.recent_vaults || []).filter(function(p){return p && p !== path;});
+  var newSettings = Object.assign({}, s, { recent_vaults: recent });
+  try {
+    await invoke('save_settings', { newSettings: newSettings });
+    state.settings = newSettings;
+    renderSettingsModal();
+  } catch (e) {
+    showToast('Could not save: '+e, 'error');
+  }
+}
+
+async function checkForUpdatesManual() {
+  showToast('Checking…', 'info');
+  try {
+    var updater = window.__TAURI__.updater;
+    var update = updater && updater.check ? await updater.check() : await invoke('plugin:updater|check');
+    if (update && update.available) {
+      state.pendingUpdate = update;
+      showUpdateBanner(update);
+      showToast('Update '+update.version+' available — see banner above.', 'success');
+    } else {
+      showToast('You are on the latest version ('+state.appVersion+').', 'success');
+    }
+  } catch (e) {
+    showToast('Check failed: '+e, 'error');
+  }
+}
+
+async function saveSettings() {
+  // Read every field across all four tabs, but only those that are mounted.
+  // For tabs not currently visible, fall back to the cached state.settings
+  // to avoid losing values when the user toggles between tabs.
+  var s = state.settings || {};
+  var p = s.profile || {};
+  var iface = s.interface || {};
+
+  var pick = function(id, fallback) { var el=document.getElementById(id); return el ? el.value.trim() : fallback; };
+
+  var newSettings = {
+    server_url: pick('s-url', s.server_url||''),
+    bearer_token: pick('s-token', s.bearer_token||''),
+    crewing_id: pick('s-crewing-id', s.crewing_id||''),
+    company_name: pick('s-company', s.company_name||''),
+    reply_to: pick('s-reply', s.reply_to||''),
+    vault_path: pick('v-path', s.vault_path||''),
+    recent_vaults: s.recent_vaults || [],
+    profile: {
+      legal_name:           pick('p-legal',  p.legal_name||''),
+      jurisdiction:         pick('p-jur',    p.jurisdiction||''),
+      registration_number:  pick('p-reg',    p.registration_number||''),
+      mlc_cert_number:      pick('p-mlc',    p.mlc_cert_number||''),
+      mlc_cert_valid_to:    pick('p-mlc-to', p.mlc_cert_valid_to||''),
+      contact_email:        pick('p-email',  p.contact_email||''),
+      contact_phone:        pick('p-phone',  p.contact_phone||''),
+      slug:                 pick('p-slug',   p.slug||''),
+    },
+    interface: {
+      theme:    pick('i-theme', iface.theme||'dark'),
+      language: pick('i-lang',  iface.language||'en'),
+    },
+  };
+  try {
+    await invoke('save_settings', { newSettings: newSettings });
+    state.settings = newSettings;
+    showToast('Settings saved', 'success');
+    updateVaultLabel();
+    closeSettings();
+  } catch (e) {
+    showToast(''+e, 'error');
+  }
+}
+
+function escapeHtml(s){ return (s||'').replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+
+// ------------- updater (banner, not dialog) -------------
+async function checkForUpdates() {
+  try {
+    var updater = window.__TAURI__.updater;
+    var update = null;
+    if (updater && updater.check) {
+      update = await updater.check();
+    } else {
+      var result = await invoke('plugin:updater|check');
+      update = (result && result.available) ? result : null;
+    }
+    if (update && update.available) {
+      state.pendingUpdate = update;
+      showUpdateBanner(update);
+    }
+  } catch (e) {
+    console.log('updater check failed:', e);
+  }
+}
+
+function showUpdateBanner(update) {
+  var v = update.version || '';
+  var current = update.currentVersion || '';
+  var html =
+    '<div class="update-banner">'
+    + '<div class="ub-msg">Skipi Crewing '+escapeHtml(v)+' is available'+(current?' (current '+escapeHtml(current)+')':'')+'</div>'
+    + '<button onclick="doInstallUpdate()">Install now</button>'
+    + '<button onclick="openDebFolder()">Open download folder</button>'
+    + '<span class="ub-close" onclick="hideUpdateBanner()" title="Dismiss">×</span>'
+    + '</div>';
+  document.getElementById('update-banner-host').innerHTML = html;
+  // Push main content down by banner height so first row isn't covered.
+  document.querySelector('main').style.paddingTop = '52px';
+}
+
+function hideUpdateBanner() {
+  document.getElementById('update-banner-host').innerHTML = '';
+  document.querySelector('main').style.paddingTop = '';
+  state.pendingUpdate = null;
+}
+
+async function doInstallUpdate() {
+  var update = state.pendingUpdate;
+  if (!update) return;
+  showToast('Downloading update...', 'info');
+  try {
+    if (update.downloadAndInstall) {
+      await update.downloadAndInstall();
+    } else {
+      await invoke('plugin:updater|download_and_install');
+    }
+    showToast('Update installed. Restarting…', 'success');
+    hideUpdateBanner();
+    // Auto-relaunch so the user doesn't have to close/reopen manually.
+    setTimeout(async function(){
+      try {
+        if (window.__TAURI__.process && window.__TAURI__.process.relaunch) {
+          await window.__TAURI__.process.relaunch();
+        } else {
+          await invoke('plugin:process|restart');
+        }
+      } catch (e) {
+        showToast('Restart failed: '+e+'. Close and reopen Skipi Crewing manually.', 'warn');
+      }
+    }, 800);
+  } catch (e) {
+    // Linux .deb: auto-install fails. Walk the user through manual install.
+    showToast('On Linux .deb the new package must be installed manually. Click "Open download folder".', 'warn');
+  }
+}
+
+async function openDebFolder() {
+  // Try to surface the platform-specific download folder. On dev (this
+  // machine) the .deb sits in the build tree; on a real install the OS
+  // download folder is what the user expects. We just toast a hint and
+  // copy the dpkg command to the clipboard for one-shot install.
+  var cmd = 'sudo dpkg -i ~/Downloads/Skipi-Crewing_'+(state.pendingUpdate&&state.pendingUpdate.version||'latest')+'_amd64.deb';
+  try {
+    if (window.__TAURI__.clipboardManager && window.__TAURI__.clipboardManager.writeText) {
+      await window.__TAURI__.clipboardManager.writeText(cmd);
+      showToast('Install command copied to clipboard. Download .deb from the GitHub release page (Skipi Crewing in skipi.app), then paste in terminal.', 'info');
+    } else {
+      showToast('Run: '+cmd, 'info');
+    }
+  } catch (e) {
+    showToast('Run: '+cmd, 'info');
+  }
+}
+
+function updateVaultLabel() {
+  var s = state.settings || {};
+  var name = s.vault_path && s.vault_path.length ? s.vault_path.split('/').filter(Boolean).pop() : 'Default vault';
+  var el = document.getElementById('mb-vault-name');
+  if (el) el.textContent = name;
+  var box = document.getElementById('mb-vault');
+  if (box) box.title = s.vault_path ? ('Current vault: '+s.vault_path) : 'Default vault: ~/.local/share/skipi-crewing';
+}
+
+// ------------- drag-drop file from OS (Tauri v2 webview events) -------------
+async function setupFileDragDrop() {
+  if (!window.__TAURI__ || !window.__TAURI__.event) return;
+  var listen = window.__TAURI__.event.listen;
+  var onDrop = function(payload){
+    if (!payload || !payload.paths || !payload.paths.length) return;
+    var sourcePath = payload.paths[0];
+    var d = state.selectedDocument;
+    if (state.view !== 'documents' || !d) {
+      showToast('Open a document first, then drop the file', 'warn');
+      return;
+    }
+    invoke('attach_file_to_document', { docId: d.id, sourcePath: sourcePath }).then(function(updated){
+      state.selectedDocument = updated;
+      showToast('File attached: '+sourcePath.split('/').pop(), 'success');
+      renderDocumentsTree().then(function(){ renderDocumentDetail(); });
+    }).catch(function(e){ showToast('Attach failed: '+e, 'error'); });
+  };
+  // Tauri 2 event names
+  ['tauri://drag-drop','tauri://file-drop'].forEach(function(name){
+    try { listen(name, function(ev){ onDrop(ev.payload); }); } catch(e){}
+  });
+}
+
+// ------------- boot -------------
+(async function(){
+  try { state.settings = await invoke('get_settings'); } catch(e){}
+  updateVaultLabel();
+  showView('vacancies');
+  setupFileDragDrop();
+  setTimeout(checkForUpdates, 2000);
+  setTimeout(autoRegisterMessagingPubkey, 1500);
+  // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
+  // applications) in sync with the server without surfacing any UI.
+  setInterval(silentRefreshVacancies, 30000);
+})();
+
+async function silentRefreshVacancies() {
+  if (state.view !== 'vacancies' && state.view !== 'new') return;
+  try {
+    var fresh = await invoke('fetch_my_vacancies');
+    state.vacancies = fresh;
+    renderVacanciesTreeBody();
+    if (state.selectedVacancy) {
+      var still = fresh.find(function(v){ return v.id === state.selectedVacancy.id; });
+      if (still) {
+        state.selectedVacancy = still;
+        // Pull applications quietly too.
+        try {
+          var apps = await invoke('fetch_applications_for_vacancy', { vacancyId: still.id });
+          state.applicationsByVacancy[still.id] = apps;
+          if (state.selectedVacancy && state.selectedVacancy.id === still.id) {
+            state.applications = apps;
+            // Don't blow away the DOM if a chat thread is open — that
+            // collapses it under the user's hands. The in-chat 15s poll
+            // keeps that conversation fresh on its own. Only repaint
+            // when nothing is expanded.
+            var anyOpen = document.querySelector('[id^="appthread-"][data-loaded="1"]');
+            if (!anyOpen) paintApplicationsList(apps);
+          }
+        } catch(e){}
+      }
+    }
+  } catch(e){}
+}
+
+// Phase 2: register this Crewing app's X25519 pubkey on startup so the
+// seafarer side can encrypt to us. Idempotent — safe to call every launch.
+async function autoRegisterMessagingPubkey() {
+  var s = state.settings || {};
+  if (!s.crewing_id) {
+    console.log('Skipping pubkey registration — crewing_id not set in Settings');
+    return;
+  }
+  try {
+    state.myIdentity = await invoke('register_my_pubkey', { crewingId: s.crewing_id });
+    console.log('Skipi messaging identity:', state.myIdentity.user_id);
+  } catch (e) {
+    console.log('Pubkey register failed (will retry on next launch):', e);
+  }
+}
+</script>
+</body>
+</html>

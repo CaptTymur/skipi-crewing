@@ -1,0 +1,118 @@
+# Skipi Crewing — private cross-platform release build.
+#
+# Source stays in the private repository; public tester downloads are copied
+# to the public landing repo after the release job finishes.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  syntax-check:
+    name: JS syntax check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check inline JS in dist/index.html
+        run: |
+          node -e '
+            const fs = require("fs");
+            const html = fs.readFileSync("dist/index.html", "utf8");
+            const blocks = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+            if (!blocks.length) { console.error("no <script> blocks found"); process.exit(1); }
+            const main = blocks.join("\n");
+            try {
+              new Function(main);
+              console.log("JS syntax OK (" + main.length + " chars across " + blocks.length + " blocks)");
+            } catch (e) {
+              console.error("SYNTAX ERROR in dist/index.html inline JS:");
+              console.error("  " + e.message);
+              process.exit(1);
+            }
+          '
+
+  build:
+    needs: syntax-check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            name: Linux
+          - platform: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            name: Windows
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.name }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Build Skipi Crewing
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Skipi Crewing ${{ github.ref_name }}"
+          releaseBody: |
+            ## Skipi Crewing ${{ github.ref_name }}
+
+            Employer-side companion application for invited Skipi testers.
+
+            ### Download
+
+            | Platform | File |
+            |----------|------|
+            | Windows | `.msi` / `.exe` |
+            | Linux | `.deb` / `.AppImage` / `.rpm` |
+
+            > Private source build. Public tester links are published separately on skipi.app.
+          releaseDraft: false
+          prerelease: false

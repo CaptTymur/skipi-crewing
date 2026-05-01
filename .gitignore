@@ -1,0 +1,13 @@
+src-tauri/target/
+src-tauri/gen/
+*.log
+.DS_Store
+.~lock.*
+
+# Local-only docs & internal notes
+docs/
+investment/
+
+# Local build artifacts
+dist/build/
+node_modules/
