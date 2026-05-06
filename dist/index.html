@@ -83,6 +83,20 @@ input[type="text"], input[type="number"], input[type="date"], select, textarea {
   width: 100%; padding: 8px 10px; background: var(--panel2); color: var(--text);
   border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-family: inherit;
 }
+/* WebKit/GTK draws the collapsed select using system theme colors —
+   reads as faded gray on dark bg. appearance:none puts it under our CSS. */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23e6e8ec' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 7px;
+}
+select option { background: var(--panel); color: var(--text); }
+select option:checked, select option:hover { background: var(--accent); color: #fff; }
 textarea { min-height: 100px; resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
 button { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 4px;
@@ -200,10 +214,13 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 <body>
 <div class="modules-bar">
   <div class="mod-tab active" id="mt-vacancies" onclick="showView('vacancies')" title="My posted vacancies">
-    <span>⚓</span><span>My vacancies</span><span id="nav-vacancies-badge" class="nav-badge" style="display:none;">0</span>
+    <span>My vacancies</span><span id="nav-vacancies-badge" class="nav-badge" style="display:none;">0</span>
+  </div>
+  <div class="mod-tab" id="mt-mailings" onclick="showView('mailings')" title="CV mailing requests">
+    <span>Рассылки</span>
   </div>
   <div class="mod-tab" id="mt-documents" onclick="showView('documents')" title="Crewing documents (templates, checklists, license, MLC cert)">
-    <span>📄</span><span>Documents</span>
+    <span>Documents</span>
   </div>
   <div class="mb-spacer"></div>
   <div class="mb-vault" id="mb-vault" onclick="openSettings('vaults')" title="Switch vault"><span>📁</span><span class="mb-vault-name" id="mb-vault-name">Vault</span></div>
@@ -219,14 +236,117 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 
 <script>
 var invoke = window.__TAURI__.core.invoke;
+var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFileSrc)
+    || function(p){ return 'file://'+p; };
 
 // Window title comes from tauri.conf.json statically ("Skipi Crewing X.Y.Z").
 // Direct JS setTitle is blocked by Tauri ACL — would surface a red error bar.
+
+// Canonical maritime nomenclature, fetched from skipi-server on boot.
+// Always single-source-of-truth — never invent values in client code.
+var TAXONOMY = null;
+var TAXONOMY_CACHE_KEY = 'skipi-taxonomy';
+var TAXONOMY_CACHE_TTL_MS = 60 * 60 * 1000;
+var TAXONOMY_FALLBACK = {
+  positions: [
+    {id:'master',          label:'Master'},
+    {id:'chief_officer',   label:'Chief Officer'},
+    {id:'second_officer',  label:'Second Officer'},
+    {id:'third_officer',   label:'Third Officer'},
+    {id:'chief_engineer',  label:'Chief Engineer'},
+    {id:'second_engineer', label:'Second Engineer'},
+    {id:'third_engineer',  label:'Third Engineer'},
+    {id:'fourth_engineer', label:'Fourth Engineer'},
+    {id:'eto',             label:'Electro-Technical Officer (ETO)'},
+    {id:'bosun',           label:'Bosun'},
+    {id:'ab',              label:'Able Seaman (AB)'},
+    {id:'os',              label:'Ordinary Seaman (OS)'},
+    {id:'motorman',        label:'Motorman'},
+    {id:'wiper',           label:'Wiper'},
+    {id:'fitter',          label:'Fitter'},
+    {id:'cook',            label:'Cook'},
+    {id:'messman',         label:'Messman / Steward'},
+    {id:'cadet_deck',      label:'Deck Cadet'},
+    {id:'cadet_engine',    label:'Engine Cadet'},
+  ],
+  vessel_types: [
+    {id:'bulk_carrier',    label:'Bulk Carrier'},
+    {id:'general_cargo',   label:'General Cargo'},
+    {id:'container',       label:'Container'},
+    {id:'tanker_crude',    label:'Tanker (Crude)'},
+    {id:'tanker_product',  label:'Tanker (Product)'},
+    {id:'tanker_chemical', label:'Tanker (Chemical)'},
+    {id:'lng_carrier',     label:'LNG Carrier'},
+    {id:'lpg_carrier',     label:'LPG Carrier'},
+    {id:'ro_ro',           label:'RoRo'},
+    {id:'reefer',          label:'Reefer'},
+    {id:'offshore',        label:'Offshore'},
+    {id:'cruise',          label:'Cruise'},
+    {id:'ferry',           label:'Ferry'},
+    {id:'tug',             label:'Tug'},
+    {id:'yacht',           label:'Yacht'},
+    {id:'other',           label:'Other'},
+  ],
+};
+
+function taxonomyLabels(kind) {
+  var t = TAXONOMY || TAXONOMY_FALLBACK;
+  return (t[kind]||[]).map(function(x){return x.label;});
+}
+
+function readTaxonomyCache() {
+  try {
+    var raw = localStorage.getItem(TAXONOMY_CACHE_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.payload) return parsed;
+    return { fetched_at: 0, version: (parsed && parsed.version) || 0, payload: parsed };
+  } catch(e) {
+    return null;
+  }
+}
+
+function writeTaxonomyCache(data) {
+  try {
+    localStorage.setItem(TAXONOMY_CACHE_KEY, JSON.stringify({
+      fetched_at: Date.now(),
+      version: (data && data.version) || 0,
+      payload: data,
+    }));
+  } catch(e){}
+}
+
+async function loadTaxonomy() {
+  // Cache-first from localStorage so the form opens instantly even if
+  // the server is slow. The full /api/catalogs payload is cached for
+  // future cert-matrix work, but not used by current document flows.
+  var cached = readTaxonomyCache();
+  if (cached && cached.payload) TAXONOMY = cached.payload;
+  if (cached && cached.fetched_at && Date.now() - cached.fetched_at < TAXONOMY_CACHE_TTL_MS) return;
+
+  var base = (state.settings && state.settings.server_url ? state.settings.server_url : 'https://api.skipi.app').replace(/\/$/,'');
+  var urls = [base + '/api/catalogs', base + '/api/taxonomy'];
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      var resp = await fetch(urls[i]);
+      if (resp.ok) {
+        var data = await resp.json();
+        if (data && data.positions && data.vessel_types) {
+          TAXONOMY = data;
+          writeTaxonomyCache(data);
+          return;
+        }
+      }
+    } catch(e){}
+  }
+}
 
 var state = {
   view: 'vacancies',
   settings: null,
   vacancies: [],
+  mailingRequests: [],
+  selectedMailingRequest: null,
   sortBy: 'open_first',
   selectedVacancy: null,
   applications: [],
@@ -242,7 +362,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.77',
+  appVersion: '0.4.101',
 };
 
 // ------------- toasts -------------
@@ -278,8 +398,8 @@ function suggestedCrewingVaultName() {
 function showView(v) {
   state.view = v;
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
-  var topTab = (v==='new') ? 'vacancies' : v;
-  ['vacancies','documents'].forEach(function(k){
+  var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : v);
+  ['vacancies','mailings','documents'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -294,6 +414,19 @@ function showView(v) {
     document.getElementById('left-panel').style.display = '';
     renderVacanciesTree();
     renderNewVacancy();
+    return;
+  }
+  if (v==='mailings') {
+    document.getElementById('left-panel').style.display = '';
+    renderMailingRequestsTree();
+    if (state.selectedMailingRequest) renderMailingRequestDetail();
+    else renderMailingRequestsEmptyMain();
+    return;
+  }
+  if (v==='new_mailing') {
+    document.getElementById('left-panel').style.display = '';
+    renderMailingRequestsTree();
+    renderNewMailingRequest();
     return;
   }
   if (v==='documents') {
@@ -574,6 +707,203 @@ function renderVacanciesTreeBody() {
   tree.innerHTML = html;
 }
 
+// ------------- mailing requests -------------
+async function renderMailingRequestsTree(opts) {
+  opts = opts || {};
+  var force = opts.force === true;
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">Рассылки</span>'
+    + '<span class="actions" style="display:flex;gap:4px;">'
+    + '<button onclick="showView(\'new_mailing\')" style="padding:4px 10px;font-size:11px;" title="Publish a CV mailing request">＋ New</button>'
+    + '</span>'
+    + '</div>'
+    + '<div class="panel-search"><input type="text" id="mailing-search" placeholder="Search..." oninput="state.mailingSearch=this.value.toLowerCase();renderMailingRequestsTreeBody();"></div>'
+    + '<div class="panel-tree" id="panel-tree">'
+    + (state.mailingRequests && state.mailingRequests.length ? '' : '<div class="tree-empty">Loading...</div>')
+    + '</div>';
+
+  if (state.mailingRequests && state.mailingRequests.length) renderMailingRequestsTreeBody();
+  if (!force && state.mailingRequests && state.mailingRequests.length) return;
+
+  try {
+    state.mailingRequests = await invoke('fetch_my_mailing_requests');
+  } catch (e) {
+    document.getElementById('panel-tree').innerHTML =
+      '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
+    return;
+  }
+  renderMailingRequestsTreeBody();
+}
+
+function renderMailingRequestsTreeBody() {
+  var tree = document.getElementById('panel-tree');
+  if (!tree) return;
+  var q = (state.mailingSearch || '').toLowerCase();
+  var rows = (state.mailingRequests || []).filter(function(r){
+    if (!q) return true;
+    return [r.title,r.rank,r.vessel_type,r.crewing_ref,r.client_name,r.reply_to]
+      .join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+  if (!rows.length) {
+    tree.innerHTML = '<div class="tree-empty">No mailing requests yet.<br><br><button onclick="showView(\'new_mailing\')">＋ Publish one</button></div>';
+    return;
+  }
+  rows.sort(function(a,b){
+    var as = a.status==='active' ? 0 : 1;
+    var bs = b.status==='active' ? 0 : 1;
+    if (as !== bs) return as - bs;
+    return (b.published_at||'').localeCompare(a.published_at||'');
+  });
+  var html = '';
+  rows.forEach(function(r){
+    var isActive = state.selectedMailingRequest && state.selectedMailingRequest.id === r.id;
+    var statusGlyph = r.status==='active' ? '📨' : '✓';
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openMailingRequestById(\''+escapeAttr(r.id)+'\')">';
+    html += '<span style="font-size:11px;color:var(--text2);">'+statusGlyph+'</span>';
+    html += '<div class="ti-title"><div>'+escapeHtml(r.title||'?')+'</div>';
+    html += '<div class="ti-meta">'+escapeHtml(r.rank||'?')+' · '+escapeHtml(r.vessel_type||'?')+' · '+escapeHtml((r.published_at||'').slice(0,10))+'</div>';
+    if (r.client_name) html += '<div class="ti-meta" style="color:var(--accent);">★ '+escapeHtml(r.client_name)+'</div>';
+    html += '</div></div>';
+  });
+  tree.innerHTML = html;
+}
+
+function renderMailingRequestsEmptyMain() {
+  document.getElementById('main').innerHTML =
+    '<div class="empty" style="margin-top:80px;">'
+    + '<div class="icon" style="font-size:64px;">📨</div>'
+    + '<div style="font-size:16px;margin-top:8px;">Select a mailing request or publish a new one.</div>'
+    + '</div>';
+}
+
+function openMailingRequestById(id) {
+  state.selectedMailingRequest = (state.mailingRequests||[]).find(function(r){return r.id===id;});
+  var items = document.querySelectorAll('#panel-tree .tree-item');
+  for (var i = 0; i < items.length; i++) items[i].classList.remove('active');
+  var sel = Array.prototype.find.call(items, function(el){
+    return (el.getAttribute('onclick')||'').indexOf("'"+id+"'") !== -1;
+  });
+  if (sel) sel.classList.add('active');
+  renderMailingRequestDetail();
+}
+
+function renderMailingRequestDetail() {
+  var m = document.getElementById('main');
+  var r = state.selectedMailingRequest;
+  if (!r) { renderMailingRequestsEmptyMain(); return; }
+  var statusBadge = r.status === 'active'
+    ? '<span class="tag ok" style="font-size:11px;margin-left:8px;vertical-align:middle;">active</span>'
+    : '<span class="tag" style="background:rgba(245,158,11,0.2);color:var(--warn);font-size:11px;margin-left:8px;vertical-align:middle;">closed</span>';
+  var actBtn = 'padding:6px 12px;font-size:12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:600;';
+  var dangerBtn = actBtn + 'border-color:var(--err);color:var(--err);';
+  var actions = r.status === 'active'
+    ? '<button style="'+actBtn+'" onclick="closeMailingRequest(\''+escapeAttr(r.id)+'\')">Close</button>'
+    : '<button style="'+actBtn+'" onclick="reopenMailingRequest(\''+escapeAttr(r.id)+'\')">Reopen</button>';
+  actions += ' <button style="'+dangerBtn+'" onclick="deleteMailingRequest(\''+escapeAttr(r.id)+'\')">Delete</button>';
+  m.innerHTML =
+    '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
+    + '<h1 style="margin:0;flex:1;min-width:0;">'+escapeHtml(r.title)+statusBadge+'</h1>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0;">'+actions+'</div>'
+    + '</div>'
+    + '<div class="sub">'+escapeHtml(r.rank)+' · '+escapeHtml(r.vessel_type)+' · posted '+escapeHtml((r.published_at||'').slice(0,10))+' · <code>'+escapeHtml(r.id)+'</code></div>'
+    + '<div class="card" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px;">'
+    + '<div><label>Recipient email</label><div style="font-family:monospace;font-size:12px;">'+escapeHtml(r.reply_to||'')+'</div></div>'
+    + '<div><label>CV send clicks</label><div style="font-size:18px;font-weight:700;">'+(r.send_click_count||0)+'</div></div>'
+    + '<div><label>Hidden</label><div style="font-size:18px;font-weight:700;">'+(r.hide_count||0)+'</div></div>'
+    + '<div><label>Client</label><div style="font-size:13px;">'+escapeHtml(r.client_name||'—')+'</div></div>'
+    + '</div>'
+    + '<div class="card">'
+    + '<div class="row"><div><label>Rank</label><input value="'+escapeAttr(r.rank||'')+'" disabled></div><div><label>Vessel type</label><input value="'+escapeAttr(r.vessel_type||'')+'" disabled></div></div>'
+    + '<div class="row"><div><label>Minimum experience</label><input value="'+escapeAttr(r.min_experience_years?String(r.min_experience_years)+' years':'—')+'" disabled></div><div><label>Status</label><input value="'+escapeAttr(r.status||'')+'" disabled></div></div>'
+    + '<div class="row full"><div><label>Description</label><textarea disabled style="min-height:120px;">'+escapeHtml(r.description||'')+'</textarea></div></div>'
+    + '</div>';
+}
+
+function renderNewMailingRequest() {
+  var m = document.getElementById('main');
+  m.innerHTML = '<h1>New mailing request</h1><div class="sub">Published to <code>skipi.app</code>. Seafarer apps use it to add your agency email to an outbound CV mailing list.</div>'
+    + '<div class="card">'
+    + '<div class="row full"><div><label>Client / pool label</label><input type="text" id="mr-client" placeholder="e.g. Bulk carrier pool, internal, Costamare"></div></div>'
+    + '<div class="row"><div><label>Title*</label><input type="text" id="mr-title" placeholder="e.g. Receive Master CVs for bulk carriers"></div>'
+    + '<div><label>Reply-to email</label><input type="email" id="mr-reply" placeholder="hr@yourcompany.com"></div></div>'
+    + '<div class="row"><div><label>Rank*</label><select id="mr-rank">'
+      + (['']).concat(taxonomyLabels('positions')).map(function(r){return '<option>'+escapeHtml(r)+'</option>';}).join('')
+    + '</select></div>'
+    + '<div><label>Vessel type*</label><select id="mr-vtype">'
+      + (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')
+    + '</select></div></div>'
+    + '<div class="row"><div><label>Minimum experience, years</label><input type="number" id="mr-exp" min="0" max="60"></div><div></div></div>'
+    + '<div class="row full"><div><label>Description</label><textarea id="mr-desc" placeholder="Which CVs you want to receive, vessel types, trading limits, documents to include"></textarea></div></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'mailings\')">Cancel</button><button onclick="submitMailingRequest()">Publish request</button></div>'
+    + '</div>';
+  m.scrollTop = 0;
+}
+
+async function submitMailingRequest() {
+  var draft = {
+    title: val('mr-title'),
+    rank: val('mr-rank'),
+    vessel_type: val('mr-vtype'),
+    reply_to: val('mr-reply') || null,
+    client_name: val('mr-client') || null,
+    description: val('mr-desc') || null,
+    min_experience_years: parseIntOrNull('mr-exp'),
+    required_certs: null,
+    languages: null,
+  };
+  if (!draft.title || !draft.rank || !draft.vessel_type) {
+    showToast('Title, Rank and Vessel type are required', 'error');
+    return;
+  }
+  try {
+    var posted = await invoke('post_mailing_request', { draft: draft });
+    showToast('Mailing request published ✓ id '+posted.id, 'success');
+    state.mailingRequests = [];
+    state.selectedMailingRequest = null;
+    showView('mailings');
+  } catch (e) {
+    showToast(''+e, 'error');
+  }
+}
+
+async function closeMailingRequest(id){
+  var ok = await inAppConfirm('Close this mailing request?\n\nIt will stop appearing in seafarer mailing lists.', {confirmLabel:'Close request'});
+  if (!ok) return;
+  try {
+    await invoke('close_mailing_request_remote', { requestId: id });
+    showToast('Mailing request closed', 'success');
+    state.mailingRequests = [];
+    await renderMailingRequestsTree({force:true});
+    state.selectedMailingRequest = (state.mailingRequests||[]).find(function(x){return x.id===id;});
+    renderMailingRequestDetail();
+  } catch(e) { showToast('Failed to close: '+e, 'error'); }
+}
+
+async function reopenMailingRequest(id){
+  try {
+    await invoke('reopen_mailing_request_remote', { requestId: id });
+    showToast('Mailing request reopened', 'success');
+    state.mailingRequests = [];
+    await renderMailingRequestsTree({force:true});
+    state.selectedMailingRequest = (state.mailingRequests||[]).find(function(x){return x.id===id;});
+    renderMailingRequestDetail();
+  } catch(e) { showToast('Failed to reopen: '+e, 'error'); }
+}
+
+async function deleteMailingRequest(id){
+  var ok = await inAppConfirm('Delete this mailing request permanently?', {confirmLabel:'Delete forever', danger:true});
+  if (!ok) return;
+  try {
+    await invoke('delete_mailing_request_remote', { requestId: id });
+    showToast('Mailing request deleted', 'success');
+    state.selectedMailingRequest = null;
+    state.mailingRequests = [];
+    await renderMailingRequestsTree({force:true});
+    renderMailingRequestsEmptyMain();
+  } catch(e) { showToast('Failed to delete: '+e, 'error'); }
+}
+
 // ------------- documents tree (seafarer-style) -------------
 // Categories the user actually picks when adding a custom document. The
 // pre-seeded required templates use these same names so they group together.
@@ -590,12 +920,26 @@ var DOC_TYPES = [
   ['other',     'Other',                       'Other'],
 ];
 
+function todayStartMs() {
+  var n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+}
+function dateOnlyMs(value) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
+  if (m) return new Date(+m[1], +m[2]-1, +m[3]).getTime();
+  var d = new Date(value);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+function daysUntilDate(value) {
+  return Math.floor((dateOnlyMs(value) - todayStartMs()) / 864e5);
+}
+
 function docStatusColor(d) {
   // Required template missing its file → red.
   var isReq = !!d.template_id;
   if (!d.original_filename && isReq) return 'var(--err)';
   if (!d.has_expiry || !d.valid_to) return 'var(--text2)';
-  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  var dl = daysUntilDate(d.valid_to);
   if (dl < 0) return 'var(--err)';
   if (dl < 30) return 'var(--warn)';
   if (dl < 90) return '#d4a017';
@@ -607,7 +951,7 @@ function docStatusRank(d) {
   var isReq = !!d.template_id;
   if (!d.original_filename && isReq) return 6;
   if (!d.has_expiry || !d.valid_to) return 0;
-  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  var dl = daysUntilDate(d.valid_to);
   if (dl < 0) return 7;
   if (dl < 30) return 5;
   if (dl < 90) return 4;
@@ -726,9 +1070,9 @@ function renderDocumentsEmptyMain() {
 }
 
 function classifyDoc(d) {
-  if (d.template_id && !d.original_filename) return 'expired';
+  if (d.template_id && !d.original_filename) return 'missing';
   if (!d.has_expiry || !d.valid_to) return 'none';
-  var dl = Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  var dl = daysUntilDate(d.valid_to);
   if (dl < 0) return 'expired';
   if (dl < 30) return 'critical';
   if (dl < 90) return 'warning';
@@ -736,7 +1080,7 @@ function classifyDoc(d) {
 }
 function daysUntil(d) {
   if (!d.has_expiry || !d.valid_to) return null;
-  return Math.floor((new Date(d.valid_to) - new Date()) / 864e5);
+  return daysUntilDate(d.valid_to);
 }
 
 async function renderDocumentDetail() {
@@ -744,9 +1088,9 @@ async function renderDocumentDetail() {
   if (!d) { renderDocumentsEmptyMain(); return; }
   var s = classifyDoc(d);
   var dl = daysUntil(d);
-  var statusLabel = {expired:'Expired',critical:'Expiring soon',warning:'Attention',valid:'Valid',none:'No expiry'}[s];
-  var statusColor = {expired:'var(--err)',critical:'var(--warn)',warning:'#d4a017',valid:'var(--ok)',none:'var(--text2)'}[s];
-  var dlt = (dl !== null) ? (dl < 0 ? Math.abs(dl)+'d overdue' : dl+'d left') : '';
+  var statusLabel = {missing:'Missing file',expired:'Expired',critical:'Expiring soon',warning:'Attention',valid:'Valid',none:'No expiry'}[s];
+  var statusColor = {missing:'var(--err)',expired:'var(--err)',critical:'var(--warn)',warning:'#d4a017',valid:'var(--ok)',none:'var(--text2)'}[s];
+  var dlt = (s !== 'missing' && dl !== null) ? (dl < 0 ? Math.abs(dl)+'d overdue' : dl+'d left') : '';
   var hasFile = !!d.original_filename;
 
   var html =
@@ -904,7 +1248,8 @@ async function attachFile(docId) {
 }
 
 async function deleteDoc(docId) {
-  if (!confirm('Delete this document? The file will be removed from the vault.')) return;
+  var ok = await inAppConfirm('Delete this document?\n\nThe file will be removed from the vault.', {confirmLabel:'Delete', danger:true});
+  if (!ok) return;
   try {
     await invoke('delete_document', { docId: docId });
     state.selectedDocument = null;
@@ -1091,12 +1436,89 @@ function openVacancyById(id) {
 
 function escapeAttr(s){ return (s||'').replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
 
+// Custom confirm — Tauri 2 ACL blocks browser-native window.confirm()
+// (it goes through plugin:dialog). This stays inside the WebView.
+function inAppConfirm(msg, opts) {
+  opts = opts || {};
+  return new Promise(function(resolve){
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;max-width:480px;color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+    var safe = (msg||'').replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});
+    card.innerHTML = '<div style="white-space:pre-wrap;font-size:13px;line-height:1.5;margin-bottom:14px;">'+safe+'</div>'
+                   + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+                   +   '<button id="confirm-no" class="ghost" style="padding:6px 14px;font-size:12px;">'+(opts.cancelLabel||'Cancel')+'</button>'
+                   +   '<button id="confirm-yes" style="padding:6px 14px;font-size:12px;background:'+(opts.danger?'var(--err)':'var(--accent)')+';color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">'+(opts.confirmLabel||'OK')+'</button>'
+                   + '</div>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    var done = function(v){ document.body.removeChild(overlay); resolve(v); };
+    card.querySelector('#confirm-yes').onclick = function(){ done(true); };
+    card.querySelector('#confirm-no').onclick = function(){ done(false); };
+    overlay.onclick = function(e){ if (e.target === overlay) done(false); };
+  });
+}
+
+async function closeVacancy(id){
+  var ok = await inAppConfirm('Close this vacancy?\n\nIt will stop appearing on the public board. Existing applications and chats stay accessible.', {confirmLabel:'Close vacancy'});
+  if (!ok) return;
+  try {
+    await invoke('close_vacancy_remote', { vacancyId: id });
+    showToast('Vacancy closed', 'success');
+    state.applicationsByVacancy[id] = null;
+    state.vacancies = [];
+    await renderVacanciesTree({force:true});
+    var v = (state.vacancies||[]).find(function(x){return x.id===id;});
+    if (v) { state.selectedVacancy = v; renderVacancyDetail(); }
+  } catch(e) { showToast('Failed to close: '+e, 'error'); }
+}
+
+async function reopenVacancy(id){
+  try {
+    await invoke('reopen_vacancy_remote', { vacancyId: id });
+    showToast('Vacancy reopened', 'success');
+    state.vacancies = [];
+    await renderVacanciesTree({force:true});
+    var v = (state.vacancies||[]).find(function(x){return x.id===id;});
+    if (v) { state.selectedVacancy = v; renderVacancyDetail(); }
+  } catch(e) { showToast('Failed to reopen: '+e, 'error'); }
+}
+
+async function deleteVacancy(id){
+  var ok = await inAppConfirm('Hard-delete this vacancy?\n\nThis removes the posting AND all applications + chat messages tied to it. Cannot be undone.\n\nUse Close instead if you just want to stop accepting candidates.', {confirmLabel:'Delete forever', danger:true});
+  if (!ok) return;
+  try {
+    await invoke('delete_vacancy_remote', { vacancyId: id });
+    showToast('Vacancy deleted', 'success');
+    state.selectedVacancy = null;
+    delete state.applicationsByVacancy[id];
+    state.vacancies = [];
+    await renderVacanciesTree({force:true});
+    showView('vacancies');
+  } catch(e) { showToast('Failed to delete: '+e, 'error'); }
+}
+
 async function renderVacancyDetail() {
   var m = document.getElementById('main');
   var v = state.selectedVacancy;
   if (!v) { showView('vacancies'); return; }
   var titleStr = v.title || (v.rank+' · '+v.vessel_type);
-  var head = '<h1 style="margin:0 0 8px;">'+escapeHtml(titleStr)+'</h1>';
+  var statusBadge = v.status === 'active'
+    ? '<span class="tag ok" style="font-size:11px;margin-left:8px;vertical-align:middle;">⚓ active</span>'
+    : v.status === 'closed'
+      ? '<span class="tag" style="background:rgba(245,158,11,0.2);color:var(--warn);font-size:11px;margin-left:8px;vertical-align:middle;">✓ closed</span>'
+      : '<span class="tag" style="font-size:11px;margin-left:8px;vertical-align:middle;">'+escapeHtml(v.status||'?')+'</span>';
+  var actBtn = 'padding:6px 12px;font-size:12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:600;';
+  var dangerBtn = actBtn + 'border-color:var(--err);color:var(--err);';
+  var statusActions = v.status === 'active'
+    ? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(v.id)+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Close</button>'
+    : '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(v.id)+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button>';
+  statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(v.id)+'\')" title="Hard-delete vacancy + all applications + messages. Irreversible.">🗑 Delete</button>';
+  var head = '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
+           +   '<h1 style="margin:0;flex:1;min-width:0;">'+escapeHtml(titleStr)+statusBadge+'</h1>'
+           +   '<div style="display:flex;gap:6px;flex-shrink:0;">'+statusActions+'</div>'
+           + '</div>';
   var sub = '<div class="sub">'+escapeHtml(v.rank||'?')+' · '+escapeHtml(v.vessel_type||'?')
     +' · posted '+escapeHtml(v.published_at.slice(0,10))
     + (v.client_name ? ' · client <span style="color:var(--accent);">★ '+escapeHtml(v.client_name)+'</span>' : '')
@@ -1125,11 +1547,14 @@ async function renderVacancyDetail() {
   m.innerHTML = head + sub + engagement + details
     + '<h2 style="margin:24px 0 4px;font-size:18px;">Applications</h2>'
     + '<div class="sub">Replies received from seafarers via Skipi Package Link</div>'
+    + renderComplianceFilterBar(v)
     + '<div id="apps-list"></div>';
 
-  // Cache-first paint: show cached applications instantly, then refresh in
-  // background. Switching between vacancies should feel native.
-  var cached = state.applicationsByVacancy[v.id];
+  // Cache-first paint with filter signature in the key — Slice D filters
+  // change the result set, so the cache must split per signature.
+  var filter = currentComplianceFilter(v.id);
+  var cacheKey = applicationsCacheKey(v.id, filter);
+  var cached = state.applicationsByVacancy[cacheKey];
   if (cached) {
     state.applications = cached;
     paintApplicationsList(cached);
@@ -1138,9 +1563,16 @@ async function renderVacancyDetail() {
       '<div class="empty"><div style="color:var(--text2);font-size:12px;">Loading…</div></div>';
   }
 
-  invoke('fetch_applications_for_vacancy', { vacancyId: v.id })
+  invoke('fetch_applications_for_vacancy', {
+    vacancyId: v.id,
+    filter: { include_compliance: true,
+              missing_required: filter.missing_required,
+              expired_required: filter.expired_required,
+              months_in_rank:   filter.months_in_rank,
+              required_cert:    filter.required_cert },
+  })
     .then(function(apps){
-      state.applicationsByVacancy[v.id] = apps;
+      state.applicationsByVacancy[cacheKey] = apps;
       // Only repaint if user is still viewing this vacancy.
       if (state.selectedVacancy && state.selectedVacancy.id === v.id) {
         state.applications = apps;
@@ -1155,6 +1587,194 @@ async function renderVacancyDetail() {
           '<div class="empty"><div style="color:var(--err);">Failed to load applications: '+escapeHtml(''+e)+'</div></div>';
       }
     });
+}
+
+// Slice D — compliance filter state lives per vacancy in memory only
+// (no persistence; critic non-goal). Reset across vacancy switches.
+window._complianceFilters = window._complianceFilters || {};
+
+function currentComplianceFilter(vacancyId) {
+  var f = window._complianceFilters[vacancyId] || {};
+  var allowedSorts = {received_at:1, compliance:1, months_in_rank:1};
+  return {
+    missing_required: f.missing_required === 0 ? 0 : null,
+    expired_required: f.expired_required === 0 ? 0 : null,
+    months_in_rank:   (typeof f.months_in_rank === 'number' && f.months_in_rank > 0) ? f.months_in_rank : null,
+    required_cert:    f.required_cert || null,
+    sort:             allowedSorts[f.sort] ? f.sort : 'received_at',
+  };
+}
+
+function applicationsCacheKey(vacancyId, filter) {
+  // Stable signature per filter+sort set so the per-vacancy cache splits
+  // cleanly. Empty filter+default sort falls back to the vacancy id itself
+  // for back-compat with any old code paths still using the bare id key.
+  var sort = filter.sort || 'received_at';
+  var anySet = (filter.missing_required === 0)
+            || (filter.expired_required === 0)
+            || (typeof filter.months_in_rank === 'number')
+            || (typeof filter.required_cert === 'string' && filter.required_cert)
+            || (sort !== 'received_at');
+  if (!anySet) return vacancyId;
+  return vacancyId + '|m=' + (filter.missing_required === 0 ? '0' : '')
+                  + '|e=' + (filter.expired_required === 0 ? '0' : '')
+                  + '|r=' + (filter.months_in_rank || '')
+                  + '|c=' + (filter.required_cert || '')
+                  + '|s=' + sort;
+}
+
+function renderComplianceFilterBar(vacancy) {
+  if (!vacancy) return '';
+  // Build dropdown of required certs from cached matrix (Slice B/C).
+  var matrix = (TAXONOMY && TAXONOMY.requirements_matrix) || null;
+  var requiredIds = matrix ? computeRequiredCerts(vacancy.rank, vacancy.vessel_type, matrix) : [];
+  var f = currentComplianceFilter(vacancy.id);
+
+  var certOptions = '<option value="">— any —</option>';
+  requiredIds.forEach(function(cid){
+    var sel = (f.required_cert === cid) ? ' selected' : '';
+    certOptions += '<option value="'+escapeAttr(cid)+'"'+sel+'>'+escapeHtml(certLabelById(cid))+'</option>';
+  });
+
+  var monthsVal = (typeof f.months_in_rank === 'number') ? String(f.months_in_rank) : '';
+  var sortVal = f.sort || 'received_at';
+  var sortOptions = [
+    ['received_at', 'Newest'],
+    ['compliance', 'Best compliance'],
+    ['months_in_rank', 'Most time in rank'],
+  ].map(function(o){
+    return '<option value="'+o[0]+'"'+(sortVal===o[0]?' selected':'')+'>'+o[1]+'</option>';
+  }).join('');
+  var anyActive = (f.missing_required === 0) || (f.expired_required === 0)
+               || (typeof f.months_in_rank === 'number') || (f.required_cert)
+               || (sortVal !== 'received_at');
+
+  var html = '<div id="compliance-filter-bar" style="margin-top:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;font-size:12px;">'
+           +   '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;">'
+           +     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+           +       '<input type="checkbox" id="cf-missing" '+(f.missing_required===0?'checked':'')+'>'
+           +       'Hide candidates missing required certs'
+           +     '</label>'
+           +     '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+           +       '<input type="checkbox" id="cf-expired" '+(f.expired_required===0?'checked':'')+'>'
+           +       'Hide candidates with expired certs'
+           +     '</label>'
+           +     '<label style="display:flex;align-items:center;gap:6px;">Min months in rank: '
+           +       '<input type="number" id="cf-mir" min="0" max="600" value="'+escapeAttr(monthsVal)+'" style="width:70px;padding:4px 6px;font-size:12px;">'
+           +     '</label>'
+           +     '<label style="display:flex;align-items:center;gap:6px;">Required cert: '
+           +       '<select id="cf-cert" style="padding:4px 6px;font-size:12px;min-width:200px;">'+certOptions+'</select>'
+           +     '</label>'
+           +     '<label style="display:flex;align-items:center;gap:6px;">Sort by: '
+           +       '<select id="cf-sort" style="padding:4px 6px;font-size:12px;min-width:160px;">'+sortOptions+'</select>'
+           +     '</label>'
+           +     (anyActive ? '<button id="cf-reset" style="padding:4px 10px;font-size:12px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:4px;cursor:pointer;">Reset</button>' : '')
+           +     '<span id="cf-counter" style="margin-left:auto;color:var(--text2);font-size:11px;"></span>'
+           +   '</div>'
+           + '</div>';
+  // Defer wiring until DOM is in place.
+  setTimeout(function(){ wireComplianceFilterBar(vacancy.id); }, 0);
+  return html;
+}
+
+function wireComplianceFilterBar(vacancyId) {
+  var ms = document.getElementById('cf-missing');
+  var ex = document.getElementById('cf-expired');
+  var mir = document.getElementById('cf-mir');
+  var cert = document.getElementById('cf-cert');
+  var sort = document.getElementById('cf-sort');
+  var rst = document.getElementById('cf-reset');
+  if (!ms || !ex || !mir || !cert || !sort) return;
+  function commit() {
+    window._complianceFilters[vacancyId] = {
+      missing_required: ms.checked ? 0 : null,
+      expired_required: ex.checked ? 0 : null,
+      months_in_rank:   parseInt(mir.value || '', 10) || null,
+      required_cert:    cert.value || null,
+      sort:             sort.value || 'received_at',
+    };
+    // Re-paint just the applications list — engagement card and head stay.
+    refreshApplicationsList();
+  }
+  ms.addEventListener('change', commit);
+  ex.addEventListener('change', commit);
+  cert.addEventListener('change', commit);
+  sort.addEventListener('change', commit);
+  // Debounce numeric input — commit on blur/change to avoid flooding requests.
+  mir.addEventListener('change', commit);
+  if (rst) rst.addEventListener('click', function(){
+    delete window._complianceFilters[vacancyId];
+    refreshApplicationsList();
+  });
+}
+
+function refreshApplicationsList() {
+  var v = state.selectedVacancy;
+  if (!v) return;
+  var filter = currentComplianceFilter(v.id);
+  var cacheKey = applicationsCacheKey(v.id, filter);
+  var cached = state.applicationsByVacancy[cacheKey];
+  if (cached) {
+    state.applications = cached;
+    paintApplicationsList(cached);
+    // Re-render the bar so Reset button visibility updates.
+    var host = document.getElementById('compliance-filter-bar');
+    if (host && host.parentElement) {
+      host.outerHTML = renderComplianceFilterBar(v);
+    }
+    updateComplianceCounter(cached.length);
+  }
+  invoke('fetch_applications_for_vacancy', {
+    vacancyId: v.id,
+    filter: { include_compliance: true,
+              missing_required: filter.missing_required,
+              expired_required: filter.expired_required,
+              months_in_rank:   filter.months_in_rank,
+              required_cert:    filter.required_cert,
+              sort:             filter.sort },
+  }).then(function(apps){
+    state.applicationsByVacancy[cacheKey] = apps;
+    if (state.selectedVacancy && state.selectedVacancy.id === v.id) {
+      state.applications = apps;
+      paintApplicationsList(apps);
+      var host = document.getElementById('compliance-filter-bar');
+      if (host && host.parentElement) {
+        host.outerHTML = renderComplianceFilterBar(v);
+      }
+      updateComplianceCounter(apps.length);
+    }
+  }).catch(function(e){ showToast('Filter refresh failed: '+e, 'error'); });
+}
+
+function updateComplianceCounter(shownCount) {
+  var c = document.getElementById('cf-counter');
+  if (!c) return;
+  // We don't know totals server-side without a second roundtrip; show
+  // current visible count only — enough signal for the crewing.
+  c.textContent = shownCount + ' shown';
+}
+
+// Compact compliance badge for the application card header.
+// Reads `a.compliance` straight from the server — never recomputes
+// client-side. Returns an HTML span (already styled) or '' if no
+// compliance dict is attached (Slice E gate: only when sort=compliance
+// or include_compliance is requested).
+function renderComplianceBadge(a) {
+  var c = a && a.compliance;
+  if (!c || typeof c !== 'object') return '';
+  if (c.assessed === false) {
+    return '<span style="font-size:11px;color:var(--text2);padding:2px 6px;border:1px solid var(--border);border-radius:10px;">not assessed</span>';
+  }
+  var pct = Math.round((Number(c.coverage_ratio) || 0) * 100);
+  if (c.is_fully_compliant) {
+    return '<span style="font-size:11px;color:#0a7;padding:2px 6px;background:rgba(0,170,100,0.10);border-radius:10px;">✅ '+pct+'%</span>';
+  }
+  var present = Number(c.present) || 0;
+  var total = Number(c.required_total) || 0;
+  var blockers = Number(c.blocking_issues_count) || 0;
+  var txt = present+'/'+total+' · '+pct+'%';
+  if (blockers > 0) txt += ' · '+blockers+' '+(blockers===1?'blocker':'blockers');
+  return '<span style="font-size:11px;color:var(--text2);padding:2px 6px;border:1px solid var(--border);border-radius:10px;">'+escapeHtml(txt)+'</span>';
 }
 
 function paintApplicationsList(apps) {
@@ -1188,14 +1808,219 @@ function paintApplicationsList(apps) {
     html += '<div class="meta" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12px;color:var(--text2);">'
          +    (preview.text ? (preview.mine?'<span style="color:var(--text2);">You: </span>':'')+escapeHtml(preview.text) : escapeHtml((a.message||'').slice(0,80) || sumLineMeta(sum)))
          + '</div>';
+    var badge = renderComplianceBadge(a);
+    if (badge) html += badge;
     html += '<span class="tag '+(a.status==='new'?'ok':'')+'" style="flex-shrink:0;font-size:10px;">'+escapeHtml(a.status)+'</span>';
     html += '</div>';
     html += '</div></div>';
+    // Candidate snapshot: structured summary the seafarer sent. The CV PDF
+    // itself lives in the chat (as a [skipi:file_attached] tile) — opening
+    // the conversation is the natural first step, so the file shows there.
+    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);" onclick="event.stopPropagation()">';
+    html += renderApplicationSnapshot(a, sum, sUid);
+    html += '</div>';
     // Inline thread (stops click bubbling so clicks inside don't re-toggle).
     html += '<div id="appthread-'+escapeAttr(a.id)+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);" onclick="event.stopPropagation()"></div>';
     html += '</div>';
   });
   list.innerHTML = html;
+}
+
+function sUidOf(a) {
+  return a.seafarer_user_id || ((a.contact_for_reply||'').indexOf('@e2e.skipi.app')>0
+      ? (a.contact_for_reply||'').split('@')[0] : null);
+}
+
+function renderApplicationSnapshot(a, sum, sUid) {
+  // Compact key/value grid of everything the seafarer chose to share.
+  var rows = [];
+  if (sum.rank)                  rows.push(['Rank', sum.rank]);
+  if (sum.nationality)           rows.push(['Nationality', sum.nationality]);
+  if (sum.total_sea_time_months) rows.push(['Sea time', sum.total_sea_time_months+' months']);
+  if (sum.months_in_rank)        rows.push(['Time in rank', sum.months_in_rank+' months']);
+  if (sum.available_from)        rows.push(['Available from', sum.available_from]);
+  if (sum.min_salary || sum.salary_expectation) {
+    var s = sum.min_salary || sum.salary_expectation;
+    var c = sum.min_salary_currency || sum.salary_currency || 'USD';
+    rows.push(['Salary expectation', c+' '+s+'/mo']);
+  }
+  if (sum.vessel_type_experience && sum.vessel_type_experience.length) {
+    rows.push(['Vessel experience', sum.vessel_type_experience.join(', ')]);
+  }
+  var cover = a.message || '';
+  var snap = '<div style="background:var(--panel2);border-radius:6px;padding:10px 12px;font-size:12px;">';
+  snap +=   '<div style="font-weight:600;margin-bottom:6px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Candidate snapshot</div>';
+  if (rows.length) {
+    snap += '<div style="display:grid;grid-template-columns:140px 1fr;row-gap:4px;column-gap:10px;">';
+    rows.forEach(function(r){
+      snap += '<div style="color:var(--text2);">'+escapeHtml(r[0])+'</div>'
+            + '<div>'+escapeHtml(r[1])+'</div>';
+    });
+    snap += '</div>';
+  } else {
+    snap += '<div style="color:var(--text2);font-style:italic;">No structured details — see cover note below.</div>';
+  }
+  if (cover) {
+    snap += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;white-space:pre-wrap;">'+escapeHtml(cover)+'</div>';
+  }
+  // Slice C — compliance section. Match seafarer's certs_summary against
+  // the cached requirements_matrix from /api/catalogs (Slice B). Lookup
+  // is local; no per-card server round trip.
+  snap += renderApplicationCompliance(a, sum);
+  snap += '</div>';
+  return snap;
+}
+
+// Stable label for an unknown cert id — Crewing must never crash on a
+// catalog/client version skew. Falls back to template_id verbatim.
+function certLabelById(certId) {
+  var cat = (TAXONOMY && TAXONOMY.certs) || (TAXONOMY_FALLBACK && TAXONOMY_FALLBACK.certs) || [];
+  for (var i = 0; i < cat.length; i++) {
+    if (cat[i].id === certId) return cat[i].label || certId;
+  }
+  return certId;
+}
+
+function complianceCertStatus(cert) {
+  // 6 statuses (per critic decision):
+  //   missing       — required cert not in seafarer's summary at all
+  //   no_file       — listed but no file attached (has_file=false)
+  //   expired       — valid_to < today
+  //   expiring      — valid_to within 90 days
+  //   no_expiry     — entry exists, no valid_to → unknown / never expires
+  //   valid         — has file, valid_to >= 90 days out
+  if (!cert) return {key: 'missing', label: '❌ missing', color: 'var(--err)'};
+  if (cert.has_file === false) return {key: 'no_file', label: '⚠ no file', color: 'var(--warn)'};
+  if (!cert.valid_to)          return {key: 'no_expiry', label: 'no expiry', color: 'var(--text2)'};
+  var today = new Date().toISOString().slice(0,10);
+  if (cert.valid_to < today)   return {key: 'expired', label: '🔴 EXPIRED', color: 'var(--err)'};
+  var diffDays = (new Date(cert.valid_to) - new Date(today)) / (1000*60*60*24);
+  if (diffDays < 90)           return {key: 'expiring', label: '🟠 <90 days', color: 'var(--warn)'};
+  return {key: 'valid', label: '✅ valid', color: 'var(--ok)'};
+}
+
+function renderApplicationCompliance(a, sum) {
+  var v = state.selectedVacancy || {};
+  var rank = v.rank || '';
+  var vesselType = v.vessel_type || '';
+  // Need both vacancy axes to compute requirements; otherwise skip silently.
+  if (!rank || !vesselType) return '';
+
+  var certsSummary = (sum && Array.isArray(sum.certs_summary)) ? sum.certs_summary : null;
+
+  // Local lookup against cached matrix (no server roundtrip per critic).
+  var matrix = (TAXONOMY && TAXONOMY.requirements_matrix) || null;
+  if (!matrix) return ''; // catalogs not yet cached — degrade silently
+  var requiredIds = computeRequiredCerts(rank, vesselType, matrix);
+  if (!requiredIds.length) return '';
+
+  // Legacy applies (no certs_summary) — neutral note, NOT painted as
+  // non-compliant. Critic R7.
+  if (!certsSummary) {
+    return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);">'
+         +   '<div style="font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Compliance</div>'
+         +   '<div style="font-style:italic;">No structured cert list — legacy apply.</div>'
+         + '</div>';
+  }
+
+  var byId = {};
+  certsSummary.forEach(function(c){ if (c && c.template_id) byId[c.template_id] = c; });
+
+  var rowsHtml = '';
+  var coveragePresent = 0;
+  requiredIds.forEach(function(cid){
+    var cert = byId[cid];
+    var st = complianceCertStatus(cert);
+    if (st.key === 'valid' || st.key === 'no_expiry') coveragePresent++;
+    var detail = cert && cert.valid_to ? 'valid to '+cert.valid_to : '';
+    rowsHtml += '<div style="display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:3px 0;font-size:12px;">'
+              +   '<div style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeAttr(cid)+'">'+escapeHtml(certLabelById(cid))+'</div>'
+              +   '<div style="color:'+st.color+';white-space:nowrap;">'+escapeHtml(st.label)+(detail?' · '+escapeHtml(detail):'')+'</div>'
+              + '</div>';
+  });
+
+  // Collapsible — header always visible, list collapsed by default to
+  // avoid pushing the cover note below the fold (critic R6).
+  var headerSummary = coveragePresent+' / '+requiredIds.length+' covered';
+  var html = '<details style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">'
+           +   '<summary style="cursor:pointer;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Compliance · '+escapeHtml(headerSummary)+'</summary>'
+           +   '<div style="margin-top:6px;">'+rowsHtml+'</div>'
+           + '</details>';
+  return html;
+}
+
+// Compose required cert ids using the cached matrix (mirrors the Slice B
+// server-side composer; client only needs lookup, no special logic).
+function computeRequiredCerts(rank, vesselType, matrix) {
+  var posIdx = (matrix && matrix.position_natural_level) || {};
+  var posAliases = {
+    'master':'master','captain':'master',
+    'chief officer':'chief_officer','chief mate':'chief_officer','c/o':'chief_officer',
+    'second officer':'second_officer','2nd officer':'second_officer','2/o':'second_officer',
+    'third officer':'third_officer','3rd officer':'third_officer','3/o':'third_officer',
+    'chief engineer':'chief_engineer','c/e':'chief_engineer',
+    'second engineer':'second_engineer','2nd engineer':'second_engineer','2/e':'second_engineer',
+    'third engineer':'third_engineer','3rd engineer':'third_engineer','3/e':'third_engineer',
+    'fourth engineer':'fourth_engineer','4th engineer':'fourth_engineer','4/e':'fourth_engineer',
+    'electro-technical officer (eto)':'eto','electro-technical officer':'eto','eto':'eto',
+    'bosun':'bosun','boatswain':'bosun',
+    'able seaman (ab)':'ab','ab':'ab','able seaman':'ab',
+    'ordinary seaman (os)':'os','os':'os','ordinary seaman':'os',
+    'motorman':'motorman','oiler':'motorman',
+    'wiper':'wiper','fitter':'fitter','pumpman':'pumpman','pump man':'pumpman',
+    'cook':'cook','chief cook':'cook',
+    'messman / steward':'messman','messman':'messman','steward':'messman',
+    'deck cadet':'cadet_deck','engine cadet':'cadet_engine',
+    'electro-technical rating':'ete','etr':'ete',
+  };
+  var posKey = String(rank||'').trim().toLowerCase();
+  var posId = posAliases[posKey] || posKey;
+  if (!posIdx[posId]) return [];
+
+  var vesselAliases = (matrix && matrix.vessel_group_aliases) || {};
+  var vesselKey = String(vesselType||'').trim().toLowerCase();
+  var vesselGroup = vesselAliases[vesselKey] || null;
+
+  var level = posIdx[posId] || 'support';
+  var out = [];
+  var seen = {};
+  function addMany(ids) {
+    if (!ids) return;
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i];
+      if (!seen[id]) { out.push(id); seen[id] = true; }
+    }
+  }
+  addMany(matrix.universal);
+  addMany((matrix.levels || {})[level]);
+  addMany((matrix.positions || {})[posId]);
+  if (vesselGroup) {
+    var vmap = (matrix.vessels || {})[vesselGroup] || {};
+    addMany(vmap[level]);
+  }
+  return out;
+}
+
+async function loadApplicationAttachments(applicationId, counterpartId) {
+  var host = document.getElementById('app-attachments-'+applicationId);
+  if (!host) return;
+  var atts;
+  try { atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId }); }
+  catch (e) { return; }
+  if (!atts || !atts.length) return;
+  var html = '<div style="font-weight:600;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin:8px 0 6px;">Attached documents</div>';
+  atts.forEach(function(att){
+    var sizeKb = att.size_bytes ? Math.round(att.size_bytes/1024)+' KB' : '';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">';
+    html +=   '<div style="font-size:20px;">📎</div>';
+    html +=   '<div style="flex:1;min-width:0;">';
+    html +=     '<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(att.original_filename||'file')+'</div>';
+    html +=     '<div style="font-size:11px;color:var(--text2);">'+escapeHtml(sizeKb)+(att.mime_type?' · '+escapeHtml(att.mime_type):'')+'</div>';
+    html +=   '</div>';
+    html +=   '<button onclick="event.stopPropagation();downloadCrewingAttachment(\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpartId||att.from_user_id||'')+'\',\''+escapeAttr(att.original_filename||'file')+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>';
+    html += '</div>';
+  });
+  host.innerHTML = html;
 }
 
 async function prefetchApplicationsMessages(apps) {
@@ -1339,7 +2164,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
     var ta = document.getElementById('app-compose-'+applicationId);
     if (ta && (document.activeElement === ta || (ta.value||'').length > 0)) return;
     refreshApplicationChat(applicationId, seafarerUserId, /*silent=*/true);
-  }, 15000);
+  }, 5000);
   host.dataset.pollId = String(pollId);
 }
 
@@ -1400,6 +2225,30 @@ function renderMessageBubble(m, mine, opts) {
          +   '</div>'
          + '</div>';
   }
+  if (raw.indexOf('[skipi:doc_bundle]') === 0) {
+    var bundleJson = raw.replace('[skipi:doc_bundle]','').trim();
+    var bundle = {};
+    try { bundle = JSON.parse(bundleJson); } catch(e){}
+    var bSizeKb = bundle.size ? Math.round(bundle.size/1024)+' KB' : '';
+    var myIdB = state.myIdentity ? state.myIdentity.user_id : '';
+    var bCounterpart = (myIdB === m.from_user_id) ? m.to_user_id : m.from_user_id;
+    var openBtn = bundle.id
+      ? '<button onclick="openDocumentsBundle(\''+m.application_id+'\',\''+bundle.id+'\',\''+bCounterpart+'\',\''+escapeAttr(bundle.filename||'documents.zip')+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>'
+      : '';
+    return '<div class="'+classes+'"'+idAttr+'>'
+         +   '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:300px;">'
+         +     '<div style="display:flex;align-items:center;gap:8px;">'
+         +       '<div style="font-size:24px;">🗂️</div>'
+         +       '<div style="flex:1;min-width:0;">'
+         +         '<div style="font-weight:600;font-size:12px;">Documents bundle</div>'
+         +         '<div style="font-size:11px;opacity:0.7;">'+escapeHtml(bSizeKb)+' · structured</div>'
+         +       '</div>'
+         +     '</div>'
+         +     openBtn
+         +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
+         +   '</div>'
+         + '</div>';
+  }
   if (raw.indexOf('[skipi:file_attached]') === 0) {
     var jsonStr = raw.replace('[skipi:file_attached]','').trim();
     var info = {};
@@ -1432,6 +2281,255 @@ function renderMessageBubble(m, mine, opts) {
        +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
        +   '</div>'
        + '</div>';
+}
+
+async function openDocumentsBundle(applicationId, attachmentId, counterpartId, filename) {
+  showToast('Downloading bundle…', 'info');
+  var zipPath;
+  try {
+    zipPath = await invoke('download_encrypted_attachment', {
+      attachmentId: attachmentId,
+      counterpartUserId: counterpartId,
+      originalFilename: filename || 'documents.zip',
+    });
+  } catch (e) { showToast('Download failed: '+e, 'error'); return; }
+
+  var bundle;
+  try {
+    bundle = await invoke('extract_documents_bundle', {
+      applicationId: applicationId,
+      zipPath: zipPath,
+    });
+  } catch (e) { showToast('Cannot extract: '+e, 'error'); return; }
+
+  showDocumentsBundleViewer(bundle);
+}
+
+// Two-pane document viewer that mirrors seafarer's Documents module:
+// left = collapsible category tree, right = selected doc detail panel.
+// Inherits status-color logic and ⭐ template marking.
+window._bundleState = window._bundleState || { selected: null };
+
+function showDocumentsBundleViewer(bundle) {
+  var manifest = (bundle && bundle.manifest) || {};
+  var docs = manifest.documents || [];
+  var extractedTo = bundle.extracted_to || '';
+  window._bundleViewerData = { docs: docs, extractedTo: extractedTo, manifest: manifest };
+
+  var byCat = {};
+  docs.forEach(function(d){
+    var c = d.category || 'Other';
+    if (!byCat[c]) byCat[c] = [];
+    byCat[c].push(d);
+  });
+  // Stable category order — match seafarer's Documents module ordering.
+  var preferredOrder = [
+    'Certificate of Competency',
+    'STCW Mandatory',
+    'Deck Training',
+    'Engine Training',
+    'Medical',
+    'Visas',
+    'Identity',
+    'Custom',
+  ];
+  var categoryOrder = preferredOrder.filter(function(c){ return byCat[c]; })
+    .concat(Object.keys(byCat).filter(function(c){ return preferredOrder.indexOf(c) < 0; }).sort());
+
+  var by = manifest.exported_by || {};
+  var headLine = (by.name||'(seafarer)')
+    + (by.rank ? ' · '+escapeHtml(by.rank) : '')
+    + (by.position ? ' · '+escapeHtml(by.position) : '');
+
+  var overlay = document.createElement('div');
+  overlay.id = 'bundle-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:8px;width:96%;max-width:1200px;height:92vh;color:var(--text);display:flex;flex-direction:column;box-shadow:0 6px 24px rgba(0,0,0,0.5);overflow:hidden;';
+  modal.innerHTML = ''
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border);">'
+    +   '<div><div style="font-size:15px;font-weight:600;">📂 Candidate documents</div>'
+    +     '<div style="font-size:12px;color:var(--text2);margin-top:2px;">'+escapeHtml(headLine)+'</div>'
+    +   '</div>'
+    +   '<button id="bundle-close" style="background:transparent;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;">Close</button>'
+    + '</div>'
+    + '<div style="flex:1;display:flex;min-height:0;">'
+    +   '<div id="bundle-tree" style="width:300px;border-right:1px solid var(--border);overflow-y:auto;padding:8px 6px;background:var(--panel);"></div>'
+    +   '<div id="bundle-detail" style="flex:1;overflow-y:auto;padding:18px 22px;background:var(--bg);"></div>'
+    + '</div>';
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  modal.querySelector('#bundle-close').onclick = function(){ document.body.removeChild(overlay); };
+  overlay.onclick = function(e){ if (e.target === overlay) document.body.removeChild(overlay); };
+
+  paintBundleTree(byCat, categoryOrder);
+  // Auto-select first doc with a file so the right pane isn't empty on open.
+  var firstWithFile = docs.find(function(d){ return d.file_name; }) || docs[0];
+  if (firstWithFile) selectBundleDoc(firstWithFile.id);
+  else paintBundleDetail(null);
+}
+
+function bundleDocStatus(d){
+  if (!d.file_name) return {color: 'var(--err)', label: 'no file'};
+  if (!d.valid_to) return {color: 'var(--text2)', label: ''};
+  var todayIso = new Date().toISOString().slice(0,10);
+  if (d.valid_to < todayIso) return {color: 'var(--err)', label: 'EXPIRED'};
+  var diff = (new Date(d.valid_to) - new Date(todayIso)) / (1000*60*60*24);
+  if (diff < 30) return {color: 'var(--err)', label: '<30 days'};
+  if (diff < 90) return {color: 'var(--warn)', label: '<90 days'};
+  if (diff < 180) return {color: '#eac94f', label: '<180 days'};
+  if (diff < 365) return {color: '#f7e38d', label: '<1 year'};
+  return {color: 'var(--ok)', label: 'valid'};
+}
+
+function paintBundleTree(byCat, categoryOrder) {
+  var host = document.getElementById('bundle-tree');
+  if (!host) return;
+  // Sort docs inside each category: templates first, then alpha by title.
+  Object.keys(byCat).forEach(function(c){
+    byCat[c].sort(function(a,b){
+      if ((a.is_template?0:1) !== (b.is_template?0:1)) return a.is_template?-1:1;
+      return (a.title||'').localeCompare(b.title||'');
+    });
+  });
+  var html = '';
+  categoryOrder.forEach(function(cat){
+    var open = window._bundleState.collapsed && window._bundleState.collapsed[cat] ? false : true;
+    html += '<div class="bnd-cat" style="margin-bottom:2px;">';
+    html +=   '<div onclick="toggleBundleCategory(\''+escapeAttr(cat)+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">'
+            +   '<span style="font-size:9px;width:10px;display:inline-block;">'+(open?'▼':'▶')+'</span>'
+            +   '<span style="flex:1;">'+escapeHtml(cat)+'</span>'
+            +   '<span style="font-size:11px;color:var(--text2);">'+byCat[cat].length+'</span>'
+            + '</div>';
+    if (open) {
+      byCat[cat].forEach(function(d){
+        var st = bundleDocStatus(d);
+        var sel = window._bundleState.selected === d.id;
+        html += '<div onclick="selectBundleDoc(\''+escapeAttr(d.id)+'\')" '
+              +     'style="display:flex;align-items:center;gap:6px;padding:5px 8px 5px 22px;cursor:pointer;border-radius:4px;'
+              +     (sel?'background:var(--accent);color:#fff;':'')+'">'
+              +   '<span style="font-size:11px;">'+(d.is_template?'⭐':'📄')+'</span>'
+              +   '<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(d.title||'(untitled)')+'</span>'
+              +   '<span style="width:8px;height:8px;border-radius:50%;background:'+st.color+';flex-shrink:0;" title="'+escapeAttr(st.label)+'"></span>'
+              + '</div>';
+      });
+    }
+    html += '</div>';
+  });
+  host.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px;">Bundle is empty.</div>';
+}
+
+function toggleBundleCategory(cat){
+  if (!window._bundleState.collapsed) window._bundleState.collapsed = {};
+  window._bundleState.collapsed[cat] = !window._bundleState.collapsed[cat];
+  // Re-render tree from current data.
+  var data = window._bundleViewerData;
+  if (!data) return;
+  var byCat = {};
+  data.docs.forEach(function(d){
+    var c = d.category || 'Other';
+    (byCat[c] = byCat[c] || []).push(d);
+  });
+  var preferredOrder = ['Certificate of Competency','STCW Mandatory','Deck Training','Engine Training','Medical','Visas','Identity','Custom'];
+  var ord = preferredOrder.filter(function(c){return byCat[c];})
+    .concat(Object.keys(byCat).filter(function(c){return preferredOrder.indexOf(c)<0;}).sort());
+  paintBundleTree(byCat, ord);
+}
+
+function selectBundleDoc(id){
+  window._bundleState.selected = id;
+  var data = window._bundleViewerData;
+  if (!data) return;
+  var doc = data.docs.find(function(d){return d.id === id;});
+  // Re-render tree to update active highlight.
+  var byCat = {};
+  data.docs.forEach(function(d){
+    var c = d.category || 'Other';
+    (byCat[c] = byCat[c] || []).push(d);
+  });
+  var preferredOrder = ['Certificate of Competency','STCW Mandatory','Deck Training','Engine Training','Medical','Visas','Identity','Custom'];
+  var ord = preferredOrder.filter(function(c){return byCat[c];})
+    .concat(Object.keys(byCat).filter(function(c){return preferredOrder.indexOf(c)<0;}).sort());
+  paintBundleTree(byCat, ord);
+  paintBundleDetail(doc);
+}
+
+function paintBundleDetail(d) {
+  var host = document.getElementById('bundle-detail');
+  if (!host) return;
+  if (!d) {
+    host.innerHTML = '<div style="text-align:center;color:var(--text2);font-size:13px;padding:40px;">Select a document on the left.</div>';
+    return;
+  }
+  var data = window._bundleViewerData;
+  var st = bundleDocStatus(d);
+  var hasFile = !!d.file_name;
+  var openPath = (data && data.extractedTo && d.file_path) ? (data.extractedTo+'/'+d.file_path) : '';
+  var ext = (d.file_name||'').split('.').pop().toLowerCase();
+
+  var fields = [
+    ['Category', d.category],
+    ['Doc number', d.doc_number],
+    ['Issued by', d.issued_by],
+    ['Valid from', d.valid_from],
+    ['Valid to', d.valid_to],
+    ['Status', st.label || (hasFile?'on file':'no file')],
+    ['Filename', d.file_name],
+  ].filter(function(r){ return r[1]; });
+
+  var html = ''
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">'
+    +   '<div style="flex:1;min-width:0;">'
+    +     '<h2 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px;">'
+    +       '<span>'+(d.is_template?'⭐':'📄')+'</span>'
+    +       '<span>'+escapeHtml(d.title||'(untitled)')+'</span>'
+    +     '</h2>'
+    +     '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'+escapeHtml(d.category||'')+(d.is_template?' · required template':' · custom')+'</div>'
+    +   '</div>';
+  if (hasFile) {
+    html += '<button onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(openPath)+'\'})" '
+          +    'style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:600;flex-shrink:0;">'
+          +   'Open file</button>';
+  }
+  html += '</div>';
+
+  // Status badge bar (color + label) — same visual cue as seafarer's tree dots.
+  if (st.label) {
+    html += '<div style="display:inline-block;padding:4px 10px;background:'+st.color+';color:#000;border-radius:4px;font-size:11px;font-weight:600;margin-bottom:14px;text-transform:uppercase;">'+escapeHtml(st.label)+'</div>';
+  }
+
+  // Field grid.
+  if (fields.length) {
+    html += '<div class="card" style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:14px;">';
+    html +=   '<div style="display:grid;grid-template-columns:140px 1fr;row-gap:8px;column-gap:14px;font-size:13px;">';
+    fields.forEach(function(r){
+      html += '<div style="color:var(--text2);">'+escapeHtml(r[0])+'</div>'
+            + '<div>'+escapeHtml(r[1])+'</div>';
+    });
+    html +=   '</div>';
+    html += '</div>';
+  }
+
+  // Inline preview for PDFs/images via local file path. Tauri's WebKit can
+  // render file:// URIs when allowed by the assets scope; if blocked, the
+  // user always has the "Open file" button above.
+  if (hasFile && openPath) {
+    // Tauri's WebKit blocks file:// in iframes/img — must go through the
+    // assets protocol (configured in tauri.conf.json security.assetProtocol).
+    var fileUri = convertFileSrc(openPath);
+    if (ext === 'pdf') {
+      html += '<iframe src="'+escapeAttr(fileUri)+'" style="width:100%;height:65vh;border:1px solid var(--border);border-radius:6px;background:#fff;"></iframe>';
+    } else if (['png','jpg','jpeg','gif','webp','bmp'].indexOf(ext) !== -1) {
+      html += '<div style="text-align:center;padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);"><img src="'+escapeAttr(fileUri)+'" style="max-width:100%;max-height:65vh;border-radius:4px;"></div>';
+    } else {
+      html += '<div style="font-size:12px;color:var(--text2);padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);">'
+            + 'Inline preview not supported for .'+escapeHtml(ext)+' — click <strong>Open file</strong> to view in your default app.'
+            + '</div>';
+    }
+  } else if (!hasFile) {
+    html += '<div style="font-size:12px;color:var(--err);padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);">No file attached for this entry.</div>';
+  }
+  host.innerHTML = html;
 }
 
 async function downloadCrewingAttachment(attachmentId, counterpartId, filename) {
@@ -1602,15 +2700,13 @@ function renderNewVacancy() {
     + '</div></div>'
     + '<div class="row"><div><label>Title*</label><input type="text" id="f-title" placeholder="e.g. Chief Officer for Aframax"></div>'
     + '<div><label>Rank*</label><select id="f-rank">'
-      + ['','Master','Chief Officer','2nd Officer','3rd Officer','Chief Engineer','2nd Engineer','3rd Engineer','4th Engineer','Bosun','AB','OS','Cook','Electro-Technical Officer','Cadet']
-        .map(function(r){return '<option>'+r+'</option>';}).join('')
+      + (['']).concat(taxonomyLabels('positions')).map(function(r){return '<option>'+escapeHtml(r)+'</option>';}).join('')
     + '</select></div></div>'
     + '<div class="row"><div><label>Vessel type*</label><select id="f-vtype">'
-      + ['','Bulk Carrier','Tanker (Crude)','Tanker (Product)','Tanker (Chemical)','LNG Carrier','LPG Carrier','Container','General Cargo','RoRo','Reefer','Offshore','Cruise','Other']
-        .map(function(t){return '<option>'+t+'</option>';}).join('')
+      + (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')
     + '</select></div>'
     + '<div><label>Vessel name (optional)</label><input type="text" id="f-vname" placeholder="MV ..."></div></div>'
-    + '<div class="row"><div><label>IMO (optional)</label><input type="text" id="f-imo" placeholder="9XXXXXX"></div>'
+    + '<div class="row"><div><label>IMO (optional, 7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"></div>'
     + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"></div></div>'
     + '<div class="row"><div><label>Join date (optional)</label><input type="date" id="f-jdate"></div>'
     + '<div><label>Join port (optional)</label><input type="text" id="f-jport"></div></div>'
@@ -1623,6 +2719,8 @@ function renderNewVacancy() {
     + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements"></textarea></div></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
     + '</div>';
+  m.scrollTop = 0;
+  requestAnimationFrame(function(){ m.scrollTop = 0; });
 }
 
 async function submitVacancy() {
@@ -1647,6 +2745,14 @@ async function submitVacancy() {
   if (!draft.title || !draft.rank || !draft.vessel_type) {
     showToast('Title, Rank and Vessel type are required', 'error');
     return;
+  }
+  // IMO is exactly 7 digits per IMO Resolution A.600(15). Server validates
+  // 1_000_000..9_999_999 — surface the error inline before the round-trip.
+  if (draft.vessel_imo) {
+    if (!/^\d{7}$/.test(String(draft.vessel_imo))) {
+      showToast('IMO must be exactly 7 digits (e.g. 9554488). Leave blank if unknown.', 'error');
+      return;
+    }
   }
   try {
     var posted = await invoke('post_vacancy', { draft: draft });
@@ -1840,7 +2946,8 @@ async function createNamedCrewingVault() {
     var picked = await window.__TAURI__.dialog.open({ directory: true, multiple: false, title: 'Choose parent folder for '+folder });
     if (!picked) return;
     var path = joinFolderPath(picked, folder);
-    if (!confirm('Skipi Crewing will use this vault folder after restart:\n\n'+path+'\n\nThe clear folder name makes it easier to find in your file manager.')) return;
+    var ok = await inAppConfirm('Skipi Crewing will use this vault folder after restart:\n\n'+path+'\n\nThe clear folder name makes it easier to find in your file manager.', {confirmLabel:'Use this folder'});
+    if (!ok) return;
     await invoke('ensure_vault_folder', { path: path });
     await switchToVault(path);
   } catch (e) {
@@ -2076,6 +3183,7 @@ async function setupFileDragDrop() {
 // ------------- boot -------------
 (async function(){
   try { state.settings = await invoke('get_settings'); } catch(e){}
+  await loadTaxonomy();
   updateVaultLabel();
   showView('vacancies');
   setupFileDragDrop();
@@ -2098,8 +3206,17 @@ async function silentRefreshVacancies() {
         state.selectedVacancy = still;
         // Pull applications quietly too.
         try {
-          var apps = await invoke('fetch_applications_for_vacancy', { vacancyId: still.id });
-          state.applicationsByVacancy[still.id] = apps;
+          var qfilter = currentComplianceFilter(still.id);
+          var qkey = applicationsCacheKey(still.id, qfilter);
+          var apps = await invoke('fetch_applications_for_vacancy', {
+            vacancyId: still.id,
+            filter: { include_compliance: true,
+                      missing_required: qfilter.missing_required,
+                      expired_required: qfilter.expired_required,
+                      months_in_rank:   qfilter.months_in_rank,
+                      required_cert:    qfilter.required_cert },
+          });
+          state.applicationsByVacancy[qkey] = apps;
           if (state.selectedVacancy && state.selectedVacancy.id === still.id) {
             state.applications = apps;
             // Don't blow away the DOM if a chat thread is open — that

@@ -1,6 +1,6 @@
 [package]
 name = "skipi-crewing"
-version = "0.4.77"
+version = "0.4.101"
 description = "Skipi Crewing — vacancy posting and applications inbox for verified employers"
 authors = ["Tymur Rudov"]
 license = "Proprietary"
@@ -18,7 +18,7 @@ tauri-build = { version = "2.5.6", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.10.3", features = ["devtools"] }
+tauri = { version = "2.10.3", features = ["protocol-asset", "devtools"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -37,6 +37,7 @@ crypto_box = { version = "0.9", features = ["std"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 sha2 = "0.10"
 data-encoding = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [profile.dev]
 incremental = true

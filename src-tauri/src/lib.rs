@@ -76,7 +76,15 @@ impl Settings {
             Err(_) => return first_run(),
         };
         match serde_json::from_str::<Settings>(&raw) {
-            Ok(s) => s,
+            Ok(mut s) => {
+                // Auto-migrate stale URLs from old builds that hardcoded
+                // :8443 (nginx now listens on 443). Idempotent.
+                if s.server_url.ends_with(":8443") {
+                    s.server_url = s.server_url.trim_end_matches(":8443").to_string();
+                    let _ = s.save();
+                }
+                s
+            },
             Err(e) => {
                 // Forward-compat fallback: settings.json from an older
                 // build is missing required fields. Don't wipe it — back
@@ -128,6 +136,19 @@ pub struct VacancyPosted {
     pub posted_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MailingRequestDraft {
+    pub title: String,
+    pub rank: String,
+    pub vessel_type: String,
+    pub reply_to: Option<String>,
+    pub client_name: Option<String>,
+    pub description: Option<String>,
+    pub min_experience_years: Option<u32>,
+    pub required_certs: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
+}
+
 // ---------- Tauri commands ----------
 
 pub struct AppState {
@@ -140,9 +161,25 @@ fn get_settings(state: tauri::State<AppState>) -> Settings {
 }
 
 #[tauri::command]
-fn save_settings(new_settings: Settings, state: tauri::State<AppState>) -> Result<(), String> {
+fn save_settings(mut new_settings: Settings, state: tauri::State<AppState>) -> Result<(), String> {
+    // Maintain recent_vaults list whenever vault_path changes via Settings.
+    // Newest-first, deduped, capped at 10.
+    if !new_settings.vault_path.is_empty() {
+        new_settings.recent_vaults.retain(|p| p != &new_settings.vault_path);
+        new_settings.recent_vaults.insert(0, new_settings.vault_path.clone());
+        new_settings.recent_vaults.truncate(10);
+    }
     new_settings.save()?;
     *state.settings.lock().unwrap() = new_settings;
+    Ok(())
+}
+
+#[tauri::command]
+fn forget_recent_vault(path: String, state: tauri::State<AppState>) -> Result<(), String> {
+    let mut s = state.settings.lock().unwrap().clone();
+    s.recent_vaults.retain(|p| p != &path);
+    s.save()?;
+    *state.settings.lock().unwrap() = s;
     Ok(())
 }
 
@@ -191,8 +228,34 @@ struct VacancyWire<'a> {
     client_name: Option<&'a str>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct MailingRequestWire<'a> {
+    crewing_id: &'a str,
+    title: &'a str,
+    rank: &'a str,
+    vessel_type: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reply_to: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    client_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    min_experience_years: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    required_certs: Option<&'a Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    languages: Option<&'a Vec<String>>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct VacancyServerResponse {
+    id: String,
+    published_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MailingRequestServerResponse {
     id: String,
     published_at: String,
 }
@@ -282,6 +345,72 @@ fn post_vacancy(
 }
 
 #[tauri::command]
+fn post_mailing_request(
+    draft: MailingRequestDraft,
+    state: tauri::State<AppState>,
+) -> Result<VacancyPosted, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() {
+        return Err("No bearer token configured. Open Settings and paste the token issued by Skipi.".into());
+    }
+    if settings.crewing_id.is_empty() {
+        return Err("No crewing_id configured. Open Settings and paste the crewing_id issued together with the token.".into());
+    }
+    if settings.server_url.is_empty() {
+        return Err("No server URL configured.".into());
+    }
+
+    let url = format!("{}/api/mailing-requests", settings.server_url.trim_end_matches('/'));
+    let reply_to_owned = draft
+        .reply_to
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            if settings.reply_to.trim().is_empty() {
+                None
+            } else {
+                Some(settings.reply_to.trim().to_string())
+            }
+        });
+    let wire = MailingRequestWire {
+        crewing_id: &settings.crewing_id,
+        title: &draft.title,
+        rank: &draft.rank,
+        vessel_type: &draft.vessel_type,
+        reply_to: reply_to_owned.as_deref(),
+        client_name: draft.client_name.as_deref(),
+        description: draft.description.as_deref(),
+        min_experience_years: draft.min_experience_years,
+        required_certs: draft.required_certs.as_ref(),
+        languages: draft.languages.as_ref(),
+    };
+
+    let resp = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?
+        .post(&url)
+        .bearer_auth(&settings.bearer_token)
+        .json(&wire)
+        .send()
+        .map_err(|e| format!("network error: {e}"))?;
+    let status = resp.status();
+    if !status.is_success() {
+        let body = resp.text().unwrap_or_default();
+        return Err(format!("server returned {status}: {body}"));
+    }
+    let server_resp: MailingRequestServerResponse = resp
+        .json()
+        .map_err(|e| format!("bad JSON from server: {e}"))?;
+    Ok(VacancyPosted {
+        id: server_resp.id,
+        posted_at: server_resp.published_at,
+    })
+}
+
+#[tauri::command]
 fn list_my_vacancies() -> Result<Vec<db::CachedVacancy>, String> {
     db::list_vacancies().map_err(|e| e.to_string())
 }
@@ -298,6 +427,10 @@ pub struct ServerApplication {
     // Derived client-side from contact_for_reply.
     #[serde(default)]
     pub seafarer_user_id: Option<String>,
+    // Slice D — present only when server was asked with
+    // ?include_compliance=1 (or when any compliance filter was passed).
+    #[serde(default)]
+    pub compliance: Option<serde_json::Value>,
 }
 
 /// Vacancy as returned by GET /api/vacancies — superset of the local cache
@@ -338,9 +471,43 @@ pub struct ServerVacancy {
     pub new_applications_count: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerMailingRequest {
+    pub id: String,
+    pub crewing_id: String,
+    pub crewing_ref: String,
+    pub title: String,
+    pub rank: String,
+    pub vessel_type: String,
+    pub reply_to: String,
+    #[serde(default)]
+    pub client_name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub min_experience_years: Option<i64>,
+    #[serde(default)]
+    pub required_certs: Option<Vec<String>>,
+    #[serde(default)]
+    pub languages: Option<Vec<String>>,
+    pub published_at: String,
+    #[serde(default)]
+    pub expires_at: Option<String>,
+    pub status: String,
+    #[serde(default)]
+    pub send_click_count: i64,
+    #[serde(default)]
+    pub hide_count: i64,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct VacancyListResp {
     items: Vec<ServerVacancy>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MailingRequestListResp {
+    items: Vec<ServerMailingRequest>,
 }
 
 #[tauri::command]
@@ -371,8 +538,211 @@ fn fetch_my_vacancies(
 }
 
 #[tauri::command]
+fn fetch_my_mailing_requests(
+    state: tauri::State<AppState>,
+) -> Result<Vec<ServerMailingRequest>, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.crewing_id.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured. Open Settings.".into());
+    }
+    let url = format!(
+        "{}/api/mailing-requests?crewing_id={}&include_closed=true&limit=200",
+        settings.server_url.trim_end_matches('/'),
+        settings.crewing_id
+    );
+    let resp = auth_client_for(&settings, 15)?
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network error: {e}"))?;
+    let s = resp.status();
+    if !s.is_success() {
+        let body = resp.text().unwrap_or_default();
+        return Err(format!("server returned {s}: {body}"));
+    }
+    let parsed: MailingRequestListResp = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    Ok(parsed.items)
+}
+
+#[tauri::command]
+fn close_mailing_request_remote(
+    request_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    mailing_request_action(&request_id, "close", state)
+}
+
+#[tauri::command]
+fn reopen_mailing_request_remote(
+    request_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    mailing_request_action(&request_id, "reopen", state)
+}
+
+#[tauri::command]
+fn delete_mailing_request_remote(
+    request_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured".into());
+    }
+    let url = format!(
+        "{}/api/mailing-requests/{}",
+        settings.server_url.trim_end_matches('/'),
+        request_id
+    );
+    let resp = auth_client_for(&settings, 15)?
+        .delete(&url)
+        .bearer_auth(&settings.bearer_token)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
+    }
+    Ok(())
+}
+
+fn mailing_request_action(
+    request_id: &str,
+    action: &str,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured".into());
+    }
+    let url = format!(
+        "{}/api/mailing-requests/{}/{}",
+        settings.server_url.trim_end_matches('/'),
+        request_id,
+        action
+    );
+    let resp = auth_client_for(&settings, 15)?
+        .post(&url)
+        .bearer_auth(&settings.bearer_token)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
+    }
+    Ok(())
+}
+
+fn auth_client_for(settings: &Settings, timeout_secs: u64) -> Result<reqwest::blocking::Client, String> {
+    let _ = settings;
+    reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(timeout_secs))
+        .build()
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn close_vacancy_remote(
+    vacancy_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured".into());
+    }
+    let url = format!("{}/api/vacancies/{}/close",
+        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let resp = auth_client_for(&settings, 15)?
+        .post(&url)
+        .bearer_auth(&settings.bearer_token)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("server returned {}: {}",
+            resp.status(), resp.text().unwrap_or_default()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn reopen_vacancy_remote(
+    vacancy_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured".into());
+    }
+    let url = format!("{}/api/vacancies/{}/reopen",
+        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let resp = auth_client_for(&settings, 15)?
+        .post(&url)
+        .bearer_auth(&settings.bearer_token)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("server returned {}: {}",
+            resp.status(), resp.text().unwrap_or_default()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn delete_vacancy_remote(
+    vacancy_id: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
+        return Err("Not configured".into());
+    }
+    let url = format!("{}/api/vacancies/{}",
+        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let resp = auth_client_for(&settings, 15)?
+        .delete(&url)
+        .bearer_auth(&settings.bearer_token)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("server returned {}: {}",
+            resp.status(), resp.text().unwrap_or_default()));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub struct ApplicationsFilter {
+    pub include_compliance: Option<bool>,
+    pub missing_required: Option<i64>,
+    pub expired_required: Option<i64>,
+    pub months_in_rank: Option<i64>,
+    pub required_cert: Option<String>,
+    pub sort: Option<String>,
+}
+
+fn urlenc(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.as_bytes() {
+        match *b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*b as char);
+            }
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
+    }
+    out
+}
+
+#[tauri::command]
 fn fetch_applications_for_vacancy(
     vacancy_id: String,
+    filter: Option<ApplicationsFilter>,
     state: tauri::State<AppState>,
 ) -> Result<Vec<ServerApplication>, String> {
     let settings = state.settings.lock().unwrap().clone();
@@ -383,11 +753,32 @@ fn fetch_applications_for_vacancy(
         return Err("No server URL configured.".into());
     }
 
-    let url = format!(
+    let mut url = format!(
         "{}/api/vacancies/{}/applications",
         settings.server_url.trim_end_matches('/'),
         vacancy_id
     );
+    if let Some(f) = filter {
+        let mut q: Vec<String> = Vec::new();
+        if matches!(f.include_compliance, Some(true)) {
+            q.push("include_compliance=1".into());
+        }
+        if let Some(v) = f.missing_required { q.push(format!("missing_required={}", v)); }
+        if let Some(v) = f.expired_required { q.push(format!("expired_required={}", v)); }
+        if let Some(v) = f.months_in_rank   { q.push(format!("months_in_rank={}", v)); }
+        if let Some(v) = f.required_cert {
+            if !v.is_empty() { q.push(format!("required_cert={}", urlenc(&v))); }
+        }
+        if let Some(v) = f.sort {
+            if !v.is_empty() && v != "received_at" {
+                q.push(format!("sort={}", urlenc(&v)));
+            }
+        }
+        if !q.is_empty() {
+            url.push('?');
+            url.push_str(&q.join("&"));
+        }
+    }
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
         .build()
@@ -772,10 +1163,19 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,
+            forget_recent_vault,
             ensure_vault_folder,
             post_vacancy,
+            post_mailing_request,
             list_my_vacancies,
             fetch_my_vacancies,
+            fetch_my_mailing_requests,
+            close_vacancy_remote,
+            reopen_vacancy_remote,
+            delete_vacancy_remote,
+            close_mailing_request_remote,
+            reopen_mailing_request_remote,
+            delete_mailing_request_remote,
             fetch_applications_for_vacancy,
             add_document,
             list_documents,
@@ -791,6 +1191,8 @@ pub fn run() {
             messaging::fetch_messages,
             messaging::upload_encrypted_attachment,
             messaging::download_encrypted_attachment,
+            messaging::fetch_attachments_for_application,
+            messaging::extract_documents_bundle,
             messaging::open_path_with_default,
         ])
         .run(tauri::generate_context!())

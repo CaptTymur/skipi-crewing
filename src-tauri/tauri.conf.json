@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Skipi Crewing",
-  "version": "0.4.77",
+  "version": "0.4.101",
   "identifier": "app.skipi.crewing",
   "build": {
     "frontendDist": "../dist"
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Skipi Crewing 0.4.77",
+        "title": "Skipi Crewing 0.4.101",
         "width": 1100,
         "height": 750,
         "resizable": true,
@@ -18,17 +18,21 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$HOME/Downloads/Skipi/Inbox/**"
+        ]
+      }
     }
   },
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://api.skipi.app:8443/crewing/latest.json",
-        "http://127.0.0.1:8000/crewing/latest.json"
+        "https://api.skipi.app/crewing/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFRTAxNUM4NEE2MzAxRkIKUldUN0FXTkt5QlhnL3VoV2hDWVJja3cwUlBGbFpvWGxnS2pHWFB3TVY0T3ZjS1FsZUtOSlhqOWMK",
-      "dangerousInsecureTransportProtocol": true,
       "windows": {
         "installMode": "passive"
       }

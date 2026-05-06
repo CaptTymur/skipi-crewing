@@ -379,3 +379,62 @@ pub fn open_path_with_default(path: String) -> Result<(), String> {
     let _ = std::process::Command::new("xdg-open").arg(&path).spawn();
     Ok(())
 }
+
+#[tauri::command]
+pub fn fetch_attachments_for_application(
+    application_id: String,
+) -> Result<Vec<AttachmentMeta>, String> {
+    let url = format!("{}/api/messaging/threads/{}/attachments", PROD_API, application_id);
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build().map_err(|e| e.to_string())?;
+    let resp = client.get(&url).send().map_err(|e| format!("network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("server returned {}", resp.status()));
+    }
+    resp.json::<Vec<AttachmentMeta>>().map_err(|e| format!("bad JSON: {e}"))
+}
+
+/// Unpack a downloaded `[skipi:doc_bundle]` ZIP into a stable per-application
+/// folder under ~/Downloads/Skipi/Inbox/<application_id>/. Returns the
+/// parsed manifest so the UI can render the seafarer-style doc tree.
+#[tauri::command]
+pub fn extract_documents_bundle(
+    application_id: String,
+    zip_path: String,
+) -> Result<serde_json::Value, String> {
+    use std::io::Read;
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+    let dest = home.join("Downloads").join("Skipi").join("Inbox").join(format!("bundle_{}", application_id));
+    std::fs::create_dir_all(&dest).map_err(|e| format!("create dir: {e}"))?;
+
+    let f = std::fs::File::open(&zip_path).map_err(|e| format!("open zip: {e}"))?;
+    let mut archive = zip::ZipArchive::new(f).map_err(|e| format!("zip parse: {e}"))?;
+
+    let mut manifest_text: Option<String> = None;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| format!("zip entry: {e}"))?;
+        let name = entry.name().to_string();
+        if name.ends_with('/') { continue; }
+        let out_path = dest.join(&name);
+        if let Some(parent) = out_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let mut data = Vec::new();
+        entry.read_to_end(&mut data).map_err(|e| format!("read entry {name}: {e}"))?;
+        if name == "manifest.json" {
+            manifest_text = Some(String::from_utf8_lossy(&data).to_string());
+        }
+        std::fs::write(&out_path, &data).map_err(|e| format!("write {}: {}", out_path.display(), e))?;
+    }
+
+    let manifest: serde_json::Value = match manifest_text {
+        Some(t) => serde_json::from_str(&t).map_err(|e| format!("manifest parse: {e}"))?,
+        None => serde_json::json!({"schema_version": 0, "documents": []}),
+    };
+    Ok(serde_json::json!({
+        "extracted_to": dest.to_string_lossy().to_string(),
+        "manifest": manifest,
+    }))
+}
