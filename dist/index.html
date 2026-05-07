@@ -166,6 +166,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 nav .item { display: flex; align-items: center; }
 .vac-row .new-badge { display: inline-block; padding: 2px 8px; background: var(--err); color: #fff;
   border-radius: 10px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+.app-card { transition: border-color 120ms ease, background 120ms ease; }
+.app-card:hover { border-color: rgba(79,142,247,0.45); }
+.app-card.app-expanded { border-color: var(--accent); background: rgba(79,142,247,0.06); }
+.app-caret { color: var(--text2); font-size: 12px; min-width: 12px; text-align: center; }
+.app-details { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .toolbar select { width: auto; min-width: 200px; }
 /* update banner — top of viewport, gradient, dismiss-able */
@@ -1798,7 +1803,7 @@ function paintApplicationsList(apps) {
         ? (a.contact_for_reply||'').split('@')[0] : null);
     var preview = lastMessagePreview(a.id, a.message);
     var initials = (sum.redacted_initials || '?').slice(0, 2);
-    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
+    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row app-card" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
     html += '<div style="display:flex;align-items:center;gap:12px;">';
     // Avatar
     html += '<div style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;">'+escapeHtml(initials)+'</div>';
@@ -1814,20 +1819,33 @@ function paintApplicationsList(apps) {
     var badge = renderComplianceBadge(a);
     if (badge) html += badge;
     html += '<span class="tag '+(a.status==='new'?'ok':'')+'" style="flex-shrink:0;font-size:10px;">'+escapeHtml(a.status)+'</span>';
+    html += '<span id="app-caret-'+escapeAttr(a.id)+'" class="app-caret">></span>';
     html += '</div>';
     html += '</div></div>';
     // Candidate snapshot: structured summary the seafarer sent. The CV PDF
     // itself lives in the chat (as a [skipi:file_attached] tile) — opening
     // the conversation is the natural first step, so the file shows there.
-    html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);" onclick="event.stopPropagation()">';
+    html += '<div id="appdetails-'+escapeAttr(a.id)+'" class="app-details" style="display:none;" onclick="event.stopPropagation()">';
     html += renderApplicationSnapshot(a, sum, sUid);
     html += '</div>';
     // Inline thread (stops click bubbling so clicks inside don't re-toggle).
     html += '<div id="appthread-'+escapeAttr(a.id)+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);" onclick="event.stopPropagation()"></div>';
     html += '</div>';
   });
+  var expandedId = state.focusedApplicationId;
   list.innerHTML = html;
-  applyApplicationFocus();
+  var expandedApp = null;
+  if (expandedId) {
+    expandedApp = apps.find(function(x){ return x.id === expandedId; }) || null;
+  }
+  if (expandedApp) {
+    setTimeout(function(){
+      toggleApplicationChat(expandedApp.id, sUidOf(expandedApp), true);
+    }, 0);
+  } else {
+    state.focusedApplicationId = null;
+    applyApplicationFocus();
+  }
 }
 
 function sUidOf(a) {
@@ -2089,13 +2107,24 @@ function stopApplicationPoll(host) {
   host.dataset.pollId = '';
 }
 
+function setApplicationExpanded(applicationId, expanded) {
+  var details = document.getElementById('appdetails-'+applicationId);
+  var host = document.getElementById('appthread-'+applicationId);
+  var card = document.getElementById('app-card-'+applicationId);
+  var caret = document.getElementById('app-caret-'+applicationId);
+  if (details) details.style.display = expanded ? 'block' : 'none';
+  if (host) host.style.display = expanded ? 'block' : 'none';
+  if (card) card.classList.toggle('app-expanded', !!expanded);
+  if (caret) caret.textContent = expanded ? 'v' : '>';
+}
+
 function closeApplicationChat(applicationId) {
   var host = document.getElementById('appthread-'+applicationId);
   if (host) {
     stopApplicationPoll(host);
-    host.style.display = 'none';
     host.dataset.loaded = '';
   }
+  setApplicationExpanded(applicationId, false);
   if (state.focusedApplicationId === applicationId) {
     state.focusedApplicationId = null;
     applyApplicationFocus();
@@ -2106,8 +2135,8 @@ function closeOtherApplicationChats(applicationId) {
   document.querySelectorAll('[id^="appthread-"]').forEach(function(host){
     if (host.id === 'appthread-'+applicationId) return;
     stopApplicationPoll(host);
-    host.style.display = 'none';
     host.dataset.loaded = '';
+    setApplicationExpanded(host.id.replace('appthread-', ''), false);
   });
 }
 
@@ -2120,26 +2149,24 @@ function applyApplicationFocus() {
     focusId = null;
   }
   document.querySelectorAll('[id^="app-card-"]').forEach(function(card){
-    if (!focusId || card.id === 'app-card-'+focusId) {
-      card.style.display = 'block';
-    } else {
-      card.style.display = 'none';
-    }
+    var id = card.id.replace('app-card-', '');
+    card.style.display = 'block';
+    card.classList.toggle('app-expanded', !!focusId && id === focusId);
   });
 }
 
 // Toggle inline E2E thread under an application card. Crewing-side mirror
 // of seafarer's toggleVacancyThread — same UX, opposite participant.
-async function toggleApplicationChat(applicationId, seafarerUserId) {
+async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
   var host = document.getElementById('appthread-'+applicationId);
   if (!host) return;
-  if (host.style.display !== 'none') {
+  if (host.style.display !== 'none' && !forceOpen) {
     closeApplicationChat(applicationId);
     return;
   }
   closeOtherApplicationChats(applicationId);
   state.focusedApplicationId = applicationId;
-  host.style.display = 'block';
+  setApplicationExpanded(applicationId, true);
   applyApplicationFocus();
   host.innerHTML = '<div class="chat-empty">Loading…</div>';
   // Register pubkey in background — don't await, no need to block UI on it.
