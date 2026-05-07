@@ -79,7 +79,10 @@ pub struct MyIdentity {
 pub fn get_my_identity() -> Result<MyIdentity, String> {
     let (_sk, pk, user_id) = ensure_keypair()?;
     let pubkey_b64 = base64::engine::general_purpose::STANDARD.encode(pk.as_bytes());
-    Ok(MyIdentity { user_id, pubkey_b64 })
+    Ok(MyIdentity {
+        user_id,
+        pubkey_b64,
+    })
 }
 
 #[tauri::command]
@@ -96,7 +99,10 @@ pub fn register_my_pubkey(crewing_id: String) -> Result<MyIdentity, String> {
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client.post(&url).json(&body).send()
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         let s = resp.status();
@@ -117,7 +123,10 @@ fn lookup_recipient_pk(user_id: &str) -> Result<PublicKey, String> {
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client.get(&url).send().map_err(|e| format!("network: {e}"))?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         return Err(format!("recipient pubkey not found: {}", resp.status()));
     }
@@ -165,7 +174,8 @@ pub fn send_encrypted_message(
     let recipient_pk = lookup_recipient_pk(&to_user_id)?;
     let salsa = SalsaBox::new(&recipient_pk, &sk);
     let nonce = SalsaBox::generate_nonce(&mut OsRng);
-    let ct = salsa.encrypt(&nonce, plaintext.as_bytes())
+    let ct = salsa
+        .encrypt(&nonce, plaintext.as_bytes())
         .map_err(|e| format!("encrypt: {e}"))?;
     // Wire format: 24-byte nonce || ciphertext, all base64.
     let mut payload = Vec::with_capacity(24 + ct.len());
@@ -173,7 +183,10 @@ pub fn send_encrypted_message(
     payload.extend_from_slice(&ct);
     let ciphertext_b64 = base64::engine::general_purpose::STANDARD.encode(&payload);
 
-    let url = format!("{}/api/messaging/threads/{}/messages", PROD_API, application_id);
+    let url = format!(
+        "{}/api/messaging/threads/{}/messages",
+        PROD_API, application_id
+    );
     let body = serde_json::json!({
         "from_user_id": my_user_id,
         "to_user_id": to_user_id,
@@ -183,7 +196,10 @@ pub fn send_encrypted_message(
         .timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client.post(&url).json(&body).send()
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         let s = resp.status();
@@ -213,7 +229,10 @@ pub fn fetch_messages(application_id: String) -> Result<Vec<PlaintextMessage>, S
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client.get(&url).send().map_err(|e| format!("network: {e}"))?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         return Err(format!("server returned {}", resp.status()));
     }
@@ -233,15 +252,21 @@ pub fn fetch_messages(application_id: String) -> Result<Vec<PlaintextMessage>, S
             pk.clone()
         } else {
             match lookup_recipient_pk(&counterpart_id) {
-                Ok(pk) => { pk_cache.insert(counterpart_id.clone(), pk.clone()); pk }
+                Ok(pk) => {
+                    pk_cache.insert(counterpart_id.clone(), pk.clone());
+                    pk
+                }
                 Err(_) => continue,
             }
         };
         let salsa = SalsaBox::new(&counterpart_pk, &sk);
         let raw = match base64::engine::general_purpose::STANDARD.decode(&m.ciphertext_b64) {
-            Ok(r) => r, Err(_) => continue,
+            Ok(r) => r,
+            Err(_) => continue,
         };
-        if raw.len() < 24 { continue; }
+        if raw.len() < 24 {
+            continue;
+        }
         let (nonce_bytes, ct) = raw.split_at(24);
         let nonce = crypto_box::Nonce::from_slice(nonce_bytes);
         let plaintext = match salsa.decrypt(nonce, ct) {
@@ -277,7 +302,12 @@ pub struct AttachmentMeta {
 }
 
 fn guess_mime_from_path(p: &std::path::Path) -> String {
-    match p.extension().and_then(|e| e.to_str()).map(|s| s.to_lowercase()).as_deref() {
+    match p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_lowercase())
+        .as_deref()
+    {
         Some("pdf") => "application/pdf".into(),
         Some("zip") => "application/zip".into(),
         Some("png") => "image/png".into(),
@@ -298,20 +328,31 @@ pub fn upload_encrypted_attachment(
     let recipient_pk = lookup_recipient_pk(&to_user_id)?;
     let path = std::path::Path::new(&file_path);
     let bytes = std::fs::read(path).map_err(|e| format!("read file: {e}"))?;
-    if bytes.len() > 10 * 1024 * 1024 { return Err("file too large (>10 MB)".into()); }
-    let original_filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("file.bin").to_string();
+    if bytes.len() > 10 * 1024 * 1024 {
+        return Err("file too large (>10 MB)".into());
+    }
+    let original_filename = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("file.bin")
+        .to_string();
     let mime_type = guess_mime_from_path(path);
     let size_bytes = bytes.len() as u64;
 
     let salsa = SalsaBox::new(&recipient_pk, &sk);
     let nonce = SalsaBox::generate_nonce(&mut OsRng);
-    let ct = salsa.encrypt(&nonce, bytes.as_slice()).map_err(|e| format!("encrypt: {e}"))?;
+    let ct = salsa
+        .encrypt(&nonce, bytes.as_slice())
+        .map_err(|e| format!("encrypt: {e}"))?;
     let mut payload = Vec::with_capacity(24 + ct.len());
     payload.extend_from_slice(&nonce);
     payload.extend_from_slice(&ct);
     let ciphertext_b64 = base64::engine::general_purpose::STANDARD.encode(&payload);
 
-    let url = format!("{}/api/messaging/threads/{}/attachments", PROD_API, application_id);
+    let url = format!(
+        "{}/api/messaging/threads/{}/attachments",
+        PROD_API, application_id
+    );
     let body = serde_json::json!({
         "from_user_id": my_user_id,
         "to_user_id": to_user_id,
@@ -322,13 +363,20 @@ pub fn upload_encrypted_attachment(
     });
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
-        .build().map_err(|e| e.to_string())?;
-    let resp = client.post(&url).json(&body).send().map_err(|e| format!("network: {e}"))?;
+        .build()
+        .map_err(|e| e.to_string())?;
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
-        let s = resp.status(); let b = resp.text().unwrap_or_default();
+        let s = resp.status();
+        let b = resp.text().unwrap_or_default();
         return Err(format!("server returned {s}: {b}"));
     }
-    resp.json::<AttachmentMeta>().map_err(|e| format!("bad JSON: {e}"))
+    resp.json::<AttachmentMeta>()
+        .map_err(|e| format!("bad JSON: {e}"))
 }
 
 #[tauri::command]
@@ -339,34 +387,60 @@ pub fn download_encrypted_attachment(
 ) -> Result<String, String> {
     let (sk, _pk, my_user_id) = ensure_keypair()?;
     let counterpart_pk = lookup_recipient_pk(&counterpart_user_id)?;
-    let url = format!("{}/api/messaging/attachments/{}/body?user_id={}", PROD_API, attachment_id, my_user_id);
+    let url = format!(
+        "{}/api/messaging/attachments/{}/body?user_id={}",
+        PROD_API, attachment_id, my_user_id
+    );
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
-        .build().map_err(|e| e.to_string())?;
-    let resp = client.get(&url).send().map_err(|e| format!("network: {e}"))?;
+        .build()
+        .map_err(|e| e.to_string())?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         return Err(format!("server returned {}", resp.status()));
     }
-    #[derive(Deserialize)] struct Body { ciphertext_b64: String }
+    #[derive(Deserialize)]
+    struct Body {
+        ciphertext_b64: String,
+    }
     let parsed: Body = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
-    let raw = base64::engine::general_purpose::STANDARD.decode(&parsed.ciphertext_b64)
+    let raw = base64::engine::general_purpose::STANDARD
+        .decode(&parsed.ciphertext_b64)
         .map_err(|e| format!("bad b64: {e}"))?;
-    if raw.len() < 24 { return Err("ciphertext too short".into()); }
+    if raw.len() < 24 {
+        return Err("ciphertext too short".into());
+    }
     let (nonce_bytes, ct) = raw.split_at(24);
     let nonce = crypto_box::Nonce::from_slice(nonce_bytes);
     let salsa = SalsaBox::new(&counterpart_pk, &sk);
-    let plaintext = salsa.decrypt(nonce, ct).map_err(|e| format!("decrypt: {e}"))?;
+    let plaintext = salsa
+        .decrypt(nonce, ct)
+        .map_err(|e| format!("decrypt: {e}"))?;
 
-    let home = std::env::var_os("HOME").map(std::path::PathBuf::from)
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
     let dir = home.join("Downloads").join("Skipi").join("Inbox");
     std::fs::create_dir_all(&dir).map_err(|e| format!("create dir: {e}"))?;
     let mut target = dir.join(&original_filename);
     let mut idx = 1;
     while target.exists() {
-        let stem = std::path::Path::new(&original_filename).file_stem().and_then(|s| s.to_str()).unwrap_or("file");
-        let ext = std::path::Path::new(&original_filename).extension().and_then(|s| s.to_str()).unwrap_or("");
-        let candidate = if ext.is_empty() { format!("{}_{}", stem, idx) } else { format!("{}_{}.{}", stem, idx, ext) };
+        let stem = std::path::Path::new(&original_filename)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("file");
+        let ext = std::path::Path::new(&original_filename)
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+        let candidate = if ext.is_empty() {
+            format!("{}_{}", stem, idx)
+        } else {
+            format!("{}_{}.{}", stem, idx, ext)
+        };
         target = dir.join(candidate);
         idx += 1;
     }
@@ -384,15 +458,23 @@ pub fn open_path_with_default(path: String) -> Result<(), String> {
 pub fn fetch_attachments_for_application(
     application_id: String,
 ) -> Result<Vec<AttachmentMeta>, String> {
-    let url = format!("{}/api/messaging/threads/{}/attachments", PROD_API, application_id);
+    let url = format!(
+        "{}/api/messaging/threads/{}/attachments",
+        PROD_API, application_id
+    );
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
-        .build().map_err(|e| e.to_string())?;
-    let resp = client.get(&url).send().map_err(|e| format!("network: {e}"))?;
+        .build()
+        .map_err(|e| e.to_string())?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
         return Err(format!("server returned {}", resp.status()));
     }
-    resp.json::<Vec<AttachmentMeta>>().map_err(|e| format!("bad JSON: {e}"))
+    resp.json::<Vec<AttachmentMeta>>()
+        .map_err(|e| format!("bad JSON: {e}"))
 }
 
 /// Unpack a downloaded `[skipi:doc_bundle]` ZIP into a stable per-application
@@ -404,9 +486,14 @@ pub fn extract_documents_bundle(
     zip_path: String,
 ) -> Result<serde_json::Value, String> {
     use std::io::Read;
-    let home = std::env::var_os("HOME").map(std::path::PathBuf::from)
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
-    let dest = home.join("Downloads").join("Skipi").join("Inbox").join(format!("bundle_{}", application_id));
+    let dest = home
+        .join("Downloads")
+        .join("Skipi")
+        .join("Inbox")
+        .join(format!("bundle_{}", application_id));
     std::fs::create_dir_all(&dest).map_err(|e| format!("create dir: {e}"))?;
 
     let f = std::fs::File::open(&zip_path).map_err(|e| format!("open zip: {e}"))?;
@@ -416,17 +503,22 @@ pub fn extract_documents_bundle(
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| format!("zip entry: {e}"))?;
         let name = entry.name().to_string();
-        if name.ends_with('/') { continue; }
+        if name.ends_with('/') {
+            continue;
+        }
         let out_path = dest.join(&name);
         if let Some(parent) = out_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let mut data = Vec::new();
-        entry.read_to_end(&mut data).map_err(|e| format!("read entry {name}: {e}"))?;
+        entry
+            .read_to_end(&mut data)
+            .map_err(|e| format!("read entry {name}: {e}"))?;
         if name == "manifest.json" {
             manifest_text = Some(String::from_utf8_lossy(&data).to_string());
         }
-        std::fs::write(&out_path, &data).map_err(|e| format!("write {}: {}", out_path.display(), e))?;
+        std::fs::write(&out_path, &data)
+            .map_err(|e| format!("write {}: {}", out_path.display(), e))?;
     }
 
     let manifest: serde_json::Value = match manifest_text {

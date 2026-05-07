@@ -18,6 +18,7 @@ pub struct CrewingProfile {
     pub contact_email: String,
     pub contact_phone: String,
     pub slug: String,
+    pub public_description: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -30,9 +31,9 @@ pub struct InterfacePrefs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]   // forward-compat: any new field added later loads with
-                    // its Default value when absent from the JSON, so user
-                    // settings survive every upgrade.
+#[serde(default)] // forward-compat: any new field added later loads with
+                  // its Default value when absent from the JSON, so user
+                  // settings survive every upgrade.
 pub struct Settings {
     // ----- Connection (server, identity) -----
     pub server_url: String,
@@ -84,7 +85,7 @@ impl Settings {
                     let _ = s.save();
                 }
                 s
-            },
+            }
             Err(e) => {
                 // Forward-compat fallback: settings.json from an older
                 // build is missing required fields. Don't wipe it — back
@@ -165,8 +166,12 @@ fn save_settings(mut new_settings: Settings, state: tauri::State<AppState>) -> R
     // Maintain recent_vaults list whenever vault_path changes via Settings.
     // Newest-first, deduped, capped at 10.
     if !new_settings.vault_path.is_empty() {
-        new_settings.recent_vaults.retain(|p| p != &new_settings.vault_path);
-        new_settings.recent_vaults.insert(0, new_settings.vault_path.clone());
+        new_settings
+            .recent_vaults
+            .retain(|p| p != &new_settings.vault_path);
+        new_settings
+            .recent_vaults
+            .insert(0, new_settings.vault_path.clone());
         new_settings.recent_vaults.truncate(10);
     }
     new_settings.save()?;
@@ -181,6 +186,85 @@ fn forget_recent_vault(path: String, state: tauri::State<AppState>) -> Result<()
     s.save()?;
     *state.settings.lock().unwrap() = s;
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct CrewingProfileWire<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    display_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    legal_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    jurisdiction: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    registration_number: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mlc_cert_number: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mlc_cert_valid_to: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    contact_email: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    contact_phone: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    slug: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public_description: Option<&'a str>,
+}
+
+fn nonempty(s: &str) -> Option<&str> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
+}
+
+#[tauri::command]
+fn sync_crewing_profile(state: tauri::State<AppState>) -> Result<String, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.is_empty()
+        || settings.crewing_id.is_empty()
+        || settings.server_url.is_empty()
+    {
+        return Ok("skipped: connection settings incomplete".into());
+    }
+
+    let profile = &settings.profile;
+    let mlc_valid_to =
+        nonempty(&profile.mlc_cert_valid_to).map(|s| format!("{}T00:00:00+00:00", s));
+    let wire = CrewingProfileWire {
+        display_name: nonempty(&settings.company_name),
+        legal_name: nonempty(&profile.legal_name),
+        jurisdiction: nonempty(&profile.jurisdiction),
+        registration_number: nonempty(&profile.registration_number),
+        mlc_cert_number: nonempty(&profile.mlc_cert_number),
+        mlc_cert_valid_to: mlc_valid_to,
+        contact_email: nonempty(&profile.contact_email),
+        contact_phone: nonempty(&profile.contact_phone),
+        slug: nonempty(&profile.slug),
+        public_description: nonempty(&profile.public_description),
+    };
+    let url = format!(
+        "{}/api/crewings/{}/profile",
+        settings.server_url.trim_end_matches('/'),
+        settings.crewing_id
+    );
+    let resp = auth_client_for(&settings, 15)?
+        .patch(&url)
+        .bearer_auth(&settings.bearer_token)
+        .json(&wire)
+        .send()
+        .map_err(|e| format!("network error: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
+    }
+    Ok("synced".into())
 }
 
 #[tauri::command]
@@ -267,7 +351,9 @@ fn post_vacancy(
 ) -> Result<VacancyPosted, String> {
     let settings = state.settings.lock().unwrap().clone();
     if settings.bearer_token.is_empty() {
-        return Err("No bearer token configured. Open Settings and paste the token issued by Skipi.".into());
+        return Err(
+            "No bearer token configured. Open Settings and paste the token issued by Skipi.".into(),
+        );
     }
     if settings.crewing_id.is_empty() {
         return Err("No crewing_id configured. Open Settings and paste the crewing_id issued together with the token.".into());
@@ -276,7 +362,10 @@ fn post_vacancy(
         return Err("No server URL configured. Default is http://127.0.0.1:8000 for dev.".into());
     }
 
-    let url = format!("{}/api/vacancies", settings.server_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/api/vacancies",
+        settings.server_url.trim_end_matches('/')
+    );
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()
@@ -284,9 +373,13 @@ fn post_vacancy(
 
     // Build wire payload. Map join_date → joining_window_from (server uses
     // datetimes; we send midnight UTC). vessel_imo is integer on the server.
-    let imo: Option<i64> = draft.vessel_imo.as_ref()
+    let imo: Option<i64> = draft
+        .vessel_imo
+        .as_ref()
         .and_then(|s| s.trim().parse::<i64>().ok());
-    let join_from = draft.join_date.as_ref()
+    let join_from = draft
+        .join_date
+        .as_ref()
         .filter(|s| !s.is_empty())
         .map(|s| format!("{}T00:00:00+00:00", s));
     let salary_min_int = draft.salary_min.map(|f| f.round() as i64);
@@ -332,7 +425,8 @@ fn post_vacancy(
         return Err(format!("server returned {status}: {body}"));
     }
 
-    let server_resp: VacancyServerResponse = resp.json()
+    let server_resp: VacancyServerResponse = resp
+        .json()
         .map_err(|e| format!("bad JSON from server: {e}"))?;
 
     db::save_posted_vacancy(&server_resp.id, &draft, &server_resp.published_at)
@@ -351,7 +445,9 @@ fn post_mailing_request(
 ) -> Result<VacancyPosted, String> {
     let settings = state.settings.lock().unwrap().clone();
     if settings.bearer_token.is_empty() {
-        return Err("No bearer token configured. Open Settings and paste the token issued by Skipi.".into());
+        return Err(
+            "No bearer token configured. Open Settings and paste the token issued by Skipi.".into(),
+        );
     }
     if settings.crewing_id.is_empty() {
         return Err("No crewing_id configured. Open Settings and paste the crewing_id issued together with the token.".into());
@@ -360,7 +456,10 @@ fn post_mailing_request(
         return Err("No server URL configured.".into());
     }
 
-    let url = format!("{}/api/mailing-requests", settings.server_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/api/mailing-requests",
+        settings.server_url.trim_end_matches('/')
+    );
     let reply_to_owned = draft
         .reply_to
         .as_deref()
@@ -511,11 +610,12 @@ struct MailingRequestListResp {
 }
 
 #[tauri::command]
-fn fetch_my_vacancies(
-    state: tauri::State<AppState>,
-) -> Result<Vec<ServerVacancy>, String> {
+fn fetch_my_vacancies(state: tauri::State<AppState>) -> Result<Vec<ServerVacancy>, String> {
     let settings = state.settings.lock().unwrap().clone();
-    if settings.bearer_token.is_empty() || settings.crewing_id.is_empty() || settings.server_url.is_empty() {
+    if settings.bearer_token.is_empty()
+        || settings.crewing_id.is_empty()
+        || settings.server_url.is_empty()
+    {
         return Err("Not configured. Open Settings.".into());
     }
     let url = format!(
@@ -527,7 +627,10 @@ fn fetch_my_vacancies(
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client.get(&url).send().map_err(|e| format!("network error: {e}"))?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("network error: {e}"))?;
     let s = resp.status();
     if !s.is_success() {
         let body = resp.text().unwrap_or_default();
@@ -542,7 +645,10 @@ fn fetch_my_mailing_requests(
     state: tauri::State<AppState>,
 ) -> Result<Vec<ServerMailingRequest>, String> {
     let settings = state.settings.lock().unwrap().clone();
-    if settings.bearer_token.is_empty() || settings.crewing_id.is_empty() || settings.server_url.is_empty() {
+    if settings.bearer_token.is_empty()
+        || settings.crewing_id.is_empty()
+        || settings.server_url.is_empty()
+    {
         return Err("Not configured. Open Settings.".into());
     }
     let url = format!(
@@ -638,7 +744,10 @@ fn mailing_request_action(
     Ok(())
 }
 
-fn auth_client_for(settings: &Settings, timeout_secs: u64) -> Result<reqwest::blocking::Client, String> {
+fn auth_client_for(
+    settings: &Settings,
+    timeout_secs: u64,
+) -> Result<reqwest::blocking::Client, String> {
     let _ = settings;
     reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(timeout_secs))
@@ -647,70 +756,79 @@ fn auth_client_for(settings: &Settings, timeout_secs: u64) -> Result<reqwest::bl
 }
 
 #[tauri::command]
-fn close_vacancy_remote(
-    vacancy_id: String,
-    state: tauri::State<AppState>,
-) -> Result<(), String> {
+fn close_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> Result<(), String> {
     let settings = state.settings.lock().unwrap().clone();
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!("{}/api/vacancies/{}/close",
-        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let url = format!(
+        "{}/api/vacancies/{}/close",
+        settings.server_url.trim_end_matches('/'),
+        vacancy_id
+    );
     let resp = auth_client_for(&settings, 15)?
         .post(&url)
         .bearer_auth(&settings.bearer_token)
         .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
-        return Err(format!("server returned {}: {}",
-            resp.status(), resp.text().unwrap_or_default()));
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
     }
     Ok(())
 }
 
 #[tauri::command]
-fn reopen_vacancy_remote(
-    vacancy_id: String,
-    state: tauri::State<AppState>,
-) -> Result<(), String> {
+fn reopen_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> Result<(), String> {
     let settings = state.settings.lock().unwrap().clone();
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!("{}/api/vacancies/{}/reopen",
-        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let url = format!(
+        "{}/api/vacancies/{}/reopen",
+        settings.server_url.trim_end_matches('/'),
+        vacancy_id
+    );
     let resp = auth_client_for(&settings, 15)?
         .post(&url)
         .bearer_auth(&settings.bearer_token)
         .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
-        return Err(format!("server returned {}: {}",
-            resp.status(), resp.text().unwrap_or_default()));
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
     }
     Ok(())
 }
 
 #[tauri::command]
-fn delete_vacancy_remote(
-    vacancy_id: String,
-    state: tauri::State<AppState>,
-) -> Result<(), String> {
+fn delete_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> Result<(), String> {
     let settings = state.settings.lock().unwrap().clone();
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!("{}/api/vacancies/{}",
-        settings.server_url.trim_end_matches('/'), vacancy_id);
+    let url = format!(
+        "{}/api/vacancies/{}",
+        settings.server_url.trim_end_matches('/'),
+        vacancy_id
+    );
     let resp = auth_client_for(&settings, 15)?
         .delete(&url)
         .bearer_auth(&settings.bearer_token)
         .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
-        return Err(format!("server returned {}: {}",
-            resp.status(), resp.text().unwrap_or_default()));
+        return Err(format!(
+            "server returned {}: {}",
+            resp.status(),
+            resp.text().unwrap_or_default()
+        ));
     }
     Ok(())
 }
@@ -763,11 +881,19 @@ fn fetch_applications_for_vacancy(
         if matches!(f.include_compliance, Some(true)) {
             q.push("include_compliance=1".into());
         }
-        if let Some(v) = f.missing_required { q.push(format!("missing_required={}", v)); }
-        if let Some(v) = f.expired_required { q.push(format!("expired_required={}", v)); }
-        if let Some(v) = f.months_in_rank   { q.push(format!("months_in_rank={}", v)); }
+        if let Some(v) = f.missing_required {
+            q.push(format!("missing_required={}", v));
+        }
+        if let Some(v) = f.expired_required {
+            q.push(format!("expired_required={}", v));
+        }
+        if let Some(v) = f.months_in_rank {
+            q.push(format!("months_in_rank={}", v));
+        }
         if let Some(v) = f.required_cert {
-            if !v.is_empty() { q.push(format!("required_cert={}", urlenc(&v))); }
+            if !v.is_empty() {
+                q.push(format!("required_cert={}", urlenc(&v)));
+            }
         }
         if let Some(v) = f.sort {
             if !v.is_empty() && v != "received_at" {
@@ -805,7 +931,7 @@ fn fetch_applications_for_vacancy(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrewingDocumentMeta {
     pub name: String,
-    pub doc_type: String,    // 'license' | 'mlc_cert' | 'template' | 'checklist' | 'other'
+    pub doc_type: String, // 'license' | 'mlc_cert' | 'template' | 'checklist' | 'other'
     pub notes: String,
 }
 
@@ -816,8 +942,7 @@ fn add_document(
     state: tauri::State<AppState>,
 ) -> Result<db::CachedDocument, String> {
     let settings = state.settings.lock().unwrap().clone();
-    db::add_document(&meta, &source_path, &settings.vault_path)
-        .map_err(|e| e.to_string())
+    db::add_document(&meta, &source_path, &settings.vault_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -856,10 +981,7 @@ pub struct DocumentMetaUpdate {
 }
 
 #[tauri::command]
-fn update_document(
-    doc_id: String,
-    meta: DocumentMetaUpdate,
-) -> Result<db::CachedDocument, String> {
+fn update_document(doc_id: String, meta: DocumentMetaUpdate) -> Result<db::CachedDocument, String> {
     db::update_document_meta(
         &doc_id,
         meta.name.as_deref(),
@@ -894,14 +1016,23 @@ fn read_document_file_base64(doc_id: String) -> Result<(String, String), String>
 
 fn mime_from_path(path: &str) -> String {
     let lower = path.to_lowercase();
-    if lower.ends_with(".pdf") { "application/pdf".into() }
-    else if lower.ends_with(".png") { "image/png".into() }
-    else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") { "image/jpeg".into() }
-    else if lower.ends_with(".webp") { "image/webp".into() }
-    else if lower.ends_with(".gif") { "image/gif".into() }
-    else if lower.ends_with(".bmp") { "image/bmp".into() }
-    else if lower.ends_with(".txt") { "text/plain".into() }
-    else { "application/octet-stream".into() }
+    if lower.ends_with(".pdf") {
+        "application/pdf".into()
+    } else if lower.ends_with(".png") {
+        "image/png".into()
+    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
+        "image/jpeg".into()
+    } else if lower.ends_with(".webp") {
+        "image/webp".into()
+    } else if lower.ends_with(".gif") {
+        "image/gif".into()
+    } else if lower.ends_with(".bmp") {
+        "image/bmp".into()
+    } else if lower.ends_with(".txt") {
+        "text/plain".into()
+    } else {
+        "application/octet-stream".into()
+    }
 }
 
 fn open_with_default_app(path: &str) -> Result<(), String> {
@@ -932,12 +1063,14 @@ fn open_with_default_app(path: &str) -> Result<(), String> {
 // ---------- Demo documents (synthetic license + MLC cert) ----------
 
 fn write_demo_pdf(title: &str, body_lines: &[&str]) -> Result<std::path::PathBuf, String> {
-    use printpdf::{PdfDocument, Mm, BuiltinFont};
+    use printpdf::{BuiltinFont, Mm, PdfDocument};
     let (doc, page1, layer1) = PdfDocument::new(title, Mm(210.0), Mm(297.0), "L1");
     let layer = doc.get_page(page1).get_layer(layer1);
-    let font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+    let font = doc
+        .add_builtin_font(BuiltinFont::HelveticaBold)
         .map_err(|e| e.to_string())?;
-    let body_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+    let body_font = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
         .map_err(|e| e.to_string())?;
     layer.use_text(title, 18.0, Mm(20.0), Mm(265.0), &font);
     let mut y = 245.0;
@@ -963,167 +1096,184 @@ fn write_demo_pdf(title: &str, body_lines: &[&str]) -> Result<std::path::PathBuf
 fn template_pdf_content(template_id: &str) -> Option<(&'static str, Vec<String>)> {
     let issued = chrono::Utc::now().format("%Y-%m-%d").to_string();
     let valid_to_5y = (chrono::Utc::now() + chrono::Duration::days(365 * 5))
-        .format("%Y-%m-%d").to_string();
+        .format("%Y-%m-%d")
+        .to_string();
     let valid_to_1y = (chrono::Utc::now() + chrono::Duration::days(365))
-        .format("%Y-%m-%d").to_string();
+        .format("%Y-%m-%d")
+        .to_string();
     Some(match template_id {
-        "crew-licence" => ("Recruitment and Placement Service Licence", vec![
-            "*** SYNTHETIC SAMPLE — NOT A VALID LICENCE ***".into(),
-            "".into(),
-            "Issuing Authority: Department of Maritime Affairs (DEMO)".into(),
-            "Issued under MLC 2006 Regulation 1.4 and IMO Resolution".into(),
-            "A.946(23) (Voluntary Member State Audit Scheme).".into(),
-            "".into(),
-            "LICENCE GRANTED TO".into(),
-            "  Skipi Dev Crewing".into(),
-            "  Address: 1 Demo Street, Tbilisi, Georgia".into(),
-            format!("  Registration number: DEV-LIC-2026-0001"),
-            "".into(),
-            "SCOPE OF LICENCE".into(),
-            "  - Recruitment and placement of seafarers (deck, engine,".into(),
-            "    catering, hotel) for vessels engaged in international".into(),
-            "    voyages under any flag.".into(),
-            "  - Compliance with MLC 2006 Standard A1.4 (Recruitment".into(),
-            "    and placement) and Guideline B1.4.".into(),
-            "  - Quality management system: ISO 9001:2015 (DEMO).".into(),
-            "".into(),
-            format!("Date of issue : {issued}"),
-            format!("Valid until   : {valid_to_5y}"),
-            "".into(),
-            "______________________________".into(),
-            "Director, Maritime Personnel Affairs (DEMO)".into(),
-            "Department of Maritime Affairs".into(),
-        ]),
-        "mlc-cert" => ("Maritime Labour Certificate", vec![
-            "*** SYNTHETIC SAMPLE — NOT A VALID MLC CERTIFICATE ***".into(),
-            "".into(),
-            "Issued under the authority of the Government of:".into(),
-            "  REPUBLIC OF MARSHALL ISLANDS (DEMO)".into(),
-            "by the Maritime Administration of the Republic of the".into(),
-            "Marshall Islands.".into(),
-            "".into(),
-            "Particulars of the recruiter:".into(),
-            "  Name: Skipi Dev Crewing".into(),
-            "  Address: 1 Demo Street, Tbilisi, Georgia".into(),
-            "  Identification (Reg No): DEV-MLC-2026-0001".into(),
-            "".into(),
-            "This is to certify that the recruitment and placement".into(),
-            "service has been audited and verified to be in compliance".into(),
-            "with the requirements of the Maritime Labour Convention,".into(),
-            "2006, as amended, in respect of:".into(),
-            "  1. Minimum age".into(),
-            "  2. Medical certification".into(),
-            "  3. Qualifications of seafarers".into(),
-            "  4. Seafarers' employment agreements".into(),
-            "  5. Recruitment and placement procedures".into(),
-            "  6. Hours of work or rest verification".into(),
-            "  7. Documentation of employment conditions".into(),
-            "  8. Anti-fraud and anti-discrimination procedures".into(),
-            "  9. Complaints handling".into(),
-            "".into(),
-            format!("Date of issue : {issued}"),
-            format!("Valid until   : {valid_to_5y}"),
-            format!("Certificate No: DMLC-DEMO-2026-0001"),
-            "".into(),
-            "______________________________".into(),
-            "For the Maritime Administrator (DEMO)".into(),
-        ]),
-        "pi-insurance" => ("P&I Insurance Cover Note", vec![
-            "*** SYNTHETIC SAMPLE — NOT A VALID INSURANCE POLICY ***".into(),
-            "".into(),
-            "INSURER".into(),
-            "  Demo P&I Mutual Association Ltd.".into(),
-            "  Member of the International Group of P&I Clubs (DEMO)".into(),
-            "".into(),
-            "ASSURED".into(),
-            "  Skipi Dev Crewing".into(),
-            "  1 Demo Street, Tbilisi, Georgia".into(),
-            "".into(),
-            "TYPE OF COVER".into(),
-            "  Crew liabilities (Class 1) — recruitment & placement".into(),
-            "  service operator's liability for claims by seafarers".into(),
-            "  arising from breach of employment contract, repatriation".into(),
-            "  costs, medical expenses ashore, death and disability.".into(),
-            "".into(),
-            "LIMIT OF LIABILITY".into(),
-            "  USD 5,000,000 any one event (DEMO)".into(),
-            "  USD 25,000,000 in the aggregate".into(),
-            "".into(),
-            "PERIOD OF COVER".into(),
-            format!("  From: {issued} 12:00 GMT"),
-            format!("  To  : {valid_to_1y} 12:00 GMT"),
-            "".into(),
-            format!("Policy number : PI-DEMO-2026-0001"),
-            "Geographic limits: Worldwide except sanctioned zones".into(),
-            "".into(),
-            "Subject to the rules and exclusions of the Association".into(),
-            "in force from time to time.".into(),
-        ]),
-        "joining-checklist" => ("Seafarer Joining Checklist (Template)", vec![
-            "*** SYNTHETIC TEMPLATE — replace with your own ***".into(),
-            "".into(),
-            "Vessel: ____________________  Position: _____________".into(),
-            "Joining port: _______________  ETD: _________________".into(),
-            "Seafarer: ____________________  Rank: ______________".into(),
-            "".into(),
-            "PRE-DEPARTURE DOCUMENTS".into(),
-            "  [ ] Valid passport (>= 6 months remaining)".into(),
-            "  [ ] Seaman's Discharge Book".into(),
-            "  [ ] Certificate of Competency (CoC) for the position".into(),
-            "  [ ] Medical fitness certificate (PEME, valid)".into(),
-            "  [ ] Yellow Fever vaccination (if required by route)".into(),
-            "  [ ] STCW basic safety: BST, AFF, PSCRB, MFA".into(),
-            "  [ ] Vessel-specific endorsements (tanker, IGF, etc.)".into(),
-            "  [ ] Visa for joining port + transit countries".into(),
-            "  [ ] Letter of guarantee / contract".into(),
-            "  [ ] Bank details for salary".into(),
-            "".into(),
-            "TRAVEL ARRANGEMENTS".into(),
-            "  [ ] Flight tickets booked and forwarded".into(),
-            "  [ ] Hotel reservation at joining port (if needed)".into(),
-            "  [ ] Local agent contact provided".into(),
-            "  [ ] Emergency contact at crewing office (24/7)".into(),
-            "".into(),
-            "BRIEFING".into(),
-            "  [ ] Vessel particulars, owner, ISM details shared".into(),
-            "  [ ] Salary scale, overtime, leave structure explained".into(),
-            "  [ ] Repatriation conditions explained".into(),
-            "  [ ] Onboard reporting and grievance channels shared".into(),
-            "".into(),
-            "Signed by seafarer: __________________  Date: _______".into(),
-            "Signed by crewing : __________________  Date: _______".into(),
-        ]),
-        "info-pack" => ("Seafarer Information Pack (Template)", vec![
-            "*** SYNTHETIC TEMPLATE — replace with your own ***".into(),
-            "".into(),
-            "Welcome from Skipi Dev Crewing".into(),
-            "".into(),
-            "About us".into(),
-            "  Skipi Dev Crewing is a manning agency operating under".into(),
-            "  MLC 2006 and the laws of the country of registration.".into(),
-            "  We work with shipowners and ship managers across all".into(),
-            "  vessel types.".into(),
-            "".into(),
-            "Your contract".into(),
-            "  - Standard contracts follow ITF templates or owner".into(),
-            "    CBA, whichever is more favourable.".into(),
-            "  - Salary is paid in USD/EUR by 7th of the following".into(),
-            "    month directly to your designated bank account.".into(),
-            "  - Allotment to family is configurable up to 80%.".into(),
-            "  - Overtime is calculated per the CBA in force.".into(),
-            "".into(),
-            "While onboard".into(),
-            "  - Hours of work and rest are recorded per MLC 2.3.".into(),
-            "  - Repatriation is at no cost to the seafarer per MLC 2.5.".into(),
-            "  - Medical care onboard and ashore is covered per MLC 4.1.".into(),
-            "  - Complaints can be raised onboard via the Master,".into(),
-            "    or directly to the crewing office at any time.".into(),
-            "".into(),
-            "Contact us 24/7".into(),
-            "  Email: ops@skipi-dev-crewing.example".into(),
-            "  Phone: +995 XX XXX XXXX (DEMO)".into(),
-            "  WhatsApp: same number above".into(),
-        ]),
+        "crew-licence" => (
+            "Recruitment and Placement Service Licence",
+            vec![
+                "*** SYNTHETIC SAMPLE — NOT A VALID LICENCE ***".into(),
+                "".into(),
+                "Issuing Authority: Department of Maritime Affairs (DEMO)".into(),
+                "Issued under MLC 2006 Regulation 1.4 and IMO Resolution".into(),
+                "A.946(23) (Voluntary Member State Audit Scheme).".into(),
+                "".into(),
+                "LICENCE GRANTED TO".into(),
+                "  Skipi Dev Crewing".into(),
+                "  Address: 1 Demo Street, Tbilisi, Georgia".into(),
+                format!("  Registration number: DEV-LIC-2026-0001"),
+                "".into(),
+                "SCOPE OF LICENCE".into(),
+                "  - Recruitment and placement of seafarers (deck, engine,".into(),
+                "    catering, hotel) for vessels engaged in international".into(),
+                "    voyages under any flag.".into(),
+                "  - Compliance with MLC 2006 Standard A1.4 (Recruitment".into(),
+                "    and placement) and Guideline B1.4.".into(),
+                "  - Quality management system: ISO 9001:2015 (DEMO).".into(),
+                "".into(),
+                format!("Date of issue : {issued}"),
+                format!("Valid until   : {valid_to_5y}"),
+                "".into(),
+                "______________________________".into(),
+                "Director, Maritime Personnel Affairs (DEMO)".into(),
+                "Department of Maritime Affairs".into(),
+            ],
+        ),
+        "mlc-cert" => (
+            "Maritime Labour Certificate",
+            vec![
+                "*** SYNTHETIC SAMPLE — NOT A VALID MLC CERTIFICATE ***".into(),
+                "".into(),
+                "Issued under the authority of the Government of:".into(),
+                "  REPUBLIC OF MARSHALL ISLANDS (DEMO)".into(),
+                "by the Maritime Administration of the Republic of the".into(),
+                "Marshall Islands.".into(),
+                "".into(),
+                "Particulars of the recruiter:".into(),
+                "  Name: Skipi Dev Crewing".into(),
+                "  Address: 1 Demo Street, Tbilisi, Georgia".into(),
+                "  Identification (Reg No): DEV-MLC-2026-0001".into(),
+                "".into(),
+                "This is to certify that the recruitment and placement".into(),
+                "service has been audited and verified to be in compliance".into(),
+                "with the requirements of the Maritime Labour Convention,".into(),
+                "2006, as amended, in respect of:".into(),
+                "  1. Minimum age".into(),
+                "  2. Medical certification".into(),
+                "  3. Qualifications of seafarers".into(),
+                "  4. Seafarers' employment agreements".into(),
+                "  5. Recruitment and placement procedures".into(),
+                "  6. Hours of work or rest verification".into(),
+                "  7. Documentation of employment conditions".into(),
+                "  8. Anti-fraud and anti-discrimination procedures".into(),
+                "  9. Complaints handling".into(),
+                "".into(),
+                format!("Date of issue : {issued}"),
+                format!("Valid until   : {valid_to_5y}"),
+                format!("Certificate No: DMLC-DEMO-2026-0001"),
+                "".into(),
+                "______________________________".into(),
+                "For the Maritime Administrator (DEMO)".into(),
+            ],
+        ),
+        "pi-insurance" => (
+            "P&I Insurance Cover Note",
+            vec![
+                "*** SYNTHETIC SAMPLE — NOT A VALID INSURANCE POLICY ***".into(),
+                "".into(),
+                "INSURER".into(),
+                "  Demo P&I Mutual Association Ltd.".into(),
+                "  Member of the International Group of P&I Clubs (DEMO)".into(),
+                "".into(),
+                "ASSURED".into(),
+                "  Skipi Dev Crewing".into(),
+                "  1 Demo Street, Tbilisi, Georgia".into(),
+                "".into(),
+                "TYPE OF COVER".into(),
+                "  Crew liabilities (Class 1) — recruitment & placement".into(),
+                "  service operator's liability for claims by seafarers".into(),
+                "  arising from breach of employment contract, repatriation".into(),
+                "  costs, medical expenses ashore, death and disability.".into(),
+                "".into(),
+                "LIMIT OF LIABILITY".into(),
+                "  USD 5,000,000 any one event (DEMO)".into(),
+                "  USD 25,000,000 in the aggregate".into(),
+                "".into(),
+                "PERIOD OF COVER".into(),
+                format!("  From: {issued} 12:00 GMT"),
+                format!("  To  : {valid_to_1y} 12:00 GMT"),
+                "".into(),
+                format!("Policy number : PI-DEMO-2026-0001"),
+                "Geographic limits: Worldwide except sanctioned zones".into(),
+                "".into(),
+                "Subject to the rules and exclusions of the Association".into(),
+                "in force from time to time.".into(),
+            ],
+        ),
+        "joining-checklist" => (
+            "Seafarer Joining Checklist (Template)",
+            vec![
+                "*** SYNTHETIC TEMPLATE — replace with your own ***".into(),
+                "".into(),
+                "Vessel: ____________________  Position: _____________".into(),
+                "Joining port: _______________  ETD: _________________".into(),
+                "Seafarer: ____________________  Rank: ______________".into(),
+                "".into(),
+                "PRE-DEPARTURE DOCUMENTS".into(),
+                "  [ ] Valid passport (>= 6 months remaining)".into(),
+                "  [ ] Seaman's Discharge Book".into(),
+                "  [ ] Certificate of Competency (CoC) for the position".into(),
+                "  [ ] Medical fitness certificate (PEME, valid)".into(),
+                "  [ ] Yellow Fever vaccination (if required by route)".into(),
+                "  [ ] STCW basic safety: BST, AFF, PSCRB, MFA".into(),
+                "  [ ] Vessel-specific endorsements (tanker, IGF, etc.)".into(),
+                "  [ ] Visa for joining port + transit countries".into(),
+                "  [ ] Letter of guarantee / contract".into(),
+                "  [ ] Bank details for salary".into(),
+                "".into(),
+                "TRAVEL ARRANGEMENTS".into(),
+                "  [ ] Flight tickets booked and forwarded".into(),
+                "  [ ] Hotel reservation at joining port (if needed)".into(),
+                "  [ ] Local agent contact provided".into(),
+                "  [ ] Emergency contact at crewing office (24/7)".into(),
+                "".into(),
+                "BRIEFING".into(),
+                "  [ ] Vessel particulars, owner, ISM details shared".into(),
+                "  [ ] Salary scale, overtime, leave structure explained".into(),
+                "  [ ] Repatriation conditions explained".into(),
+                "  [ ] Onboard reporting and grievance channels shared".into(),
+                "".into(),
+                "Signed by seafarer: __________________  Date: _______".into(),
+                "Signed by crewing : __________________  Date: _______".into(),
+            ],
+        ),
+        "info-pack" => (
+            "Seafarer Information Pack (Template)",
+            vec![
+                "*** SYNTHETIC TEMPLATE — replace with your own ***".into(),
+                "".into(),
+                "Welcome from Skipi Dev Crewing".into(),
+                "".into(),
+                "About us".into(),
+                "  Skipi Dev Crewing is a manning agency operating under".into(),
+                "  MLC 2006 and the laws of the country of registration.".into(),
+                "  We work with shipowners and ship managers across all".into(),
+                "  vessel types.".into(),
+                "".into(),
+                "Your contract".into(),
+                "  - Standard contracts follow ITF templates or owner".into(),
+                "    CBA, whichever is more favourable.".into(),
+                "  - Salary is paid in USD/EUR by 7th of the following".into(),
+                "    month directly to your designated bank account.".into(),
+                "  - Allotment to family is configurable up to 80%.".into(),
+                "  - Overtime is calculated per the CBA in force.".into(),
+                "".into(),
+                "While onboard".into(),
+                "  - Hours of work and rest are recorded per MLC 2.3.".into(),
+                "  - Repatriation is at no cost to the seafarer per MLC 2.5.".into(),
+                "  - Medical care onboard and ashore is covered per MLC 4.1.".into(),
+                "  - Complaints can be raised onboard via the Master,".into(),
+                "    or directly to the crewing office at any time.".into(),
+                "".into(),
+                "Contact us 24/7".into(),
+                "  Email: ops@skipi-dev-crewing.example".into(),
+                "  Phone: +995 XX XXX XXXX (DEMO)".into(),
+                "  WhatsApp: same number above".into(),
+            ],
+        ),
         _ => return None,
     })
 }
@@ -1163,6 +1313,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,
+            sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,
             post_vacancy,

@@ -44,7 +44,7 @@ cp "$APPIMAGE_SIG" "$RELEASES/$SIG_OUT"
 
 PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 SIGNATURE=$(cat "$RELEASES/$SIG_OUT")
-BASE_URL="${SKIPI_UPDATE_BASE:-http://127.0.0.1:8000/crewing/releases}"
+BASE_URL="${SKIPI_UPDATE_BASE:-https://api.skipi.app/crewing/releases}"
 
 cat > "$RELEASES/latest.json" <<JSON
 {

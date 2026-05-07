@@ -52,9 +52,12 @@ jobs:
           - platform: ubuntu-22.04
             rust_targets: x86_64-unknown-linux-gnu
             name: Linux
+          - platform: macos-15-intel
+            rust_targets: x86_64-apple-darwin
+            name: macOS unsigned
           - platform: windows-latest
             rust_targets: x86_64-pc-windows-msvc
-            name: Windows
+            name: Windows unsigned
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.name }})
@@ -92,38 +95,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-registry-
 
-      - name: Validate Windows signing secrets
+      - name: Disable Authenticode config for tester build
         if: matrix.platform == 'windows-latest'
         shell: bash
-        env:
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
-          AZURE_CODE_SIGNING_NAME: ${{ secrets.AZURE_CODE_SIGNING_NAME }}
-          AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
         run: |
           set -eu
-          missing=0
-          for name in \
-            AZURE_TENANT_ID \
-            AZURE_CLIENT_ID \
-            AZURE_CLIENT_SECRET \
-            AZURE_ENDPOINT \
-            AZURE_CODE_SIGNING_NAME \
-            AZURE_CERT_PROFILE_NAME
-          do
-            if [ -z "${!name:-}" ]; then
-              echo "::error::Missing GitHub Actions secret: ${name}"
-              missing=1
-            fi
-          done
-          exit "$missing"
-
-      - name: Install trusted-signing-cli
-        if: matrix.platform == 'windows-latest'
-        run: cargo install trusted-signing-cli --locked
-        shell: bash
+          mv src-tauri/tauri.windows.conf.json src-tauri/tauri.windows.conf.json.disabled
 
       - name: Build Skipi Crewing
         uses: tauri-apps/tauri-action@v0
@@ -131,12 +108,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
-          AZURE_CODE_SIGNING_NAME: ${{ secrets.AZURE_CODE_SIGNING_NAME }}
-          AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Skipi Crewing ${{ github.ref_name }}"
@@ -149,7 +120,8 @@ jobs:
 
             | Platform | File |
             |----------|------|
-            | Windows | `.msi` / `.exe` (Authenticode signed) |
+            | Windows | `.msi` / `.exe` (unsigned tester build) |
+            | macOS | `.dmg` / `.app.tar.gz` (unsigned tester build) |
             | Linux | `.deb` / `.AppImage` / `.rpm` |
 
             > Private source build. Public tester links are published separately on skipi.app.

@@ -82,11 +82,41 @@ pub fn init(vault_path: &str) -> Result<(), rusqlite::Error> {
 
 const REQUIRED_TEMPLATES: &[(&str, &str, &str, &str, bool)] = &[
     // (template_id, name, category, doc_type, has_expiry)
-    ("crew-licence",     "Manning Agency Licence",       "Licences",      "license",  true),
-    ("mlc-cert",         "MLC Certificate",               "Certifications","mlc_cert", true),
-    ("pi-insurance",     "P&I Insurance Cover",           "Insurance",     "other",    true),
-    ("joining-checklist","Joining Checklist (template)",  "Checklists",    "checklist",false),
-    ("info-pack",        "Seafarer Info Pack (template)", "Templates",     "template", false),
+    (
+        "crew-licence",
+        "Manning Agency Licence",
+        "Licences",
+        "license",
+        true,
+    ),
+    (
+        "mlc-cert",
+        "MLC Certificate",
+        "Certifications",
+        "mlc_cert",
+        true,
+    ),
+    (
+        "pi-insurance",
+        "P&I Insurance Cover",
+        "Insurance",
+        "other",
+        true,
+    ),
+    (
+        "joining-checklist",
+        "Joining Checklist (template)",
+        "Checklists",
+        "checklist",
+        false,
+    ),
+    (
+        "info-pack",
+        "Seafarer Info Pack (template)",
+        "Templates",
+        "template",
+        false,
+    ),
 ];
 
 pub fn seed_required_templates() -> Result<(), rusqlite::Error> {
@@ -94,12 +124,16 @@ pub fn seed_required_templates() -> Result<(), rusqlite::Error> {
     let conn = guard.as_ref().expect("db not initialised");
     let now = chrono::Utc::now().to_rfc3339();
     for (tid, name, cat, dtype, has_exp) in REQUIRED_TEMPLATES {
-        let exists: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM documents WHERE template_id = ?1",
-            params![tid],
-            |r| r.get(0),
-        ).unwrap_or(0);
-        if exists > 0 { continue; }
+        let exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM documents WHERE template_id = ?1",
+                params![tid],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+        if exists > 0 {
+            continue;
+        }
         let id = uuid::Uuid::new_v4().to_string();
         conn.execute(
             "INSERT INTO documents (id, name, doc_type, stored_path, original_filename, size_bytes,
@@ -152,24 +186,25 @@ pub fn list_vacancies() -> Result<Vec<CachedVacancy>, rusqlite::Error> {
     let rows = stmt
         .query_map([], |r| {
             let payload: String = r.get(3)?;
-            let draft: VacancyDraft = serde_json::from_str(&payload).unwrap_or_else(|_| VacancyDraft {
-                title: "(corrupted record)".into(),
-                rank: String::new(),
-                vessel_type: String::new(),
-                vessel_imo: None,
-                vessel_name: None,
-                flag: None,
-                join_date: None,
-                join_port: None,
-                contract_months: None,
-                salary_min: None,
-                salary_max: None,
-                salary_currency: None,
-                trading_area: None,
-                trading_russia_ok: None,
-                description: None,
-                client_name: None,
-            });
+            let draft: VacancyDraft =
+                serde_json::from_str(&payload).unwrap_or_else(|_| VacancyDraft {
+                    title: "(corrupted record)".into(),
+                    rank: String::new(),
+                    vessel_type: String::new(),
+                    vessel_imo: None,
+                    vessel_name: None,
+                    flag: None,
+                    join_date: None,
+                    join_port: None,
+                    contract_months: None,
+                    salary_min: None,
+                    salary_max: None,
+                    salary_currency: None,
+                    trading_area: None,
+                    trading_russia_ok: None,
+                    description: None,
+                    client_name: None,
+                });
             Ok(CachedVacancy {
                 id: r.get(0)?,
                 posted_at: r.get(1)?,
@@ -226,14 +261,17 @@ pub fn add_document(
         return Err(format!("source file not found: {source_path}"));
     }
     let id = uuid::Uuid::new_v4().to_string();
-    let original_filename = src.file_name()
+    let original_filename = src
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("unnamed")
         .to_string();
     let stored_filename = format!("{id}__{original_filename}");
     let stored = documents_dir(vault_path).join(&stored_filename);
     std::fs::copy(&src, &stored).map_err(|e| format!("copy failed: {e}"))?;
-    let size = std::fs::metadata(&stored).map(|m| m.len() as i64).unwrap_or(0);
+    let size = std::fs::metadata(&stored)
+        .map(|m| m.len() as i64)
+        .unwrap_or(0);
     let now = chrono::Utc::now().to_rfc3339();
     let category = doc_type_to_category(&meta.doc_type);
 
@@ -244,31 +282,53 @@ pub fn add_document(
             notes, created_at, category, has_expiry)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0)",
         params![
-            id, meta.name, meta.doc_type,
-            stored.to_string_lossy(), original_filename, size,
-            if meta.notes.is_empty() { None } else { Some(&meta.notes) },
-            now, category,
+            id,
+            meta.name,
+            meta.doc_type,
+            stored.to_string_lossy(),
+            original_filename,
+            size,
+            if meta.notes.is_empty() {
+                None
+            } else {
+                Some(&meta.notes)
+            },
+            now,
+            category,
         ],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(CachedDocument {
-        id, name: meta.name.clone(), doc_type: meta.doc_type.clone(),
+        id,
+        name: meta.name.clone(),
+        doc_type: meta.doc_type.clone(),
         stored_path: stored.to_string_lossy().into(),
-        original_filename, size_bytes: size,
-        notes: if meta.notes.is_empty() { None } else { Some(meta.notes.clone()) },
-        created_at: now, category,
-        template_id: None, valid_to: None, has_expiry: false,
-        issuer: None, issue_date: None, cert_number: None,
+        original_filename,
+        size_bytes: size,
+        notes: if meta.notes.is_empty() {
+            None
+        } else {
+            Some(meta.notes.clone())
+        },
+        created_at: now,
+        category,
+        template_id: None,
+        valid_to: None,
+        has_expiry: false,
+        issuer: None,
+        issue_date: None,
+        cert_number: None,
     })
 }
 
 fn doc_type_to_category(t: &str) -> String {
     match t {
-        "license"   => "Licences".into(),
-        "mlc_cert"  => "Certifications".into(),
-        "template"  => "Templates".into(),
+        "license" => "Licences".into(),
+        "mlc_cert" => "Certifications".into(),
+        "template" => "Templates".into(),
         "checklist" => "Checklists".into(),
-        _           => "Other".into(),
+        _ => "Other".into(),
     }
 }
 
@@ -281,12 +341,17 @@ pub fn attach_file_to_document(
     if !src.exists() {
         return Err(format!("source file not found: {source_path}"));
     }
-    let original_filename = src.file_name()
-        .and_then(|s| s.to_str()).unwrap_or("unnamed").to_string();
+    let original_filename = src
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unnamed")
+        .to_string();
     let stored_filename = format!("{doc_id}__{original_filename}");
     let stored = documents_dir(vault_path).join(&stored_filename);
     std::fs::copy(&src, &stored).map_err(|e| format!("copy failed: {e}"))?;
-    let size = std::fs::metadata(&stored).map(|m| m.len() as i64).unwrap_or(0);
+    let size = std::fs::metadata(&stored)
+        .map(|m| m.len() as i64)
+        .unwrap_or(0);
 
     let guard = CONN.lock().unwrap();
     let conn = guard.as_ref().expect("db not initialised");
@@ -315,9 +380,18 @@ pub fn update_document_meta(
             issuer = ?2, issue_date = ?3, valid_to = ?4,
             cert_number = ?5, notes = ?6, has_expiry = ?7
          WHERE id = ?8",
-        params![name, issuer, issue_date, valid_to, cert_number, notes,
-                if has_expiry {1} else {0}, doc_id],
-    ).map_err(|e| e.to_string())?;
+        params![
+            name,
+            issuer,
+            issue_date,
+            valid_to,
+            cert_number,
+            notes,
+            if has_expiry { 1 } else { 0 },
+            doc_id
+        ],
+    )
+    .map_err(|e| e.to_string())?;
     drop(guard);
     fetch_document(doc_id).map_err(|e| e.to_string())
 }
@@ -325,26 +399,30 @@ pub fn update_document_meta(
 pub fn delete_document(doc_id: &str) -> Result<(), String> {
     let guard = CONN.lock().unwrap();
     let conn = guard.as_ref().expect("db not initialised");
-    let stored: Option<String> = conn.query_row(
-        "SELECT stored_path FROM documents WHERE id = ?1",
-        params![doc_id],
-        |r| r.get(0),
-    ).ok();
+    let stored: Option<String> = conn
+        .query_row(
+            "SELECT stored_path FROM documents WHERE id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .ok();
     conn.execute("DELETE FROM documents WHERE id = ?1", params![doc_id])
         .map_err(|e| e.to_string())?;
     if let Some(p) = stored {
-        if !p.is_empty() { let _ = std::fs::remove_file(&p); }
+        if !p.is_empty() {
+            let _ = std::fs::remove_file(&p);
+        }
     }
     Ok(())
 }
 
-pub fn find_document_by_template(template_id: &str) -> Result<Option<CachedDocument>, rusqlite::Error> {
+pub fn find_document_by_template(
+    template_id: &str,
+) -> Result<Option<CachedDocument>, rusqlite::Error> {
     let id_opt: Option<String> = {
         let guard = CONN.lock().unwrap();
         let conn = guard.as_ref().expect("db not initialised");
-        let mut stmt = conn.prepare(
-            "SELECT id FROM documents WHERE template_id = ?1 LIMIT 1",
-        )?;
+        let mut stmt = conn.prepare("SELECT id FROM documents WHERE template_id = ?1 LIMIT 1")?;
         stmt.query_row(params![template_id], |r| r.get(0)).ok()
     };
     if let Some(id) = id_opt {
@@ -384,13 +462,21 @@ pub fn list_documents() -> Result<Vec<CachedDocument>, rusqlite::Error> {
     let rows = stmt
         .query_map([], |r| {
             Ok(CachedDocument {
-                id: r.get(0)?, name: r.get(1)?, doc_type: r.get(2)?,
-                stored_path: r.get(3)?, original_filename: r.get(4)?,
-                size_bytes: r.get(5)?, notes: r.get(6)?, created_at: r.get(7)?,
-                category: r.get(8)?, template_id: r.get(9)?,
+                id: r.get(0)?,
+                name: r.get(1)?,
+                doc_type: r.get(2)?,
+                stored_path: r.get(3)?,
+                original_filename: r.get(4)?,
+                size_bytes: r.get(5)?,
+                notes: r.get(6)?,
+                created_at: r.get(7)?,
+                category: r.get(8)?,
+                template_id: r.get(9)?,
                 valid_to: r.get(10)?,
-                has_expiry: r.get::<_,i64>(11)? != 0,
-                issuer: r.get(12)?, issue_date: r.get(13)?, cert_number: r.get(14)?,
+                has_expiry: r.get::<_, i64>(11)? != 0,
+                issuer: r.get(12)?,
+                issue_date: r.get(13)?,
+                cert_number: r.get(14)?,
             })
         })?
         .filter_map(|r| r.ok())
@@ -418,7 +504,8 @@ pub fn list_applications() -> Result<Vec<CachedApplication>, rusqlite::Error> {
     let rows = stmt
         .query_map([], |r| {
             let summary: String = r.get(4)?;
-            let value: serde_json::Value = serde_json::from_str(&summary).unwrap_or(serde_json::Value::Null);
+            let value: serde_json::Value =
+                serde_json::from_str(&summary).unwrap_or(serde_json::Value::Null);
             Ok(CachedApplication {
                 id: r.get(0)?,
                 vacancy_id: r.get(1)?,

@@ -354,6 +354,8 @@ var state = {
   applicationsByVacancy: {},
   // Per-application messages cache for last-message preview + instant chat open.
   messagesByApp: {},
+  attachmentsByApp: {},
+  focusedApplicationId: null,
   documents: [],
   selectedDocument: null,
   pendingUpdate: null,
@@ -362,7 +364,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.101',
+  appVersion: '0.4.102',
 };
 
 // ------------- toasts -------------
@@ -1785,6 +1787,7 @@ function paintApplicationsList(apps) {
   // worker pool gets unhappy with many parallel invokes.
   prefetchApplicationsMessages(apps);
   if (!apps.length) {
+    state.focusedApplicationId = null;
     list.innerHTML = '<div class="empty"><div class="icon">✉</div><div>No applications yet.</div></div>';
     return;
   }
@@ -1824,6 +1827,7 @@ function paintApplicationsList(apps) {
     html += '</div>';
   });
   list.innerHTML = html;
+  applyApplicationFocus();
 }
 
 function sUidOf(a) {
@@ -2079,17 +2083,64 @@ function formatChatRowTime(iso) {
   return d.toLocaleDateString(undefined, {day:'numeric', month:'short'});
 }
 
+function stopApplicationPoll(host) {
+  if (!host || !host.dataset.pollId) return;
+  clearInterval(parseInt(host.dataset.pollId, 10));
+  host.dataset.pollId = '';
+}
+
+function closeApplicationChat(applicationId) {
+  var host = document.getElementById('appthread-'+applicationId);
+  if (host) {
+    stopApplicationPoll(host);
+    host.style.display = 'none';
+    host.dataset.loaded = '';
+  }
+  if (state.focusedApplicationId === applicationId) {
+    state.focusedApplicationId = null;
+    applyApplicationFocus();
+  }
+}
+
+function closeOtherApplicationChats(applicationId) {
+  document.querySelectorAll('[id^="appthread-"]').forEach(function(host){
+    if (host.id === 'appthread-'+applicationId) return;
+    stopApplicationPoll(host);
+    host.style.display = 'none';
+    host.dataset.loaded = '';
+  });
+}
+
+function applyApplicationFocus() {
+  var focusId = state.focusedApplicationId;
+  var focusCard = focusId ? document.getElementById('app-card-'+focusId) : null;
+  var focusHost = focusId ? document.getElementById('appthread-'+focusId) : null;
+  if (focusId && (!focusCard || !focusHost || focusHost.style.display === 'none')) {
+    state.focusedApplicationId = null;
+    focusId = null;
+  }
+  document.querySelectorAll('[id^="app-card-"]').forEach(function(card){
+    if (!focusId || card.id === 'app-card-'+focusId) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
 // Toggle inline E2E thread under an application card. Crewing-side mirror
 // of seafarer's toggleVacancyThread — same UX, opposite participant.
 async function toggleApplicationChat(applicationId, seafarerUserId) {
   var host = document.getElementById('appthread-'+applicationId);
   if (!host) return;
-  if (host.style.display !== 'none' && host.dataset.loaded === '1') {
-    host.style.display = 'none';
-    host.dataset.loaded = '';
+  if (host.style.display !== 'none') {
+    closeApplicationChat(applicationId);
     return;
   }
+  closeOtherApplicationChats(applicationId);
+  state.focusedApplicationId = applicationId;
   host.style.display = 'block';
+  applyApplicationFocus();
   host.innerHTML = '<div class="chat-empty">Loading…</div>';
   // Register pubkey in background — don't await, no need to block UI on it.
   invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }).catch(function(){});
@@ -2098,6 +2149,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
   // refresh in the background.
   var cachedMsgs = state.messagesByApp[applicationId];
   var msgs = cachedMsgs || [];
+  var atts = state.attachmentsByApp[applicationId] || [];
   if (!cachedMsgs) {
     try { msgs = await invoke('fetch_messages', { applicationId: applicationId }); }
     catch(e){
@@ -2105,12 +2157,19 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
       return;
     }
     state.messagesByApp[applicationId] = msgs;
+    try {
+      atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+      state.attachmentsByApp[applicationId] = atts || [];
+    } catch(e) {
+      atts = [];
+    }
   } else {
     // Background refresh (no flicker — soft refresh hits the existing DOM later).
     setTimeout(function(){ refreshApplicationChat(applicationId, seafarerUserId, true); }, 0);
   }
   var msgsHtml = '<div id="app-msgs-'+applicationId+'" class="chat-pane">'
               + renderApplicationMessages(msgs)
+              + renderApplicationAttachmentFallbacks(applicationId, atts, msgs)
               + '</div>';
   msgsHtml += '<div class="chat-composer">';
   msgsHtml += '<textarea id="app-compose-'+applicationId+'" rows="1" placeholder="Type a message" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\');}"></textarea>';
@@ -2118,7 +2177,10 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
   msgsHtml += '</div>';
   msgsHtml += '<div class="chat-status">'
            +    '<span id="app-status-'+applicationId+'">🔒 End-to-end encrypted</span>'
-           +    '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')">📄 Request documents</button>'
+           +    '<span style="display:flex;gap:6px;align-items:center;">'
+           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="closeApplicationChat(\''+escapeAttr(applicationId)+'\')">Back to candidates</button>'
+           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')">📄 Request documents</button>'
+           +    '</span>'
            +  '</div>';
   host.innerHTML = msgsHtml;
   host.dataset.loaded = '1';
@@ -2137,7 +2199,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
 
   var box = document.getElementById('app-msgs-'+applicationId);
   if (box) {
-    box.dataset.msgCount = String(msgs.length);
+    box.dataset.msgCount = String(msgs.length + (atts || []).length);
     // Two RAFs — first lets layout commit, second pins to bottom after
     // bubbles paint. WebKit's scrollHeight is 0 in the same tick as
     // innerHTML assignment for tall content.
@@ -2169,9 +2231,9 @@ async function toggleApplicationChat(applicationId, seafarerUserId) {
 }
 
 function renderApplicationMessages(msgs) {
-  if (!msgs.length) {
-    return '<div class="chat-empty">No messages yet. Send the first reply to start the conversation.</div>';
-  }
+    if (!msgs.length) {
+        return '<div class="chat-empty">No messages yet. Send the first reply to start the conversation.</div>';
+    }
   var myId = state.myIdentity ? state.myIdentity.user_id : '';
   var html = '';
   var lastDay = '';
@@ -2183,6 +2245,55 @@ function renderApplicationMessages(msgs) {
       lastDay = day;
     }
     html += renderMessageBubble(m, m.from_user_id === myId);
+  });
+  return html;
+}
+
+function attachmentIdsFromMessages(msgs) {
+  var ids = {};
+  (msgs || []).forEach(function(m){
+    var raw = m.plaintext || '';
+    var json = '';
+    if (raw.indexOf('[skipi:file_attached]') === 0) {
+      json = raw.replace('[skipi:file_attached]','').trim();
+    } else if (raw.indexOf('[skipi:doc_bundle]') === 0) {
+      json = raw.replace('[skipi:doc_bundle]','').trim();
+    }
+    if (!json) return;
+    try {
+      var parsed = JSON.parse(json);
+      if (parsed && parsed.id) ids[parsed.id] = true;
+    } catch(e){}
+  });
+  return ids;
+}
+
+function renderApplicationAttachmentFallbacks(applicationId, atts, msgs) {
+  var linked = attachmentIdsFromMessages(msgs);
+  var missing = (atts || []).filter(function(a){ return a && a.id && !linked[a.id]; });
+  if (!missing.length) return '';
+  var myId = state.myIdentity ? state.myIdentity.user_id : '';
+  var html = '<div class="chat-day-sep"><span>Encrypted attachments</span></div>';
+  missing.forEach(function(att){
+    var sizeKb = att.size_bytes ? Math.round(att.size_bytes/1024)+' KB' : '';
+    var fname = att.original_filename || 'file';
+    var counterpart = (myId && myId === att.from_user_id) ? att.to_user_id : att.from_user_id;
+    var isZip = String(att.mime_type||'').indexOf('zip') !== -1 || /\.zip$/i.test(fname);
+    html += '<div class="msg other">'
+         +    '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:340px;">'
+         +      '<div style="display:flex;align-items:center;gap:8px;">'
+         +        '<div style="font-size:24px;">'+(isZip?'🗂️':'📎')+'</div>'
+         +        '<div style="flex:1;min-width:0;">'
+         +          '<div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(fname)+'</div>'
+         +          '<div style="font-size:11px;opacity:0.7;">'+escapeHtml(sizeKb)+(att.mime_type?' · '+escapeHtml(att.mime_type):'')+'</div>'
+         +        '</div>'
+         +      '</div>'
+         +      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">'
+         +        (isZip ? '<button onclick="openDocumentsBundle(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'\')" style="padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>' : '')
+         +        '<button onclick="downloadCrewingAttachment(\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'\')" style="padding:5px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>'
+         +      '</div>'
+         +    '</div>'
+         +  '</div>';
   });
   return html;
 }
@@ -2571,6 +2682,7 @@ async function requestDocs(applicationId, seafarerUserId) {
   }
   await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
   try {
+    try { await invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }); } catch(e){}
     await invoke('send_encrypted_message', {
       applicationId: applicationId,
       toUserId: counterpart,
@@ -2613,16 +2725,24 @@ async function refreshApplicationChat(applicationId, seafarerUserId, silent) {
     }
     return;
   }
+  var atts = [];
+  try {
+    atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+  } catch(e) {
+    atts = state.attachmentsByApp[applicationId] || [];
+  }
   state.messagesByApp[applicationId] = msgs;
+  state.attachmentsByApp[applicationId] = atts || [];
   // Skip DOM update if nothing changed — avoids scroll jumps during typing.
   var pendingCount = msgsBox.querySelectorAll('.msg.pending').length;
-  var newCount = msgs.length + pendingCount;
+  var newCount = msgs.length + (atts || []).length + pendingCount;
   var prevCount = parseInt(msgsBox.dataset.msgCount || '-1', 10);
   if (newCount === prevCount) return;
   // Preserve scroll-at-bottom intent.
   var nearBottom = (msgsBox.scrollHeight - msgsBox.scrollTop - msgsBox.clientHeight) < 30;
-  msgsBox.innerHTML = renderApplicationMessages(msgs);
-  msgsBox.dataset.msgCount = String(msgs.length);
+  msgsBox.innerHTML = renderApplicationMessages(msgs)
+    + renderApplicationAttachmentFallbacks(applicationId, atts, msgs);
+  msgsBox.dataset.msgCount = String(msgs.length + (atts || []).length);
   if (nearBottom) msgsBox.scrollTop = msgsBox.scrollHeight;
 }
 
@@ -2665,6 +2785,7 @@ async function sendApplicationReply(applicationId, seafarerUserId) {
   await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
 
   try {
+    try { await invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }); } catch(e){}
     await invoke('send_encrypted_message', {
       applicationId: applicationId,
       toUserId: counterpart,
@@ -2798,6 +2919,13 @@ function inputCtrl(id, value, type, placeholder, width) {
     + (width ? ' style="width:'+width+';"' : '') + '>';
 }
 
+function textareaCtrl(id, value, placeholder, width, rows) {
+  return '<textarea id="'+id+'" rows="'+(rows||4)+'"'
+    + (placeholder ? ' placeholder="'+escapeAttr(placeholder)+'"' : '')
+    + ' style="width:'+(width||'320px')+';min-height:92px;resize:vertical;">'
+    + escapeHtml(value||'') + '</textarea>';
+}
+
 function selectCtrl(id, value, options) {
   // options: [[v, label, disabled?], ...]
   return '<select id="'+id+'">'
@@ -2852,6 +2980,7 @@ function renderSettingsModal() {
       + settingRow('MLC valid to', 'Expiry date of the MLC certificate.', inputCtrl('p-mlc-to', p.mlc_cert_valid_to, 'date', '', '160px'))
       + settingRow('Contact email', 'Reaches the crewing — e.g. for verification correspondence.', inputCtrl('p-email', p.contact_email, 'text', 'hr@marlow.cy', '240px'))
       + settingRow('Contact phone', 'Optional. Used only on company_verified profiles.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+      + settingRow('Public description', 'Shown to seafarers in job offers after company verification.', textareaCtrl('p-public-desc', p.public_description, 'Short factual profile: license, vessel focus, geography, hiring process', '320px', 5))
       + '</div>';
   } else if (settingsTab==='vaults' || settingsTab==='vault') {
     var current = s.vault_path || '(default — ~/.local/share/skipi-crewing)';
@@ -3039,6 +3168,7 @@ async function saveSettings() {
       contact_email:        pick('p-email',  p.contact_email||''),
       contact_phone:        pick('p-phone',  p.contact_phone||''),
       slug:                 pick('p-slug',   p.slug||''),
+      public_description:   pick('p-public-desc', p.public_description||''),
     },
     interface: {
       theme:    pick('i-theme', iface.theme||'dark'),
@@ -3048,7 +3178,16 @@ async function saveSettings() {
   try {
     await invoke('save_settings', { newSettings: newSettings });
     state.settings = newSettings;
-    showToast('Settings saved', 'success');
+    try {
+      var syncResult = await invoke('sync_crewing_profile');
+      if (String(syncResult||'').indexOf('synced') === 0) {
+        showToast('Settings saved and profile synced', 'success');
+      } else {
+        showToast('Settings saved', 'success');
+      }
+    } catch (syncErr) {
+      showToast('Settings saved. Profile sync failed: '+syncErr, 'warn');
+    }
     updateVaultLabel();
     closeSettings();
   } catch (e) {
