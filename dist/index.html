@@ -292,11 +292,33 @@ var TAXONOMY_FALLBACK = {
     {id:'yacht',           label:'Yacht'},
     {id:'other',           label:'Other'},
   ],
+  languages: [
+    {id:'en', label:'English', native_label:'English'},
+    {id:'tl', label:'Tagalog', native_label:'Tagalog'},
+    {id:'hi', label:'Hindi', native_label:'हिन्दी'},
+    {id:'id', label:'Indonesian', native_label:'Bahasa Indonesia'},
+  ],
 };
 
 function taxonomyLabels(kind) {
   var t = TAXONOMY || TAXONOMY_FALLBACK;
   return (t[kind]||[]).map(function(x){return x.label;});
+}
+
+function languageSelectHtml(id) {
+  return '<select id="'+id+'" multiple size="4">'
+    + languageOptionsHtml()
+    + '</select>'
+    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Hold Ctrl/Cmd to select more than one.</div>';
+}
+
+function languageOptionsHtml() {
+  var t = TAXONOMY || TAXONOMY_FALLBACK;
+  return (t.languages||[]).map(function(lang){
+    var label = lang.label || lang.id || '';
+    var nativeLabel = lang.native_label && lang.native_label !== label ? ' / '+lang.native_label : '';
+    return '<option value="'+escapeAttr(label)+'">'+escapeHtml(label+nativeLabel)+'</option>';
+  }).join('');
 }
 
 function readTaxonomyCache() {
@@ -823,6 +845,7 @@ function renderMailingRequestDetail() {
     + '<div class="card">'
     + '<div class="row"><div><label>Rank</label><input value="'+escapeAttr(r.rank||'')+'" disabled></div><div><label>Vessel type</label><input value="'+escapeAttr(r.vessel_type||'')+'" disabled></div></div>'
     + '<div class="row"><div><label>Minimum experience</label><input value="'+escapeAttr(r.min_experience_years?String(r.min_experience_years)+' years':'—')+'" disabled></div><div><label>Status</label><input value="'+escapeAttr(r.status||'')+'" disabled></div></div>'
+    + '<div class="row full"><div><label>Required languages</label><input value="'+escapeAttr((r.languages||[]).join(', ')||'—')+'" disabled></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea disabled style="min-height:120px;">'+escapeHtml(r.description||'')+'</textarea></div></div>'
     + '</div>';
 }
@@ -841,6 +864,7 @@ function renderNewMailingRequest() {
       + (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')
     + '</select></div></div>'
     + '<div class="row"><div><label>Minimum experience, years</label><input type="number" id="mr-exp" min="0" max="60"></div><div></div></div>'
+    + '<div class="row full"><div><label>Required languages</label>'+languageSelectHtml('mr-languages')+'</div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="mr-desc" placeholder="Which CVs you want to receive, vessel types, trading limits, documents to include"></textarea></div></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'mailings\')">Cancel</button><button onclick="submitMailingRequest()">Publish request</button></div>'
     + '</div>';
@@ -857,7 +881,7 @@ async function submitMailingRequest() {
     description: val('mr-desc') || null,
     min_experience_years: parseIntOrNull('mr-exp'),
     required_certs: null,
-    languages: null,
+    languages: selectedValues('mr-languages'),
   };
   if (!draft.title || !draft.rank || !draft.vessel_type) {
     showToast('Title, Rank and Vessel type are required', 'error');
@@ -3012,6 +3036,7 @@ function renderNewVacancy() {
     + '<div class="row"><div><label>Salary min/mo</label><input type="number" id="f-smin" min="0"></div>'
     + '<div><label>Salary max/mo</label><input type="number" id="f-smax" min="0"></div></div>'
     + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."></div></div>'
+    + '<div class="row full"><div><label>Required languages</label>'+languageSelectHtml('f-languages')+'</div></div>'
     + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements"></textarea></div></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
@@ -3036,6 +3061,7 @@ async function submitVacancy() {
     salary_currency: val('f-cur') || null,
     trading_area: val('f-trade') || null,
     trading_russia_ok: document.getElementById('f-russia').checked,
+    languages: selectedValues('f-languages'),
     description: val('f-desc') || null,
     client_name: val('f-client') || null,
   };
@@ -3059,6 +3085,12 @@ async function submitVacancy() {
 }
 
 function val(id){ var el=document.getElementById(id); return el ? (el.value||'').trim() : ''; }
+function selectedValues(id){
+  var el=document.getElementById(id);
+  if(!el)return null;
+  var vals=Array.prototype.slice.call(el.selectedOptions||[]).map(function(o){return (o.value||o.textContent||'').trim();}).filter(Boolean);
+  return vals.length ? vals : null;
+}
 function parseIntOrNull(id){ var v=val(id); return v===''?null:parseInt(v,10); }
 function parseFloatOrNull(id){ var v=val(id); return v===''?null:parseFloat(v); }
 
@@ -3201,7 +3233,13 @@ function renderSettingsModal() {
     body = '<div class="settings-section"><h3>Appearance</h3>'
       + '<div class="section-desc">Visual preferences. More options arrive as the app grows.</div>'
       + settingRow('Theme', 'Light theme arrives in a future release.', selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
-      + settingRow('Language', 'Russian arrives in a future release.', selectCtrl('i-lang', iface.language||'en', [['en','English'],['ru','Русский (coming soon)',true]]))
+      + settingRow('Language', 'Interface translations arrive in a future release.', selectCtrl('i-lang', iface.language||'en', [
+          ['en','English'],
+          ['tl','Tagalog (coming soon)',true],
+          ['hi','Hindi / हिन्दी (coming soon)',true],
+          ['id','Indonesian / Bahasa Indonesia (coming soon)',true],
+          ['ru','Русский (coming soon)',true]
+        ]))
       + '</div>';
   } else if (settingsTab==='about') {
     body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
