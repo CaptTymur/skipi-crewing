@@ -243,6 +243,93 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 var invoke = window.__TAURI__.core.invoke;
 var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFileSrc)
     || function(p){ return 'file://'+p; };
+var UI_LANG_KEY = 'skipi-crewing-ui-language';
+var UI_LANG_OPTIONS = [
+  ['en','English'],
+  ['tl','Tagalog'],
+  ['hi','Hindi / हिन्दी'],
+  ['id','Indonesian / Bahasa Indonesia'],
+];
+var UI_STRINGS = {
+  en: {
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.documents':'Documents',
+    'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
+    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
+    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Light theme arrives in a future release.','settings.language':'Language','settings.language_desc':'Interface language.',
+    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
+  },
+  tl: {
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.documents':'Mga dokumento',
+    'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
+    'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
+    'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
+    'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
+  },
+  hi: {
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.documents':'दस्तावेज़',
+    'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
+    'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
+    'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
+    'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
+  },
+  id: {
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.documents':'Dokumen',
+    'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
+    'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
+    'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
+    'vacancy.new_title':'Lowongan baru','mailing.new_title':'Permintaan mailing baru','mailing.empty':'Belum ada mailing request.','vacancy.empty':'Belum ada lowongan.','documents.empty':'Pilih dokumen di sebelah kiri.'
+  },
+};
+function getUiLang() {
+  var stored = localStorage.getItem(UI_LANG_KEY);
+  var settingsLang = (typeof state !== 'undefined' && state.settings && state.settings.interface && state.settings.interface.language) || '';
+  var lang = stored || settingsLang || 'en';
+  return UI_STRINGS[lang] ? lang : 'en';
+}
+function tr(key) {
+  var lang = getUiLang();
+  return (UI_STRINGS[lang] && UI_STRINGS[lang][key]) || UI_STRINGS.en[key] || key;
+}
+function setUiLang(lang) {
+  if (!UI_STRINGS[lang]) lang = 'en';
+  localStorage.setItem(UI_LANG_KEY, lang);
+  if (typeof state !== 'undefined') {
+    state.settings = state.settings || {};
+    state.settings.interface = state.settings.interface || {};
+    state.settings.interface.language = lang;
+  }
+  applyI18nChrome();
+  try { renderSettingsModal(); } catch(e) {}
+  try { showView(state.view); } catch(e) {}
+}
+function languageSettingsSelectHtml() {
+  var cur = getUiLang();
+  return '<select id="i-lang" onchange="setUiLang(this.value)">'
+    + UI_LANG_OPTIONS.map(function(o){
+        return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+o[1]+'</option>';
+      }).join('')
+    + '</select>';
+}
+function applyI18nChrome() {
+  document.documentElement.lang = getUiLang();
+  var pairs = [
+    ['mt-vacancies','nav.vacancies'],
+    ['mt-mailings','nav.mailings'],
+    ['mt-documents','nav.documents'],
+  ];
+  pairs.forEach(function(p){
+    var el = document.getElementById(p[0]);
+    if (!el) return;
+    var span = el.querySelector('span');
+    if (span) span.textContent = tr(p[1]);
+  });
+  var vault = document.getElementById('mb-vault'); if (vault) vault.title = tr('common.switch_vault');
+  var gear = document.querySelector('.mb-gear'); if (gear) gear.title = tr('common.settings');
+}
 
 // Window title comes from tauri.conf.json statically ("Skipi Crewing X.Y.Z").
 // Direct JS setTitle is blocked by Tauri ACL — would surface a red error bar.
@@ -391,7 +478,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.102',
+  appVersion: '0.4.106',
 };
 
 // ------------- toasts -------------
@@ -677,9 +764,9 @@ async function renderVacanciesTree(opts) {
     + sortOptions.map(function(o){return '<option value="'+o[0]+'"'+(state.sortBy===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')
     + '</select>';
   lp.innerHTML =
-    '<div class="panel-header"><span class="title">My vacancies</span>'
+    '<div class="panel-header"><span class="title">'+tr('left.vacancies')+'</span>'
     + '<span class="actions" style="display:flex;gap:4px;">'
-    + '<button onclick="showView(\'new\')" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">＋ New</button>'
+    + '<button onclick="showView(\'new\')" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">'+tr('common.new')+'</button>'
     + '</span>'
     + '</div>'
     + '<div class="panel-search">'+sortHtml+'</div>'
@@ -710,7 +797,7 @@ function renderVacanciesTreeBody() {
   var tree = document.getElementById('panel-tree');
   if (!tree) return;
   if (!state.vacancies || !state.vacancies.length) {
-    tree.innerHTML = '<div class="tree-empty">No vacancies posted yet.<br><br><button onclick="showView(\'new\')">＋ Post one</button></div>';
+    tree.innerHTML = '<div class="tree-empty">'+tr('vacancy.empty')+'<br><br><button onclick="showView(\'new\')">'+tr('common.new')+'</button></div>';
     return;
   }
 
@@ -742,12 +829,12 @@ async function renderMailingRequestsTree(opts) {
   var force = opts.force === true;
   var lp = document.getElementById('left-panel');
   lp.innerHTML =
-    '<div class="panel-header"><span class="title">Рассылки</span>'
+    '<div class="panel-header"><span class="title">'+tr('left.mailings')+'</span>'
     + '<span class="actions" style="display:flex;gap:4px;">'
-    + '<button onclick="showView(\'new_mailing\')" style="padding:4px 10px;font-size:11px;" title="Publish a CV mailing request">＋ New</button>'
+    + '<button onclick="showView(\'new_mailing\')" style="padding:4px 10px;font-size:11px;" title="Publish a CV mailing request">'+tr('common.new')+'</button>'
     + '</span>'
     + '</div>'
-    + '<div class="panel-search"><input type="text" id="mailing-search" placeholder="Search..." oninput="state.mailingSearch=this.value.toLowerCase();renderMailingRequestsTreeBody();"></div>'
+    + '<div class="panel-search"><input type="text" id="mailing-search" placeholder="'+tr('common.search')+'" oninput="state.mailingSearch=this.value.toLowerCase();renderMailingRequestsTreeBody();"></div>'
     + '<div class="panel-tree" id="panel-tree">'
     + (state.mailingRequests && state.mailingRequests.length ? '' : '<div class="tree-empty">Loading...</div>')
     + '</div>';
@@ -775,7 +862,7 @@ function renderMailingRequestsTreeBody() {
       .join(' ').toLowerCase().indexOf(q) !== -1;
   });
   if (!rows.length) {
-    tree.innerHTML = '<div class="tree-empty">No mailing requests yet.<br><br><button onclick="showView(\'new_mailing\')">＋ Publish one</button></div>';
+    tree.innerHTML = '<div class="tree-empty">'+tr('mailing.empty')+'<br><br><button onclick="showView(\'new_mailing\')">'+tr('common.new')+'</button></div>';
     return;
   }
   rows.sort(function(a,b){
@@ -852,7 +939,7 @@ function renderMailingRequestDetail() {
 
 function renderNewMailingRequest() {
   var m = document.getElementById('main');
-  m.innerHTML = '<h1>New mailing request</h1><div class="sub">Published to <code>skipi.app</code>. Seafarer apps use it to add your agency email to an outbound CV mailing list.</div>'
+  m.innerHTML = '<h1>'+tr('mailing.new_title')+'</h1><div class="sub">Published to <code>skipi.app</code>. Seafarer apps use it to add your agency email to an outbound CV mailing list.</div>'
     + '<div class="card">'
     + '<div class="row full"><div><label>Client / pool label</label><input type="text" id="mr-client" placeholder="e.g. Bulk carrier pool, internal, Costamare"></div></div>'
     + '<div class="row"><div><label>Title*</label><input type="text" id="mr-title" placeholder="e.g. Receive Master CVs for bulk carriers"></div>'
@@ -994,13 +1081,13 @@ function docStatusRank(d) {
 async function renderDocumentsTree() {
   var lp = document.getElementById('left-panel');
   lp.innerHTML =
-    '<div class="panel-header"><span class="title">Documents</span>'
+    '<div class="panel-header"><span class="title">'+tr('left.documents')+'</span>'
     + '<span class="actions" style="display:flex;gap:4px;">'
     + '<button onclick="openAddDocument()" style="padding:4px 10px;font-size:11px;" title="Add a custom document">＋ Add</button>'
     + '<button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderDocumentsTree()" title="Refresh">↻</button>'
     + '</span>'
     + '</div>'
-    + '<div class="panel-search"><input type="text" id="docs-search" placeholder="Search..." oninput="state.docsSearch=this.value.toLowerCase();renderDocumentsTreeOnly();"></div>'
+    + '<div class="panel-search"><input type="text" id="docs-search" placeholder="'+tr('common.search')+'" oninput="state.docsSearch=this.value.toLowerCase();renderDocumentsTreeOnly();"></div>'
     + '<div class="panel-tree" id="panel-tree"><div class="tree-empty">Loading...</div></div>';
   try {
     state.documents = await invoke('list_documents');
@@ -3009,7 +3096,7 @@ async function sendApplicationReply(applicationId, seafarerUserId) {
 // ------------- new vacancy -------------
 function renderNewVacancy() {
   var m = document.getElementById('main');
-  m.innerHTML = '<h1>New vacancy</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
+  m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
     + '<div class="card">'
     + '<div class="row full"><div><label>Client (who requested this search)</label>'
     + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions">'
@@ -3157,13 +3244,13 @@ function renderSettingsModal() {
 
   var nav =
     '<div class="settings-nav-title">Crewing app</div>'
-    + navItem('connection', '🔌', 'Connection')
-    + navItem('profile',    '🏢', 'Crewing profile')
-    + navItem('vaults',     '📁', 'Vaults')
-    + '<div class="settings-nav-title">Interface</div>'
-    + navItem('appearance', '🎨', 'Appearance')
-    + '<div class="settings-nav-title">Help</div>'
-    + navItem('about',      'ⓘ', 'About Skipi Crewing');
+    + navItem('connection', '🔌', tr('settings.connection'))
+    + navItem('profile',    '🏢', tr('settings.profile'))
+    + navItem('vaults',     '📁', tr('settings.vaults'))
+    + '<div class="settings-nav-title">'+tr('settings.interface')+'</div>'
+    + navItem('appearance', '🎨', tr('settings.appearance'))
+    + '<div class="settings-nav-title">'+tr('settings.help')+'</div>'
+    + navItem('about',      'ⓘ', tr('settings.about'));
 
   var body = '';
   if (settingsTab==='connection') {
@@ -3230,16 +3317,10 @@ function renderSettingsModal() {
       + '</div>'
       + recentHtml;
   } else if (settingsTab==='appearance') {
-    body = '<div class="settings-section"><h3>Appearance</h3>'
-      + '<div class="section-desc">Visual preferences. More options arrive as the app grows.</div>'
-      + settingRow('Theme', 'Light theme arrives in a future release.', selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
-      + settingRow('Language', 'Interface translations arrive in a future release.', selectCtrl('i-lang', iface.language||'en', [
-          ['en','English'],
-          ['tl','Tagalog (coming soon)',true],
-          ['hi','Hindi / हिन्दी (coming soon)',true],
-          ['id','Indonesian / Bahasa Indonesia (coming soon)',true],
-          ['ru','Русский (coming soon)',true]
-        ]))
+    body = '<div class="settings-section"><h3>'+tr('settings.appearance_title')+'</h3>'
+      + '<div class="section-desc">'+tr('settings.appearance_desc')+'</div>'
+      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
+      + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
       + '</div>';
   } else if (settingsTab==='about') {
     body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
@@ -3563,6 +3644,7 @@ async function setupFileDragDrop() {
 // ------------- boot -------------
 (async function(){
   try { state.settings = await invoke('get_settings'); } catch(e){}
+  applyI18nChrome();
   await loadTaxonomy();
   updateVaultLabel();
   showView('vacancies');
