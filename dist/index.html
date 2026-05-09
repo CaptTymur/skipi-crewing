@@ -2039,7 +2039,7 @@ async function loadApplicationAttachments(applicationId, counterpartId) {
     html +=     '<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(att.original_filename||'file')+'</div>';
     html +=     '<div style="font-size:11px;color:var(--text2);">'+escapeHtml(sizeKb)+(att.mime_type?' · '+escapeHtml(att.mime_type):'')+'</div>';
     html +=   '</div>';
-    html +=   '<button onclick="event.stopPropagation();downloadCrewingAttachment(\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpartId||att.from_user_id||'')+'\',\''+escapeAttr(att.original_filename||'file')+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>';
+    html +=   '<button onclick="event.stopPropagation();openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(att.original_filename||'file')+'\',mime_type:\''+escapeAttr(att.mime_type||'')+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(counterpartId||att.from_user_id||'')+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>';
     html += '</div>';
   });
   host.innerHTML = html;
@@ -2170,7 +2170,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
   applyApplicationFocus();
   host.innerHTML = '<div class="chat-empty">Loading…</div>';
   // Register pubkey in background — don't await, no need to block UI on it.
-  invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }).catch(function(){});
+  registerMessagingPubkey().catch(function(){});
 
   // Cache-first: render any previously-loaded messages instantly while we
   // refresh in the background.
@@ -2295,6 +2295,47 @@ function attachmentIdsFromMessages(msgs) {
   return ids;
 }
 
+function latestAttachmentFromSender(applicationId, senderUserId) {
+  var atts = state.attachmentsByApp[applicationId] || [];
+  var filtered = atts.filter(function(a){
+    return a && a.id && (!senderUserId || a.from_user_id === senderUserId);
+  });
+  if (!filtered.length) return null;
+  var bundles = filtered.filter(function(a){
+    var name = String(a.original_filename || '').toLowerCase();
+    var mime = String(a.mime_type || '').toLowerCase();
+    return name.indexOf('documents-bundle') !== -1
+      || name.indexOf('document') !== -1 && name.endsWith('.zip')
+      || mime.indexOf('zip') !== -1 && name.indexOf('package') === -1;
+  });
+  if (bundles.length) filtered = bundles;
+  filtered.sort(function(a,b){
+    return String(b.sent_at||'').localeCompare(String(a.sent_at||''));
+  });
+  return filtered[0];
+}
+
+async function openLatestAttachmentFromSender(applicationId, senderUserId) {
+  var att = latestAttachmentFromSender(applicationId, senderUserId);
+  if (!att) {
+    try {
+      var fresh = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+      state.attachmentsByApp[applicationId] = fresh || [];
+      att = latestAttachmentFromSender(applicationId, senderUserId);
+    } catch(e) {
+      showToast('Could not refresh attachments: '+e, 'error');
+      return;
+    }
+  }
+  if (!att) {
+    showToast('No received attachment found for this document response.', 'warn');
+    return;
+  }
+  var myId = state.myIdentity ? state.myIdentity.user_id : '';
+  var counterpart = (myId && myId === att.from_user_id) ? att.to_user_id : att.from_user_id;
+  await openAttachmentInApp(applicationId, att, counterpart || senderUserId || '');
+}
+
 function renderApplicationAttachmentFallbacks(applicationId, atts, msgs) {
   var linked = attachmentIdsFromMessages(msgs);
   var missing = (atts || []).filter(function(a){ return a && a.id && !linked[a.id]; });
@@ -2317,7 +2358,7 @@ function renderApplicationAttachmentFallbacks(applicationId, atts, msgs) {
          +      '</div>'
          +      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">'
          +        (isZip ? '<button onclick="openDocumentsBundle(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'\')" style="padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>' : '')
-         +        '<button onclick="downloadCrewingAttachment(\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'\')" style="padding:5px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>'
+         +        '<button onclick="openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_type:\''+escapeAttr(att.mime_type||'')+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(counterpart||'')+'\')" style="padding:5px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
          +      '</div>'
          +    '</div>'
          +  '</div>';
@@ -2355,10 +2396,15 @@ function renderMessageBubble(m, mine, opts) {
   if (raw.indexOf('[skipi:docs_response]') === 0) {
     var note2 = raw.replace('[skipi:docs_response]','').trim()
              || 'Documents sent.';
+    var latestAtt = latestAttachmentFromSender(m.application_id, m.from_user_id);
+    var openLatestBtn = latestAtt
+      ? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open received documents</button>'
+      : '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Find documents</button>';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);">'
          +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">📎 Documents sent</div>'
          +     '<div class="msg-text" style="font-size:12px;opacity:0.9;">'+escapeHtml(note2)+'</div>'
+         +     openLatestBtn
          +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
          +   '</div>'
          + '</div>';
@@ -2396,7 +2442,7 @@ function renderMessageBubble(m, mine, opts) {
     var myId = state.myIdentity ? state.myIdentity.user_id : '';
     var counterpartId = (myId === m.from_user_id) ? m.to_user_id : m.from_user_id;
     var dlBtn = info.id
-      ? '<button onclick="downloadCrewingAttachment(\''+info.id+'\',\''+counterpartId+'\',\''+escapeAttr(fname)+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">⬇ Download</button>'
+      ? '<button onclick="openAttachmentInApp(\''+escapeAttr(m.application_id)+'\',{id:\''+escapeAttr(info.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_type:\''+escapeAttr(info.mime||'')+'\',size_bytes:'+(Number(info.size)||0)+'},\''+escapeAttr(counterpartId)+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
       : '';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:300px;">'
@@ -2441,6 +2487,104 @@ async function openDocumentsBundle(applicationId, attachmentId, counterpartId, f
   } catch (e) { showToast('Cannot extract: '+e, 'error'); return; }
 
   showDocumentsBundleViewer(bundle);
+}
+
+async function openAttachmentInApp(applicationId, att, counterpartId) {
+  if (!att || !att.id) {
+    showToast('Attachment metadata is missing.', 'error');
+    return;
+  }
+  if (!counterpartId) {
+    showToast('Cannot decrypt: missing counterpart identity.', 'error');
+    return;
+  }
+  var fname = att.original_filename || 'file';
+  var mime = String(att.mime_type || '').toLowerCase();
+  var lower = String(fname || '').toLowerCase();
+  var looksLikeDocsBundle = lower.indexOf('documents-bundle') !== -1
+    || lower.indexOf('document') !== -1 && lower.endsWith('.zip')
+    || mime.indexOf('zip') !== -1 && lower.indexOf('package') === -1;
+  if (looksLikeDocsBundle) {
+    await openDocumentsBundle(applicationId, att.id, counterpartId, fname);
+    return;
+  }
+
+  showToast('Downloading and decrypting…', 'info');
+  var path;
+  try {
+    path = await invoke('download_encrypted_attachment', {
+      attachmentId: att.id,
+      counterpartUserId: counterpartId,
+      originalFilename: fname,
+    });
+  } catch (e) {
+    showToast('Download failed: '+e, 'error');
+    return;
+  }
+  showSingleAttachmentViewer({
+    path: path,
+    filename: fname,
+    mimeType: att.mime_type || '',
+    sizeBytes: att.size_bytes || 0,
+    applicationId: applicationId,
+  });
+}
+
+function attachmentSizeLabel(bytes) {
+  var n = Number(bytes || 0);
+  if (!n) return '';
+  if (n < 1024) return n+' B';
+  if (n < 1024*1024) return Math.round(n/1024)+' KB';
+  return (n/(1024*1024)).toFixed(n < 10*1024*1024 ? 1 : 0)+' MB';
+}
+
+function showSingleAttachmentViewer(info) {
+  var path = info.path || '';
+  var filename = info.filename || path.split('/').pop() || 'file';
+  var ext = filename.split('.').pop().toLowerCase();
+  var mime = String(info.mimeType || '').toLowerCase();
+  var fileUri = convertFileSrc(path);
+  var overlay = document.createElement('div');
+  overlay.id = 'single-attachment-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:8px;width:94%;max-width:1050px;height:90vh;color:var(--text);display:flex;flex-direction:column;box-shadow:0 6px 24px rgba(0,0,0,0.5);overflow:hidden;';
+
+  var size = attachmentSizeLabel(info.sizeBytes);
+  var body = '';
+  if (ext === 'pdf' || mime === 'application/pdf') {
+    body = '<iframe src="'+escapeAttr(fileUri)+'" style="width:100%;height:100%;border:none;background:#fff;"></iframe>';
+  } else if (['png','jpg','jpeg','gif','webp','bmp'].indexOf(ext) !== -1 || mime.indexOf('image/') === 0) {
+    body = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:18px;">'
+         +   '<img src="'+escapeAttr(fileUri)+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'
+         + '</div>';
+  } else {
+    body = '<div style="height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text2);font-size:13px;text-align:center;padding:24px;">'
+         +   '<div><div style="font-size:36px;margin-bottom:12px;">📎</div>'
+         +   '<div>Inline preview is not available for .'+escapeHtml(ext || 'file')+'.</div>'
+         +   '<div style="margin-top:6px;font-size:12px;">Use Open in system viewer.</div></div>'
+         + '</div>';
+  }
+
+  modal.innerHTML = ''
+    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);">'
+    +   '<div style="min-width:0;flex:1;">'
+    +     '<div style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 '+escapeHtml(filename)+'</div>'
+    +     '<div style="font-size:12px;color:var(--text2);margin-top:2px;">'+escapeHtml([mime, size].filter(Boolean).join(' · '))+'</div>'
+    +   '</div>'
+    +   '<button id="single-open-system" style="background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">Open in system viewer</button>'
+    +   '<button id="single-close" style="background:transparent;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Close</button>'
+    + '</div>'
+    + '<div style="flex:1;min-height:0;">'+body+'</div>';
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  modal.querySelector('#single-close').onclick = function(){ document.body.removeChild(overlay); };
+  overlay.onclick = function(e){ if (e.target === overlay) document.body.removeChild(overlay); };
+  modal.querySelector('#single-open-system').onclick = async function(){
+    try { await invoke('open_path_with_default', { path: path }); }
+    catch(e) { showToast('Could not open externally: '+e, 'warn'); }
+  };
+  showToast('Opened in Skipi.', 'success');
 }
 
 // Two-pane document viewer that mirrors seafarer's Documents module:
@@ -2673,13 +2817,18 @@ function paintBundleDetail(d) {
 async function downloadCrewingAttachment(attachmentId, counterpartId, filename) {
   showToast('Downloading and decrypting…', 'info');
   try {
+    if (!counterpartId) throw new Error('missing counterpart identity');
     var path = await invoke('download_encrypted_attachment', {
       attachmentId: attachmentId,
       counterpartUserId: counterpartId,
       originalFilename: filename,
     });
-    showToast('Saved: '+path, 'success');
-    try { await invoke('open_path_with_default', { path: path }); } catch(e){}
+    try {
+      await invoke('open_path_with_default', { path: path });
+      showToast('Saved and opened: '+path, 'success');
+    } catch(e) {
+      showToast('Saved, but could not open automatically: '+path+' — '+e, 'warn');
+    }
   } catch (e) {
     showToast('Download failed: '+e, 'error');
   }
@@ -2709,7 +2858,7 @@ async function requestDocs(applicationId, seafarerUserId) {
   }
   await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
   try {
-    try { await invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }); } catch(e){}
+    try { await registerMessagingPubkey(); } catch(e){}
     await invoke('send_encrypted_message', {
       applicationId: applicationId,
       toUserId: counterpart,
@@ -2812,7 +2961,7 @@ async function sendApplicationReply(applicationId, seafarerUserId) {
   await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
 
   try {
-    try { await invoke('register_my_pubkey', { crewingId: state.settings.crewing_id }); } catch(e){}
+    try { await registerMessagingPubkey(); } catch(e){}
     await invoke('send_encrypted_message', {
       applicationId: applicationId,
       toUserId: counterpart,
@@ -2853,8 +3002,8 @@ function renderNewVacancy() {
     + '<div class="row"><div><label>Vessel type*</label><select id="f-vtype">'
       + (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')
     + '</select></div>'
-    + '<div><label>Vessel name (optional)</label><input type="text" id="f-vname" placeholder="MV ..."></div></div>'
-    + '<div class="row"><div><label>IMO (optional, 7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"></div>'
+    + '<div><label>Vessel name</label><input type="text" id="f-vname" placeholder="MV ..."></div></div>'
+    + '<div class="row"><div><label>IMO* (7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"></div>'
     + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"></div></div>'
     + '<div class="row"><div><label>Join date (optional)</label><input type="date" id="f-jdate"></div>'
     + '<div><label>Join port (optional)</label><input type="text" id="f-jport"></div></div>'
@@ -2890,17 +3039,15 @@ async function submitVacancy() {
     description: val('f-desc') || null,
     client_name: val('f-client') || null,
   };
-  if (!draft.title || !draft.rank || !draft.vessel_type) {
-    showToast('Title, Rank and Vessel type are required', 'error');
+  if (!draft.title || !draft.rank || !draft.vessel_type || !draft.vessel_imo) {
+    showToast('Title, Rank, Vessel type and IMO are required', 'error');
     return;
   }
   // IMO is exactly 7 digits per IMO Resolution A.600(15). Server validates
   // 1_000_000..9_999_999 — surface the error inline before the round-trip.
-  if (draft.vessel_imo) {
-    if (!/^\d{7}$/.test(String(draft.vessel_imo))) {
-      showToast('IMO must be exactly 7 digits (e.g. 9554488). Leave blank if unknown.', 'error');
-      return;
-    }
+  if (!/^\d{7}$/.test(String(draft.vessel_imo))) {
+    showToast('IMO must be exactly 7 digits (e.g. 9554488).', 'error');
+    return;
   }
   try {
     var posted = await invoke('post_vacancy', { draft: draft });
@@ -2991,8 +3138,12 @@ function renderSettingsModal() {
     body = '<div class="settings-section"><h3>Connection</h3>'
       + '<div class="section-desc">Server endpoint and credentials issued by Skipi after company verification.</div>'
       + settingRow('Server URL', 'Default <code>http://127.0.0.1:8000</code> for dev. <code>https://api.skipi.app</code> for prod.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
-      + settingRow('Bearer token', 'Authenticates write actions against the server.', inputCtrl('s-token', s.bearer_token, 'password', 'Paste token', '240px'))
-      + settingRow('Crewing ID', 'Server-side UUID of your crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
+      + settingRow('Company token', 'Issued by Skipi after manual accreditation. Used for vacancies, mailings, applications, and E2E key registration.',
+          '<div style="display:flex;gap:8px;align-items:center;">'
+        + inputCtrl('s-token', s.bearer_token, 'password', 'Paste company token', '240px')
+        + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Validate</button>'
+        + '</div>')
+      + settingRow('Crewing ID', 'Server-side UUID of your accredited crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
       + settingRow('Company display name', 'Shown in the app title only — not sent to the server.', inputCtrl('s-company', s.company_name, 'text', 'e.g. Marlow Crewing Ltd', '240px'))
       + settingRow('Reply-to email (optional)', 'Override for application replies. Falls back to the crewing contact email if blank.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@yourcompany.com', '240px'))
       + '</div>';
@@ -3165,6 +3316,31 @@ async function checkForUpdatesManual() {
     }
   } catch (e) {
     showToast('Check failed: '+e, 'error');
+  }
+}
+
+async function activateCompanyToken() {
+  var urlEl = document.getElementById('s-url');
+  var tokenEl = document.getElementById('s-token');
+  var idEl = document.getElementById('s-crewing-id');
+  var companyEl = document.getElementById('s-company');
+  var serverUrl = urlEl ? urlEl.value.trim() : ((state.settings||{}).server_url || '');
+  var token = tokenEl ? tokenEl.value.trim() : ((state.settings||{}).bearer_token || '');
+  if (!serverUrl || !token) {
+    showToast('Server URL and company token are required', 'error');
+    return;
+  }
+  showToast('Validating company token…', 'info');
+  try {
+    var activation = await invoke('activate_crewing_token', {
+      serverUrl: serverUrl,
+      bearerToken: token
+    });
+    if (idEl) idEl.value = activation.crewing_id || '';
+    if (companyEl && !companyEl.value.trim()) companyEl.value = activation.display_name || '';
+    showToast('Token valid for '+(activation.display_name || 'crewing'), 'success');
+  } catch (e) {
+    showToast('Token validation failed: '+e, 'error');
   }
 }
 
@@ -3407,11 +3583,20 @@ async function autoRegisterMessagingPubkey() {
     return;
   }
   try {
-    state.myIdentity = await invoke('register_my_pubkey', { crewingId: s.crewing_id });
+    state.myIdentity = await registerMessagingPubkey();
     console.log('Skipi messaging identity:', state.myIdentity.user_id);
   } catch (e) {
     console.log('Pubkey register failed (will retry on next launch):', e);
   }
+}
+
+function registerMessagingPubkey() {
+  var s = state.settings || {};
+  return invoke('register_my_pubkey', {
+    crewingId: s.crewing_id || '',
+    bearerToken: s.bearer_token || '',
+    serverUrl: s.server_url || ''
+  });
 }
 </script>
 </body>

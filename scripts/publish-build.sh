@@ -23,6 +23,7 @@ fi
 
 BUNDLE="$ROOT/src-tauri/target/release/bundle"
 DEB="$BUNDLE/deb/Skipi Crewing_${VERSION}_amd64.deb"
+DEB_SIG="${DEB}.sig"
 APPIMAGE="$BUNDLE/appimage/Skipi Crewing_${VERSION}_amd64.AppImage"
 APPIMAGE_SIG="${APPIMAGE}.sig"
 
@@ -35,16 +36,34 @@ fi
 
 # Strip spaces from output filenames (URL-friendly).
 DEB_OUT="Skipi-Crewing_${VERSION}_amd64.deb"
+DEB_SIG_OUT="${DEB_OUT}.sig"
 APPIMAGE_OUT="Skipi-Crewing_${VERSION}_amd64.AppImage"
 SIG_OUT="${APPIMAGE_OUT}.sig"
 
 cp "$APPIMAGE" "$RELEASES/$APPIMAGE_OUT"
 cp "$APPIMAGE_SIG" "$RELEASES/$SIG_OUT"
 [ -f "$DEB" ] && cp "$DEB" "$RELEASES/$DEB_OUT" || true
+[ -f "$DEB_SIG" ] && cp "$DEB_SIG" "$RELEASES/$DEB_SIG_OUT" || true
 
 PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-SIGNATURE=$(cat "$RELEASES/$SIG_OUT")
+APPIMAGE_SIGNATURE=$(cat "$RELEASES/$SIG_OUT")
+DEB_SIGNATURE=""
+if [ -f "$RELEASES/$DEB_SIG_OUT" ]; then
+  DEB_SIGNATURE=$(cat "$RELEASES/$DEB_SIG_OUT")
+fi
 BASE_URL="${SKIPI_UPDATE_BASE:-https://api.skipi.app/crewing/releases}"
+
+if [ -n "$DEB_SIGNATURE" ]; then
+  DEB_PLATFORM=$(cat <<JSON
+    "linux-x86_64-deb": {
+      "signature": "$DEB_SIGNATURE",
+      "url": "$BASE_URL/$DEB_OUT"
+    },
+JSON
+)
+else
+  DEB_PLATFORM=""
+fi
 
 cat > "$RELEASES/latest.json" <<JSON
 {
@@ -52,8 +71,9 @@ cat > "$RELEASES/latest.json" <<JSON
   "pub_date": "$PUB_DATE",
   "notes": "Skipi Crewing $VERSION",
   "platforms": {
+${DEB_PLATFORM}
     "linux-x86_64": {
-      "signature": "$SIGNATURE",
+      "signature": "$APPIMAGE_SIGNATURE",
       "url": "$BASE_URL/$APPIMAGE_OUT"
     }
   }

@@ -156,6 +156,19 @@ pub struct AppState {
     pub settings: Mutex<Settings>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrewingTokenActivation {
+    pub crewing_id: String,
+    pub organization_id: Option<String>,
+    pub display_name: String,
+    pub verified_level: String,
+    pub mlc_certified: bool,
+    pub token_id: String,
+    pub token_prefix: String,
+    pub token_status: String,
+    pub scopes: Vec<String>,
+}
+
 #[tauri::command]
 fn get_settings(state: tauri::State<AppState>) -> Settings {
     state.settings.lock().unwrap().clone()
@@ -186,6 +199,39 @@ fn forget_recent_vault(path: String, state: tauri::State<AppState>) -> Result<()
     s.save()?;
     *state.settings.lock().unwrap() = s;
     Ok(())
+}
+
+#[tauri::command]
+fn activate_crewing_token(
+    server_url: String,
+    bearer_token: String,
+) -> Result<CrewingTokenActivation, String> {
+    let base = server_url.trim().trim_end_matches('/');
+    if base.is_empty() {
+        return Err("No server URL configured.".into());
+    }
+    let token = bearer_token.trim();
+    if token.is_empty() {
+        return Err("No company token configured.".into());
+    }
+    let url = format!("{}/api/crewings/token/activate", base);
+    let resp = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?
+        .post(&url)
+        .bearer_auth(token)
+        .send()
+        .map_err(|e| format!("network error: {e}"))?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(format!(
+            "server returned {status}: {}",
+            resp.text().unwrap_or_default()
+        ));
+    }
+    resp.json::<CrewingTokenActivation>()
+        .map_err(|e| format!("bad JSON from server: {e}"))
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1313,6 +1359,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,
+            activate_crewing_token,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,

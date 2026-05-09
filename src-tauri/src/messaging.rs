@@ -20,6 +20,7 @@ use std::path::PathBuf;
 
 const SK_FILENAME: &str = "x25519_sk.bin";
 const PROD_API: &str = "https://api.skipi.app";
+const MAX_ATTACHMENT_BYTES: usize = 50 * 1024 * 1024;
 
 fn keys_dir() -> PathBuf {
     let dir = dirs::config_dir()
@@ -86,9 +87,20 @@ pub fn get_my_identity() -> Result<MyIdentity, String> {
 }
 
 #[tauri::command]
-pub fn register_my_pubkey(crewing_id: String) -> Result<MyIdentity, String> {
+pub fn register_my_pubkey(
+    crewing_id: String,
+    bearer_token: Option<String>,
+    server_url: Option<String>,
+) -> Result<MyIdentity, String> {
     let me = get_my_identity()?;
-    let url = format!("{}/api/messaging/pubkey", PROD_API);
+    let base = server_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(PROD_API)
+        .trim_end_matches('/')
+        .to_string();
+    let url = format!("{}/api/messaging/pubkey", base);
     let body = serde_json::json!({
         "user_id": me.user_id,
         "pubkey_b64": me.pubkey_b64,
@@ -99,9 +111,11 @@ pub fn register_my_pubkey(crewing_id: String) -> Result<MyIdentity, String> {
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
-    let resp = client
-        .post(&url)
-        .json(&body)
+    let mut req = client.post(&url).json(&body);
+    if let Some(token) = bearer_token.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        req = req.bearer_auth(token);
+    }
+    let resp = req
         .send()
         .map_err(|e| format!("network: {e}"))?;
     if !resp.status().is_success() {
@@ -328,8 +342,8 @@ pub fn upload_encrypted_attachment(
     let recipient_pk = lookup_recipient_pk(&to_user_id)?;
     let path = std::path::Path::new(&file_path);
     let bytes = std::fs::read(path).map_err(|e| format!("read file: {e}"))?;
-    if bytes.len() > 10 * 1024 * 1024 {
-        return Err("file too large (>10 MB)".into());
+    if bytes.len() > MAX_ATTACHMENT_BYTES {
+        return Err("file too large (>50 MB)".into());
     }
     let original_filename = path
         .file_name()
@@ -450,17 +464,45 @@ pub fn download_encrypted_attachment(
 
 #[tauri::command]
 pub fn open_path_with_default(path: String) -> Result<(), String> {
-    let _ = std::process::Command::new("xdg-open").arg(&path).spawn();
-    Ok(())
+    let path_buf = std::path::PathBuf::from(&path);
+    if !path_buf.exists() {
+        return Err(format!("file does not exist: {path}"));
+    }
+
+    #[cfg(target_os = "macos")]
+    let candidates: &[(&str, &[&str])] = &[("open", &[])];
+    #[cfg(target_os = "windows")]
+    let candidates: &[(&str, &[&str])] = &[("cmd", &["/C", "start", ""])];
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let candidates: &[(&str, &[&str])] = &[("gio", &["open"]), ("xdg-open", &[])];
+
+    let mut errors = Vec::new();
+    for (program, prefix_args) in candidates {
+        let mut cmd = std::process::Command::new(program);
+        for arg in *prefix_args {
+            cmd.arg(arg);
+        }
+        let status = cmd
+            .arg(&path)
+            .status()
+            .map_err(|e| format!("{program}: {e}"));
+        match status {
+            Ok(s) if s.success() => return Ok(()),
+            Ok(s) => errors.push(format!("{program} exited with {s}")),
+            Err(e) => errors.push(e),
+        }
+    }
+    Err(format!("could not open file automatically: {}", errors.join("; ")))
 }
 
 #[tauri::command]
 pub fn fetch_attachments_for_application(
     application_id: String,
 ) -> Result<Vec<AttachmentMeta>, String> {
+    let (_sk, _pk, my_user_id) = ensure_keypair()?;
     let url = format!(
-        "{}/api/messaging/threads/{}/attachments",
-        PROD_API, application_id
+        "{}/api/messaging/threads/{}/attachments?user_id={}",
+        PROD_API, application_id, my_user_id
     );
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
