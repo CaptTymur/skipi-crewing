@@ -1065,6 +1065,190 @@ fn read_document_file_base64(doc_id: String) -> Result<(String, String), String>
     Ok((b64, mime))
 }
 
+#[tauri::command]
+fn save_seafarer_from_bundle(
+    application_id: String,
+    seafarer_user_id: String,
+    manifest: serde_json::Value,
+    extracted_to: String,
+    applicant_summary: Option<serde_json::Value>,
+    cv_path: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<db::SavedSeafarer, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    db::save_seafarer_from_bundle(
+        &application_id,
+        &seafarer_user_id,
+        &manifest,
+        &extracted_to,
+        applicant_summary.as_ref(),
+        cv_path.as_deref(),
+        &settings.vault_path,
+    )
+}
+
+#[tauri::command]
+fn list_saved_seafarers() -> Result<Vec<db::SavedSeafarer>, String> {
+    db::list_saved_seafarers().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_saved_seafarer_documents(
+    seafarer_id: String,
+) -> Result<Vec<db::SavedSeafarerDocument>, String> {
+    db::list_saved_seafarer_documents(&seafarer_id).map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SavedSeafarerUpdate {
+    pub ex_crew: Option<bool>,
+    pub status: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[tauri::command]
+fn update_saved_seafarer(
+    seafarer_id: String,
+    patch: SavedSeafarerUpdate,
+) -> Result<db::SavedSeafarer, String> {
+    db::update_saved_seafarer(
+        &seafarer_id,
+        patch.ex_crew,
+        patch.status.as_deref(),
+        patch.notes.as_deref(),
+    )
+}
+
+fn classify_availability_reply(text: &str) -> &'static str {
+    let lower = text.to_lowercase();
+    let negative = [
+        "not available",
+        "unavailable",
+        "not ready",
+        "no work",
+        "can't",
+        "cannot",
+        "не готов",
+        "не могу",
+        "недоступ",
+    ];
+    if negative.iter().any(|needle| lower.contains(needle)) {
+        return "not_available";
+    }
+    let positive = ["available", "ready", "can join", "готов", "доступ", "могу"];
+    if positive.iter().any(|needle| lower.contains(needle)) {
+        return "available";
+    }
+    "replied"
+}
+
+#[tauri::command]
+fn send_saved_seafarer_ping(
+    seafarer_id: String,
+    plaintext: String,
+    state: tauri::State<AppState>,
+) -> Result<db::SavedSeafarer, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if seafarer_id.trim().is_empty() || seafarer_id.starts_with("application_") {
+        return Err("Saved record has no server seafarer ID.".into());
+    }
+    if settings.bearer_token.trim().is_empty() {
+        return Err("No company token configured. Open Settings.".into());
+    }
+    if settings.crewing_id.trim().is_empty() {
+        return Err("No crewing_id configured. Open Settings.".into());
+    }
+    messaging::register_my_pubkey(
+        settings.crewing_id.clone(),
+        Some(settings.bearer_token.clone()),
+        Some(settings.server_url.clone()),
+    )?;
+    let saved = db::get_saved_seafarer(&seafarer_id)?;
+    let msg = if let Some(app_id) = saved
+        .source_application_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    {
+        messaging::send_encrypted_message(
+            app_id.to_string(),
+            seafarer_id.clone(),
+            plaintext,
+            Some(settings.server_url.clone()),
+        )?
+    } else {
+        messaging::send_direct_availability_ping(
+            seafarer_id.clone(),
+            plaintext,
+            settings.bearer_token.clone(),
+            Some(settings.server_url.clone()),
+        )?
+    };
+    db::mark_saved_seafarer_ping_sent(&seafarer_id, Some(&msg.application_id), Some(&msg.sent_at))
+}
+
+#[tauri::command]
+fn refresh_saved_seafarer_replies(
+    seafarer_id: String,
+    state: tauri::State<AppState>,
+) -> Result<db::SavedSeafarer, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let saved = db::get_saved_seafarer(&seafarer_id)?;
+    let Some(application_id) = saved
+        .source_application_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    else {
+        return Ok(saved);
+    };
+    let messages = messaging::fetch_messages(
+        application_id.to_string(),
+        Some(settings.server_url.clone()),
+    )?;
+    let last_ping_at = saved.last_ping_at.clone().unwrap_or_default();
+    let latest_reply = messages
+        .into_iter()
+        .filter(|m| m.from_user_id == seafarer_id)
+        .filter(|m| !m.plaintext.trim_start().starts_with("[skipi:"))
+        .filter(|m| last_ping_at.is_empty() || m.sent_at > last_ping_at)
+        .max_by(|a, b| a.sent_at.cmp(&b.sent_at));
+    if let Some(reply) = latest_reply {
+        let status = classify_availability_reply(&reply.plaintext);
+        db::mark_saved_seafarer_reply(&seafarer_id, status, &reply.sent_at, &reply.plaintext)
+    } else {
+        Ok(saved)
+    }
+}
+
+#[tauri::command]
+fn send_direct_availability_ping(
+    seafarer_id: String,
+    plaintext: String,
+    state: tauri::State<AppState>,
+) -> Result<db::SavedSeafarer, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    if settings.bearer_token.trim().is_empty() {
+        return Err("No company token configured. Open Settings.".into());
+    }
+    if settings.crewing_id.trim().is_empty() {
+        return Err("No crewing_id configured. Open Settings.".into());
+    }
+    messaging::register_my_pubkey(
+        settings.crewing_id.clone(),
+        Some(settings.bearer_token.clone()),
+        Some(settings.server_url.clone()),
+    )?;
+    let msg = messaging::send_direct_availability_ping(
+        seafarer_id.clone(),
+        plaintext,
+        settings.bearer_token.clone(),
+        Some(settings.server_url.clone()),
+    )?;
+    db::mark_saved_seafarer_ping_sent(&seafarer_id, Some(&msg.application_id), Some(&msg.sent_at))
+}
+
 fn mime_from_path(path: &str) -> String {
     let lower = path.to_lowercase();
     if lower.ends_with(".pdf") {
@@ -1388,6 +1572,13 @@ pub fn run() {
             update_document,
             delete_document,
             read_document_file_base64,
+            save_seafarer_from_bundle,
+            list_saved_seafarers,
+            list_saved_seafarer_documents,
+            update_saved_seafarer,
+            send_saved_seafarer_ping,
+            refresh_saved_seafarer_replies,
+            send_direct_availability_ping,
             messaging::get_my_identity,
             messaging::register_my_pubkey,
             messaging::send_encrypted_message,

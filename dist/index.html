@@ -49,6 +49,14 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: 
 .panel-search { padding: 8px 12px; border-bottom: 1px solid var(--border); }
 .panel-search select, .panel-search input { width: 100%; padding: 6px 10px; background: var(--panel2);
   color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+.panel-filters { padding: 8px 12px 10px; border-bottom: 1px solid var(--border); background: rgba(15,20,25,0.35); }
+.sf-filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sf-filter-grid select { width: 100%; padding: 5px 22px 5px 8px; background-color: var(--panel2);
+  color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; }
+.sf-filter-grid .wide { grid-column: 1 / -1; }
+.sf-filter-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 7px;
+  color: var(--text2); font-size: 11px; }
+.sf-filter-footer button { padding: 3px 8px; font-size: 11px; }
 .panel-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
 .tree-folder { cursor: pointer; }
 .tree-folder-header { height: 26px; display: flex; align-items: center; padding: 0 12px; gap: 6px;
@@ -224,6 +232,9 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
   <div class="mod-tab" id="mt-mailings" onclick="showView('mailings')" title="CV mailing requests">
     <span>Рассылки</span>
   </div>
+  <div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
+    <span>Seafarers DB</span>
+  </div>
   <div class="mod-tab" id="mt-documents" onclick="showView('documents')" title="Crewing documents (templates, checklists, license, MLC cert)">
     <span>Documents</span>
   </div>
@@ -252,32 +263,32 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
     'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
     'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Light theme arrives in a future release.','settings.language':'Language','settings.language_desc':'Interface language.',
     'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
   },
   tl: {
-    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.documents':'Mga dokumento',
-    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.documents':'Mga dokumento',
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
     'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
     'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
     'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
     'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
   },
   hi: {
-    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.documents':'दस्तावेज़',
-    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.documents':'दस्तावेज़',
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
     'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
     'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
     'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
     'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
   },
   id: {
-    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.documents':'Dokumen',
-    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.documents':'Dokumen',
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
     'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
     'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
     'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
@@ -319,6 +330,7 @@ function applyI18nChrome() {
   var pairs = [
     ['mt-vacancies','nav.vacancies'],
     ['mt-mailings','nav.mailings'],
+    ['mt-seafarers','nav.seafarers'],
     ['mt-documents','nav.documents'],
   ];
   pairs.forEach(function(p){
@@ -470,6 +482,11 @@ var state = {
   messagesByApp: {},
   attachmentsByApp: {},
   focusedApplicationId: null,
+  seafarers: [],
+  selectedSeafarer: null,
+  seafarerDocsById: {},
+  seafarerSearch: '',
+  seafarerFilters: { rank: '', nationality: '', vesselType: '', availability: '', experience: '' },
   documents: [],
   selectedDocument: null,
   pendingUpdate: null,
@@ -515,7 +532,7 @@ function showView(v) {
   state.view = v;
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : v);
-  ['vacancies','mailings','documents'].forEach(function(k){
+  ['vacancies','mailings','seafarers','documents'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -543,6 +560,13 @@ function showView(v) {
     document.getElementById('left-panel').style.display = '';
     renderMailingRequestsTree();
     renderNewMailingRequest();
+    return;
+  }
+  if (v==='seafarers') {
+    document.getElementById('left-panel').style.display = '';
+    renderSeafarersTree();
+    if (state.selectedSeafarer) renderSeafarerDetail();
+    else renderSeafarersEmptyMain();
     return;
   }
   if (v==='documents') {
@@ -668,7 +692,7 @@ async function loadThreadMessages() {
   var t = state.selectedThread;
   if (!t) return;
   try {
-    state.threadMessages = await invoke('fetch_messages', { applicationId: t.application_id });
+    state.threadMessages = await invoke('fetch_messages', { applicationId: t.application_id, serverUrl: serverUrlArg() });
     renderThreadMessages();
   } catch (e) {
     var host = document.getElementById('thread-msgs');
@@ -739,6 +763,7 @@ async function sendThreadReply() {
       applicationId: t.application_id,
       toUserId: counterpart,
       plaintext: text,
+      serverUrl: serverUrlArg(),
     });
     if (input) input.value = '';
     if (status) { status.textContent = 'Sent ✓'; status.style.color = 'var(--ok)'; }
@@ -1020,6 +1045,414 @@ async function deleteMailingRequest(id){
     await renderMailingRequestsTree({force:true});
     renderMailingRequestsEmptyMain();
   } catch(e) { showToast('Failed to delete: '+e, 'error'); }
+}
+
+// ------------- local seafarer database -------------
+async function renderSeafarersTree(opts) {
+  opts = opts || {};
+  var force = opts.force === true;
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">'+tr('left.seafarers')+'</span>'
+    + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderSeafarersTree({force:true})" title="Refresh">↻</button></span>'
+    + '</div>'
+    + '<div class="panel-search"><input type="text" id="seafarer-search" placeholder="Search name, rank, nationality, ID..." value="'+escapeAttr(state.seafarerSearch||'')+'" oninput="state.seafarerSearch=this.value.toLowerCase();renderSeafarersTreeBody();"></div>'
+    + '<div class="panel-filters"><div id="seafarer-filter-controls"></div></div>'
+    + '<div class="panel-tree" id="panel-tree">'
+    + (state.seafarers && state.seafarers.length ? '' : '<div class="tree-empty">Loading...</div>')
+    + '</div>';
+
+  renderSeafarerFilterControls();
+  if (state.seafarers && state.seafarers.length) renderSeafarersTreeBody();
+  if (!force && state.seafarers && state.seafarers.length) return;
+
+  try {
+    state.seafarers = await invoke('list_saved_seafarers');
+  } catch(e) {
+    document.getElementById('panel-tree').innerHTML =
+      '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
+    return;
+  }
+  renderSeafarerFilterControls();
+  renderSeafarersTreeBody();
+}
+
+function getSeafarerFilters() {
+  if (!state.seafarerFilters) {
+    state.seafarerFilters = { rank: '', nationality: '', vesselType: '', availability: '', experience: '' };
+  }
+  return state.seafarerFilters;
+}
+
+function setSeafarerFilter(key, value) {
+  var f = getSeafarerFilters();
+  f[key] = value || '';
+  renderSeafarersTreeBody();
+}
+
+function resetSeafarerFilters() {
+  state.seafarerFilters = { rank: '', nationality: '', vesselType: '', availability: '', experience: '' };
+  state.seafarerSearch = '';
+  var search = document.getElementById('seafarer-search');
+  if (search) search.value = '';
+  renderSeafarerFilterControls();
+  renderSeafarersTreeBody();
+}
+
+function normalizeFilterValue(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function uniqueSorted(values) {
+  var seen = {};
+  var out = [];
+  values.forEach(function(v){
+    v = String(v || '').trim();
+    if (!v) return;
+    var key = normalizeFilterValue(v);
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push(v);
+  });
+  return out.sort(function(a,b){ return a.localeCompare(b); });
+}
+
+function savedSeafarerSummary(s) {
+  return (s && s.summary && typeof s.summary === 'object') ? s.summary : {};
+}
+
+function splitMaybeList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return String(value).split(/[;,]/);
+}
+
+function savedSeafarerVesselTypes(s) {
+  var sum = savedSeafarerSummary(s);
+  var vals = [];
+  if (sum.last_sea_service && sum.last_sea_service.vessel_type) vals.push(sum.last_sea_service.vessel_type);
+  vals = vals.concat(splitMaybeList(sum.vessel_type));
+  vals = vals.concat(splitMaybeList(sum.vessel_types));
+  vals = vals.concat(splitMaybeList(sum.preferred_vessel_type));
+  vals = vals.concat(splitMaybeList(sum.preferred_vessel_types));
+  return uniqueSorted(vals);
+}
+
+function savedSeafarerPrimaryVesselType(s) {
+  var vals = savedSeafarerVesselTypes(s);
+  return vals.length ? vals[0] : '';
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null;
+  var n = Number(value);
+  return isFinite(n) ? n : null;
+}
+
+function savedSeafarerExperienceMonths(s) {
+  var sum = savedSeafarerSummary(s);
+  var candidates = [
+    sum.total_sea_time_months,
+    sum.months_in_rank,
+    sum.experience_months,
+    sum.sea_time_months,
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var n = numberOrNull(candidates[i]);
+    if (n !== null) return n;
+  }
+  return null;
+}
+
+function formatExperienceMonths(months) {
+  months = numberOrNull(months);
+  if (months === null) return '';
+  if (months < 12) return Math.round(months) + ' mo';
+  var years = Math.floor(months / 12);
+  var rest = Math.round(months % 12);
+  return years + (rest ? 'y ' + rest + 'm' : 'y');
+}
+
+function experienceMatches(months, filter) {
+  months = numberOrNull(months);
+  if (!filter) return true;
+  if (months === null) return false;
+  if (filter === '0-6') return months >= 0 && months < 6;
+  if (filter === '6-12') return months >= 6 && months < 12;
+  if (filter === '12-36') return months >= 12 && months < 36;
+  if (filter === '36-60') return months >= 36 && months < 60;
+  if (filter === '60+') return months >= 60;
+  return true;
+}
+
+function savedSeafarerAvailabilityValue(s) {
+  var a = normalizeFilterValue(s && s.availability_status);
+  return a || 'unknown';
+}
+
+function seafarerSearchText(s) {
+  return [
+    s.display_name, s.rank, s.position, s.nationality, s.id, s.status,
+    s.availability_status, s.available_from, s.last_reply_text, s.notes,
+    savedSeafarerVesselTypes(s).join(' '),
+    formatExperienceMonths(savedSeafarerExperienceMonths(s)),
+  ].join(' ').toLowerCase();
+}
+
+function seafarerMatchesFilters(s) {
+  var f = getSeafarerFilters();
+  if (f.rank && normalizeFilterValue(s.rank || s.position) !== normalizeFilterValue(f.rank)) return false;
+  if (f.nationality && normalizeFilterValue(s.nationality) !== normalizeFilterValue(f.nationality)) return false;
+  if (f.vesselType) {
+    var wantVessel = normalizeFilterValue(f.vesselType);
+    var hasVessel = savedSeafarerVesselTypes(s).some(function(v){ return normalizeFilterValue(v) === wantVessel; });
+    if (!hasVessel) return false;
+  }
+  if (f.availability) {
+    var wantAvailability = normalizeFilterValue(f.availability);
+    var availability = savedSeafarerAvailabilityValue(s);
+    var status = normalizeFilterValue(s.status);
+    if (availability !== wantAvailability && status !== wantAvailability) return false;
+  }
+  if (!experienceMatches(savedSeafarerExperienceMonths(s), f.experience)) return false;
+  return true;
+}
+
+function seafarerFilterSelect(key, placeholder, options, value, extraClass) {
+  var html = '<select class="'+(extraClass || '')+'" onchange="setSeafarerFilter(\''+key+'\',this.value)">';
+  html += '<option value="">'+escapeHtml(placeholder)+'</option>';
+  options.forEach(function(opt){
+    var val = Array.isArray(opt) ? opt[0] : opt;
+    var label = Array.isArray(opt) ? opt[1] : opt;
+    html += '<option value="'+escapeAttr(val)+'"'+(value===val?' selected':'')+'>'+escapeHtml(label)+'</option>';
+  });
+  html += '</select>';
+  return html;
+}
+
+function renderSeafarerFilterControls() {
+  var host = document.getElementById('seafarer-filter-controls');
+  if (!host) return;
+  var f = getSeafarerFilters();
+  var rows = state.seafarers || [];
+  var ranks = uniqueSorted(rows.map(function(s){ return s.rank || s.position || ''; }));
+  var nationalities = uniqueSorted(rows.map(function(s){ return s.nationality || ''; }));
+  var vesselTypes = uniqueSorted(rows.reduce(function(acc, s){ return acc.concat(savedSeafarerVesselTypes(s)); }, []));
+  var availability = [
+    ['available','available'],
+    ['pinged','pinged'],
+    ['replied','replied'],
+    ['not_available','not available'],
+    ['unknown','unknown'],
+  ];
+  uniqueSorted(rows.map(function(s){ return s.status || ''; })).forEach(function(v){
+    if (!availability.some(function(opt){ return opt[0] === v; })) availability.push([v, v]);
+  });
+  var experience = [
+    ['0-6','0-6 mo'],
+    ['6-12','6-12 mo'],
+    ['12-36','1-3 yr'],
+    ['36-60','3-5 yr'],
+    ['60+','5+ yr'],
+  ];
+  host.innerHTML =
+    '<div class="sf-filter-grid">'
+    + seafarerFilterSelect('rank', 'Any rank', ranks, f.rank)
+    + seafarerFilterSelect('nationality', 'Any citizenship', nationalities, f.nationality)
+    + seafarerFilterSelect('vesselType', 'Any vessel', vesselTypes, f.vesselType, 'wide')
+    + seafarerFilterSelect('availability', 'Any readiness', availability, f.availability)
+    + seafarerFilterSelect('experience', 'Any experience', experience, f.experience)
+    + '</div>'
+    + '<div class="sf-filter-footer"><span id="seafarer-filter-count"></span><button class="ghost" onclick="resetSeafarerFilters()">Reset</button></div>';
+}
+
+function renderSeafarersTreeBody() {
+  var tree = document.getElementById('panel-tree');
+  if (!tree) return;
+  var q = (state.seafarerSearch || '').toLowerCase();
+  var allRows = state.seafarers || [];
+  var rows = allRows.filter(function(s){
+    if (!seafarerMatchesFilters(s)) return false;
+    if (!q) return true;
+    return seafarerSearchText(s).indexOf(q) !== -1;
+  });
+  var countEl = document.getElementById('seafarer-filter-count');
+  if (countEl) countEl.textContent = rows.length + ' / ' + allRows.length;
+  if (!rows.length) {
+    tree.innerHTML = allRows.length
+      ? '<div class="tree-empty">No seafarers match the current filters.<br><br><button class="ghost" onclick="resetSeafarerFilters()">Reset filters</button></div>'
+      : '<div class="tree-empty">No saved seafarers yet.<br><br>Open a received documents bundle and press <b>Save to Seafarers DB</b>.</div>';
+    return;
+  }
+  rows.sort(function(a,b){
+    if (!!b.ex_crew !== !!a.ex_crew) return b.ex_crew ? 1 : -1;
+    return String(b.last_received_at||'').localeCompare(String(a.last_received_at||''));
+  });
+  var html = '';
+  rows.forEach(function(s){
+    var active = state.selectedSeafarer && state.selectedSeafarer.id === s.id;
+    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openSeafarerById(\''+escapeAttr(s.id)+'\')">';
+    html += '<span style="font-size:12px;color:var(--text2);">'+(s.ex_crew?'★':'👤')+'</span>';
+    var vesselType = savedSeafarerPrimaryVesselType(s);
+    var expText = formatExperienceMonths(savedSeafarerExperienceMonths(s));
+    html += '<div class="ti-title"><div>'+escapeHtml(s.display_name||'(seafarer)')+'</div>';
+    html += '<div class="ti-meta">'+escapeHtml([s.rank||s.position,s.nationality,vesselType,expText,(s.doc_count||0)+' docs'].filter(Boolean).join(' · '))+'</div>';
+    html += '<div class="ti-meta" style="font-family:monospace;">'+escapeHtml(s.id)+'</div>';
+    html += '</div>';
+    var badge = s.availability_status && s.availability_status !== 'unknown' ? s.availability_status : s.status;
+    if (badge) html += '<span class="tag" style="font-size:10px;">'+escapeHtml(badge)+'</span>';
+    html += '</div>';
+  });
+  tree.innerHTML = html;
+}
+
+function renderSeafarersEmptyMain() {
+  document.getElementById('main').innerHTML =
+    '<div class="empty" style="margin-top:80px;">'
+    + '<div class="icon" style="font-size:64px;">👤</div>'
+    + '<div style="font-size:16px;margin-top:8px;">Local seafarer database</div>'
+    + '<div style="font-size:12px;margin-top:6px;">Save candidates from received document bundles. Ex-crew can be marked and sorted first.</div>'
+    + '</div>';
+}
+
+function openSeafarerById(id) {
+  state.selectedSeafarer = (state.seafarers||[]).find(function(s){return s.id===id;}) || null;
+  renderSeafarersTreeBody();
+  renderSeafarerDetail();
+}
+
+async function renderSeafarerDetail() {
+  var m = document.getElementById('main');
+  var s = state.selectedSeafarer;
+  if (!s) { renderSeafarersEmptyMain(); return; }
+  var docs = state.seafarerDocsById[s.id];
+  if (!docs) {
+    try {
+      docs = await invoke('list_saved_seafarer_documents', { seafarerId: s.id });
+      state.seafarerDocsById[s.id] = docs || [];
+    } catch(e) {
+      docs = [];
+    }
+  }
+  var summaryRows = [
+    ['System ID', s.id],
+    ['Rank', s.rank || s.position],
+    ['Nationality', s.nationality],
+    ['Vessel type', savedSeafarerPrimaryVesselType(s)],
+    ['Experience', formatExperienceMonths(savedSeafarerExperienceMonths(s))],
+    ['Available from', s.available_from],
+    ['Availability', s.availability_status],
+    ['Last ping', (s.last_ping_at||'').slice(0,16).replace('T',' ')],
+    ['Last reply', (s.last_reply_at||'').slice(0,16).replace('T',' ')],
+    ['First seen', (s.first_seen_at||'').slice(0,10)],
+    ['Last documents', (s.last_received_at||'').slice(0,16).replace('T',' ')],
+    ['Application', s.source_application_id],
+  ].filter(function(r){ return r[1]; });
+  var rowsHtml = summaryRows.map(function(r){
+    return '<div style="color:var(--text2);">'+escapeHtml(r[0])+'</div><div>'+escapeHtml(r[1])+'</div>';
+  }).join('');
+  m.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">'
+    + '<div style="min-width:0;flex:1;"><h1 style="margin:0;">'+escapeHtml(s.display_name||'(seafarer)')+'</h1>'
+    + '<div class="sub">'+escapeHtml([s.rank||s.position,s.nationality].filter(Boolean).join(' · '))+'</div></div>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+    + '<button onclick="pingSavedSeafarer(\''+escapeAttr(s.id)+'\')" title="Send availability ping through Skipi server">Ping availability</button>'
+    + '<button class="ghost" onclick="refreshSavedSeafarerReplies(\''+escapeAttr(s.id)+'\')" title="Fetch latest replies from this seafarer">Refresh replies</button>'
+    + '<button class="ghost" onclick="openSavedSeafarerFolder(\''+escapeAttr(s.id)+'\')">Open folder</button>'
+    + '</div></div>'
+    + '<div class="card" style="display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-size:13px;">'+rowsHtml+'</div>'
+    + '<div class="card">'
+    + '<div class="row"><div><label>Status</label><select id="sf-status">'
+    + ['prospect','ex_crew','active','standby','not_available','blacklist'].map(function(v){return '<option value="'+v+'"'+(s.status===v?' selected':'')+'>'+v+'</option>';}).join('')
+    + '</select></div>'
+    + '<div><label>Priority</label><label class="checkbox-row" style="margin-top:8px;"><input type="checkbox" id="sf-excrew" '+(s.ex_crew?'checked':'')+'> <span>Ex-crew / priority candidate</span></label></div></div>'
+    + '<div class="row full"><div><label>Internal notes</label><textarea id="sf-notes" placeholder="Internal notes. Stored locally only.">'+escapeHtml(s.notes||'')+'</textarea></div></div>'
+    + '<div style="display:flex;justify-content:flex-end;"><button onclick="saveSeafarerMeta(\''+escapeAttr(s.id)+'\')">Save notes</button></div>'
+    + '</div>'
+    + (s.last_reply_text ? '<div class="card"><h2 style="font-size:16px;margin:0 0 8px;">Last availability reply</h2><div style="white-space:pre-wrap;font-size:13px;">'+escapeHtml(s.last_reply_text)+'</div></div>' : '')
+    + '<div class="card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<h2 style="font-size:16px;margin:0;">Received documents</h2><span class="tag">'+(s.doc_count||0)+' files</span></div>'
+    + renderSavedSeafarerDocs(docs)
+    + '</div>';
+}
+
+function renderSavedSeafarerDocs(docs) {
+  if (!docs || !docs.length) return '<div style="color:var(--text2);font-size:12px;">No documents stored.</div>';
+  var byCat = {};
+  docs.forEach(function(d){ (byCat[d.category||'Other'] = byCat[d.category||'Other'] || []).push(d); });
+  var html = '';
+  Object.keys(byCat).sort().forEach(function(cat){
+    html += '<details open style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--text2);text-transform:uppercase;">'+escapeHtml(cat)+' · '+byCat[cat].length+'</summary>';
+    byCat[cat].forEach(function(d){
+      var meta = [d.doc_number, d.issued_by, d.valid_to ? 'valid to '+d.valid_to : ''].filter(Boolean).join(' · ');
+      html += '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">'
+           + '<div style="min-width:0;"><div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(d.title||'document')+'</div>'
+           + '<div style="font-size:11px;color:var(--text2);">'+escapeHtml(meta || (d.has_file?'on file':'no file'))+'</div></div>'
+           + (d.file_path ? '<button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(d.file_path))+'\'})">Open</button>' : '<span style="font-size:11px;color:var(--text2);">no file</span>')
+           + '</div>';
+    });
+    html += '</details>';
+  });
+  return html;
+}
+
+async function saveSeafarerMeta(id) {
+  try {
+    var saved = await invoke('update_saved_seafarer', {
+      seafarerId: id,
+      patch: {
+        exCrew: !!document.getElementById('sf-excrew').checked,
+        status: document.getElementById('sf-status').value,
+        notes: document.getElementById('sf-notes').value || '',
+      }
+    });
+    var idx = (state.seafarers||[]).findIndex(function(s){return s.id===id;});
+    if (idx >= 0) state.seafarers[idx] = saved;
+    state.selectedSeafarer = saved;
+    renderSeafarersTreeBody();
+    showToast('Seafarer updated.', 'success');
+  } catch(e) { showToast('Save failed: '+e, 'error'); }
+}
+
+async function pingSavedSeafarer(id) {
+  var s = (state.seafarers||[]).find(function(x){return x.id===id;});
+  if (!s || !s.id || s.id.indexOf('application_') === 0) {
+    showToast('Cannot ping: saved record has no server seafarer ID.', 'warn');
+    return;
+  }
+  var msg = 'Hello. Are you available for work? Please reply with your availability date, preferred rank/vessel type, and any current restrictions.';
+  try {
+    var saved = await invoke('send_saved_seafarer_ping', {
+      seafarerId: s.id,
+      plaintext: msg,
+    });
+    var idx = (state.seafarers||[]).findIndex(function(x){return x.id===s.id;});
+    if (idx >= 0) state.seafarers[idx] = saved;
+    state.selectedSeafarer = saved;
+    renderSeafarersTreeBody();
+    renderSeafarerDetail();
+    showToast('Availability ping sent.', 'success');
+  } catch(e) { showToast('Ping failed: '+e, 'error'); }
+}
+
+async function refreshSavedSeafarerReplies(id) {
+  try {
+    var saved = await invoke('refresh_saved_seafarer_replies', { seafarerId: id });
+    var idx = (state.seafarers||[]).findIndex(function(x){return x.id===id;});
+    if (idx >= 0) state.seafarers[idx] = saved;
+    state.selectedSeafarer = saved;
+    renderSeafarersTreeBody();
+    renderSeafarerDetail();
+    showToast(saved.last_reply_at ? 'Replies refreshed.' : 'No new reply yet.', saved.last_reply_at ? 'success' : 'info');
+  } catch(e) { showToast('Refresh failed: '+e, 'error'); }
+}
+
+async function openSavedSeafarerFolder(id) {
+  var s = (state.seafarers||[]).find(function(x){return x.id===id;});
+  if (!s || !s.docs_dir) { showToast('No local folder stored.', 'warn'); return; }
+  try { await invoke('open_path_with_default', { path: s.docs_dir }); }
+  catch(e) { showToast('Could not open folder: '+e, 'error'); }
 }
 
 // ------------- documents tree (seafarer-style) -------------
@@ -1553,6 +1986,14 @@ function openVacancyById(id) {
 }
 
 function escapeAttr(s){ return (s||'').replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
+function escapeJsString(s){
+  return String(s||'')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/</g, '\\x3c');
+}
 
 // Custom confirm — Tauri 2 ACL blocks browser-native window.confirm()
 // (it goes through plugin:dialog). This stays inside the WebView.
@@ -2138,7 +2579,7 @@ async function loadApplicationAttachments(applicationId, counterpartId) {
   var host = document.getElementById('app-attachments-'+applicationId);
   if (!host) return;
   var atts;
-  try { atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId }); }
+  try { atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() }); }
   catch (e) { return; }
   if (!atts || !atts.length) return;
   var html = '<div style="font-weight:600;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin:8px 0 6px;">Attached documents</div>';
@@ -2161,7 +2602,7 @@ async function prefetchApplicationsMessages(apps) {
     var a = apps[i];
     if (state.messagesByApp[a.id]) continue; // already cached
     try {
-      var msgs = await invoke('fetch_messages', { applicationId: a.id });
+      var msgs = await invoke('fetch_messages', { applicationId: a.id, serverUrl: serverUrlArg() });
       state.messagesByApp[a.id] = msgs;
       // Repaint the row so its preview reflects the just-fetched last message.
       var card = document.getElementById('app-card-'+a.id);
@@ -2289,14 +2730,14 @@ async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
   var msgs = cachedMsgs || [];
   var atts = state.attachmentsByApp[applicationId] || [];
   if (!cachedMsgs) {
-    try { msgs = await invoke('fetch_messages', { applicationId: applicationId }); }
+    try { msgs = await invoke('fetch_messages', { applicationId: applicationId, serverUrl: serverUrlArg() }); }
     catch(e){
       host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+e+'</div>';
       return;
     }
     state.messagesByApp[applicationId] = msgs;
     try {
-      atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+      atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() });
       state.attachmentsByApp[applicationId] = atts || [];
     } catch(e) {
       atts = [];
@@ -2430,7 +2871,7 @@ async function openLatestAttachmentFromSender(applicationId, senderUserId) {
   var att = latestAttachmentFromSender(applicationId, senderUserId);
   if (!att) {
     try {
-      var fresh = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+      var fresh = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() });
       state.attachmentsByApp[applicationId] = fresh || [];
       att = latestAttachmentFromSender(applicationId, senderUserId);
     } catch(e) {
@@ -2506,14 +2947,14 @@ function renderMessageBubble(m, mine, opts) {
   }
   if (raw.indexOf('[skipi:docs_response]') === 0) {
     var note2 = raw.replace('[skipi:docs_response]','').trim()
-             || 'Documents sent.';
+             || 'The seafarer sent the requested files.';
     var latestAtt = latestAttachmentFromSender(m.application_id, m.from_user_id);
     var openLatestBtn = latestAtt
-      ? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open received documents</button>'
-      : '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Find documents</button>';
+      ? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open documents bundle</button>'
+      : '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Find received files</button>';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);">'
-         +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">📎 Documents sent</div>'
+         +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">📎 Document response</div>'
          +     '<div class="msg-text" style="font-size:12px;opacity:0.9;">'+escapeHtml(note2)+'</div>'
          +     openLatestBtn
          +     '<div class="msg-meta">'+escapeHtml(time)+(ticks?' <span>'+ticks+'</span>':'')+'</div>'
@@ -2586,6 +3027,7 @@ async function openDocumentsBundle(applicationId, attachmentId, counterpartId, f
       attachmentId: attachmentId,
       counterpartUserId: counterpartId,
       originalFilename: filename || 'documents.zip',
+      serverUrl: serverUrlArg(),
     });
   } catch (e) { showToast('Download failed: '+e, 'error'); return; }
 
@@ -2597,6 +3039,10 @@ async function openDocumentsBundle(applicationId, attachmentId, counterpartId, f
     });
   } catch (e) { showToast('Cannot extract: '+e, 'error'); return; }
 
+  bundle.application_id = applicationId;
+  bundle.counterpart_id = counterpartId || '';
+  bundle.attachment_id = attachmentId || '';
+  bundle.filename = filename || 'documents.zip';
   showDocumentsBundleViewer(bundle);
 }
 
@@ -2627,6 +3073,7 @@ async function openAttachmentInApp(applicationId, att, counterpartId) {
       attachmentId: att.id,
       counterpartUserId: counterpartId,
       originalFilename: fname,
+      serverUrl: serverUrlArg(),
     });
   } catch (e) {
     showToast('Download failed: '+e, 'error');
@@ -2703,11 +3150,90 @@ function showSingleAttachmentViewer(info) {
 // Inherits status-color logic and ⭐ template marking.
 window._bundleState = window._bundleState || { selected: null };
 
+function findApplicationById(applicationId) {
+  var pools = [state.applications || []];
+  Object.keys(state.applicationsByVacancy || {}).forEach(function(k){
+    if (Array.isArray(state.applicationsByVacancy[k])) pools.push(state.applicationsByVacancy[k]);
+  });
+  for (var p = 0; p < pools.length; p++) {
+    for (var i = 0; i < pools[p].length; i++) {
+      if (pools[p][i] && pools[p][i].id === applicationId) return pools[p][i];
+    }
+  }
+  return null;
+}
+
+function latestPdfAttachmentFromSender(applicationId, senderUserId) {
+  var atts = (state.attachmentsByApp && state.attachmentsByApp[applicationId]) || [];
+  var matches = atts.filter(function(a){
+    var name = String(a.original_filename || '').toLowerCase();
+    var mime = String(a.mime_type || '').toLowerCase();
+    return a && a.id
+      && (!senderUserId || a.from_user_id === senderUserId)
+      && (name.endsWith('.pdf') || mime.indexOf('pdf') !== -1);
+  });
+  matches.sort(function(a,b){ return String(b.sent_at||'').localeCompare(String(a.sent_at||'')); });
+  return matches[0] || null;
+}
+
+async function saveCurrentBundleSeafarer() {
+  var data = window._bundleViewerData;
+  if (!data || !data.manifest) {
+    showToast('No opened document bundle to save.', 'warn');
+    return;
+  }
+  var app = findApplicationById(data.applicationId) || {};
+  var summary = app.summary || null;
+  var seafarerId = data.counterpartId || app.seafarer_user_id || sUidOf(app) || '';
+  var cvPath = null;
+  var cvAtt = latestPdfAttachmentFromSender(data.applicationId, seafarerId);
+  if (cvAtt && seafarerId) {
+    try {
+      cvPath = await invoke('download_encrypted_attachment', {
+        attachmentId: cvAtt.id,
+        counterpartUserId: seafarerId,
+        originalFilename: cvAtt.original_filename || 'CV.pdf',
+        serverUrl: serverUrlArg(),
+      });
+    } catch(e) {
+      console.log('CV save skipped:', e);
+    }
+  }
+  try {
+    var saved = await invoke('save_seafarer_from_bundle', {
+      applicationId: data.applicationId,
+      seafarerUserId: seafarerId,
+      manifest: data.manifest,
+      extractedTo: data.extractedTo,
+      applicantSummary: summary,
+      cvPath: cvPath,
+    });
+    var idx = (state.seafarers||[]).findIndex(function(s){return s.id===saved.id;});
+    if (idx >= 0) state.seafarers[idx] = saved;
+    else state.seafarers.unshift(saved);
+    state.selectedSeafarer = saved;
+    delete state.seafarerDocsById[saved.id];
+    showToast('Saved to Seafarers DB.', 'success');
+    var overlay = document.getElementById('bundle-overlay');
+    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    showView('seafarers');
+  } catch(e) {
+    showToast('Save failed: '+e, 'error');
+  }
+}
+
 function showDocumentsBundleViewer(bundle) {
   var manifest = (bundle && bundle.manifest) || {};
   var docs = manifest.documents || [];
   var extractedTo = bundle.extracted_to || '';
-  window._bundleViewerData = { docs: docs, extractedTo: extractedTo, manifest: manifest };
+  window._bundleViewerData = {
+    docs: docs,
+    extractedTo: extractedTo,
+    manifest: manifest,
+    applicationId: bundle.application_id || '',
+    counterpartId: bundle.counterpart_id || '',
+    attachmentId: bundle.attachment_id || '',
+  };
 
   var byCat = {};
   docs.forEach(function(d){
@@ -2744,7 +3270,10 @@ function showDocumentsBundleViewer(bundle) {
     +   '<div><div style="font-size:15px;font-weight:600;">📂 Candidate documents</div>'
     +     '<div style="font-size:12px;color:var(--text2);margin-top:2px;">'+escapeHtml(headLine)+'</div>'
     +   '</div>'
-    +   '<button id="bundle-close" style="background:transparent;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;">Close</button>'
+    +   '<div style="display:flex;gap:8px;align-items:center;">'
+    +     '<button id="bundle-save-local" style="background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;">Save to Seafarers DB</button>'
+    +     '<button id="bundle-close" style="background:transparent;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;">Close</button>'
+    +   '</div>'
     + '</div>'
     + '<div style="flex:1;display:flex;min-height:0;">'
     +   '<div id="bundle-tree" style="width:300px;border-right:1px solid var(--border);overflow-y:auto;padding:8px 6px;background:var(--panel);"></div>'
@@ -2753,6 +3282,7 @@ function showDocumentsBundleViewer(bundle) {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   modal.querySelector('#bundle-close').onclick = function(){ document.body.removeChild(overlay); };
+  modal.querySelector('#bundle-save-local').onclick = saveCurrentBundleSeafarer;
   overlay.onclick = function(e){ if (e.target === overlay) document.body.removeChild(overlay); };
 
   paintBundleTree(byCat, categoryOrder);
@@ -2933,6 +3463,7 @@ async function downloadCrewingAttachment(attachmentId, counterpartId, filename) 
       attachmentId: attachmentId,
       counterpartUserId: counterpartId,
       originalFilename: filename,
+      serverUrl: serverUrlArg(),
     });
     try {
       await invoke('open_path_with_default', { path: path });
@@ -2974,6 +3505,7 @@ async function requestDocs(applicationId, seafarerUserId) {
       applicationId: applicationId,
       toUserId: counterpart,
       plaintext: marker,
+      serverUrl: serverUrlArg(),
     });
     var pendingEl = document.getElementById(tempId);
     if (pendingEl) pendingEl.classList.remove('pending');
@@ -3004,7 +3536,7 @@ async function refreshApplicationChat(applicationId, seafarerUserId, silent) {
   var msgsBox = document.getElementById('app-msgs-'+applicationId);
   if (!msgsBox) return;
   var msgs;
-  try { msgs = await invoke('fetch_messages', { applicationId: applicationId }); }
+  try { msgs = await invoke('fetch_messages', { applicationId: applicationId, serverUrl: serverUrlArg() }); }
   catch (e) {
     if (!silent) {
       var st = document.getElementById('app-status-'+applicationId);
@@ -3014,7 +3546,7 @@ async function refreshApplicationChat(applicationId, seafarerUserId, silent) {
   }
   var atts = [];
   try {
-    atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId });
+    atts = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() });
   } catch(e) {
     atts = state.attachmentsByApp[applicationId] || [];
   }
@@ -3077,6 +3609,7 @@ async function sendApplicationReply(applicationId, seafarerUserId) {
       applicationId: applicationId,
       toUserId: counterpart,
       plaintext: text,
+      serverUrl: serverUrlArg(),
     });
     var pendingEl = document.getElementById(tempId);
     if (pendingEl) pendingEl.classList.remove('pending');
@@ -3717,6 +4250,10 @@ function registerMessagingPubkey() {
     bearerToken: s.bearer_token || '',
     serverUrl: s.server_url || ''
   });
+}
+
+function serverUrlArg() {
+  return (state.settings && state.settings.server_url) || '';
 }
 </script>
 </body>
