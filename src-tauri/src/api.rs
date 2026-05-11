@@ -17,10 +17,10 @@ pub(crate) fn api_bases(server_url: Option<&str>) -> Vec<String> {
     let configured = server_url
         .map(normalize_api_base)
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| PRIMARY_API.to_string());
+        .unwrap_or_else(|| RU_API.to_string());
 
-    if configured == PRIMARY_API {
-        vec![PRIMARY_API.to_string(), RU_API.to_string()]
+    if configured == PRIMARY_API || configured == RU_API {
+        vec![RU_API.to_string(), PRIMARY_API.to_string()]
     } else {
         vec![configured]
     }

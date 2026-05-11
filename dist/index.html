@@ -444,8 +444,8 @@ function writeTaxonomyCache(data) {
 
 function apiBaseCandidates() {
   var configured = (state.settings && state.settings.server_url ? state.settings.server_url : '').replace(/\/$/,'').trim();
-  if (!configured || configured === 'https://api.skipi.app') {
-    return ['https://api.skipi.app', 'https://api-ru.skipi.app'];
+  if (!configured || configured === 'https://api.skipi.app' || configured === 'https://api-ru.skipi.app') {
+    return ['https://api-ru.skipi.app', 'https://api.skipi.app'];
   }
   return [configured];
 }
@@ -505,7 +505,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.107',
+  appVersion: '0.4.108',
 };
 
 // ------------- toasts -------------
@@ -3799,7 +3799,7 @@ function renderSettingsModal() {
   if (settingsTab==='connection') {
     body = '<div class="settings-section"><h3>Connection</h3>'
       + '<div class="section-desc">Server endpoint and credentials issued by Skipi after company verification.</div>'
-      + settingRow('Server URL', 'Leave default for automatic production access: <code>https://api.skipi.app</code>, with RF fallback to <code>https://api-ru.skipi.app</code>. Use <code>http://127.0.0.1:8000</code> only for dev.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
+      + settingRow('Server URL', 'Leave default for automatic production access via <code>https://api-ru.skipi.app</code>, with Contabo fallback to <code>https://api.skipi.app</code>. Use <code>http://127.0.0.1:8000</code> only for dev.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
       + settingRow('Company token', 'Issued by Skipi after manual accreditation. Used for vacancies, mailings, applications, and E2E key registration.',
           '<div style="display:flex;gap:8px;align-items:center;">'
         + inputCtrl('s-token', s.bearer_token, 'password', 'Paste company token', '240px')

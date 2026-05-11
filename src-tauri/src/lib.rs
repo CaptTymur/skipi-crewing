@@ -67,10 +67,10 @@ impl Settings {
 
     pub fn load() -> Self {
         let path = Self::config_path();
-        // First-run default points at the production endpoint; users on
+        // First-run default points at the RF-friendly production endpoint; users on
         // the local dev backend can override it in Settings → Connection.
         let first_run = || Settings {
-            server_url: api::PRIMARY_API.to_string(),
+            server_url: api::RU_API.to_string(),
             ..Default::default()
         };
         let raw = match std::fs::read_to_string(&path) {
