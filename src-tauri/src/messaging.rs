@@ -18,8 +18,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
+use crate::api;
+
 const SK_FILENAME: &str = "x25519_sk.bin";
-const PROD_API: &str = "https://api.skipi.app";
 const MAX_ATTACHMENT_BYTES: usize = 50 * 1024 * 1024;
 
 fn keys_dir() -> PathBuf {
@@ -93,38 +94,19 @@ pub fn register_my_pubkey(
     server_url: Option<String>,
 ) -> Result<MyIdentity, String> {
     let me = get_my_identity()?;
-    let base = server_url
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .unwrap_or(PROD_API)
-        .trim_end_matches('/')
-        .to_string();
-    let url = format!("{}/api/messaging/pubkey", base);
     let body = serde_json::json!({
         "user_id": me.user_id,
         "pubkey_b64": me.pubkey_b64,
         "role": "crewing",
         "crewing_id": crewing_id,
     });
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let mut req = client.post(&url).json(&body);
-    if let Some(token) = bearer_token
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        req = req.bearer_auth(token);
-    }
-    let resp = req.send().map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        let s = resp.status();
-        let b = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {b}"));
-    }
+    api::post_json_empty(
+        server_url.as_deref(),
+        bearer_token.as_deref(),
+        "/api/messaging/pubkey",
+        &body,
+        15,
+    )?;
     Ok(me)
 }
 
@@ -133,29 +115,10 @@ struct PubkeyResp {
     pubkey_b64: String,
 }
 
-fn api_base(server_url: Option<&str>) -> String {
-    server_url
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .unwrap_or(PROD_API)
-        .trim_end_matches('/')
-        .to_string()
-}
-
-fn lookup_recipient_pk_at(user_id: &str, base: &str) -> Result<PublicKey, String> {
-    let url = format!("{}/api/messaging/pubkey/{}", base, user_id);
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!("recipient pubkey not found: {}", resp.status()));
-    }
-    let parsed: PubkeyResp = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+fn lookup_recipient_pk(user_id: &str, server_url: Option<&str>) -> Result<PublicKey, String> {
+    let path = format!("/api/messaging/pubkey/{user_id}");
+    let parsed: PubkeyResp = api::get_json(server_url, None, &path, 10)
+        .map_err(|e| format!("recipient pubkey not found: {e}"))?;
     let raw = base64::engine::general_purpose::STANDARD
         .decode(&parsed.pubkey_b64)
         .map_err(|e| format!("bad b64: {e}"))?;
@@ -196,9 +159,8 @@ pub fn send_encrypted_message(
     plaintext: String,
     server_url: Option<String>,
 ) -> Result<PlaintextMessage, String> {
-    let base = api_base(server_url.as_deref());
     let (sk, _pk, my_user_id) = ensure_keypair()?;
-    let recipient_pk = lookup_recipient_pk_at(&to_user_id, &base)?;
+    let recipient_pk = lookup_recipient_pk(&to_user_id, server_url.as_deref())?;
     let salsa = SalsaBox::new(&recipient_pk, &sk);
     let nonce = SalsaBox::generate_nonce(&mut OsRng);
     let ct = salsa
@@ -210,27 +172,13 @@ pub fn send_encrypted_message(
     payload.extend_from_slice(&ct);
     let ciphertext_b64 = base64::engine::general_purpose::STANDARD.encode(&payload);
 
-    let url = format!("{}/api/messaging/threads/{}/messages", base, application_id);
+    let path = format!("/api/messaging/threads/{}/messages", application_id);
     let body = serde_json::json!({
         "from_user_id": my_user_id,
         "to_user_id": to_user_id,
         "ciphertext_b64": ciphertext_b64,
     });
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        let s = resp.status();
-        let b = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {b}"));
-    }
-    let server_msg: ServerMessage = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let server_msg: ServerMessage = api::post_json(server_url.as_deref(), None, &path, &body, 20)?;
     Ok(PlaintextMessage {
         id: server_msg.id,
         application_id: server_msg.application_id,
@@ -248,9 +196,8 @@ pub fn send_direct_availability_ping(
     bearer_token: String,
     server_url: Option<String>,
 ) -> Result<PlaintextMessage, String> {
-    let base = api_base(server_url.as_deref());
     let (sk, _pk, my_user_id) = ensure_keypair()?;
-    let recipient_pk = lookup_recipient_pk_at(&to_user_id, &base)?;
+    let recipient_pk = lookup_recipient_pk(&to_user_id, server_url.as_deref())?;
     let salsa = SalsaBox::new(&recipient_pk, &sk);
     let nonce = SalsaBox::generate_nonce(&mut OsRng);
     let ct = salsa
@@ -261,27 +208,18 @@ pub fn send_direct_availability_ping(
     payload.extend_from_slice(&ct);
     let ciphertext_b64 = base64::engine::general_purpose::STANDARD.encode(&payload);
 
-    let url = format!("{}/api/messaging/direct-ping", base);
     let body = serde_json::json!({
         "from_user_id": my_user_id,
         "to_user_id": to_user_id,
         "ciphertext_b64": ciphertext_b64,
     });
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let mut req = client.post(&url).json(&body);
-    if !bearer_token.trim().is_empty() {
-        req = req.bearer_auth(bearer_token.trim());
-    }
-    let resp = req.send().map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        let s = resp.status();
-        let b = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {b}"));
-    }
-    let server_msg: ServerMessage = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let server_msg: ServerMessage = api::post_json(
+        server_url.as_deref(),
+        Some(&bearer_token),
+        "/api/messaging/direct-ping",
+        &body,
+        20,
+    )?;
     Ok(PlaintextMessage {
         id: server_msg.id,
         application_id: server_msg.application_id,
@@ -298,24 +236,12 @@ pub fn fetch_messages(
     application_id: String,
     server_url: Option<String>,
 ) -> Result<Vec<PlaintextMessage>, String> {
-    let base = api_base(server_url.as_deref());
     let (sk, _pk, my_user_id) = ensure_keypair()?;
-    let url = format!(
-        "{}/api/messaging/threads/{}/messages?user_id={}",
-        base, application_id, my_user_id
+    let path = format!(
+        "/api/messaging/threads/{}/messages?user_id={}",
+        application_id, my_user_id
     );
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!("server returned {}", resp.status()));
-    }
-    let server_msgs: Vec<ServerMessage> = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let server_msgs: Vec<ServerMessage> = api::get_json(server_url.as_deref(), None, &path, 15)?;
     let mut out = Vec::with_capacity(server_msgs.len());
     // Cache pubkey lookups so we do at most one HTTP call per counterpart,
     // not one per message. Was the cause of UI freezes on refresh.
@@ -330,7 +256,7 @@ pub fn fetch_messages(
         let counterpart_pk = if let Some(pk) = pk_cache.get(&counterpart_id) {
             pk.clone()
         } else {
-            match lookup_recipient_pk_at(&counterpart_id, &base) {
+            match lookup_recipient_pk(&counterpart_id, server_url.as_deref()) {
                 Ok(pk) => {
                     pk_cache.insert(counterpart_id.clone(), pk.clone());
                     pk
@@ -404,9 +330,8 @@ pub fn upload_encrypted_attachment(
     file_path: String,
     server_url: Option<String>,
 ) -> Result<AttachmentMeta, String> {
-    let base = api_base(server_url.as_deref());
     let (sk, _pk, my_user_id) = ensure_keypair()?;
-    let recipient_pk = lookup_recipient_pk_at(&to_user_id, &base)?;
+    let recipient_pk = lookup_recipient_pk(&to_user_id, server_url.as_deref())?;
     let path = std::path::Path::new(&file_path);
     let bytes = std::fs::read(path).map_err(|e| format!("read file: {e}"))?;
     if bytes.len() > MAX_ATTACHMENT_BYTES {
@@ -430,10 +355,7 @@ pub fn upload_encrypted_attachment(
     payload.extend_from_slice(&ct);
     let ciphertext_b64 = base64::engine::general_purpose::STANDARD.encode(&payload);
 
-    let url = format!(
-        "{}/api/messaging/threads/{}/attachments",
-        base, application_id
-    );
+    let path = format!("/api/messaging/threads/{}/attachments", application_id);
     let body = serde_json::json!({
         "from_user_id": my_user_id,
         "to_user_id": to_user_id,
@@ -442,22 +364,7 @@ pub fn upload_encrypted_attachment(
         "mime_type": mime_type,
         "size_bytes": size_bytes,
     });
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        let s = resp.status();
-        let b = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {b}"));
-    }
-    resp.json::<AttachmentMeta>()
-        .map_err(|e| format!("bad JSON: {e}"))
+    api::post_json(server_url.as_deref(), None, &path, &body, 60)
 }
 
 #[tauri::command]
@@ -467,29 +374,17 @@ pub fn download_encrypted_attachment(
     original_filename: String,
     server_url: Option<String>,
 ) -> Result<String, String> {
-    let base = api_base(server_url.as_deref());
     let (sk, _pk, my_user_id) = ensure_keypair()?;
-    let counterpart_pk = lookup_recipient_pk_at(&counterpart_user_id, &base)?;
-    let url = format!(
-        "{}/api/messaging/attachments/{}/body?user_id={}",
-        base, attachment_id, my_user_id
-    );
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!("server returned {}", resp.status()));
-    }
+    let counterpart_pk = lookup_recipient_pk(&counterpart_user_id, server_url.as_deref())?;
     #[derive(Deserialize)]
     struct Body {
         ciphertext_b64: String,
     }
-    let parsed: Body = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let path = format!(
+        "/api/messaging/attachments/{}/body?user_id={}",
+        attachment_id, my_user_id
+    );
+    let parsed: Body = api::get_json(server_url.as_deref(), None, &path, 60)?;
     let raw = base64::engine::general_purpose::STANDARD
         .decode(&parsed.ciphertext_b64)
         .map_err(|e| format!("bad b64: {e}"))?;
@@ -572,25 +467,12 @@ pub fn fetch_attachments_for_application(
     application_id: String,
     server_url: Option<String>,
 ) -> Result<Vec<AttachmentMeta>, String> {
-    let base = api_base(server_url.as_deref());
     let (_sk, _pk, my_user_id) = ensure_keypair()?;
-    let url = format!(
-        "{}/api/messaging/threads/{}/attachments?user_id={}",
-        base, application_id, my_user_id
+    let path = format!(
+        "/api/messaging/threads/{}/attachments?user_id={}",
+        application_id, my_user_id
     );
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!("server returned {}", resp.status()));
-    }
-    resp.json::<Vec<AttachmentMeta>>()
-        .map_err(|e| format!("bad JSON: {e}"))
+    api::get_json(server_url.as_deref(), None, &path, 15)
 }
 
 /// Unpack a downloaded `[skipi:doc_bundle]` ZIP into a stable per-application

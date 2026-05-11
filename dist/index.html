@@ -442,6 +442,14 @@ function writeTaxonomyCache(data) {
   } catch(e){}
 }
 
+function apiBaseCandidates() {
+  var configured = (state.settings && state.settings.server_url ? state.settings.server_url : '').replace(/\/$/,'').trim();
+  if (!configured || configured === 'https://api.skipi.app') {
+    return ['https://api.skipi.app', 'https://api-ru.skipi.app'];
+  }
+  return [configured];
+}
+
 async function loadTaxonomy() {
   // Cache-first from localStorage so the form opens instantly even if
   // the server is slow. The full /api/catalogs payload is cached for
@@ -450,20 +458,22 @@ async function loadTaxonomy() {
   if (cached && cached.payload) TAXONOMY = cached.payload;
   if (cached && cached.fetched_at && Date.now() - cached.fetched_at < TAXONOMY_CACHE_TTL_MS) return;
 
-  var base = (state.settings && state.settings.server_url ? state.settings.server_url : 'https://api.skipi.app').replace(/\/$/,'');
-  var urls = [base + '/api/catalogs', base + '/api/taxonomy'];
-  for (var i = 0; i < urls.length; i++) {
-    try {
-      var resp = await fetch(urls[i]);
-      if (resp.ok) {
-        var data = await resp.json();
-        if (data && data.positions && data.vessel_types) {
-          TAXONOMY = data;
-          writeTaxonomyCache(data);
-          return;
+  var bases = apiBaseCandidates();
+  var paths = ['/api/catalogs', '/api/taxonomy'];
+  for (var b = 0; b < bases.length; b++) {
+    for (var i = 0; i < paths.length; i++) {
+      try {
+        var resp = await fetch(bases[b] + paths[i]);
+        if (resp.ok) {
+          var data = await resp.json();
+          if (data && data.positions && data.vessel_types) {
+            TAXONOMY = data;
+            writeTaxonomyCache(data);
+            return;
+          }
         }
-      }
-    } catch(e){}
+      } catch(e){}
+    }
   }
 }
 
@@ -495,7 +505,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.106',
+  appVersion: '0.4.107',
 };
 
 // ------------- toasts -------------
@@ -3789,7 +3799,7 @@ function renderSettingsModal() {
   if (settingsTab==='connection') {
     body = '<div class="settings-section"><h3>Connection</h3>'
       + '<div class="section-desc">Server endpoint and credentials issued by Skipi after company verification.</div>'
-      + settingRow('Server URL', 'Default <code>http://127.0.0.1:8000</code> for dev. <code>https://api.skipi.app</code> for prod.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
+      + settingRow('Server URL', 'Leave default for automatic production access: <code>https://api.skipi.app</code>, with RF fallback to <code>https://api-ru.skipi.app</code>. Use <code>http://127.0.0.1:8000</code> only for dev.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
       + settingRow('Company token', 'Issued by Skipi after manual accreditation. Used for vacancies, mailings, applications, and E2E key registration.',
           '<div style="display:flex;gap:8px;align-items:center;">'
         + inputCtrl('s-token', s.bearer_token, 'password', 'Paste company token', '240px')

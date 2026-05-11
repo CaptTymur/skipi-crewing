@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+mod api;
 mod db;
 mod messaging;
 
@@ -69,7 +70,7 @@ impl Settings {
         // First-run default points at the production endpoint; users on
         // the local dev backend can override it in Settings → Connection.
         let first_run = || Settings {
-            server_url: "https://api.skipi.app".to_string(),
+            server_url: api::PRIMARY_API.to_string(),
             ..Default::default()
         };
         let raw = match std::fs::read_to_string(&path) {
@@ -216,24 +217,12 @@ fn activate_crewing_token(
     if token.is_empty() {
         return Err("No company token configured.".into());
     }
-    let url = format!("{}/api/crewings/token/activate", base);
-    let resp = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?
-        .post(&url)
-        .bearer_auth(token)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-    let status = resp.status();
-    if !status.is_success() {
-        return Err(format!(
-            "server returned {status}: {}",
-            resp.text().unwrap_or_default()
-        ));
-    }
-    resp.json::<CrewingTokenActivation>()
-        .map_err(|e| format!("bad JSON from server: {e}"))
+    api::post_empty_json::<CrewingTokenActivation>(
+        Some(base),
+        Some(token),
+        "/api/crewings/token/activate",
+        15,
+    )
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -294,24 +283,14 @@ fn sync_crewing_profile(state: tauri::State<AppState>) -> Result<String, String>
         slug: nonempty(&profile.slug),
         public_description: nonempty(&profile.public_description),
     };
-    let url = format!(
-        "{}/api/crewings/{}/profile",
-        settings.server_url.trim_end_matches('/'),
-        settings.crewing_id
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .patch(&url)
-        .bearer_auth(&settings.bearer_token)
-        .json(&wire)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
+    let path = format!("/api/crewings/{}/profile", settings.crewing_id);
+    api::patch_json_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        &wire,
+        15,
+    )?;
     Ok("synced".into())
 }
 
@@ -412,15 +391,6 @@ fn post_vacancy(
         return Err("No server URL configured. Default is http://127.0.0.1:8000 for dev.".into());
     }
 
-    let url = format!(
-        "{}/api/vacancies",
-        settings.server_url.trim_end_matches('/')
-    );
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| e.to_string())?;
-
     // Build wire payload. Map join_date → joining_window_from (server uses
     // datetimes; we send midnight UTC). vessel_imo is integer on the server.
     let imo: Option<i64> = draft
@@ -463,22 +433,13 @@ fn post_vacancy(
         client_name: draft.client_name.as_deref(),
     };
 
-    let resp = client
-        .post(&url)
-        .bearer_auth(&settings.bearer_token)
-        .json(&wire)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("server returned {status}: {body}"));
-    }
-
-    let server_resp: VacancyServerResponse = resp
-        .json()
-        .map_err(|e| format!("bad JSON from server: {e}"))?;
+    let server_resp: VacancyServerResponse = api::post_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/vacancies",
+        &wire,
+        30,
+    )?;
 
     db::save_posted_vacancy(&server_resp.id, &draft, &server_resp.published_at)
         .map_err(|e| format!("local cache write failed: {e}"))?;
@@ -507,10 +468,6 @@ fn post_mailing_request(
         return Err("No server URL configured.".into());
     }
 
-    let url = format!(
-        "{}/api/mailing-requests",
-        settings.server_url.trim_end_matches('/')
-    );
     let reply_to_owned = draft
         .reply_to
         .as_deref()
@@ -537,23 +494,13 @@ fn post_mailing_request(
         languages: draft.languages.as_ref(),
     };
 
-    let resp = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| e.to_string())?
-        .post(&url)
-        .bearer_auth(&settings.bearer_token)
-        .json(&wire)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-    let status = resp.status();
-    if !status.is_success() {
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("server returned {status}: {body}"));
-    }
-    let server_resp: MailingRequestServerResponse = resp
-        .json()
-        .map_err(|e| format!("bad JSON from server: {e}"))?;
+    let server_resp: MailingRequestServerResponse = api::post_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mailing-requests",
+        &wire,
+        30,
+    )?;
     Ok(VacancyPosted {
         id: server_resp.id,
         posted_at: server_resp.published_at,
@@ -669,25 +616,16 @@ fn fetch_my_vacancies(state: tauri::State<AppState>) -> Result<Vec<ServerVacancy
     {
         return Err("Not configured. Open Settings.".into());
     }
-    let url = format!(
-        "{}/api/vacancies?crewing_id={}&include_closed=true&limit=200",
-        settings.server_url.trim_end_matches('/'),
+    let path = format!(
+        "/api/vacancies?crewing_id={}&include_closed=true&limit=200",
         settings.crewing_id
     );
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-    let s = resp.status();
-    if !s.is_success() {
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {body}"));
-    }
-    let parsed: VacancyListResp = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let parsed: VacancyListResp = api::get_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )?;
     Ok(parsed.items)
 }
 
@@ -702,21 +640,16 @@ fn fetch_my_mailing_requests(
     {
         return Err("Not configured. Open Settings.".into());
     }
-    let url = format!(
-        "{}/api/mailing-requests?crewing_id={}&include_closed=true&limit=200",
-        settings.server_url.trim_end_matches('/'),
+    let path = format!(
+        "/api/mailing-requests?crewing_id={}&include_closed=true&limit=200",
         settings.crewing_id
     );
-    let resp = auth_client_for(&settings, 15)?
-        .get(&url)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-    let s = resp.status();
-    if !s.is_success() {
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("server returned {s}: {body}"));
-    }
-    let parsed: MailingRequestListResp = resp.json().map_err(|e| format!("bad JSON: {e}"))?;
+    let parsed: MailingRequestListResp = api::get_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )?;
     Ok(parsed.items)
 }
 
@@ -745,24 +678,13 @@ fn delete_mailing_request_remote(
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!(
-        "{}/api/mailing-requests/{}",
-        settings.server_url.trim_end_matches('/'),
-        request_id
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .delete(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
-    Ok(())
+    let path = format!("/api/mailing-requests/{request_id}");
+    api::delete_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
 }
 
 fn mailing_request_action(
@@ -774,36 +696,13 @@ fn mailing_request_action(
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!(
-        "{}/api/mailing-requests/{}/{}",
-        settings.server_url.trim_end_matches('/'),
-        request_id,
-        action
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .post(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
-    Ok(())
-}
-
-fn auth_client_for(
-    settings: &Settings,
-    timeout_secs: u64,
-) -> Result<reqwest::blocking::Client, String> {
-    let _ = settings;
-    reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(timeout_secs))
-        .build()
-        .map_err(|e| e.to_string())
+    let path = format!("/api/mailing-requests/{request_id}/{action}");
+    api::post_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
 }
 
 #[tauri::command]
@@ -812,24 +711,13 @@ fn close_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> Re
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!(
-        "{}/api/vacancies/{}/close",
-        settings.server_url.trim_end_matches('/'),
-        vacancy_id
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .post(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
-    Ok(())
+    let path = format!("/api/vacancies/{vacancy_id}/close");
+    api::post_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
 }
 
 #[tauri::command]
@@ -838,24 +726,13 @@ fn reopen_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> R
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!(
-        "{}/api/vacancies/{}/reopen",
-        settings.server_url.trim_end_matches('/'),
-        vacancy_id
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .post(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
-    Ok(())
+    let path = format!("/api/vacancies/{vacancy_id}/reopen");
+    api::post_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
 }
 
 #[tauri::command]
@@ -864,24 +741,13 @@ fn delete_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> R
     if settings.bearer_token.is_empty() || settings.server_url.is_empty() {
         return Err("Not configured".into());
     }
-    let url = format!(
-        "{}/api/vacancies/{}",
-        settings.server_url.trim_end_matches('/'),
-        vacancy_id
-    );
-    let resp = auth_client_for(&settings, 15)?
-        .delete(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network: {e}"))?;
-    if !resp.status().is_success() {
-        return Err(format!(
-            "server returned {}: {}",
-            resp.status(),
-            resp.text().unwrap_or_default()
-        ));
-    }
-    Ok(())
+    let path = format!("/api/vacancies/{vacancy_id}");
+    api::delete_empty(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -922,11 +788,7 @@ fn fetch_applications_for_vacancy(
         return Err("No server URL configured.".into());
     }
 
-    let mut url = format!(
-        "{}/api/vacancies/{}/applications",
-        settings.server_url.trim_end_matches('/'),
-        vacancy_id
-    );
+    let mut path = format!("/api/vacancies/{vacancy_id}/applications");
     if let Some(f) = filter {
         let mut q: Vec<String> = Vec::new();
         if matches!(f.include_compliance, Some(true)) {
@@ -952,29 +814,16 @@ fn fetch_applications_for_vacancy(
             }
         }
         if !q.is_empty() {
-            url.push('?');
-            url.push_str(&q.join("&"));
+            path.push('?');
+            path.push_str(&q.join("&"));
         }
     }
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let resp = client
-        .get(&url)
-        .bearer_auth(&settings.bearer_token)
-        .send()
-        .map_err(|e| format!("network error: {e}"))?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        let body = resp.text().unwrap_or_default();
-        return Err(format!("server returned {status}: {body}"));
-    }
-
-    resp.json::<Vec<ServerApplication>>()
-        .map_err(|e| format!("bad JSON from server: {e}"))
+    api::get_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        20,
+    )
 }
 
 // ---------- Documents module ----------
