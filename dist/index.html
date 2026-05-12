@@ -18,6 +18,37 @@
   --err: #ef4444;
   --border: #2a313c;
 }
+:root[data-theme="light"] {
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel2: #eef0f4;
+  --text: #1a1f26;
+  --text2: #5a6573;
+  --accent: #2563eb;
+  --accent2: #1d4ed8;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --err: #dc2626;
+  --border: #d8dde5;
+}
+/* Checkbox-dropdown widget — used for nationality multi-select on the
+   vacancy form. Closes on click outside via JS. */
+.cd-wrap { position: relative; display: inline-block; width: 100%; }
+.cd-button { width: 100%; padding: 8px 32px 8px 10px; background: var(--panel2);
+  color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 13px;
+  cursor: pointer; text-align: left; position: relative; }
+.cd-button:hover { border-color: var(--accent); }
+.cd-button .cd-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 10px; color: var(--text2); pointer-events: none; }
+.cd-button.cd-placeholder { color: var(--text2); }
+.cd-panel { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 100;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  max-height: 320px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.cd-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;
+  font-size: 13px; color: var(--text); user-select: none; }
+.cd-item:hover { background: var(--panel2); }
+.cd-item input[type="checkbox"] { margin: 0; cursor: pointer; }
+.cd-separator { border-top: 1px dashed var(--border); margin: 4px 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; display: flex; flex-direction: column; }
@@ -275,7 +306,7 @@ var UI_STRINGS = {
     'left.vacancies':'My vacancies','left.mailings':'Mailings','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
-	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Light theme arrives in a future release.','settings.language':'Language','settings.language_desc':'Interface language.',
+	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
@@ -284,7 +315,7 @@ var UI_STRINGS = {
 	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
-	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Светлая тема появится в следующем релизе.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
+	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
@@ -438,17 +469,35 @@ function languageOptionsHtml() {
   }).join('');
 }
 
-// Nationality dropdown — seafarer citizenship. Closed list seeded from
-// the server taxonomy (NATIONALITIES). Used as primary search axis on
-// the vacancy form: brokers look for crews of specific nationalities,
-// not by language.
+// Nationality multi-select. Closed list — primary 6 supply nations
+// (operator-preferred order) followed by alphabetic rest. Rendered as a
+// checkbox-dropdown (custom widget — `<select multiple>` was awkward).
+var NATIONALITY_PRIMARY_COUNT = 6;
 var NATIONALITY_FALLBACK = [
+  // primary 6 (preferred display order)
   { id: 'UA', label: 'Ukraine' },
   { id: 'RU', label: 'Russia' },
   { id: 'IN', label: 'India' },
   { id: 'PH', label: 'Philippines' },
   { id: 'ID', label: 'Indonesia' },
   { id: 'LK', label: 'Sri Lanka' },
+  // alphabetic rest
+  { id: 'BD', label: 'Bangladesh' },
+  { id: 'BG', label: 'Bulgaria' },
+  { id: 'CN', label: 'China' },
+  { id: 'HR', label: 'Croatia' },
+  { id: 'EG', label: 'Egypt' },
+  { id: 'GE', label: 'Georgia' },
+  { id: 'GR', label: 'Greece' },
+  { id: 'LV', label: 'Latvia' },
+  { id: 'LT', label: 'Lithuania' },
+  { id: 'MM', label: 'Myanmar' },
+  { id: 'PK', label: 'Pakistan' },
+  { id: 'PL', label: 'Poland' },
+  { id: 'RO', label: 'Romania' },
+  { id: 'RS', label: 'Serbia' },
+  { id: 'TR', label: 'Turkey' },
+  { id: 'VN', label: 'Vietnam' },
 ];
 
 function nationalityList() {
@@ -458,13 +507,71 @@ function nationalityList() {
   return list;
 }
 
+// Render checkbox-dropdown. `id` is the wrap id; the underlying state
+// (selected values + open/closed) is held on DOM attributes so the
+// widget is stateless from JS state's point of view.
 function nationalitySelectHtml(id) {
-  var opts = nationalityList().map(function(n){
+  var list = nationalityList();
+  var items = list.map(function(n, i){
     var label = n.label || n.id || '';
-    return '<option value="'+escapeAttr(label)+'">'+escapeHtml(label)+'</option>';
+    var sep = (i === NATIONALITY_PRIMARY_COUNT) ? '<div class="cd-separator"></div>' : '';
+    return sep
+      + '<label class="cd-item">'
+      +   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(id)+'\')">'
+      +   '<span>'+escapeHtml(label)+'</span>'
+      + '</label>';
   }).join('');
-  return '<select id="'+id+'" multiple size="6">'+opts+'</select>'
-    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Hold Ctrl/Cmd to select more than one.</div>';
+  return '<div class="cd-wrap" id="'+id+'-wrap">'
+    +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
+    +     '<span id="'+id+'-label">Select nationalities…</span>'
+    +     '<span class="cd-arrow">▾</span>'
+    +   '</button>'
+    +   '<div class="cd-panel" id="'+id+'-panel" hidden>'+items+'</div>'
+    + '</div>';
+}
+
+function cdToggle(id) {
+  var panel = document.getElementById(id+'-panel');
+  if (!panel) return;
+  var willShow = panel.hasAttribute('hidden');
+  // close any other open panels first (single-open behaviour)
+  document.querySelectorAll('.cd-panel:not([hidden])').forEach(function(p){ p.setAttribute('hidden',''); });
+  if (willShow) {
+    panel.removeAttribute('hidden');
+    // Set up click-outside-close once when opening.
+    setTimeout(function(){
+      var off = function(e){
+        var wrap = document.getElementById(id+'-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+          panel.setAttribute('hidden','');
+          document.removeEventListener('mousedown', off, true);
+        }
+      };
+      document.addEventListener('mousedown', off, true);
+    }, 0);
+  }
+}
+
+function cdValues(id) {
+  return Array.prototype.slice.call(
+    document.querySelectorAll('input[data-cd-group="'+id+'"]:checked')
+  ).map(function(cb){ return cb.value; });
+}
+
+function cdUpdateLabel(id) {
+  var btn = document.getElementById(id+'-btn');
+  var label = document.getElementById(id+'-label');
+  if (!btn || !label) return;
+  var vals = cdValues(id);
+  if (!vals.length) {
+    label.textContent = 'Select nationalities…';
+    btn.classList.add('cd-placeholder');
+  } else {
+    label.textContent = vals.length === 1
+      ? vals[0]
+      : (vals.length+' selected: '+vals.slice(0,3).join(', ')+(vals.length>3?'…':''));
+    btn.classList.remove('cd-placeholder');
+  }
 }
 
 function readTaxonomyCache() {
@@ -552,7 +659,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.111',
+  appVersion: '0.4.112',
 };
 
 // ------------- toasts -------------
@@ -3826,7 +3933,7 @@ async function submitVacancy() {
     salary_currency: val('f-cur') || null,
     trading_area: val('f-trade') || null,
     trading_russia_ok: document.getElementById('f-russia').checked,
-    nationalities: selectedValues('f-nationalities'),
+    nationalities: cdValues('f-nationalities'),
     description: val('f-desc') || null,
     client_name: val('f-client') || null,
   };
@@ -4001,7 +4108,7 @@ function renderSettingsModal() {
   } else if (settingsTab==='appearance') {
     body = '<div class="settings-section"><h3>'+tr('settings.appearance_title')+'</h3>'
       + '<div class="section-desc">'+tr('settings.appearance_desc')+'</div>'
-      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
+      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light']]))
       + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
       + '</div>';
 	  } else if (settingsTab==='about') {
@@ -4183,6 +4290,7 @@ async function saveSettings() {
   try {
     await invoke('save_settings', { newSettings: newSettings });
     state.settings = newSettings;
+    applyTheme();
     try {
       var syncResult = await invoke('sync_crewing_profile');
       if (String(syncResult||'').indexOf('synced') === 0) {
@@ -4324,9 +4432,15 @@ async function setupFileDragDrop() {
   });
 }
 
+function applyTheme() {
+  var t = ((state.settings && state.settings.interface && state.settings.interface.theme) || 'dark').toLowerCase();
+  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+}
+
 // ------------- boot -------------
 (async function(){
   try { state.settings = await invoke('get_settings'); } catch(e){}
+  applyTheme();
   applyI18nChrome();
   await loadTaxonomy();
   updateVaultLabel();
