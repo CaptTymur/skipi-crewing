@@ -2,6 +2,7 @@
 #
 # Source stays in the private repository; public tester downloads are copied
 # to the public landing repo after the release job finishes.
+# macOS builds are paused from 2026-05-12 to save GitHub Actions minutes.
 
 name: Release
 
@@ -52,9 +53,6 @@ jobs:
           - platform: ubuntu-22.04
             rust_targets: x86_64-unknown-linux-gnu
             name: Linux
-          - platform: macos-15-intel
-            rust_targets: x86_64-apple-darwin
-            name: macOS unsigned
           - platform: windows-latest
             rust_targets: x86_64-pc-windows-msvc
             name: Windows unsigned
@@ -121,8 +119,9 @@ jobs:
             | Platform | File |
             |----------|------|
             | Windows | `.msi` / `.exe` (unsigned tester build) |
-            | macOS | `.dmg` / `.app.tar.gz` (unsigned tester build) |
             | Linux | `.deb` / `.AppImage` / `.rpm` |
+
+            macOS beta artifacts are temporarily paused to save GitHub Actions minutes.
 
             > Private source build. Public tester links are published separately on skipi.app.
           releaseDraft: false
