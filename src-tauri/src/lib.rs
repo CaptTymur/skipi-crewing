@@ -128,6 +128,8 @@ pub struct VacancyDraft {
     pub trading_russia_ok: Option<bool>,
     #[serde(default)]
     pub languages: Option<Vec<String>>,
+    #[serde(default)]
+    pub nationalities: Option<Vec<String>>,
     pub description: Option<String>,
     /// CRM phase-1: free-text client (the crewing's customer who
     /// requested this search). Promoted to FK in phase-2.
@@ -329,6 +331,8 @@ struct VacancyWire<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     languages: Option<&'a Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    nationalities: Option<&'a Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reply_to: Option<&'a str>,
@@ -426,6 +430,7 @@ fn post_vacancy(
         salary_max: salary_max_int,
         salary_currency: draft.salary_currency.as_deref(),
         languages: draft.languages.as_ref(),
+        nationalities: draft.nationalities.as_ref(),
         description: draft.description.as_deref(),
         reply_to,
         title: Some(&draft.title),

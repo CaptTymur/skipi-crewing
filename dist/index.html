@@ -438,6 +438,35 @@ function languageOptionsHtml() {
   }).join('');
 }
 
+// Nationality dropdown — seafarer citizenship. Closed list seeded from
+// the server taxonomy (NATIONALITIES). Used as primary search axis on
+// the vacancy form: brokers look for crews of specific nationalities,
+// not by language.
+var NATIONALITY_FALLBACK = [
+  { id: 'UA', label: 'Ukraine' },
+  { id: 'RU', label: 'Russia' },
+  { id: 'IN', label: 'India' },
+  { id: 'PH', label: 'Philippines' },
+  { id: 'ID', label: 'Indonesia' },
+  { id: 'LK', label: 'Sri Lanka' },
+];
+
+function nationalityList() {
+  var t = TAXONOMY || TAXONOMY_FALLBACK;
+  var list = t.nationalities;
+  if (!list || !list.length) list = NATIONALITY_FALLBACK;
+  return list;
+}
+
+function nationalitySelectHtml(id) {
+  var opts = nationalityList().map(function(n){
+    var label = n.label || n.id || '';
+    return '<option value="'+escapeAttr(label)+'">'+escapeHtml(label)+'</option>';
+  }).join('');
+  return '<select id="'+id+'" multiple size="6">'+opts+'</select>'
+    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Hold Ctrl/Cmd to select more than one.</div>';
+}
+
 function readTaxonomyCache() {
   try {
     var raw = localStorage.getItem(TAXONOMY_CACHE_KEY);
@@ -523,7 +552,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.109',
+  appVersion: '0.4.110',
 };
 
 // ------------- toasts -------------
@@ -2216,6 +2245,7 @@ async function renderVacancyDetail() {
     + '<div><label>Contract</label><div>'+(v.contract_months?v.contract_months+' months':'—')+'</div></div></div>'
     + '<div class="row"><div><label>Salary</label><div>'+salaryStr+'</div></div>'
     + '<div><label>Trading area</label><div>'+escapeHtml(v.trading_area||'—')+(v.russia_trading?' · Russia OK':'')+'</div></div></div>'
+    + '<div class="row full"><div><label>Nationality</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'
     + (v.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(v.description)+'</div></div></div>':'')
     + '</div>';
   m.innerHTML = head + sub + engagement + details
@@ -3746,6 +3776,7 @@ function renderNewVacancy() {
   var m = document.getElementById('main');
   m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
     + '<div class="card">'
+    + '<div class="row full"><div><label>Nationality* (which seafarers you want)</label>'+nationalitySelectHtml('f-nationalities')+'</div></div>'
     + '<div class="row full"><div><label>Client (who requested this search)</label>'
     + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions">'
     + '<datalist id="client-suggestions">'
@@ -3771,7 +3802,6 @@ function renderNewVacancy() {
     + '<div class="row"><div><label>Salary min/mo</label><input type="number" id="f-smin" min="0"></div>'
     + '<div><label>Salary max/mo</label><input type="number" id="f-smax" min="0"></div></div>'
     + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."></div></div>'
-    + '<div class="row full"><div><label>Required languages</label>'+languageSelectHtml('f-languages')+'</div></div>'
     + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements"></textarea></div></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
@@ -3796,12 +3826,16 @@ async function submitVacancy() {
     salary_currency: val('f-cur') || null,
     trading_area: val('f-trade') || null,
     trading_russia_ok: document.getElementById('f-russia').checked,
-    languages: selectedValues('f-languages'),
+    nationalities: selectedValues('f-nationalities'),
     description: val('f-desc') || null,
     client_name: val('f-client') || null,
   };
   if (!draft.title || !draft.rank || !draft.vessel_type || !draft.vessel_imo) {
     showToast('Title, Rank, Vessel type and IMO are required', 'error');
+    return;
+  }
+  if (!draft.nationalities || !draft.nationalities.length) {
+    showToast('Select at least one nationality — vacancies are matched by citizenship.', 'error');
     return;
   }
   // IMO is exactly 7 digits per IMO Resolution A.600(15). Server validates

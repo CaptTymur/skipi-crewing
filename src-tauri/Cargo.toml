@@ -1,6 +1,6 @@
 [package]
 name = "skipi-crewing"
-version = "0.4.109"
+version = "0.4.110"
 description = "Skipi Crewing — vacancy posting and applications inbox for verified employers"
 authors = ["Tymur Rudov"]
 license = "Proprietary"

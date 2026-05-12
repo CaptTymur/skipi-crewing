@@ -292,6 +292,7 @@ pub fn list_vacancies() -> Result<Vec<CachedVacancy>, rusqlite::Error> {
                     trading_area: None,
                     trading_russia_ok: None,
                     languages: None,
+                    nationalities: None,
                     description: None,
                     client_name: None,
                 });
