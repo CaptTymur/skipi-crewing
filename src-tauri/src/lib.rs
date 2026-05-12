@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 mod api;
 mod db;
+mod feedback;
 mod messaging;
 
 // ---------- Settings ----------
@@ -1437,6 +1438,10 @@ pub fn run() {
             messaging::fetch_attachments_for_application,
             messaging::extract_documents_bundle,
             messaging::open_path_with_default,
+            feedback::get_feedback_prompt_state,
+            feedback::postpone_app_feedback,
+            feedback::submit_app_feedback,
+            feedback::list_app_feedback,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Skipi Crewing");

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <title>Skipi Crewing</title>
@@ -167,6 +167,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .settings-actions-bar { position: absolute; bottom: 0; left: 210px; right: 0; padding: 12px 32px;
   border-top: 1px solid var(--border); background: var(--panel); display: flex;
   justify-content: flex-end; gap: 8px; }
+.skipi-feedback-stars { display:flex; gap:4px; margin:6px 0 12px; }
+.skipi-feedback-stars button { background:transparent; border:0; color:var(--text2); cursor:pointer; font-size:30px; line-height:1; padding:0 2px; }
+.skipi-feedback-stars button.on, .skipi-feedback-stars button:hover { color:#f2b84b; }
+.skipi-feedback-note { color:var(--text2); font-size:12px; line-height:1.45; margin:4px 0 14px; }
+.skipi-feedback-card textarea { width:100%; padding:8px 10px; min-height:108px; resize:vertical; border-radius:5px; border:1px solid var(--border); color:var(--text); background:var(--bg); font:inherit; }
+.skipi-feedback-card textarea:focus { outline:none; border-color:var(--accent); }
+.skipi-feedback-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
 /* sidebar badge for new applications */
 .nav-badge { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; padding: 0 6px;
   border-radius: 9px; background: var(--err); color: #fff; font-size: 11px; font-weight: 700;
@@ -256,6 +263,7 @@ var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFile
     || function(p){ return 'file://'+p; };
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
 var UI_LANG_OPTIONS = [
+  ['ru','Русский'],
   ['en','English'],
   ['tl','Tagalog'],
   ['hi','Hindi / हिन्दी'],
@@ -266,10 +274,20 @@ var UI_STRINGS = {
     'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
     'left.vacancies':'My vacancies','left.mailings':'Mailings','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
-    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
-    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Light theme arrives in a future release.','settings.language':'Language','settings.language_desc':'Interface language.',
-    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
-  },
+	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
+	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Light theme arrives in a future release.','settings.language':'Language','settings.language_desc':'Interface language.',
+	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
+	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
+	  },
+	  ru: {
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.seafarers':'База моряков','left.documents':'Документы',
+	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
+	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
+	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Светлая тема появится в следующем релизе.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
+	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
+	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
+	  },
   tl: {
     'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
     'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
@@ -298,15 +316,15 @@ var UI_STRINGS = {
 function getUiLang() {
   var stored = localStorage.getItem(UI_LANG_KEY);
   var settingsLang = (typeof state !== 'undefined' && state.settings && state.settings.interface && state.settings.interface.language) || '';
-  var lang = stored || settingsLang || 'en';
-  return UI_STRINGS[lang] ? lang : 'en';
+  var lang = stored || settingsLang || 'ru';
+  return UI_STRINGS[lang] ? lang : 'ru';
 }
 function tr(key) {
   var lang = getUiLang();
   return (UI_STRINGS[lang] && UI_STRINGS[lang][key]) || UI_STRINGS.en[key] || key;
 }
 function setUiLang(lang) {
-  if (!UI_STRINGS[lang]) lang = 'en';
+  if (!UI_STRINGS[lang]) lang = 'ru';
   localStorage.setItem(UI_LANG_KEY, lang);
   if (typeof state !== 'undefined') {
     state.settings = state.settings || {};
@@ -505,7 +523,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.108',
+  appVersion: '0.4.109',
 };
 
 // ------------- toasts -------------
@@ -515,6 +533,93 @@ function showToast(msg, kind) {
   t.textContent = msg;
   document.getElementById('toast-container').appendChild(t);
   setTimeout(function(){ t.remove(); }, 4500);
+}
+
+// ------------- app feedback -------------
+var appFeedbackPromptScheduled = false;
+var appFeedbackRating = 0;
+var appFeedbackContext = 'manual';
+
+function feedbackEsc(s) {
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function feedbackPromptFlag(state) {
+  return !!(state && (state.should_prompt || state.shouldPrompt));
+}
+
+function maybePromptForFeedback(context) {
+  if (appFeedbackPromptScheduled) return;
+  appFeedbackPromptScheduled = true;
+  setTimeout(async function(){
+    try {
+      if (document.getElementById('app-feedback-overlay')) return;
+      var st = await invoke('get_feedback_prompt_state', { appVersion: state.appVersion });
+      if (feedbackPromptFlag(st)) openFeedbackDialog(context || 'auto');
+    } catch(e) {}
+  }, 90000);
+}
+
+function feedbackStarsHtml() {
+  var h = '<div class="skipi-feedback-stars" id="app-feedback-stars">';
+  for (var i=1; i<=5; i++) {
+    h += '<button type="button" class="'+(i<=appFeedbackRating?'on':'')+'" onclick="setFeedbackRating('+i+')" aria-label="'+i+'">★</button>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function setFeedbackRating(n) {
+  appFeedbackRating = n;
+  var host = document.getElementById('app-feedback-stars');
+  if (host) host.outerHTML = feedbackStarsHtml();
+}
+
+function openFeedbackDialog(context) {
+  appFeedbackContext = context || 'manual';
+  appFeedbackRating = 0;
+  var html =
+    '<div id="app-feedback-overlay" class="settings-overlay" onclick="if(event.target===this)postponeFeedback()">'
+    + '<div class="settings-modal skipi-feedback-card" style="width:min(520px,92vw);height:auto;display:block;padding:24px;">'
+    + '<div class="settings-close" onclick="postponeFeedback()" title="Close">×</div>'
+    + '<h3 style="margin:0 0 4px;">'+feedbackEsc(tr('feedback.title'))+'</h3>'
+    + '<div class="skipi-feedback-note">'+feedbackEsc(tr('feedback.desc'))+'</div>'
+    + '<div class="field"><label>'+feedbackEsc(tr('feedback.rating_label'))+'</label>'+feedbackStarsHtml()+'</div>'
+    + '<div class="field"><label>'+feedbackEsc(tr('feedback.comment_label'))+'</label><textarea id="app-feedback-comment" rows="5" maxlength="4000" placeholder="'+feedbackEsc(tr('feedback.comment_placeholder'))+'"></textarea></div>'
+    + '<div class="skipi-feedback-actions"><button class="ghost" onclick="postponeFeedback()">'+feedbackEsc(tr('feedback.later'))+'</button><button id="app-feedback-submit" onclick="submitFeedback()">'+feedbackEsc(tr('feedback.submit'))+'</button></div>'
+    + '</div></div>';
+  document.getElementById('modal-host').innerHTML = html;
+}
+
+function closeAppFeedbackDialog() {
+  var el = document.getElementById('app-feedback-overlay');
+  if (el) el.remove();
+}
+
+async function postponeFeedback() {
+  try { await invoke('postpone_app_feedback'); } catch(e) {}
+  closeAppFeedbackDialog();
+}
+
+async function submitFeedback() {
+  var ta = document.getElementById('app-feedback-comment');
+  var comment = (ta && ta.value || '').trim();
+  if (appFeedbackRating < 1 || !comment) {
+    showToast(tr('feedback.required'), 'warn');
+    return;
+  }
+  var btn = document.getElementById('app-feedback-submit');
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    await invoke('submit_app_feedback', { appVersion: state.appVersion, rating: appFeedbackRating, comment: comment, locale: getUiLang(), context: appFeedbackContext });
+    closeAppFeedbackDialog();
+    showToast(tr('feedback.saved'), 'success');
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = tr('feedback.submit'); }
+    showToast('Feedback save failed: '+e, 'error');
+  }
 }
 
 function cleanVaultFolderPart(value, fallback) {
@@ -3865,12 +3970,13 @@ function renderSettingsModal() {
       + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light (coming soon)',true]]))
       + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
       + '</div>';
-  } else if (settingsTab==='about') {
-    body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
-      + '<div class="section-desc">The employer-side companion to <a href="https://skipi.app" style="color:var(--accent);">Skipi</a>, the seafarer document vault.</div>'
-      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Version</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
-      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check for updates</div><div class="setting-desc">Ask the server now whether a newer version is available.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Check now</button></div></div>'
-      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Maintainer</div></div><div class="setting-control">Tymur Rudov</div></div>'
+	  } else if (settingsTab==='about') {
+	    body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
+	      + '<div class="section-desc">The employer-side companion to <a href="https://skipi.app" style="color:var(--accent);">Skipi</a>, the seafarer document vault.</div>'
+	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Version</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check for updates</div><div class="setting-desc">Ask the server now whether a newer version is available.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Check now</button></div></div>'
+	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Feedback</div><div class="setting-desc">Share a beta rating and comment with Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
+	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Maintainer</div></div><div class="setting-control">Tymur Rudov</div></div>'
       + '<div class="setting-row"><div class="setting-info"><div class="setting-label">License</div></div><div class="setting-control">Proprietary</div></div>'
       + '</div>';
   }
@@ -4192,8 +4298,9 @@ async function setupFileDragDrop() {
   updateVaultLabel();
   showView('vacancies');
   setupFileDragDrop();
-  setTimeout(checkForUpdates, 2000);
-  setTimeout(autoRegisterMessagingPubkey, 1500);
+	  setTimeout(checkForUpdates, 2000);
+	  setTimeout(autoRegisterMessagingPubkey, 1500);
+	  maybePromptForFeedback('crewing-home');
   // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
   // applications) in sync with the server without surfacing any UI.
   setInterval(silentRefreshVacancies, 30000);

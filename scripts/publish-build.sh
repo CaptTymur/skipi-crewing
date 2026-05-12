@@ -51,7 +51,7 @@ DEB_SIGNATURE=""
 if [ -f "$RELEASES/$DEB_SIG_OUT" ]; then
   DEB_SIGNATURE=$(cat "$RELEASES/$DEB_SIG_OUT")
 fi
-BASE_URL="${SKIPI_UPDATE_BASE:-https://api.skipi.app/crewing/releases}"
+BASE_URL="${SKIPI_UPDATE_BASE:-https://api-ru.skipi.app/crewing/releases}"
 
 if [ -n "$DEB_SIGNATURE" ]; then
   DEB_PLATFORM=$(cat <<JSON
