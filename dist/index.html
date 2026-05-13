@@ -3325,7 +3325,37 @@ function renderMessageBubble(m, mine, opts) {
 }
 
 async function openDocumentsBundle(applicationId, attachmentId, counterpartId, filename) {
-  showToast('Downloading bundle…', 'info');
+  if (window._bundleOpenInFlight) {
+    showToast('Bundle is already opening…', 'info');
+    return;
+  }
+  if (!attachmentId) {
+    showToast('Cannot open bundle: missing attachment id.', 'error');
+    return;
+  }
+  if (!counterpartId) {
+    showToast('Cannot open bundle: missing sender identity.', 'error');
+    return;
+  }
+  window._bundleOpenInFlight = true;
+  setBundleProgress('Preparing…', 8);
+  await waitUiFrame();
+
+  var cacheKey = String(attachmentId || '');
+  var cached = window._bundleSessionCache[cacheKey];
+  if (cached && cached.extracted_to && cached.manifest) {
+    hideBundleProgress();
+    cached.application_id = applicationId;
+    cached.counterpart_id = counterpartId || '';
+    cached.attachment_id = attachmentId || '';
+    cached.filename = filename || 'documents.zip';
+    showDocumentsBundleViewer(cached);
+    window._bundleOpenInFlight = false;
+    return;
+  }
+
+  setBundleProgress('Downloading and decrypting…', 38);
+  await waitUiFrame();
   var zipPath;
   try {
     zipPath = await invoke('download_encrypted_attachment', {
@@ -3334,21 +3364,38 @@ async function openDocumentsBundle(applicationId, attachmentId, counterpartId, f
       originalFilename: filename || 'documents.zip',
       serverUrl: serverUrlArg(),
     });
-  } catch (e) { showToast('Download failed: '+e, 'error'); return; }
+  } catch (e) {
+    hideBundleProgress();
+    window._bundleOpenInFlight = false;
+    showToast('Download failed: '+e, 'error');
+    return;
+  }
 
+  setBundleProgress('Unpacking documents…', 74);
+  await waitUiFrame();
   var bundle;
   try {
     bundle = await invoke('extract_documents_bundle', {
       applicationId: applicationId,
       zipPath: zipPath,
     });
-  } catch (e) { showToast('Cannot extract: '+e, 'error'); return; }
+  } catch (e) {
+    hideBundleProgress();
+    window._bundleOpenInFlight = false;
+    showToast('Cannot extract: '+e, 'error');
+    return;
+  }
 
+  setBundleProgress('Rendering viewer…', 95);
+  await waitUiFrame();
   bundle.application_id = applicationId;
   bundle.counterpart_id = counterpartId || '';
   bundle.attachment_id = attachmentId || '';
   bundle.filename = filename || 'documents.zip';
+  window._bundleSessionCache[cacheKey] = bundle;
   showDocumentsBundleViewer(bundle);
+  hideBundleProgress();
+  window._bundleOpenInFlight = false;
 }
 
 async function openAttachmentInApp(applicationId, att, counterpartId) {
@@ -3454,6 +3501,48 @@ function showSingleAttachmentViewer(info) {
 // left = collapsible category tree, right = selected doc detail panel.
 // Inherits status-color logic and ⭐ template marking.
 window._bundleState = window._bundleState || { selected: null };
+window._bundleOpenInFlight = window._bundleOpenInFlight || false;
+window._bundleSessionCache = window._bundleSessionCache || {};
+window._bundlePreviewEnabled = window._bundlePreviewEnabled || {};
+
+function ensureBundleProgressOverlay() {
+  var el = document.getElementById('bundle-progress-overlay');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'bundle-progress-overlay';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.62);z-index:100000;display:none;align-items:center;justify-content:center;';
+  var card = document.createElement('div');
+  card.style.cssText = 'width:460px;max-width:92vw;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.45);';
+  card.innerHTML = ''
+    + '<div style="font-size:16px;font-weight:700;margin-bottom:10px;">Opening documents bundle</div>'
+    + '<div id="bundle-progress-status" style="font-size:13px;color:var(--text2);margin-bottom:12px;">Preparing…</div>'
+    + '<div style="height:8px;background:var(--panel2);border:1px solid var(--border);border-radius:999px;overflow:hidden;">'
+    +   '<div id="bundle-progress-bar" style="height:100%;width:8%;background:var(--accent);transition:width .25s ease;"></div>'
+    + '</div>';
+  el.appendChild(card);
+  document.body.appendChild(el);
+  return el;
+}
+
+function setBundleProgress(stage, percent) {
+  var overlay = ensureBundleProgressOverlay();
+  var s = document.getElementById('bundle-progress-status');
+  var b = document.getElementById('bundle-progress-bar');
+  if (s) s.textContent = stage || 'Working…';
+  if (b) b.style.width = Math.max(5, Math.min(100, Number(percent || 0))) + '%';
+  overlay.style.display = 'flex';
+}
+
+function hideBundleProgress() {
+  var overlay = document.getElementById('bundle-progress-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function waitUiFrame() {
+  return new Promise(function(resolve){
+    setTimeout(resolve, 0);
+  });
+}
 
 function findApplicationById(applicationId) {
   var pools = [state.applications || []];
@@ -3531,6 +3620,8 @@ function showDocumentsBundleViewer(bundle) {
   var manifest = (bundle && bundle.manifest) || {};
   var docs = manifest.documents || [];
   var extractedTo = bundle.extracted_to || '';
+  window._bundleState.selected = null;
+  window._bundlePreviewEnabled = {};
   window._bundleViewerData = {
     docs: docs,
     extractedTo: extractedTo,
@@ -3591,10 +3682,7 @@ function showDocumentsBundleViewer(bundle) {
   overlay.onclick = function(e){ if (e.target === overlay) document.body.removeChild(overlay); };
 
   paintBundleTree(byCat, categoryOrder);
-  // Auto-select first doc with a file so the right pane isn't empty on open.
-  var firstWithFile = docs.find(function(d){ return d.file_name; }) || docs[0];
-  if (firstWithFile) selectBundleDoc(firstWithFile.id);
-  else paintBundleDetail(null);
+  paintBundleDetail(null);
 }
 
 function bundleDocStatus(d){
@@ -3718,6 +3806,10 @@ function paintBundleDetail(d) {
     html += '<button onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(openPath)+'\'})" '
           +    'style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:600;flex-shrink:0;">'
           +   'Open file</button>';
+    html += '<button onclick="enableBundlePreview(\''+escapeAttr(d.id)+'\')" '
+          +    'style="margin-left:8px;padding:8px 12px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;flex-shrink:0;">'
+          +   (window._bundlePreviewEnabled[d.id] ? 'Preview loaded' : 'Load preview')
+          + '</button>';
   }
   html += '</div>';
 
@@ -3741,7 +3833,7 @@ function paintBundleDetail(d) {
   // Inline preview for PDFs/images via local file path. Tauri's WebKit can
   // render file:// URIs when allowed by the assets scope; if blocked, the
   // user always has the "Open file" button above.
-  if (hasFile && openPath) {
+  if (hasFile && openPath && window._bundlePreviewEnabled[d.id]) {
     // Tauri's WebKit blocks file:// in iframes/img — must go through the
     // assets protocol (configured in tauri.conf.json security.assetProtocol).
     var fileUri = convertFileSrc(openPath);
@@ -3754,10 +3846,23 @@ function paintBundleDetail(d) {
             + 'Inline preview not supported for .'+escapeHtml(ext)+' — click <strong>Open file</strong> to view in your default app.'
             + '</div>';
     }
+  } else if (hasFile && openPath && !window._bundlePreviewEnabled[d.id]) {
+    html += '<div style="font-size:12px;color:var(--text2);padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);">'
+          + 'Preview is disabled by default for performance. Click <strong>Load preview</strong> if needed.'
+          + '</div>';
   } else if (!hasFile) {
     html += '<div style="font-size:12px;color:var(--err);padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);">No file attached for this entry.</div>';
   }
   host.innerHTML = html;
+}
+
+function enableBundlePreview(docId) {
+  if (!docId) return;
+  window._bundlePreviewEnabled[docId] = true;
+  var data = window._bundleViewerData;
+  if (!data || !Array.isArray(data.docs)) return;
+  var doc = data.docs.find(function(d){ return d.id === docId; });
+  if (doc) paintBundleDetail(doc);
 }
 
 async function downloadCrewingAttachment(attachmentId, counterpartId, filename) {

@@ -23,6 +23,20 @@ use crate::api;
 const SK_FILENAME: &str = "x25519_sk.bin";
 const MAX_ATTACHMENT_BYTES: usize = 50 * 1024 * 1024;
 
+fn safe_file_component(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for ch in input.chars() {
+        let ok = ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-';
+        out.push(if ok { ch } else { '_' });
+    }
+    let trimmed = out.trim_matches('_').trim();
+    if trimmed.is_empty() {
+        "file.bin".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 fn keys_dir() -> PathBuf {
     let dir = dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
@@ -374,6 +388,25 @@ pub fn download_encrypted_attachment(
     original_filename: String,
     server_url: Option<String>,
 ) -> Result<String, String> {
+    let home = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
+    let cache_dir = home
+        .join("Downloads")
+        .join("Skipi")
+        .join("Inbox")
+        .join(".cache")
+        .join("attachments");
+    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("create dir: {e}"))?;
+    let target = cache_dir.join(format!(
+        "{}__{}",
+        safe_file_component(&attachment_id),
+        safe_file_component(&original_filename)
+    ));
+    if target.exists() {
+        return Ok(target.to_string_lossy().to_string());
+    }
+
     let (sk, _pk, my_user_id) = ensure_keypair()?;
     let counterpart_pk = lookup_recipient_pk(&counterpart_user_id, server_url.as_deref())?;
     #[derive(Deserialize)]
@@ -398,30 +431,6 @@ pub fn download_encrypted_attachment(
         .decrypt(nonce, ct)
         .map_err(|e| format!("decrypt: {e}"))?;
 
-    let home = std::env::var_os("HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"));
-    let dir = home.join("Downloads").join("Skipi").join("Inbox");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("create dir: {e}"))?;
-    let mut target = dir.join(&original_filename);
-    let mut idx = 1;
-    while target.exists() {
-        let stem = std::path::Path::new(&original_filename)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("file");
-        let ext = std::path::Path::new(&original_filename)
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
-        let candidate = if ext.is_empty() {
-            format!("{}_{}", stem, idx)
-        } else {
-            format!("{}_{}.{}", stem, idx, ext)
-        };
-        target = dir.join(candidate);
-        idx += 1;
-    }
     std::fs::write(&target, &plaintext).map_err(|e| format!("write: {e}"))?;
     Ok(target.to_string_lossy().to_string())
 }
@@ -492,6 +501,9 @@ pub fn extract_documents_bundle(
         .join("Skipi")
         .join("Inbox")
         .join(format!("bundle_{}", application_id));
+    if dest.exists() {
+        std::fs::remove_dir_all(&dest).map_err(|e| format!("clean dir: {e}"))?;
+    }
     std::fs::create_dir_all(&dest).map_err(|e| format!("create dir: {e}"))?;
 
     let f = std::fs::File::open(&zip_path).map_err(|e| format!("open zip: {e}"))?;
@@ -500,23 +512,31 @@ pub fn extract_documents_bundle(
     let mut manifest_text: Option<String> = None;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| format!("zip entry: {e}"))?;
-        let name = entry.name().to_string();
-        if name.ends_with('/') {
+        if entry.is_dir() {
             continue;
         }
-        let out_path = dest.join(&name);
+        let rel = entry
+            .enclosed_name()
+            .ok_or_else(|| "zip entry has unsafe path".to_string())?
+            .to_path_buf();
+        let out_path = dest.join(&rel);
         if let Some(parent) = out_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let mut data = Vec::new();
-        entry
-            .read_to_end(&mut data)
-            .map_err(|e| format!("read entry {name}: {e}"))?;
-        if name == "manifest.json" {
-            manifest_text = Some(String::from_utf8_lossy(&data).to_string());
+        let mut out_file =
+            std::fs::File::create(&out_path).map_err(|e| format!("create {}: {e}", out_path.display()))?;
+        std::io::copy(&mut entry, &mut out_file)
+            .map_err(|e| format!("extract {}: {e}", out_path.display()))?;
+        if rel == std::path::Path::new("manifest.json") {
+            let mut text = String::new();
+            std::fs::File::open(&out_path)
+                .and_then(|mut f| f.read_to_string(&mut text).map(|_| ()))
+                .map_err(|e| format!("read manifest: {e}"))?;
+            if text.is_empty() {
+                return Err("manifest is empty".to_string());
+            }
+            manifest_text = Some(text);
         }
-        std::fs::write(&out_path, &data)
-            .map_err(|e| format!("write {}: {}", out_path.display(), e))?;
     }
 
     let manifest: serde_json::Value = match manifest_text {
