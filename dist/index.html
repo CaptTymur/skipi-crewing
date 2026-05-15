@@ -31,7 +31,7 @@
   --err: #dc2626;
   --border: #d8dde5;
 }
-/* Checkbox-dropdown widget — used for nationality multi-select on the
+/* Checkbox-dropdown widget — used for citizenship multi-select on the
    vacancy form. Closes on click outside via JS. */
 .cd-wrap { position: relative; display: inline-block; width: 100%; }
 .cd-button { width: 100%; padding: 8px 32px 8px 10px; background: var(--panel2);
@@ -487,7 +487,7 @@ function languageOptionsHtml() {
   }).join('');
 }
 
-// Nationality multi-select. Closed list — primary 6 supply nations
+// Citizenship multi-select. Closed list — primary 6 supply nations
 // (operator-preferred order) followed by alphabetic rest. Rendered as a
 // checkbox-dropdown (custom widget — `<select multiple>` was awkward).
 var NATIONALITY_PRIMARY_COUNT = 6;
@@ -1779,7 +1779,7 @@ async function renderSeafarersTree(opts) {
     '<div class="panel-header"><span class="title">'+tr('left.seafarers')+'</span>'
     + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderSeafarersTree({force:true})" title="Refresh">↻</button></span>'
     + '</div>'
-    + '<div class="panel-search"><input type="text" id="seafarer-search" placeholder="Search name, rank, nationality, ID..." value="'+escapeAttr(state.seafarerSearch||'')+'" oninput="state.seafarerSearch=this.value.toLowerCase();renderSeafarersTreeBody();"></div>'
+    + '<div class="panel-search"><input type="text" id="seafarer-search" placeholder="Search name, rank, citizenship, ID..." value="'+escapeAttr(state.seafarerSearch||'')+'" oninput="state.seafarerSearch=this.value.toLowerCase();renderSeafarersTreeBody();"></div>'
     + '<div class="panel-filters"><div id="seafarer-filter-controls"></div></div>'
     + '<div class="panel-tree" id="panel-tree">'
     + (state.seafarers && state.seafarers.length ? '' : '<div class="tree-empty">Loading...</div>')
@@ -2060,7 +2060,7 @@ async function renderSeafarerDetail() {
   var summaryRows = [
     ['System ID', s.id],
     ['Rank', s.rank || s.position],
-    ['Nationality', s.nationality],
+    ['Citizenship', s.nationality],
     ['Vessel type', savedSeafarerPrimaryVesselType(s)],
     ['Experience', formatExperienceMonths(savedSeafarerExperienceMonths(s))],
     ['Available from', s.available_from],
@@ -2894,7 +2894,7 @@ async function renderVacancyDetail() {
     + '<div><label>Contract</label><div>'+(v.contract_months?v.contract_months+' months':'—')+'</div></div></div>'
     + '<div class="row"><div><label>Salary</label><div>'+salaryStr+'</div></div>'
     + '<div><label>Trading area</label><div>'+escapeHtml(v.trading_area||'—')+(v.russia_trading?' · Russia OK':'')+'</div></div></div>'
-    + '<div class="row full"><div><label>Nationality</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'
+    + '<div class="row full"><div><label>Citizenship</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'
     + renderVacancyRequirementsBlock(v)
     + renderVacancyComplianceProfileBlock(v)
     + (v.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(v.description)+'</div></div></div>':'')
@@ -3205,7 +3205,7 @@ function renderApplicationSnapshot(a, sum, sUid) {
   // Compact key/value grid of everything the seafarer chose to share.
   var rows = [];
   if (sum.rank)                  rows.push(['Rank', sum.rank]);
-  if (sum.nationality)           rows.push(['Nationality', sum.nationality]);
+  if (sum.nationality)           rows.push(['Citizenship', sum.nationality]);
   if (sum.total_sea_time_months) rows.push(['Sea time', sum.total_sea_time_months+' months']);
   if (sum.months_in_rank)        rows.push(['Time in rank', sum.months_in_rank+' months']);
   if (sum.available_from)        rows.push(['Available from', sum.available_from]);
@@ -4574,7 +4574,7 @@ function renderNewVacancy() {
   m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
     + '<div class="card">'
     + (seed.title ? '<div class="tag ok" style="margin-bottom:12px;">Copied as new draft</div>' : '')
-    + '<div class="row full"><div><label>Nationality* (which seafarers you want)</label>'+nationalitySelectHtml('f-nationalities')+'</div></div>'
+    + '<div class="row full"><div><label>Citizenship* (which seafarers you want)</label>'+nationalitySelectHtml('f-nationalities')+'</div></div>'
     + '<div class="row full"><div><label>Client (who requested this search)</label>'
     + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions"'+inputValueAttr(seed.client_name)+'>'
     + '<datalist id="client-suggestions">'
@@ -4651,7 +4651,7 @@ async function submitVacancy() {
     return;
   }
   if (!draft.nationalities || !draft.nationalities.length) {
-    showToast('Select at least one nationality — vacancies are matched by citizenship.', 'error');
+    showToast('Select at least one citizenship — vacancies are matched by citizenship.', 'error');
     return;
   }
   if (draft.min_age && draft.max_age && draft.min_age > draft.max_age) {
