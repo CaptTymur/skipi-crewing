@@ -319,48 +319,28 @@ struct VacancyWire<'a> {
     crewing_id: &'a str,
     rank: &'a str,
     vessel_type: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
     vessel_imo: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     flag: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     trading_area: Option<&'a str>,
     russia_trading: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     joining_window_from: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     joining_window_to: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     contract_months: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     salary_min: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     salary_max: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     salary_currency: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     min_age: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     max_age: Option<u32>,
     us_visa_required: bool,
     schengen_visa_required: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
     languages: Option<&'a Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     nationalities: Option<&'a Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     reply_to: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     title: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     vessel_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     join_port: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     client_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     compliance_profile_id: Option<&'a str>,
 }
 
@@ -396,12 +376,7 @@ struct MailingRequestServerResponse {
     published_at: String,
 }
 
-#[tauri::command]
-fn post_vacancy(
-    draft: VacancyDraft,
-    state: tauri::State<AppState>,
-) -> Result<VacancyPosted, String> {
-    let settings = state.settings.lock().unwrap().clone();
+fn ensure_vacancy_connection_settings(settings: &Settings) -> Result<(), String> {
     if settings.bearer_token.is_empty() {
         return Err(
             "No bearer token configured. Open Settings and paste the token issued by Skipi.".into(),
@@ -413,9 +388,13 @@ fn post_vacancy(
     if settings.server_url.is_empty() {
         return Err("No server URL configured. Default is http://127.0.0.1:8000 for dev.".into());
     }
+    Ok(())
+}
 
-    // Build wire payload. Map join_date → joining_window_from (server uses
-    // datetimes; we send midnight UTC). vessel_imo is integer on the server.
+fn vacancy_wire_from_draft<'a>(
+    draft: &'a VacancyDraft,
+    settings: &'a Settings,
+) -> VacancyWire<'a> {
     let imo: Option<i64> = draft
         .vessel_imo
         .as_ref()
@@ -433,7 +412,7 @@ fn post_vacancy(
         Some(settings.reply_to.as_str())
     };
 
-    let wire = VacancyWire {
+    VacancyWire {
         crewing_id: &settings.crewing_id,
         rank: &draft.rank,
         vessel_type: &draft.vessel_type,
@@ -441,7 +420,7 @@ fn post_vacancy(
         flag: draft.flag.as_deref(),
         trading_area: draft.trading_area.as_deref(),
         russia_trading: draft.trading_russia_ok.unwrap_or(false),
-        joining_window_from: join_from.clone(),
+        joining_window_from: join_from,
         joining_window_to: None,
         contract_months: draft.contract_months,
         salary_min: salary_min_int,
@@ -460,7 +439,17 @@ fn post_vacancy(
         join_port: draft.join_port.as_deref(),
         client_name: draft.client_name.as_deref(),
         compliance_profile_id: draft.compliance_profile_id.as_deref(),
-    };
+    }
+}
+
+#[tauri::command]
+fn post_vacancy(
+    draft: VacancyDraft,
+    state: tauri::State<AppState>,
+) -> Result<VacancyPosted, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    ensure_vacancy_connection_settings(&settings)?;
+    let wire = vacancy_wire_from_draft(&draft, &settings);
 
     let server_resp: VacancyServerResponse = api::post_json(
         Some(&settings.server_url),
@@ -477,6 +466,28 @@ fn post_vacancy(
         id: server_resp.id,
         posted_at: server_resp.published_at,
     })
+}
+
+#[tauri::command]
+fn update_vacancy_remote(
+    vacancy_id: String,
+    draft: VacancyDraft,
+    state: tauri::State<AppState>,
+) -> Result<ServerVacancy, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    ensure_vacancy_connection_settings(&settings)?;
+    let wire = vacancy_wire_from_draft(&draft, &settings);
+    let path = format!("/api/vacancies/{vacancy_id}");
+    let updated: ServerVacancy = api::patch_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        &wire,
+        30,
+    )?;
+    db::save_posted_vacancy(&updated.id, &draft, &updated.published_at)
+        .map_err(|e| format!("local cache write failed: {e}"))?;
+    Ok(updated)
 }
 
 #[tauri::command]
@@ -1622,6 +1633,7 @@ pub fn run() {
             forget_recent_vault,
             ensure_vault_folder,
             post_vacancy,
+            update_vacancy_remote,
             post_mailing_request,
             list_my_vacancies,
             fetch_compliance_profiles,

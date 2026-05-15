@@ -701,6 +701,7 @@ var state = {
   includeArchivedProfiles: false,
   selectedComplianceProfile: null,
   newVacancyPrefill: null,
+  editingVacancyId: null,
   sortBy: 'open_first',
   selectedVacancy: null,
   applications: [],
@@ -723,7 +724,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.112',
+  appVersion: '0.4.113',
 };
 
 // ------------- toasts -------------
@@ -1087,6 +1088,12 @@ async function loadThreadMessages() {
   }
 }
 
+function startNewVacancy() {
+  state.newVacancyPrefill = null;
+  state.editingVacancyId = null;
+  showView('new');
+}
+
 function renderThreadMessages() {
   var host = document.getElementById('thread-msgs');
   if (!host) return;
@@ -1178,7 +1185,7 @@ async function renderVacanciesTree(opts) {
   lp.innerHTML =
     '<div class="panel-header"><span class="title">'+tr('left.vacancies')+'</span>'
     + '<span class="actions" style="display:flex;gap:4px;">'
-    + '<button onclick="showView(\'new\')" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">'+tr('common.new')+'</button>'
+    + '<button onclick="startNewVacancy()" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">'+tr('common.new')+'</button>'
     + '</span>'
     + '</div>'
     + '<div class="panel-search">'+sortHtml+'</div>'
@@ -1209,7 +1216,7 @@ function renderVacanciesTreeBody() {
   var tree = document.getElementById('panel-tree');
   if (!tree) return;
   if (!state.vacancies || !state.vacancies.length) {
-    tree.innerHTML = '<div class="tree-empty">'+tr('vacancy.empty')+'<br><br><button onclick="showView(\'new\')">'+tr('common.new')+'</button></div>';
+    tree.innerHTML = '<div class="tree-empty">'+tr('vacancy.empty')+'<br><br><button onclick="startNewVacancy()">'+tr('common.new')+'</button></div>';
     return;
   }
 
@@ -2708,7 +2715,7 @@ function openVacancyById(id) {
   renderVacancyDetail();
 }
 
-function escapeAttr(s){ return (s||'').replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
+function escapeAttr(s){ return String(s == null ? '' : s).replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
 function escapeJsString(s){
   return String(s||'')
     .replace(/\\/g, '\\\\')
@@ -2781,11 +2788,12 @@ async function deleteVacancy(id){
   } catch(e) { showToast('Failed to delete: '+e, 'error'); }
 }
 
-function vacancyToPrefill(v) {
+function vacancyToPrefill(v, opts) {
   if (!v) return null;
+  opts = opts || {};
   var copyTitle = v.title || (v.rank ? v.rank + ' for ' + (v.vessel_type || 'vessel') : '');
   return {
-    title: copyTitle ? copyTitle.replace(/\s+\(copy\)$/i, '') + ' (copy)' : '',
+    title: copyTitle ? copyTitle.replace(/\s+\(copy\)$/i, '') + (opts.copy ? ' (copy)' : '') : '',
     rank: v.rank || '',
     vessel_type: v.vessel_type === 'General Cargo' ? 'General Cargo / Heavy Lift' : (v.vessel_type || ''),
     vessel_name: v.vessel_name || '',
@@ -2813,13 +2821,31 @@ function vacancyToPrefill(v) {
 function copyVacancyAsNew(id) {
   var v = (state.vacancies || []).find(function(x){ return x.id === id; });
   if (!v && state.selectedVacancy && state.selectedVacancy.id === id) v = state.selectedVacancy;
-  state.newVacancyPrefill = vacancyToPrefill(v);
+  state.newVacancyPrefill = vacancyToPrefill(v, { copy: true });
+  state.editingVacancyId = null;
   if (!state.newVacancyPrefill) {
     showToast('Could not copy vacancy: not loaded', 'error');
     return;
   }
   showToast('Vacancy copied into a new draft', 'success');
   showView('new');
+}
+
+function editVacancy(id) {
+  try {
+    var v = (state.vacancies || []).find(function(x){ return x.id === id; });
+    if (!v && state.selectedVacancy && state.selectedVacancy.id === id) v = state.selectedVacancy;
+    state.newVacancyPrefill = vacancyToPrefill(v);
+    if (!state.newVacancyPrefill) {
+      showToast('Could not edit vacancy: not loaded', 'error');
+      return;
+    }
+    state.editingVacancyId = id;
+    showView('new');
+  } catch (e) {
+    showToast('Could not open editor: '+(e && e.message ? e.message : e), 'error');
+    try { reportAppDiagnostic('vacancy_edit_open_failed', 'error', e && e.message ? e.message : String(e), { stack: e && e.stack }); } catch(_) {}
+  }
 }
 
 function renderVacancyComplianceProfileBlock(v) {
@@ -2865,6 +2891,7 @@ async function renderVacancyDetail() {
   var statusActions = v.status === 'active'
     ? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(v.id)+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Close</button>'
     : '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(v.id)+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button>';
+  statusActions += ' <button style="'+actBtn+'" onclick="editVacancy(\''+escapeAttr(v.id)+'\')" title="Edit this vacancy. Existing applications and chats stay attached.">✎ Edit</button>';
   statusActions += ' <button style="'+actBtn+'" onclick="copyVacancyAsNew(\''+escapeAttr(v.id)+'\')" title="Create a new draft from this vacancy.">⧉ Copy as new</button>';
   statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(v.id)+'\')" title="Hard-delete vacancy + all applications + messages. Irreversible.">🗑 Delete</button>';
   var head = '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
@@ -4569,11 +4596,15 @@ async function loadComplianceProfilesForPicker(selectedProfileId) {
 function renderNewVacancy() {
   var m = document.getElementById('main');
   var seed = state.newVacancyPrefill || {};
+  var editId = state.editingVacancyId || null;
+  var isEdit = !!editId;
   state.newVacancyPrefill = null;
-  var titleHint = seed.title ? 'Copied from published vacancy. Review details before posting.' : 'Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.';
-  m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
+  var titleHint = isEdit
+    ? 'Editing the live vacancy. Existing applications and conversations stay attached to this vacancy.'
+    : (seed.title ? 'Copied from published vacancy. Review details before posting.' : 'Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.');
+  m.innerHTML = '<h1>'+(isEdit?'Edit vacancy':tr('vacancy.new_title'))+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
     + '<div class="card">'
-    + (seed.title ? '<div class="tag ok" style="margin-bottom:12px;">Copied as new draft</div>' : '')
+    + (isEdit ? '<div class="tag ok" style="margin-bottom:12px;">Editing published vacancy</div>' : (seed.title ? '<div class="tag ok" style="margin-bottom:12px;">Copied as new draft</div>' : ''))
     + '<div class="row full"><div><label>Citizenship* (which seafarers you want)</label>'+nationalitySelectHtml('f-nationalities')+'</div></div>'
     + '<div class="row full"><div><label>Client (who requested this search)</label>'
     + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions"'+inputValueAttr(seed.client_name)+'>'
@@ -4611,7 +4642,7 @@ function renderNewVacancy() {
     + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."'+inputValueAttr(seed.trading_area)+'></div></div>'
     + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"'+(seed.trading_russia_ok?' checked':'')+'><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements, public contact phone/email/Telegram">'+escapeHtml(seed.description || '')+'</textarea></div></div>'
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="cancelVacancyForm()">Cancel</button><button onclick="submitVacancy()">'+(isEdit?'Save changes':'Post vacancy')+'</button></div>'
     + '</div>';
   var sub = m.querySelector('h1 + .sub');
   if (sub) sub.innerHTML = titleHint;
@@ -4619,6 +4650,12 @@ function renderNewVacancy() {
   m.scrollTop = 0;
   requestAnimationFrame(function(){ m.scrollTop = 0; });
   loadComplianceProfilesForPicker(seed.compliance_profile_id || '');
+}
+
+function cancelVacancyForm() {
+  state.editingVacancyId = null;
+  state.newVacancyPrefill = null;
+  showView('vacancies');
 }
 
 async function submitVacancy() {
@@ -4665,9 +4702,20 @@ async function submitVacancy() {
     return;
   }
   try {
-    var posted = await invoke('post_vacancy', { draft: draft });
-    showToast('Posted ✓ id '+posted.id, 'success');
-    showView('vacancies');
+    var editId = state.editingVacancyId || null;
+    if (editId) {
+      var updated = await invoke('update_vacancy_remote', { vacancyId: editId, draft: draft });
+      showToast('Vacancy updated ✓', 'success');
+      state.editingVacancyId = null;
+      state.newVacancyPrefill = null;
+      state.vacancies = await invoke('fetch_my_vacancies');
+      state.selectedVacancy = (state.vacancies || []).find(function(v){ return v.id === updated.id; }) || updated;
+      showView('vacancies');
+    } else {
+      var posted = await invoke('post_vacancy', { draft: draft });
+      showToast('Posted ✓ id '+posted.id, 'success');
+      showView('vacancies');
+    }
   } catch (e) {
     showToast(''+e, 'error');
   }
@@ -5021,7 +5069,7 @@ async function saveSettings() {
   }
 }
 
-function escapeHtml(s){ return (s||'').replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+function escapeHtml(s){ return String(s == null ? '' : s).replace(/[<>&"]/g, function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 
 // ------------- updater (banner, not dialog) -------------
 async function checkForUpdates() {
