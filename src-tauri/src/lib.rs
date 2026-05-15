@@ -124,6 +124,14 @@ pub struct VacancyDraft {
     pub salary_min: Option<f64>,
     pub salary_max: Option<f64>,
     pub salary_currency: Option<String>,
+    #[serde(default)]
+    pub min_age: Option<u32>,
+    #[serde(default)]
+    pub max_age: Option<u32>,
+    #[serde(default)]
+    pub us_visa_required: Option<bool>,
+    #[serde(default)]
+    pub schengen_visa_required: Option<bool>,
     pub trading_area: Option<String>,
     pub trading_russia_ok: Option<bool>,
     #[serde(default)]
@@ -331,6 +339,12 @@ struct VacancyWire<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     salary_currency: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    min_age: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_age: Option<u32>,
+    us_visa_required: bool,
+    schengen_visa_required: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     languages: Option<&'a Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     nationalities: Option<&'a Vec<String>>,
@@ -433,6 +447,10 @@ fn post_vacancy(
         salary_min: salary_min_int,
         salary_max: salary_max_int,
         salary_currency: draft.salary_currency.as_deref(),
+        min_age: draft.min_age,
+        max_age: draft.max_age,
+        us_visa_required: draft.us_visa_required.unwrap_or(false),
+        schengen_visa_required: draft.schengen_visa_required.unwrap_or(false),
         languages: draft.languages.as_ref(),
         nationalities: draft.nationalities.as_ref(),
         description: draft.description.as_deref(),
@@ -560,6 +578,14 @@ pub struct ServerVacancy {
     pub salary_min: Option<i64>,
     pub salary_max: Option<i64>,
     pub salary_currency: Option<String>,
+    #[serde(default)]
+    pub min_age: Option<i64>,
+    #[serde(default)]
+    pub max_age: Option<i64>,
+    #[serde(default)]
+    pub us_visa_required: bool,
+    #[serde(default)]
+    pub schengen_visa_required: bool,
     pub salary_negotiable: bool,
     pub description: Option<String>,
     pub reply_to: String,

@@ -49,6 +49,7 @@
 .cd-item:hover { background: var(--panel2); }
 .cd-item input[type="checkbox"] { margin: 0; cursor: pointer; }
 .cd-separator { border-top: 1px dashed var(--border); margin: 4px 0; }
+.cd-preset { margin-bottom: 6px; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; display: flex; flex-direction: column; }
@@ -428,7 +429,7 @@ var TAXONOMY_FALLBACK = {
   ],
   vessel_types: [
     {id:'bulk_carrier',    label:'Bulk Carrier'},
-    {id:'general_cargo',   label:'General Cargo'},
+    {id:'general_cargo',   label:'General Cargo / Heavy Lift'},
     {id:'container',       label:'Container'},
     {id:'tanker_crude',    label:'Tanker (Crude)'},
     {id:'tanker_product',  label:'Tanker (Product)'},
@@ -455,6 +456,19 @@ var TAXONOMY_FALLBACK = {
 function taxonomyLabels(kind) {
   var t = TAXONOMY || TAXONOMY_FALLBACK;
   return (t[kind]||[]).map(function(x){return x.label;});
+}
+
+function optionHtml(value, selectedValue) {
+  var val = value || '';
+  return '<option value="'+escapeAttr(val)+'"'+(val === (selectedValue || '') ? ' selected' : '')+'>'+escapeHtml(val)+'</option>';
+}
+
+function optionLabelsHtml(labels, selectedValue) {
+  return (['']).concat(labels || []).map(function(label){ return optionHtml(label, selectedValue); }).join('');
+}
+
+function inputValueAttr(value) {
+  return value == null ? '' : ' value="'+escapeAttr(value)+'"';
 }
 
 function languageSelectHtml(id) {
@@ -491,6 +505,7 @@ var NATIONALITY_FALLBACK = [
   { id: 'CN', label: 'China' },
   { id: 'HR', label: 'Croatia' },
   { id: 'EG', label: 'Egypt' },
+  { id: 'EE', label: 'Estonia' },
   { id: 'GE', label: 'Georgia' },
   { id: 'GR', label: 'Greece' },
   { id: 'LV', label: 'Latvia' },
@@ -501,8 +516,19 @@ var NATIONALITY_FALLBACK = [
   { id: 'RO', label: 'Romania' },
   { id: 'RS', label: 'Serbia' },
   { id: 'TR', label: 'Turkey' },
+  { id: 'GB', label: 'United Kingdom' },
   { id: 'VN', label: 'Vietnam' },
 ];
+
+var NATIONALITY_PRESETS = {
+  anywhere: null,
+  international: ['Ukraine', 'Russia', 'India', 'Philippines', 'Indonesia', 'Sri Lanka'],
+  baltic: ['Estonia', 'Latvia', 'Lithuania'],
+  eu: ['Bulgaria', 'Croatia', 'Estonia', 'Greece', 'Latvia', 'Lithuania', 'Poland', 'Romania'],
+  russia: ['Russia'],
+  ukraine: ['Ukraine'],
+  uk_work: ['United Kingdom'],
+};
 
 function nationalityList() {
   var t = TAXONOMY || TAXONOMY_FALLBACK;
@@ -516,6 +542,16 @@ function nationalityList() {
 // widget is stateless from JS state's point of view.
 function nationalitySelectHtml(id) {
   var list = nationalityList();
+  var presets = '<select class="cd-preset" onchange="applyNationalityPreset(\''+escapeAttr(id)+'\', this.value)">'
+    + '<option value="">Preset / group…</option>'
+    + '<option value="anywhere">Anywhere</option>'
+    + '<option value="international">International supply</option>'
+    + '<option value="baltic">Only Baltic</option>'
+    + '<option value="eu">Only EU</option>'
+    + '<option value="russia">Only Russia</option>'
+    + '<option value="ukraine">Only Ukraine</option>'
+    + '<option value="uk_work">UK or UK Work Permit</option>'
+    + '</select>';
   var items = list.map(function(n, i){
     var label = n.label || n.id || '';
     var sep = (i === NATIONALITY_PRIMARY_COUNT) ? '<div class="cd-separator"></div>' : '';
@@ -526,6 +562,7 @@ function nationalitySelectHtml(id) {
       + '</label>';
   }).join('');
   return '<div class="cd-wrap" id="'+id+'-wrap">'
+    +   presets
     +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
     +     '<span id="'+id+'-label">Select nationalities…</span>'
     +     '<span class="cd-arrow">▾</span>'
@@ -560,6 +597,24 @@ function cdValues(id) {
   return Array.prototype.slice.call(
     document.querySelectorAll('input[data-cd-group="'+id+'"]:checked')
   ).map(function(cb){ return cb.value; });
+}
+
+function setCdValues(id, values) {
+  var want = {};
+  (values || []).forEach(function(v){ want[String(v)] = true; });
+  document.querySelectorAll('input[data-cd-group="'+id+'"]').forEach(function(cb){
+    cb.checked = !!want[cb.value];
+  });
+  cdUpdateLabel(id);
+}
+
+function applyNationalityPreset(id, preset) {
+  if (!preset) return;
+  var list = nationalityList().map(function(n){ return n.label || n.id || ''; }).filter(Boolean);
+  var selected = preset === 'anywhere' ? list : (NATIONALITY_PRESETS[preset] || []);
+  var available = {};
+  list.forEach(function(label){ available[label] = true; });
+  setCdValues(id, selected.filter(function(label){ return available[label]; }));
 }
 
 function cdUpdateLabel(id) {
@@ -645,6 +700,7 @@ var state = {
   complianceProfilesLoaded: false,
   includeArchivedProfiles: false,
   selectedComplianceProfile: null,
+  newVacancyPrefill: null,
   sortBy: 'open_first',
   selectedVacancy: null,
   applications: [],
@@ -2725,6 +2781,47 @@ async function deleteVacancy(id){
   } catch(e) { showToast('Failed to delete: '+e, 'error'); }
 }
 
+function vacancyToPrefill(v) {
+  if (!v) return null;
+  var copyTitle = v.title || (v.rank ? v.rank + ' for ' + (v.vessel_type || 'vessel') : '');
+  return {
+    title: copyTitle ? copyTitle.replace(/\s+\(copy\)$/i, '') + ' (copy)' : '',
+    rank: v.rank || '',
+    vessel_type: v.vessel_type === 'General Cargo' ? 'General Cargo / Heavy Lift' : (v.vessel_type || ''),
+    vessel_name: v.vessel_name || '',
+    vessel_imo: v.vessel_imo ? String(v.vessel_imo) : '',
+    flag: v.flag || '',
+    join_date: v.joining_window_from ? String(v.joining_window_from).slice(0, 10) : '',
+    join_port: v.join_port || '',
+    contract_months: v.contract_months || '',
+    salary_min: v.salary_min || '',
+    salary_max: v.salary_max || '',
+    salary_currency: v.salary_currency || 'USD',
+    trading_area: v.trading_area || '',
+    trading_russia_ok: !!v.russia_trading,
+    nationalities: v.nationalities || [],
+    description: v.description || '',
+    client_name: v.client_name || '',
+    compliance_profile_id: v.compliance_profile_id || '',
+    min_age: v.min_age || '',
+    max_age: v.max_age || '',
+    us_visa_required: !!v.us_visa_required,
+    schengen_visa_required: !!v.schengen_visa_required,
+  };
+}
+
+function copyVacancyAsNew(id) {
+  var v = (state.vacancies || []).find(function(x){ return x.id === id; });
+  if (!v && state.selectedVacancy && state.selectedVacancy.id === id) v = state.selectedVacancy;
+  state.newVacancyPrefill = vacancyToPrefill(v);
+  if (!state.newVacancyPrefill) {
+    showToast('Could not copy vacancy: not loaded', 'error');
+    return;
+  }
+  showToast('Vacancy copied into a new draft', 'success');
+  showView('new');
+}
+
 function renderVacancyComplianceProfileBlock(v) {
   var snap = v && v.compliance_profile_snapshot;
   if (!snap) return '';
@@ -2738,6 +2835,19 @@ function renderVacancyComplianceProfileBlock(v) {
     + '<div style="margin-top:10px;"><strong>Extras</strong>'+renderExtrasList(extras)+'</div>'
     + '<div style="color:var(--text2);font-size:11px;margin-top:10px;">Snapshot frozen '+escapeHtml((snap.snapshot_at||'').slice(0,19) || 'at publish')+'. Match-% per application is phase 2.</div>'
     + '</details></div></div>';
+}
+
+function renderVacancyRequirementsBlock(v) {
+  var items = [];
+  if (v.min_age || v.max_age) {
+    if (v.min_age && v.max_age) items.push('Age '+v.min_age+'-'+v.max_age);
+    else if (v.min_age) items.push('Age from '+v.min_age);
+    else items.push('Age up to '+v.max_age);
+  }
+  if (v.us_visa_required) items.push('US visa required');
+  if (v.schengen_visa_required) items.push('Schengen visa required');
+  if (!items.length) return '';
+  return '<div class="row full"><div><label>Age / visa requirements</label><div>'+escapeHtml(items.join(' · '))+'</div></div></div>';
 }
 
 async function renderVacancyDetail() {
@@ -2755,6 +2865,7 @@ async function renderVacancyDetail() {
   var statusActions = v.status === 'active'
     ? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(v.id)+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Close</button>'
     : '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(v.id)+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button>';
+  statusActions += ' <button style="'+actBtn+'" onclick="copyVacancyAsNew(\''+escapeAttr(v.id)+'\')" title="Create a new draft from this vacancy.">⧉ Copy as new</button>';
   statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(v.id)+'\')" title="Hard-delete vacancy + all applications + messages. Irreversible.">🗑 Delete</button>';
   var head = '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
            +   '<h1 style="margin:0;flex:1;min-width:0;">'+escapeHtml(titleStr)+statusBadge+'</h1>'
@@ -2784,6 +2895,7 @@ async function renderVacancyDetail() {
     + '<div class="row"><div><label>Salary</label><div>'+salaryStr+'</div></div>'
     + '<div><label>Trading area</label><div>'+escapeHtml(v.trading_area||'—')+(v.russia_trading?' · Russia OK':'')+'</div></div></div>'
     + '<div class="row full"><div><label>Nationality</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'
+    + renderVacancyRequirementsBlock(v)
     + renderVacancyComplianceProfileBlock(v)
     + (v.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(v.description)+'</div></div></div>':'')
     + '</div>';
@@ -4437,7 +4549,7 @@ function updateCompliancePickerHelp() {
   }
 }
 
-async function loadComplianceProfilesForPicker() {
+async function loadComplianceProfilesForPicker(selectedProfileId) {
   var select = document.getElementById('f-compliance-profile');
   if (!select) return;
   if (!state.complianceProfilesLoaded) {
@@ -4450,16 +4562,21 @@ async function loadComplianceProfilesForPicker() {
     }
   }
   select.innerHTML = complianceProfileOptionsHtml();
+  if (selectedProfileId) select.value = selectedProfileId;
   updateCompliancePickerHelp();
 }
 
 function renderNewVacancy() {
   var m = document.getElementById('main');
+  var seed = state.newVacancyPrefill || {};
+  state.newVacancyPrefill = null;
+  var titleHint = seed.title ? 'Copied from published vacancy. Review details before posting.' : 'Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.';
   m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
     + '<div class="card">'
+    + (seed.title ? '<div class="tag ok" style="margin-bottom:12px;">Copied as new draft</div>' : '')
     + '<div class="row full"><div><label>Nationality* (which seafarers you want)</label>'+nationalitySelectHtml('f-nationalities')+'</div></div>'
     + '<div class="row full"><div><label>Client (who requested this search)</label>'
-    + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions">'
+    + '<input type="text" id="f-client" placeholder="e.g. Marlow Navigation, Costamare, internal — leave blank if none" list="client-suggestions"'+inputValueAttr(seed.client_name)+'>'
     + '<datalist id="client-suggestions">'
     + (state.vacancies||[]).map(function(v){return v.client_name;})
         .filter(function(c,i,a){return c && a.indexOf(c)===i;})
@@ -4470,30 +4587,38 @@ function renderNewVacancy() {
     + '<select id="f-compliance-profile">'+complianceProfileOptionsHtml()+'</select>'
     + '<div id="f-compliance-help" style="font-size:11px;color:var(--text2);margin-top:4px;"></div>'
     + '</div></div>'
-    + '<div class="row"><div><label>Title*</label><input type="text" id="f-title" placeholder="e.g. Chief Officer for Aframax"></div>'
+    + '<div class="row"><div><label>Title*</label><input type="text" id="f-title" placeholder="e.g. Chief Officer for Aframax"'+inputValueAttr(seed.title)+'>'
     + '<div><label>Rank*</label><select id="f-rank">'
-      + (['']).concat(taxonomyLabels('positions')).map(function(r){return '<option>'+escapeHtml(r)+'</option>';}).join('')
+      + optionLabelsHtml(taxonomyLabels('positions'), seed.rank)
     + '</select></div></div>'
     + '<div class="row"><div><label>Vessel type*</label><select id="f-vtype">'
-      + (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')
+      + optionLabelsHtml(taxonomyLabels('vessel_types'), seed.vessel_type)
     + '</select></div>'
-    + '<div><label>Vessel name</label><input type="text" id="f-vname" placeholder="MV ..."></div></div>'
-    + '<div class="row"><div><label>IMO* (7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"></div>'
-    + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"></div></div>'
-    + '<div class="row"><div><label>Join date (optional)</label><input type="date" id="f-jdate"></div>'
-    + '<div><label>Join port (optional)</label><input type="text" id="f-jport"></div></div>'
-    + '<div class="row"><div><label>Contract months</label><input type="number" id="f-months" min="1" max="12"></div>'
-    + '<div><label>Currency</label><select id="f-cur">'+['USD','EUR','GBP'].map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div></div>'
-    + '<div class="row"><div><label>Salary min/mo</label><input type="number" id="f-smin" min="0"></div>'
-    + '<div><label>Salary max/mo</label><input type="number" id="f-smax" min="0"></div></div>'
-    + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."></div></div>'
-    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
-    + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements"></textarea></div></div>'
+    + '<div><label>Vessel name</label><input type="text" id="f-vname" placeholder="MV ..."'+inputValueAttr(seed.vessel_name)+'></div></div>'
+    + '<div class="row"><div><label>IMO (optional, 7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"'+inputValueAttr(seed.vessel_imo)+'>'
+    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Leave blank if owner/crewing does not disclose IMO.</div></div>'
+    + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"'+inputValueAttr(seed.flag)+'></div></div>'
+    + '<div class="row"><div><label>Join date (optional)</label><input type="date" lang="en" id="f-jdate"'+inputValueAttr(seed.join_date)+'></div>'
+    + '<div><label>Join port (optional)</label><input type="text" id="f-jport"'+inputValueAttr(seed.join_port)+'></div></div>'
+    + '<div class="row"><div><label>Contract months</label><input type="number" id="f-months" min="1" max="12"'+inputValueAttr(seed.contract_months)+'></div>'
+    + '<div><label>Currency</label><select id="f-cur">'+['USD','EUR','GBP'].map(function(c){return optionHtml(c, seed.salary_currency || 'USD');}).join('')+'</select></div></div>'
+    + '<div class="row"><div><label>Salary min/mo</label><input type="number" id="f-smin" min="0"'+inputValueAttr(seed.salary_min)+'></div>'
+    + '<div><label>Salary max/mo</label><input type="number" id="f-smax" min="0"'+inputValueAttr(seed.salary_max)+'></div></div>'
+    + '<div class="row"><div><label>Min age (optional)</label><input type="number" id="f-min-age" min="16" max="80"'+inputValueAttr(seed.min_age)+'></div>'
+    + '<div><label>Max age (optional)</label><input type="number" id="f-max-age" min="16" max="80"'+inputValueAttr(seed.max_age)+'></div></div>'
+    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-us-visa"'+(seed.us_visa_required?' checked':'')+'><label for="f-us-visa">US visa required</label></div></div>'
+    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-schengen-visa"'+(seed.schengen_visa_required?' checked':'')+'><label for="f-schengen-visa">Schengen visa required</label></div></div>'
+    + '<div class="row full"><div><label>Trading area (optional)</label><input type="text" id="f-trade" placeholder="Worldwide / Atlantic / etc."'+inputValueAttr(seed.trading_area)+'></div></div>'
+    + '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="f-russia"'+(seed.trading_russia_ok?' checked':'')+'><label for="f-russia">Vessel calls Russian ports / Russia trading OK</label></div></div>'
+    + '<div class="row full"><div><label>Description</label><textarea id="f-desc" placeholder="Additional notes — equipment, voyage details, requirements, public contact phone/email/Telegram">'+escapeHtml(seed.description || '')+'</textarea></div></div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'vacancies\')">Cancel</button><button onclick="submitVacancy()">Post vacancy</button></div>'
     + '</div>';
+  var sub = m.querySelector('h1 + .sub');
+  if (sub) sub.innerHTML = titleHint;
+  setCdValues('f-nationalities', seed.nationalities || []);
   m.scrollTop = 0;
   requestAnimationFrame(function(){ m.scrollTop = 0; });
-  loadComplianceProfilesForPicker();
+  loadComplianceProfilesForPicker(seed.compliance_profile_id || '');
 }
 
 async function submitVacancy() {
@@ -4510,6 +4635,10 @@ async function submitVacancy() {
     salary_min: parseFloatOrNull('f-smin'),
     salary_max: parseFloatOrNull('f-smax'),
     salary_currency: val('f-cur') || null,
+    min_age: parseIntOrNull('f-min-age'),
+    max_age: parseIntOrNull('f-max-age'),
+    us_visa_required: document.getElementById('f-us-visa').checked,
+    schengen_visa_required: document.getElementById('f-schengen-visa').checked,
     trading_area: val('f-trade') || null,
     trading_russia_ok: document.getElementById('f-russia').checked,
     nationalities: cdValues('f-nationalities'),
@@ -4517,17 +4646,21 @@ async function submitVacancy() {
     client_name: val('f-client') || null,
     compliance_profile_id: val('f-compliance-profile') || null,
   };
-  if (!draft.title || !draft.rank || !draft.vessel_type || !draft.vessel_imo) {
-    showToast('Title, Rank, Vessel type and IMO are required', 'error');
+  if (!draft.title || !draft.rank || !draft.vessel_type) {
+    showToast('Title, Rank and Vessel type are required', 'error');
     return;
   }
   if (!draft.nationalities || !draft.nationalities.length) {
     showToast('Select at least one nationality — vacancies are matched by citizenship.', 'error');
     return;
   }
-  // IMO is exactly 7 digits per IMO Resolution A.600(15). Server validates
-  // 1_000_000..9_999_999 — surface the error inline before the round-trip.
-  if (!/^\d{7}$/.test(String(draft.vessel_imo))) {
+  if (draft.min_age && draft.max_age && draft.min_age > draft.max_age) {
+    showToast('Min age cannot be higher than max age.', 'error');
+    return;
+  }
+  // IMO is optional for vacancies because many crewings do not disclose it.
+  // If provided, keep it clean so vessel lookup and ratings can work.
+  if (draft.vessel_imo && !/^\d{7}$/.test(String(draft.vessel_imo))) {
     showToast('IMO must be exactly 7 digits (e.g. 9554488).', 'error');
     return;
   }
