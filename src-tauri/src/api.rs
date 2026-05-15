@@ -272,6 +272,42 @@ where
     Err(last_err)
 }
 
+pub(crate) fn patch_json<T, B>(
+    server_url: Option<&str>,
+    bearer_token: Option<&str>,
+    path: &str,
+    body: &B,
+    timeout_secs: u64,
+) -> Result<T, String>
+where
+    T: DeserializeOwned,
+    B: Serialize + ?Sized,
+{
+    let client = client(timeout_secs)?;
+    let bases = api_bases(server_url);
+    let mut last_err = String::from("API unavailable");
+
+    for base in &bases {
+        let url = api_url(base, path);
+        match bearer(client.patch(&url).json(body), bearer_token).send() {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    return resp.json().map_err(|e| format!("bad JSON: {e}"));
+                }
+                let body = resp.text().unwrap_or_default();
+                return Err(format!("server returned {status}: {body}"));
+            }
+            Err(e) => {
+                last_err = format!("{base} network: {e}");
+                continue;
+            }
+        }
+    }
+
+    Err(last_err)
+}
+
 pub(crate) fn delete_empty(
     server_url: Option<&str>,
     bearer_token: Option<&str>,

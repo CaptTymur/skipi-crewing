@@ -135,6 +135,8 @@ pub struct VacancyDraft {
     /// requested this search). Promoted to FK in phase-2.
     #[serde(default)]
     pub client_name: Option<String>,
+    #[serde(default)]
+    pub compliance_profile_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -344,6 +346,8 @@ struct VacancyWire<'a> {
     join_port: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     client_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compliance_profile_id: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -437,6 +441,7 @@ fn post_vacancy(
         vessel_name: draft.vessel_name.as_deref(),
         join_port: draft.join_port.as_deref(),
         client_name: draft.client_name.as_deref(),
+        compliance_profile_id: draft.compliance_profile_id.as_deref(),
     };
 
     let server_resp: VacancyServerResponse = api::post_json(
@@ -563,6 +568,10 @@ pub struct ServerVacancy {
     pub join_port: Option<String>,
     #[serde(default)]
     pub client_name: Option<String>,
+    #[serde(default)]
+    pub compliance_profile_id: Option<String>,
+    #[serde(default)]
+    pub compliance_profile_snapshot: Option<serde_json::Value>,
     pub published_at: String,
     pub expires_at: Option<String>,
     pub status: String,
@@ -611,6 +620,185 @@ struct VacancyListResp {
 #[derive(Debug, Clone, Deserialize)]
 struct MailingRequestListResp {
     items: Vec<ServerMailingRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplianceExtraRequirement {
+    pub id: String,
+    pub label: String,
+    pub weight: i64,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ComplianceProfileDraft {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub mandatory_certs: Option<Vec<String>>,
+    #[serde(default)]
+    pub extra_requirements: Option<Vec<ComplianceExtraRequirement>>,
+    #[serde(default)]
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerComplianceProfile {
+    pub id: String,
+    pub crewing_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub mandatory_certs: Option<Vec<String>>,
+    #[serde(default)]
+    pub extra_requirements: Option<Vec<ComplianceExtraRequirement>>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ComplianceProfileListResp {
+    items: Vec<ServerComplianceProfile>,
+}
+
+fn require_api_settings(settings: &Settings) -> Result<(), String> {
+    if settings.bearer_token.is_empty()
+        || settings.crewing_id.is_empty()
+        || settings.server_url.is_empty()
+    {
+        return Err("Not configured. Open Settings.".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn fetch_compliance_profiles(
+    include_archived: Option<bool>,
+    state: tauri::State<AppState>,
+) -> Result<Vec<ServerComplianceProfile>, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let path = format!(
+        "/api/compliance-profiles?crewing_id={}&include_archived={}",
+        urlenc(&settings.crewing_id),
+        if include_archived.unwrap_or(false) { "true" } else { "false" }
+    );
+    let parsed: ComplianceProfileListResp = api::get_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        20,
+    )?;
+    Ok(parsed.items)
+}
+
+#[tauri::command]
+fn create_compliance_profile(
+    draft: ComplianceProfileDraft,
+    state: tauri::State<AppState>,
+) -> Result<ServerComplianceProfile, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let name = draft
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "Profile name is required.".to_string())?;
+    let description = draft
+        .description
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let body = serde_json::json!({
+        "crewing_id": settings.crewing_id,
+        "name": name,
+        "description": description,
+        "mandatory_certs": draft.mandatory_certs.unwrap_or_default(),
+        "extra_requirements": draft.extra_requirements.unwrap_or_default(),
+    });
+    api::post_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/compliance-profiles",
+        &body,
+        20,
+    )
+}
+
+#[tauri::command]
+fn update_compliance_profile(
+    profile_id: String,
+    draft: ComplianceProfileDraft,
+    state: tauri::State<AppState>,
+) -> Result<ServerComplianceProfile, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let mut body = serde_json::Map::new();
+    if let Some(name) = draft.name {
+        let trimmed = name.trim().to_string();
+        if trimmed.is_empty() {
+            return Err("Profile name is required.".into());
+        }
+        body.insert("name".into(), serde_json::Value::String(trimmed));
+    }
+    if let Some(description) = draft.description {
+        let trimmed = description.trim().to_string();
+        body.insert(
+            "description".into(),
+            if trimmed.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::Value::String(trimmed)
+            },
+        );
+    }
+    if let Some(certs) = draft.mandatory_certs {
+        body.insert(
+            "mandatory_certs".into(),
+            serde_json::to_value(certs).map_err(|e| e.to_string())?,
+        );
+    }
+    if let Some(extras) = draft.extra_requirements {
+        body.insert(
+            "extra_requirements".into(),
+            serde_json::to_value(extras).map_err(|e| e.to_string())?,
+        );
+    }
+    if let Some(status) = draft.status {
+        body.insert("status".into(), serde_json::Value::String(status));
+    }
+    let path = format!("/api/compliance-profiles/{profile_id}");
+    api::patch_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        &body,
+        20,
+    )
+}
+
+#[tauri::command]
+fn archive_compliance_profile(
+    profile_id: String,
+    state: tauri::State<AppState>,
+) -> Result<ServerComplianceProfile, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let path = format!("/api/compliance-profiles/{profile_id}/archive");
+    api::post_empty_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        20,
+    )
 }
 
 #[tauri::command]
@@ -1410,6 +1598,10 @@ pub fn run() {
             post_vacancy,
             post_mailing_request,
             list_my_vacancies,
+            fetch_compliance_profiles,
+            create_compliance_profile,
+            update_compliance_profile,
+            archive_compliance_profile,
             fetch_my_vacancies,
             fetch_my_mailing_requests,
             close_vacancy_remote,

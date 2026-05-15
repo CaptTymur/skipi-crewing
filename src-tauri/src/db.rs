@@ -295,6 +295,7 @@ pub fn list_vacancies() -> Result<Vec<CachedVacancy>, rusqlite::Error> {
                     nationalities: None,
                     description: None,
                     client_name: None,
+                    compliance_profile_id: None,
                 });
             Ok(CachedVacancy {
                 id: r.get(0)?,

@@ -270,6 +270,9 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
   <div class="mod-tab" id="mt-mailings" onclick="showView('mailings')" title="CV mailing requests">
     <span>Рассылки</span>
   </div>
+  <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable candidate requirement profiles">
+    <span>Профили соответствия</span>
+  </div>
   <div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
     <span>Seafarers DB</span>
   </div>
@@ -302,8 +305,8 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
@@ -311,8 +314,8 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.seafarers':'База моряков','nav.documents':'Документы',
-	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.seafarers':'База моряков','left.documents':'Документы',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.compliance':'Профили соответствия','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профили соответствия','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
@@ -320,24 +323,24 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
-    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
-    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
     'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
     'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
     'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
     'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
   },
   hi: {
-    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
-    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
     'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
     'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
     'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
     'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
   },
   id: {
-    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
-    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
     'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
     'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
     'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
@@ -379,6 +382,7 @@ function applyI18nChrome() {
   var pairs = [
     ['mt-vacancies','nav.vacancies'],
     ['mt-mailings','nav.mailings'],
+    ['mt-compliance','nav.compliance'],
     ['mt-seafarers','nav.seafarers'],
     ['mt-documents','nav.documents'],
   ];
@@ -637,6 +641,10 @@ var state = {
   vacancies: [],
   mailingRequests: [],
   selectedMailingRequest: null,
+  complianceProfiles: [],
+  complianceProfilesLoaded: false,
+  includeArchivedProfiles: false,
+  selectedComplianceProfile: null,
   sortBy: 'open_first',
   selectedVacancy: null,
   applications: [],
@@ -835,8 +843,8 @@ function suggestedCrewingVaultName() {
 function showView(v) {
   state.view = v;
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
-  var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : v);
-  ['vacancies','mailings','seafarers','documents'].forEach(function(k){
+  var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
+  ['vacancies','mailings','compliance','seafarers','documents'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -864,6 +872,25 @@ function showView(v) {
     document.getElementById('left-panel').style.display = '';
     renderMailingRequestsTree();
     renderNewMailingRequest();
+    return;
+  }
+  if (v==='compliance') {
+    document.getElementById('left-panel').style.display = '';
+    renderComplianceProfilesTree();
+    if (state.selectedComplianceProfile) renderComplianceProfileDetail();
+    else renderComplianceProfilesEmptyMain();
+    return;
+  }
+  if (v==='new_profile') {
+    document.getElementById('left-panel').style.display = '';
+    renderComplianceProfilesTree();
+    renderComplianceProfileForm(null);
+    return;
+  }
+  if (v==='edit_profile') {
+    document.getElementById('left-panel').style.display = '';
+    renderComplianceProfilesTree();
+    renderComplianceProfileForm(state.selectedComplianceProfile);
     return;
   }
   if (v==='seafarers') {
@@ -1150,6 +1177,342 @@ function renderVacanciesTreeBody() {
     html += '</div>';
   });
   tree.innerHTML = html;
+}
+
+// ------------- compliance profiles -------------
+function certCatalog() {
+  var t = TAXONOMY || TAXONOMY_FALLBACK || {};
+  return Array.isArray(t.certs) ? t.certs : [];
+}
+
+function certsByCategory() {
+  var by = {};
+  certCatalog().forEach(function(c){
+    var cat = c.category || 'Other';
+    if (!by[cat]) by[cat] = [];
+    by[cat].push(c);
+  });
+  return by;
+}
+
+function profileMandatoryCount(p) {
+  return ((p && p.mandatory_certs) || []).length;
+}
+
+function profileExtrasCount(p) {
+  return ((p && p.extra_requirements) || []).length;
+}
+
+function profileUsageCount(profileId) {
+  if (!profileId) return 0;
+  return (state.vacancies || []).filter(function(v){
+    var snap = v.compliance_profile_snapshot || {};
+    return v.compliance_profile_id === profileId || snap.id === profileId;
+  }).length;
+}
+
+function activeComplianceProfiles() {
+  return (state.complianceProfiles || []).filter(function(p){ return p.status === 'active'; });
+}
+
+async function refreshComplianceProfiles(includeArchived) {
+  state.complianceProfiles = await invoke('fetch_compliance_profiles', { includeArchived: !!includeArchived });
+  state.complianceProfilesLoaded = true;
+  if (!state.vacancies || !state.vacancies.length) {
+    try { state.vacancies = await invoke('fetch_my_vacancies'); } catch(e) {}
+  }
+  if (state.selectedComplianceProfile) {
+    var same = state.complianceProfiles.find(function(p){ return p.id === state.selectedComplianceProfile.id; });
+    if (same) state.selectedComplianceProfile = same;
+  }
+}
+
+async function renderComplianceProfilesTree(opts) {
+  opts = opts || {};
+  var force = opts.force === true;
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">'+tr('left.compliance')+'</span>'
+    + '<span class="actions"><button onclick="showView(\'new_profile\')" style="padding:4px 10px;font-size:11px;">'+tr('common.new')+'</button></span>'
+    + '</div>'
+    + '<div class="panel-search"><label style="display:flex;align-items:center;gap:7px;margin:0;color:var(--text);font-size:12px;">'
+    + '<input type="checkbox" id="cp-include-archived" '+(state.includeArchivedProfiles?'checked':'')+' onchange="state.includeArchivedProfiles=this.checked;state.complianceProfilesLoaded=false;renderComplianceProfilesTree({force:true});renderComplianceProfilesEmptyMain();"> '
+    + 'Показывать архив</label></div>'
+    + '<div class="panel-tree" id="panel-tree">'
+    + (state.complianceProfilesLoaded ? '' : '<div class="tree-empty">Loading...</div>')
+    + '</div>';
+
+  if (state.complianceProfilesLoaded) renderComplianceProfilesTreeBody();
+  if (!force && state.complianceProfilesLoaded) return;
+
+  try {
+    await refreshComplianceProfiles(state.includeArchivedProfiles);
+  } catch(e) {
+    document.getElementById('panel-tree').innerHTML =
+      '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
+    return;
+  }
+  renderComplianceProfilesTreeBody();
+}
+
+function renderComplianceProfilesTreeBody() {
+  var tree = document.getElementById('panel-tree');
+  if (!tree) return;
+  var profiles = state.complianceProfiles || [];
+  if (!profiles.length) {
+    tree.innerHTML = '<div class="tree-empty">Профилей пока нет.<br><br><button onclick="showView(\'new_profile\')">'+tr('common.new')+'</button></div>';
+    return;
+  }
+  var html = '';
+  profiles.forEach(function(p){
+    var isActive = state.selectedComplianceProfile && state.selectedComplianceProfile.id === p.id;
+    var archived = p.status === 'archived';
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(p.id)+'\')">';
+    html += '<span style="font-size:12px;color:var(--text2);">'+(archived?'□':'▣')+'</span>';
+    html += '<div class="ti-title"><div>'+escapeHtml(p.name||'Untitled')+'</div>';
+    html += '<div class="ti-meta">'+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
+    if (archived) html += '<div class="ti-meta" style="color:var(--warn);">archived</div>';
+    html += '</div></div>';
+  });
+  tree.innerHTML = html;
+}
+
+function openComplianceProfileById(id) {
+  var p = (state.complianceProfiles || []).find(function(x){ return x.id === id; });
+  if (!p) return;
+  state.selectedComplianceProfile = p;
+  showView('compliance');
+}
+
+function renderComplianceProfilesEmptyMain() {
+  var m = document.getElementById('main');
+  m.innerHTML = '<h1>Профили соответствия</h1>'
+    + '<div class="sub">Переиспользуемые шаблоны требований к кандидату. Крюинг выбирает профиль при публикации вакансии, сервер замораживает snapshot в вакансии.</div>'
+    + '<div class="card">'
+    + '<h3 style="margin-top:0;">Как это используется</h3>'
+    + '<div style="line-height:1.55;color:var(--text2);">'
+    + 'Создайте профиль один раз: обязательные сертификаты как hard gate и дополнительные требования с весом. '
+    + 'После этого выбирайте профиль в форме новой вакансии. Вакансию всё ещё можно опубликовать без профиля.'
+    + '</div><br><button onclick="showView(\'new_profile\')">+ Новый профиль</button></div>';
+}
+
+function renderMandatoryCertList(ids) {
+  ids = ids || [];
+  if (!ids.length) return '<div style="color:var(--text2);font-style:italic;">No mandatory certificates selected.</div>';
+  return '<ul style="margin:8px 0 0 18px;padding:0;">'
+    + ids.map(function(id){ return '<li>'+escapeHtml(certLabelById(id))+' <code style="color:var(--text2);">'+escapeHtml(id)+'</code></li>'; }).join('')
+    + '</ul>';
+}
+
+function renderExtrasList(extras) {
+  extras = extras || [];
+  if (!extras.length) return '<div style="color:var(--text2);font-style:italic;">No extra requirements.</div>';
+  return '<div style="display:grid;gap:8px;margin-top:8px;">'
+    + extras.map(function(x){
+        return '<div style="padding:8px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;">'
+          + '<div style="display:flex;justify-content:space-between;gap:8px;"><strong>'+escapeHtml(x.label||x.id||'Requirement')+'</strong><span class="tag">'+escapeHtml(x.category||'other')+' · weight '+escapeHtml(String(x.weight||1))+'</span></div>'
+          + (x.description?'<div style="color:var(--text2);font-size:12px;margin-top:4px;">'+escapeHtml(x.description)+'</div>':'')
+          + '<div style="color:var(--text2);font-size:11px;margin-top:4px;"><code>'+escapeHtml(x.id||'')+'</code></div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+function renderComplianceProfileDetail() {
+  var m = document.getElementById('main');
+  var p = state.selectedComplianceProfile;
+  if (!p) { renderComplianceProfilesEmptyMain(); return; }
+  var archived = p.status === 'archived';
+  var statusBadge = archived
+    ? '<span class="tag" style="background:rgba(245,158,11,0.16);color:var(--warn);">archived</span>'
+    : '<span class="tag ok">active</span>';
+  m.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
+    + '<div><h1>'+escapeHtml(p.name||'Untitled')+' '+statusBadge+'</h1>'
+    + '<div class="sub"><code>'+escapeHtml(p.id)+'</code> · used in '+profileUsageCount(p.id)+' vacancies</div></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button class="ghost" onclick="showView(\'edit_profile\')">Edit</button>'
+    + (archived
+        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(p.id)+'\')">Restore</button>'
+        : '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(p.id)+'\')">Archive</button>')
+    + '</div></div>'
+    + '<div class="card">'
+    + '<div class="row"><div><label>Mandatory certificates</label><div style="font-size:18px;font-weight:700;">'+profileMandatoryCount(p)+'</div></div>'
+    + '<div><label>Extra requirements</label><div style="font-size:18px;font-weight:700;">'+profileExtrasCount(p)+'</div></div></div>'
+    + (p.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(p.description)+'</div></div></div>':'')
+    + '<details open><summary style="cursor:pointer;font-weight:700;">Mandatory</summary>'+renderMandatoryCertList(p.mandatory_certs||[])+'</details>'
+    + '<details open style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;">Extras</summary>'+renderExtrasList(p.extra_requirements||[])+'</details>'
+    + '<div style="margin-top:16px;color:var(--text2);font-size:12px;">Match-% per application will appear here after the seafarer client starts reporting local scores.</div>'
+    + '</div>';
+}
+
+function certCheckboxesHtml(selected, readonly) {
+  selected = selected || [];
+  var selectedMap = {};
+  selected.forEach(function(id){ selectedMap[id] = true; });
+  var byCat = certsByCategory();
+  var cats = Object.keys(byCat).sort();
+  if (!cats.length) {
+    return '<div style="color:var(--warn);">Certificate catalog is not loaded. Check connection and reopen this screen.</div>';
+  }
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;">'
+    + cats.map(function(cat){
+        return '<details open style="background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:8px;">'
+          + '<summary style="cursor:pointer;font-weight:700;font-size:12px;color:var(--text2);">'+escapeHtml(cat)+' · '+byCat[cat].length+'</summary>'
+          + byCat[cat].map(function(c){
+              return '<label style="display:flex;align-items:flex-start;gap:7px;margin-top:7px;color:var(--text);font-size:12px;line-height:1.35;">'
+                + '<input type="checkbox" data-cp-cert="1" value="'+escapeAttr(c.id)+'" '+(selectedMap[c.id]?'checked':'')+' '+(readonly?'disabled':'')+'>'
+                + '<span>'+escapeHtml(c.label||c.id)+'<br><code style="color:var(--text2);">'+escapeHtml(c.id)+'</code></span>'
+                + '</label>';
+            }).join('')
+          + '</details>';
+      }).join('')
+    + '</div>';
+}
+
+function slugifyRequirement(value) {
+  return String(value||'').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+}
+
+function renderProfileExtras(extras, readonly) {
+  extras = extras || [];
+  var host = document.getElementById('cp-extras');
+  if (!host) return;
+  if (!extras.length) extras = [];
+  host.innerHTML = extras.map(function(x, i){
+    return '<div class="card" data-extra-row="'+i+'" style="background:var(--panel2);padding:12px;margin-bottom:8px;">'
+      + '<div class="row"><div><label>Label</label><input type="text" class="x-label" value="'+escapeAttr(x.label||'')+'" '+(readonly?'disabled':'')+' oninput="profileExtraAutoslug(this)"></div>'
+      + '<div><label>ID</label><input type="text" class="x-id" value="'+escapeAttr(x.id||'')+'" '+(readonly?'disabled':'')+' placeholder="snake_case"></div></div>'
+      + '<div class="row"><div><label>Category</label><select class="x-cat" '+(readonly?'disabled':'')+'>'
+      + ['visa','training','endorsement','test','equipment','other'].map(function(c){ return '<option value="'+c+'" '+((x.category||'other')===c?'selected':'')+'>'+c+'</option>'; }).join('')
+      + '</select></div>'
+      + '<div><label>Weight</label><input type="number" class="x-weight" min="1" max="10" value="'+escapeAttr(String(x.weight||1))+'" '+(readonly?'disabled':'')+'></div></div>'
+      + '<div class="row full"><div><label>Description</label><textarea class="x-desc" '+(readonly?'disabled':'')+'>'+escapeHtml(x.description||'')+'</textarea></div></div>'
+      + (readonly?'':'<div style="display:flex;justify-content:flex-end;"><button class="ghost" onclick="profileRemoveExtra('+i+')" style="padding:5px 10px;font-size:12px;">Remove</button></div>')
+      + '</div>';
+  }).join('') || '<div style="color:var(--text2);font-size:12px;">No extra requirements yet.</div>';
+}
+
+function currentProfileExtrasFromDom() {
+  return Array.prototype.slice.call(document.querySelectorAll('#cp-extras [data-extra-row]')).map(function(row){
+    return {
+      id: (row.querySelector('.x-id') && row.querySelector('.x-id').value || '').trim(),
+      label: (row.querySelector('.x-label') && row.querySelector('.x-label').value || '').trim(),
+      weight: Math.max(1, Math.min(10, parseInt(row.querySelector('.x-weight').value || '1', 10) || 1)),
+      category: (row.querySelector('.x-cat') && row.querySelector('.x-cat').value || 'other').trim(),
+      description: (row.querySelector('.x-desc') && row.querySelector('.x-desc').value || '').trim(),
+    };
+  }).filter(function(x){ return x.label || x.id; }).map(function(x){
+    if (!x.id) x.id = slugifyRequirement(x.label);
+    if (!x.description) x.description = null;
+    return x;
+  });
+}
+
+function profileExtraAutoslug(input) {
+  var row = input.closest('[data-extra-row]');
+  if (!row) return;
+  var id = row.querySelector('.x-id');
+  if (id && !id.value.trim()) id.value = slugifyRequirement(input.value);
+}
+
+function profileAddExtra() {
+  var extras = currentProfileExtrasFromDom();
+  extras.push({id:'', label:'', weight:1, category:'other', description:''});
+  renderProfileExtras(extras, false);
+}
+
+function profileRemoveExtra(idx) {
+  var extras = currentProfileExtrasFromDom();
+  extras.splice(idx, 1);
+  renderProfileExtras(extras, false);
+}
+
+function renderComplianceProfileForm(profile) {
+  var m = document.getElementById('main');
+  var editing = !!profile;
+  var readonly = !!(profile && profile.status === 'archived');
+  var title = editing ? 'Редактировать профиль соответствия' : 'Новый профиль соответствия';
+  m.innerHTML = '<h1>'+title+'</h1>'
+    + '<div class="sub">Выберите обязательные документы и дополнительные требования. Уже опубликованные вакансии сохраняют старый snapshot.</div>'
+    + '<div class="card">'
+    + '<div class="row full"><div><label>Name*</label><input type="text" id="cp-name" maxlength="200" value="'+escapeAttr(profile&&profile.name||'')+'" '+(readonly?'disabled':'')+' placeholder="Greek BC-180k Master"></div></div>'
+    + '<div class="row full"><div><label>Description</label><textarea id="cp-desc" maxlength="2000" '+(readonly?'disabled':'')+' placeholder="Internal comment">'+escapeHtml(profile&&profile.description||'')+'</textarea></div></div>'
+    + '<h3 style="margin:16px 0 8px;">Mandatory certs</h3>'
+    + '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Missing any mandatory item will later make the seafarer match fail locally.</div>'
+    + certCheckboxesHtml((profile&&profile.mandatory_certs)||[], readonly)
+    + '<h3 style="margin:18px 0 8px;">Extra requirements</h3>'
+    + '<div id="cp-extras"></div>'
+    + (readonly?'':'<button class="ghost" onclick="profileAddExtra()" style="margin:4px 0 16px;">+ Add requirement</button>')
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+    + '<button class="ghost" onclick="showView(\'compliance\')">Cancel</button>'
+    + (readonly
+        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(profile.id)+'\')">Restore</button>'
+        : '<button onclick="saveComplianceProfile('+(editing?'\''+escapeAttr(profile.id)+'\'':'null')+')">Save</button>')
+    + '</div></div>';
+  renderProfileExtras((profile&&profile.extra_requirements)||[], readonly);
+}
+
+async function saveComplianceProfile(profileId) {
+  var name = val('cp-name');
+  if (!name) { showToast('Profile name is required.', 'error'); return; }
+  var mandatory = Array.prototype.slice.call(document.querySelectorAll('input[data-cp-cert]:checked')).map(function(cb){ return cb.value; });
+  var extras = currentProfileExtrasFromDom();
+  for (var i=0; i<extras.length; i++) {
+    if (!extras[i].id || !extras[i].label) {
+      showToast('Every extra requirement needs label and id.', 'error');
+      return;
+    }
+  }
+  var draft = {
+    name: name,
+    description: val('cp-desc') || '',
+    mandatory_certs: mandatory,
+    extra_requirements: extras,
+  };
+  try {
+    var saved = profileId
+      ? await invoke('update_compliance_profile', { profileId: profileId, draft: draft })
+      : await invoke('create_compliance_profile', { draft: draft });
+    state.selectedComplianceProfile = saved;
+    state.complianceProfilesLoaded = false;
+    await renderComplianceProfilesTree({force:true});
+    showView('compliance');
+    showToast('Compliance profile saved', 'success');
+  } catch(e) {
+    showToast('Save failed: '+e, 'error');
+  }
+}
+
+async function archiveComplianceProfile(profileId) {
+  var ok = await inAppConfirm('Archive this profile?\n\nIt will not be available for new vacancies. Existing vacancy snapshots stay valid.', {confirmLabel:'Archive'});
+  if (!ok) return;
+  try {
+    var saved = await invoke('archive_compliance_profile', { profileId: profileId });
+    state.selectedComplianceProfile = saved;
+    state.complianceProfilesLoaded = false;
+    state.includeArchivedProfiles = true;
+    await renderComplianceProfilesTree({force:true});
+    showView('compliance');
+    showToast('Profile archived', 'success');
+  } catch(e) {
+    showToast('Archive failed: '+e, 'error');
+  }
+}
+
+async function restoreComplianceProfile(profileId) {
+  try {
+    var saved = await invoke('update_compliance_profile', { profileId: profileId, draft: { status: 'active' } });
+    state.selectedComplianceProfile = saved;
+    state.complianceProfilesLoaded = false;
+    await renderComplianceProfilesTree({force:true});
+    showView('compliance');
+    showToast('Profile restored', 'success');
+  } catch(e) {
+    showToast('Restore failed: '+e, 'error');
+  }
 }
 
 // ------------- mailing requests -------------
@@ -2362,6 +2725,21 @@ async function deleteVacancy(id){
   } catch(e) { showToast('Failed to delete: '+e, 'error'); }
 }
 
+function renderVacancyComplianceProfileBlock(v) {
+  var snap = v && v.compliance_profile_snapshot;
+  if (!snap) return '';
+  var mandatory = snap.mandatory_certs || [];
+  var extras = snap.extra_requirements || [];
+  return '<div class="row full"><div><label>Compliance profile</label>'
+    + '<details style="margin-top:4px;">'
+    + '<summary style="cursor:pointer;color:var(--accent);font-weight:700;">'+escapeHtml(snap.name || 'Attached profile')+'</summary>'
+    + (snap.description?'<div style="white-space:pre-wrap;color:var(--text2);font-size:12px;margin-top:8px;">'+escapeHtml(snap.description)+'</div>':'')
+    + '<div style="margin-top:10px;"><strong>Mandatory</strong>'+renderMandatoryCertList(mandatory)+'</div>'
+    + '<div style="margin-top:10px;"><strong>Extras</strong>'+renderExtrasList(extras)+'</div>'
+    + '<div style="color:var(--text2);font-size:11px;margin-top:10px;">Snapshot frozen '+escapeHtml((snap.snapshot_at||'').slice(0,19) || 'at publish')+'. Match-% per application is phase 2.</div>'
+    + '</details></div></div>';
+}
+
 async function renderVacancyDetail() {
   var m = document.getElementById('main');
   var v = state.selectedVacancy;
@@ -2406,6 +2784,7 @@ async function renderVacancyDetail() {
     + '<div class="row"><div><label>Salary</label><div>'+salaryStr+'</div></div>'
     + '<div><label>Trading area</label><div>'+escapeHtml(v.trading_area||'—')+(v.russia_trading?' · Russia OK':'')+'</div></div></div>'
     + '<div class="row full"><div><label>Nationality</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'
+    + renderVacancyComplianceProfileBlock(v)
     + (v.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(v.description)+'</div></div></div>':'')
     + '</div>';
   m.innerHTML = head + sub + engagement + details
@@ -4037,6 +4416,43 @@ async function sendApplicationReply(applicationId, seafarerUserId) {
 }
 
 // ------------- new vacancy -------------
+function complianceProfileOptionsHtml() {
+  if (!state.complianceProfilesLoaded) return '<option value="">Loading profiles…</option>';
+  var profiles = activeComplianceProfiles();
+  var html = '<option value="">— no compliance profile —</option>';
+  html += profiles.map(function(p){
+    return '<option value="'+escapeAttr(p.id)+'">'+escapeHtml(p.name)+' ('+profileMandatoryCount(p)+' reqs, '+profileExtrasCount(p)+' extras)</option>';
+  }).join('');
+  return html;
+}
+
+function updateCompliancePickerHelp() {
+  var help = document.getElementById('f-compliance-help');
+  if (!help) return;
+  var profiles = activeComplianceProfiles();
+  if (!profiles.length) {
+    help.innerHTML = 'Нет активных профилей. <a href="#" onclick="showView(\'new_profile\');return false;" style="color:var(--accent);">Создать новый профиль</a>.';
+  } else {
+    help.textContent = 'Профиль замораживается в vacancy snapshot при публикации.';
+  }
+}
+
+async function loadComplianceProfilesForPicker() {
+  var select = document.getElementById('f-compliance-profile');
+  if (!select) return;
+  if (!state.complianceProfilesLoaded) {
+    try {
+      await refreshComplianceProfiles(false);
+    } catch(e) {
+      select.innerHTML = '<option value="">Profiles unavailable</option>';
+      updateCompliancePickerHelp();
+      return;
+    }
+  }
+  select.innerHTML = complianceProfileOptionsHtml();
+  updateCompliancePickerHelp();
+}
+
 function renderNewVacancy() {
   var m = document.getElementById('main');
   m.innerHTML = '<h1>'+tr('vacancy.new_title')+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to seafarers running Skipi. <strong>Client</strong> = the customer of your crewing who requested this search.</div>'
@@ -4049,6 +4465,10 @@ function renderNewVacancy() {
         .filter(function(c,i,a){return c && a.indexOf(c)===i;})
         .map(function(c){return '<option value="'+escapeAttr(c)+'">';}).join('')
     + '</datalist>'
+    + '</div></div>'
+    + '<div class="row full"><div><label>Compliance profile (optional)</label>'
+    + '<select id="f-compliance-profile">'+complianceProfileOptionsHtml()+'</select>'
+    + '<div id="f-compliance-help" style="font-size:11px;color:var(--text2);margin-top:4px;"></div>'
     + '</div></div>'
     + '<div class="row"><div><label>Title*</label><input type="text" id="f-title" placeholder="e.g. Chief Officer for Aframax"></div>'
     + '<div><label>Rank*</label><select id="f-rank">'
@@ -4073,6 +4493,7 @@ function renderNewVacancy() {
     + '</div>';
   m.scrollTop = 0;
   requestAnimationFrame(function(){ m.scrollTop = 0; });
+  loadComplianceProfilesForPicker();
 }
 
 async function submitVacancy() {
@@ -4094,6 +4515,7 @@ async function submitVacancy() {
     nationalities: cdValues('f-nationalities'),
     description: val('f-desc') || null,
     client_name: val('f-client') || null,
+    compliance_profile_id: val('f-compliance-profile') || null,
   };
   if (!draft.title || !draft.rank || !draft.vessel_type || !draft.vessel_imo) {
     showToast('Title, Rank, Vessel type and IMO are required', 'error');
