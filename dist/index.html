@@ -274,6 +274,9 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
   <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable candidate requirement profiles">
     <span>Профили соответствия</span>
   </div>
+  <div class="mod-tab" id="mt-team" onclick="showView('team')" title="Team access">
+    <span>Team</span>
+  </div>
   <div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
     <span>Seafarers DB</span>
   </div>
@@ -306,8 +309,8 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
@@ -315,8 +318,8 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.compliance':'Профили соответствия','nav.seafarers':'База моряков','nav.documents':'Документы',
-	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профили соответствия','left.seafarers':'База моряков','left.documents':'Документы',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.compliance':'Профили соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профили соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
@@ -324,24 +327,24 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
-    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
-    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
     'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
     'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
     'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
     'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
   },
   hi: {
-    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
-    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
     'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
     'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
     'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
     'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
   },
   id: {
-    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Compliance Profiles','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
-    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Compliance Profiles','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
     'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
     'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
     'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
@@ -384,6 +387,7 @@ function applyI18nChrome() {
     ['mt-vacancies','nav.vacancies'],
     ['mt-mailings','nav.mailings'],
     ['mt-compliance','nav.compliance'],
+    ['mt-team','nav.team'],
     ['mt-seafarers','nav.seafarers'],
     ['mt-documents','nav.documents'],
   ];
@@ -718,6 +722,9 @@ var state = {
   seafarerFilters: { rank: '', nationality: '', vesselType: '', availability: '', experience: '' },
   documents: [],
   selectedDocument: null,
+  teamMembers: [],
+  teamLoading: false,
+  lastTeamMemberToken: null,
   pendingUpdate: null,
   // Phase 2 messaging
   myIdentity: null,
@@ -901,7 +908,7 @@ function showView(v) {
   state.view = v;
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
-  ['vacancies','mailings','compliance','seafarers','documents'].forEach(function(k){
+  ['vacancies','mailings','compliance','team','seafarers','documents'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -938,6 +945,11 @@ function showView(v) {
     else renderComplianceProfilesEmptyMain();
     return;
   }
+  if (v==='team') {
+    document.getElementById('left-panel').style.display = '';
+    renderTeamView();
+    return;
+  }
   if (v==='new_profile') {
     document.getElementById('left-panel').style.display = '';
     renderComplianceProfilesTree();
@@ -966,6 +978,195 @@ function showView(v) {
   }
   // 'inbox' view removed in 0.1.21 — conversations now live inside each
   // vacancy's detail (one chat thread per applicant).
+}
+
+// ------------- Team access -------------
+async function ensureMyIdentityForTeam() {
+  if (state.myIdentity && state.myIdentity.user_id) return state.myIdentity;
+  state.myIdentity = await invoke('get_my_identity');
+  return state.myIdentity;
+}
+
+function renderTeamTree() {
+  var lp = document.getElementById('left-panel');
+  var count = (state.teamMembers || []).length;
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">'+tr('left.team')+'</span>'
+    + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="refreshTeamMembers(true)" title="Refresh">↻</button></span>'
+    + '</div>'
+    + '<div class="panel-tree">'
+    + '<div class="tree-item active" style="padding-left:16px;"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+'</div></div></div>'
+    + '<div class="tree-item" style="padding-left:16px;" onclick="openSettings(\'connection\')"><span>🔌</span><div class="ti-title"><div>Company token</div><div class="ti-meta">Connection settings</div></div></div>'
+    + '</div>';
+}
+
+function renderTeamMain() {
+  var s = state.settings || {};
+  var me = state.myIdentity || null;
+  var hasConnection = !!(s.bearer_token && s.crewing_id);
+  var role = s.team_role || '';
+  var members = state.teamMembers || [];
+  var userId = me && me.user_id ? me.user_id : 'loading...';
+  var issued = state.lastTeamMemberToken || null;
+  var connectionHtml = hasConnection
+    ? '<span style="color:var(--ok);">● Connected</span><span style="color:var(--text2);margin-left:10px;">Crewing '+escapeHtml(s.crewing_id)+'</span>'
+    : '<span style="color:var(--warn);">● Company token not validated</span> <button class="ghost" onclick="openSettings(\'connection\')" style="padding:4px 10px;font-size:11px;margin-left:8px;">Open settings</button>';
+  var teamRows = members.length ? members.map(function(m){
+    var isMe = me && m.user_id === me.user_id;
+    var remove = isMe
+      ? '<span style="color:var(--text2);font-size:12px;">this device</span>'
+      : '<button class="ghost" onclick="removeTeamMember(\''+escapeAttr(m.user_id)+'\')" style="padding:4px 10px;font-size:11px;">Remove</button>';
+    return '<tr>'
+      + '<td><code style="font-size:12px;">'+escapeHtml(m.user_id)+'</code>'+(isMe?' <span style="color:var(--ok);font-size:11px;">you</span>':'')+'</td>'
+      + '<td>'+escapeHtml(m.display_name || '')+'</td>'
+      + '<td>'+escapeHtml(m.role || '')+'</td>'
+      + '<td style="text-align:right;">'+remove+'</td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="4" style="color:var(--text2);padding:14px 0;">No team members yet.</td></tr>';
+
+  document.getElementById('main').innerHTML =
+    '<h1>Team</h1><div class="sub">Organization access for HR managers.</div>'
+    + '<div class="card">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">'
+    + '<div>'+connectionHtml+'</div>'
+    + '<div style="color:var(--text2);font-size:12px;">'+(role ? ('Role: '+escapeHtml(role)) : 'No team role on this device')+'</div>'
+    + '</div>'
+    + '<label>Your public user ID</label>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
+    + '<code style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:9px 10px;word-break:break-all;">'+escapeHtml(userId)+'</code>'
+    + '<button class="ghost" onclick="copyMyTeamUserId()" style="padding:8px 12px;">Copy</button>'
+    + '</div>'
+    + '<div class="row"><div><label>Your name</label><input id="team-display-name" type="text" value="'+escapeAttr(s.user_display_name || s.company_name || '')+'" placeholder="Name shown to teammates"></div>'
+    + '<div style="display:flex;align-items:flex-end;"><button onclick="claimOwnerAccess()" '+(hasConnection?'':'disabled')+'>Claim owner access</button></div></div>'
+    + '<div style="font-size:12px;color:var(--text2);line-height:1.5;">User ID is public. The private key stays on this device and is not sent to Skipi.</div>'
+    + '</div>'
+    + '<div class="card">'
+    + '<h3 style="margin-top:0;">Add team member</h3>'
+    + '<div class="row"><div><label>User ID</label><input id="team-new-user-id" type="text" placeholder="teammate public user ID"></div>'
+    + '<div><label>Name</label><input id="team-new-display-name" type="text" placeholder="Optional"></div></div>'
+    + '<div class="row"><div><label>Role</label><select id="team-new-role"><option value="member">Member</option><option value="admin">Admin</option><option value="owner">Owner</option></select></div>'
+    + '<div style="display:flex;align-items:flex-end;"><button onclick="addTeamMember()" '+(hasConnection?'':'disabled')+'>Add member</button></div></div>'
+    + '</div>'
+    + (issued ? '<div class="card" style="border-color:var(--ok);">'
+      + '<h3 style="margin-top:0;">Personal team token</h3>'
+      + '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">Give this token to '+escapeHtml(issued.user_id)+'. It is shown once here; the employee enters it in Settings → Company token.</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;"><code style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:9px 10px;word-break:break-all;">'+escapeHtml(issued.token)+'</code>'
+      + '<button class="ghost" onclick="copyIssuedTeamToken()" style="padding:8px 12px;">Copy</button>'
+      + '<button class="ghost" onclick="state.lastTeamMemberToken=null;renderTeamMain();" style="padding:8px 12px;">Hide</button></div>'
+      + '</div>' : '')
+    + '<div class="card">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
+    + '<h3 style="margin:0;">Members</h3>'
+    + '<button class="ghost" onclick="refreshTeamMembers(true)" style="padding:5px 12px;font-size:12px;">Refresh</button>'
+    + '</div>'
+    + (state.teamLoading ? '<div style="color:var(--text2);margin-bottom:10px;">Loading team...</div>' : '')
+    + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text2);text-align:left;border-bottom:1px solid var(--border);"><th style="padding:8px 0;">User ID</th><th>Name</th><th>Role</th><th></th></tr></thead><tbody>'+teamRows+'</tbody></table>'
+    + '</div>';
+}
+
+async function renderTeamView() {
+  renderTeamTree();
+  renderTeamMain();
+  try {
+    await ensureMyIdentityForTeam();
+    if (state.view !== 'team') return;
+    renderTeamMain();
+  } catch (e) {
+    showToast('Could not load local user ID: '+e, 'error');
+  }
+  await refreshTeamMembers(false);
+}
+
+async function refreshTeamMembers(showErrors) {
+  var s = state.settings || {};
+  if (!s.bearer_token || !s.crewing_id) {
+    state.teamMembers = [];
+    state.teamLoading = false;
+    if (state.view === 'team') { renderTeamTree(); renderTeamMain(); }
+    return;
+  }
+  state.teamLoading = true;
+  if (state.view === 'team') renderTeamMain();
+  try {
+    state.teamMembers = await invoke('list_team_members');
+    state.teamLoading = false;
+    if (state.view === 'team') { renderTeamTree(); renderTeamMain(); }
+  } catch (e) {
+    state.teamLoading = false;
+    if (showErrors) showToast('Team refresh failed: '+e, 'error');
+    if (state.view === 'team') renderTeamMain();
+  }
+}
+
+async function copyMyTeamUserId() {
+  try {
+    var me = await ensureMyIdentityForTeam();
+    await navigator.clipboard.writeText(me.user_id);
+    showToast('User ID copied', 'success');
+  } catch (e) {
+    showToast('Copy failed: '+e, 'error');
+  }
+}
+
+async function copyIssuedTeamToken() {
+  try {
+    if (!state.lastTeamMemberToken || !state.lastTeamMemberToken.token) return;
+    await navigator.clipboard.writeText(state.lastTeamMemberToken.token);
+    showToast('Team token copied', 'success');
+  } catch (e) {
+    showToast('Copy failed: '+e, 'error');
+  }
+}
+
+async function claimOwnerAccess() {
+  try {
+    var el = document.getElementById('team-display-name');
+    var member = await invoke('claim_team_owner', { displayName: el ? el.value.trim() : '' });
+    state.settings = await invoke('get_settings');
+    showToast('Owner access active for '+(member.display_name || member.user_id), 'success');
+    await refreshTeamMembers(false);
+  } catch (e) {
+    showToast('Owner claim failed: '+e, 'error');
+  }
+}
+
+async function addTeamMember() {
+  var userEl = document.getElementById('team-new-user-id');
+  var nameEl = document.getElementById('team-new-display-name');
+  var roleEl = document.getElementById('team-new-role');
+  var userId = userEl ? userEl.value.trim() : '';
+  if (!userId) {
+    showToast('User ID is required', 'error');
+    return;
+  }
+  try {
+    var member = await invoke('add_team_member', {
+      userId: userId,
+      displayName: nameEl ? nameEl.value.trim() : '',
+      role: roleEl ? roleEl.value : 'member'
+    });
+    if (member && member.token) {
+      state.lastTeamMemberToken = { user_id: member.user_id || userId, token: member.token };
+    }
+    if (userEl) userEl.value = '';
+    if (nameEl) nameEl.value = '';
+    showToast('Team member added. Personal token issued.', 'success');
+    await refreshTeamMembers(false);
+  } catch (e) {
+    showToast('Add member failed: '+e, 'error');
+  }
+}
+
+async function removeTeamMember(userId) {
+  var ok = await inAppConfirm('Remove this team member?\n\n'+userId, {confirmLabel:'Remove'});
+  if (!ok) return;
+  try {
+    await invoke('remove_team_member', { userId: userId });
+    showToast('Team member removed', 'success');
+    await refreshTeamMembers(false);
+  } catch (e) {
+    showToast('Remove failed: '+e, 'error');
+  }
 }
 
 // ------------- Inbox (E2E messages) -------------
@@ -5008,6 +5209,9 @@ async function activateCompanyToken() {
     });
     if (idEl) idEl.value = activation.crewing_id || '';
     if (companyEl && !companyEl.value.trim()) companyEl.value = activation.display_name || '';
+    state.settings = Object.assign({}, state.settings || {}, {
+      organization_id: activation.organization_id || ((state.settings||{}).organization_id || '')
+    });
     showToast('Token valid for '+(activation.display_name || 'crewing'), 'success');
   } catch (e) {
     showToast('Token validation failed: '+e, 'error');
@@ -5028,7 +5232,10 @@ async function saveSettings() {
     server_url: pick('s-url', s.server_url||''),
     bearer_token: pick('s-token', s.bearer_token||''),
     crewing_id: pick('s-crewing-id', s.crewing_id||''),
+    organization_id: s.organization_id || '',
     company_name: pick('s-company', s.company_name||''),
+    user_display_name: s.user_display_name || '',
+    team_role: s.team_role || '',
     reply_to: pick('s-reply', s.reply_to||''),
     vault_path: pick('v-path', s.vault_path||''),
     recent_vaults: s.recent_vaults || [],

@@ -41,7 +41,10 @@ pub struct Settings {
     pub server_url: String,
     pub bearer_token: String,
     pub crewing_id: String,
+    pub organization_id: String,
     pub company_name: String,
+    pub user_display_name: String,
+    pub team_role: String,
     pub reply_to: String,
 
     // ----- Vault (multi-user shared storage) -----
@@ -185,6 +188,44 @@ pub struct CrewingTokenActivation {
     pub scopes: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrewingTeamMember {
+    pub id: String,
+    pub organization_id: String,
+    pub crewing_id: Option<String>,
+    pub user_id: String,
+    pub display_name: Option<String>,
+    pub role: String,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub token: Option<String>,
+    pub token_prefix: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct CrewingTeamMemberWire {
+    user_id: String,
+    display_name: Option<String>,
+    role: String,
+}
+
+fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
+    let token = s.bearer_token.trim();
+    if token.is_empty() {
+        return Err("Company token is required.".into());
+    }
+    let crewing_id = s.crewing_id.trim();
+    if crewing_id.is_empty() {
+        return Err("Crewing ID is required. Validate the company token first.".into());
+    }
+    Ok((
+        s.server_url.trim().to_string(),
+        token.to_string(),
+        crewing_id.to_string(),
+    ))
+}
+
 #[tauri::command]
 fn get_settings(state: tauri::State<AppState>) -> Settings {
     state.settings.lock().unwrap().clone()
@@ -236,6 +277,95 @@ fn activate_crewing_token(
         "/api/crewings/token/activate",
         15,
     )
+}
+
+#[tauri::command]
+fn claim_team_owner(
+    display_name: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<CrewingTeamMember, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let me = messaging::get_my_identity()?;
+    let display = display_name
+        .and_then(|v| {
+            let trimmed = v.trim().to_string();
+            if trimmed.is_empty() { None } else { Some(trimmed) }
+        })
+        .or_else(|| {
+            let trimmed = settings.user_display_name.trim();
+            if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+        })
+        .or_else(|| {
+            let trimmed = settings.company_name.trim();
+            if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+        });
+    let body = CrewingTeamMemberWire {
+        user_id: me.user_id,
+        display_name: display,
+        role: "owner".into(),
+    };
+    let path = format!("/api/crewings/{}/team/owner", crewing_id);
+    let member: CrewingTeamMember = api::post_json(
+        Some(&server_url),
+        Some(&bearer_token),
+        &path,
+        &body,
+        15,
+    )?;
+
+    let mut next = state.settings.lock().unwrap().clone();
+    next.organization_id = member.organization_id.clone();
+    next.team_role = member.role.clone();
+    if let Some(name) = member.display_name.clone() {
+        next.user_display_name = name;
+    }
+    next.save()?;
+    *state.settings.lock().unwrap() = next;
+    Ok(member)
+}
+
+#[tauri::command]
+fn list_team_members(state: tauri::State<AppState>) -> Result<Vec<CrewingTeamMember>, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let path = format!("/api/crewings/{}/team", crewing_id);
+    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
+}
+
+#[tauri::command]
+fn add_team_member(
+    user_id: String,
+    display_name: Option<String>,
+    role: String,
+    state: tauri::State<AppState>,
+) -> Result<CrewingTeamMember, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let role = match role.trim() {
+        "owner" => "owner",
+        "admin" => "admin",
+        _ => "member",
+    }
+    .to_string();
+    let body = CrewingTeamMemberWire {
+        user_id: user_id.trim().to_string(),
+        display_name: display_name.and_then(|v| {
+            let trimmed = v.trim().to_string();
+            if trimmed.is_empty() { None } else { Some(trimmed) }
+        }),
+        role,
+    };
+    let path = format!("/api/crewings/{}/team", crewing_id);
+    api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)
+}
+
+#[tauri::command]
+fn remove_team_member(user_id: String, state: tauri::State<AppState>) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let path = format!("/api/crewings/{}/team/{}", crewing_id, user_id.trim());
+    api::delete_empty(Some(&server_url), Some(&bearer_token), &path, 15)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1629,6 +1759,10 @@ pub fn run() {
             get_settings,
             save_settings,
             activate_crewing_token,
+            claim_team_owner,
+            list_team_members,
+            add_team_member,
+            remove_team_member,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,
