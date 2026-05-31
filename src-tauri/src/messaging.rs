@@ -101,6 +101,49 @@ pub fn get_my_identity() -> Result<MyIdentity, String> {
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_my_identity_creates_persistent_local_user() {
+        let root = std::env::temp_dir().join(format!(
+            "skipi-crewing-identity-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::env::set_var("XDG_CONFIG_HOME", &root);
+
+        let first = get_my_identity().expect("first identity");
+        assert_eq!(first.user_id.len(), 16);
+        assert!(!first.pubkey_b64.is_empty());
+
+        let sk_path = root
+            .join("skipi-crewing")
+            .join("keys")
+            .join(SK_FILENAME);
+        let bytes = std::fs::read(&sk_path).expect("secret key written");
+        assert_eq!(bytes.len(), 32);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&sk_path)
+                .expect("secret key metadata")
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(mode, 0o600);
+        }
+
+        let second = get_my_identity().expect("second identity");
+        assert_eq!(first.user_id, second.user_id);
+        assert_eq!(first.pubkey_b64, second.pubkey_b64);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
 #[tauri::command]
 pub fn register_my_pubkey(
     crewing_id: String,
