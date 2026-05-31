@@ -116,6 +116,22 @@ main > h2, main > h3, main > div { max-width: 760px; }
 h1 { margin: 0 0 4px; font-size: 22px; }
 h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+.team-onboarding-modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 18px 60px rgba(0,0,0,0.45); }
+.team-onboarding-head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.team-onboarding-head h2 { margin: 0 0 5px; font-size: 19px; }
+.team-onboarding-head p { margin: 0; color: var(--text2); font-size: 13px; line-height: 1.45; }
+.team-onboarding-body { padding: 18px 20px 20px; }
+.team-onboarding-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.team-onboarding-choice { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: left; cursor: pointer; min-height: 156px; }
+.team-onboarding-choice:hover { border-color: var(--accent); background: var(--panel2); }
+.team-onboarding-choice strong { display: block; font-size: 15px; margin-bottom: 7px; color: var(--text); }
+.team-onboarding-choice span { display: block; color: var(--text2); font-size: 12px; line-height: 1.45; }
+.team-onboarding-steps { margin: 12px 0 16px; padding-left: 20px; color: var(--text2); line-height: 1.55; font-size: 13px; }
+.team-onboarding-id { display: flex; gap: 8px; align-items: center; margin: 10px 0 14px; }
+.team-onboarding-id code { flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); word-break: break-all; }
+.team-onboarding-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 760px) { .team-onboarding-options { grid-template-columns: 1fr; } .team-onboarding-actions { justify-content: stretch; } .team-onboarding-actions button { flex: 1; } }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .row.full { grid-template-columns: 1fr; }
 label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
@@ -731,7 +747,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.113',
+  appVersion: '0.4.114',
 };
 
 // ------------- toasts -------------
@@ -987,6 +1003,131 @@ async function ensureMyIdentityForTeam() {
   return state.myIdentity;
 }
 
+function shouldShowTeamOnboarding() {
+  var s = state.settings || {};
+  return !s.team_onboarding_seen && !s.bearer_token && !s.crewing_id;
+}
+
+async function setTeamOnboardingSeen() {
+  var s = state.settings || {};
+  if (s.team_onboarding_seen) return;
+  var next = Object.assign({}, s, { team_onboarding_seen: true });
+  await invoke('save_settings', { newSettings: next });
+  state.settings = next;
+}
+
+async function maybeShowTeamOnboarding() {
+  if (!shouldShowTeamOnboarding()) return false;
+  openTeamOnboarding('start');
+  return true;
+}
+
+function openTeamOnboarding(mode) {
+  var currentMode = mode || 'start';
+  renderTeamOnboarding(currentMode);
+  if (currentMode === 'member' && !(state.myIdentity && state.myIdentity.user_id)) {
+    ensureMyIdentityForTeam()
+      .then(function(){ renderTeamOnboarding('member'); })
+      .catch(function(e){ showToast('Could not create local user ID: '+e, 'error'); });
+  }
+}
+
+async function closeTeamOnboarding(markSeen) {
+  try {
+    if (markSeen) await setTeamOnboardingSeen();
+  } catch (e) {
+    showToast('Could not save onboarding state: '+e, 'error');
+  }
+  document.getElementById('modal-host').innerHTML = '';
+}
+
+function renderTeamOnboarding(mode) {
+  var me = state.myIdentity || null;
+  var userId = me && me.user_id ? me.user_id : 'Generating local user ID...';
+  var body = '';
+  if (mode === 'owner') {
+    body = '<h3 style="margin-top:0;">Owner or team admin setup</h3>'
+      + '<ol class="team-onboarding-steps">'
+      + '<li>Paste the company token issued by Skipi.</li>'
+      + '<li>Press Validate so the app stores the crewing ID.</li>'
+      + '<li>Open Team and press Claim owner access.</li>'
+      + '<li>Add teammates by their public user ID; Skipi will issue each teammate a personal token.</li>'
+      + '</ol>'
+      + '<div class="team-onboarding-actions">'
+      + '<button class="ghost" onclick="openTeamOnboarding(\'start\')">Back</button>'
+      + '<button onclick="teamOnboardingOpenConnection()">Open token settings</button>'
+      + '</div>';
+  } else if (mode === 'member') {
+    body = '<h3 style="margin-top:0;">Join an existing team</h3>'
+      + '<div style="color:var(--text2);font-size:13px;line-height:1.5;">Send this public user ID to your organization admin. Your private key stays on this device.</div>'
+      + '<div class="team-onboarding-id"><code>'+escapeHtml(userId)+'</code><button class="ghost" onclick="copyMyTeamUserId()">Copy</button></div>'
+      + '<ol class="team-onboarding-steps">'
+      + '<li>Your admin adds this ID in Team.</li>'
+      + '<li>The admin gives you a personal team token.</li>'
+      + '<li>Paste that token in Settings -> Company token and press Validate.</li>'
+      + '</ol>'
+      + '<div class="team-onboarding-actions">'
+      + '<button class="ghost" onclick="openTeamOnboarding(\'start\')">Back</button>'
+      + '<button class="ghost" onclick="teamOnboardingOpenConnection()">I have a token</button>'
+      + '<button onclick="teamOnboardingShowTeam()">Show Team screen</button>'
+      + '</div>';
+  } else {
+    body = '<div class="team-onboarding-options">'
+      + '<button class="team-onboarding-choice" onclick="openTeamOnboarding(\'owner\')">'
+      + '<strong>I manage the organization</strong>'
+      + '<span>I have, or will request, a company token. I will become the first owner/admin and add HR teammates.</span>'
+      + '</button>'
+      + '<button class="team-onboarding-choice" onclick="openTeamOnboarding(\'member\')">'
+      + '<strong>I am joining a team</strong>'
+      + '<span>I need my public user ID, then my boss/admin will add me and give me a personal team token.</span>'
+      + '</button>'
+      + '</div>'
+      + '<div class="team-onboarding-actions">'
+      + '<button class="ghost" onclick="closeTeamOnboarding(true)">Skip for now</button>'
+      + '</div>';
+  }
+  document.getElementById('modal-host').innerHTML =
+    '<div class="settings-overlay" onclick="if(event.target===this)closeTeamOnboarding(false)">'
+    + '<div class="team-onboarding-modal">'
+    + '<div class="team-onboarding-head">'
+    + '<div><h2>Set up Skipi Crewing access</h2><p>Choose how this app copy will join the organization. User ID is public; tokens and private keys stay separate.</p></div>'
+    + '<button class="ghost" onclick="closeTeamOnboarding(false)" style="padding:5px 10px;font-size:12px;">Close</button>'
+    + '</div>'
+    + '<div class="team-onboarding-body">'+body+'</div>'
+    + '</div></div>';
+}
+
+async function teamOnboardingOpenConnection() {
+  await closeTeamOnboarding(true);
+  openSettings('connection');
+}
+
+async function teamOnboardingShowTeam() {
+  await closeTeamOnboarding(true);
+  showView('team');
+}
+
+async function syncTeamRoleFromMembers() {
+  if (!state.teamMembers || !state.teamMembers.length) return;
+  var me = state.myIdentity || null;
+  if (!me || !me.user_id) {
+    try { me = await ensureMyIdentityForTeam(); } catch(e) { return; }
+  }
+  var mine = state.teamMembers.find(function(m){ return m.user_id === me.user_id; });
+  if (!mine) return;
+  var s = state.settings || {};
+  var next = Object.assign({}, s, {
+    organization_id: mine.organization_id || s.organization_id || '',
+    team_role: mine.role || s.team_role || '',
+    user_display_name: mine.display_name || s.user_display_name || ''
+  });
+  if (next.organization_id === s.organization_id
+      && next.team_role === s.team_role
+      && next.user_display_name === s.user_display_name) return;
+  await invoke('save_settings', { newSettings: next });
+  state.settings = next;
+}
+
 function renderTeamTree() {
   var lp = document.getElementById('left-panel');
   var count = (state.teamMembers || []).length;
@@ -996,6 +1137,7 @@ function renderTeamTree() {
     + '</div>'
     + '<div class="panel-tree">'
     + '<div class="tree-item active" style="padding-left:16px;"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+'</div></div></div>'
+    + '<div class="tree-item" style="padding-left:16px;" onclick="openTeamOnboarding(\'start\')"><span>?</span><div class="ti-title"><div>Setup guide</div><div class="ti-meta">Owner or member</div></div></div>'
     + '<div class="tree-item" style="padding-left:16px;" onclick="openSettings(\'connection\')"><span>🔌</span><div class="ti-title"><div>Company token</div><div class="ti-meta">Connection settings</div></div></div>'
     + '</div>';
 }
@@ -1005,6 +1147,7 @@ function renderTeamMain() {
   var me = state.myIdentity || null;
   var hasConnection = !!(s.bearer_token && s.crewing_id);
   var role = s.team_role || '';
+  var canManageTeam = role === 'owner' || role === 'admin';
   var members = state.teamMembers || [];
   var userId = me && me.user_id ? me.user_id : 'loading...';
   var issued = state.lastTeamMemberToken || null;
@@ -1025,7 +1168,10 @@ function renderTeamMain() {
   }).join('') : '<tr><td colspan="4" style="color:var(--text2);padding:14px 0;">No team members yet.</td></tr>';
 
   document.getElementById('main').innerHTML =
-    '<h1>Team</h1><div class="sub">Organization access for HR managers.</div>'
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;max-width:760px;">'
+    + '<div><h1>Team</h1><div class="sub">Organization access for HR managers.</div></div>'
+    + '<button class="ghost" onclick="openTeamOnboarding(\'start\')" style="padding:6px 12px;font-size:12px;">Setup guide</button>'
+    + '</div>'
     + '<div class="card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">'
     + '<div>'+connectionHtml+'</div>'
@@ -1045,7 +1191,8 @@ function renderTeamMain() {
     + '<div class="row"><div><label>User ID</label><input id="team-new-user-id" type="text" placeholder="teammate public user ID"></div>'
     + '<div><label>Name</label><input id="team-new-display-name" type="text" placeholder="Optional"></div></div>'
     + '<div class="row"><div><label>Role</label><select id="team-new-role"><option value="member">Member</option><option value="admin">Admin</option><option value="owner">Owner</option></select></div>'
-    + '<div style="display:flex;align-items:flex-end;"><button onclick="addTeamMember()" '+(hasConnection?'':'disabled')+'>Add member</button></div></div>'
+    + '<div style="display:flex;align-items:flex-end;"><button onclick="addTeamMember()" '+(hasConnection && canManageTeam?'':'disabled')+'>Add member</button></div></div>'
+    + (!hasConnection ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;">Validate a company token before adding teammates.</div>' : (!canManageTeam ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;">Only owners and admins can add teammates. If this is the first company device, claim owner access above.</div>' : ''))
     + '</div>'
     + (issued ? '<div class="card" style="border-color:var(--ok);">'
       + '<h3 style="margin-top:0;">Personal team token</h3>'
@@ -1089,6 +1236,7 @@ async function refreshTeamMembers(showErrors) {
   if (state.view === 'team') renderTeamMain();
   try {
     state.teamMembers = await invoke('list_team_members');
+    await syncTeamRoleFromMembers();
     state.teamLoading = false;
     if (state.view === 'team') { renderTeamTree(); renderTeamMain(); }
   } catch (e) {
@@ -5209,10 +5357,19 @@ async function activateCompanyToken() {
     });
     if (idEl) idEl.value = activation.crewing_id || '';
     if (companyEl && !companyEl.value.trim()) companyEl.value = activation.display_name || '';
-    state.settings = Object.assign({}, state.settings || {}, {
-      organization_id: activation.organization_id || ((state.settings||{}).organization_id || '')
+    var companyName = companyEl ? companyEl.value.trim() : ((state.settings||{}).company_name || '');
+    var next = Object.assign({}, state.settings || {}, {
+      server_url: serverUrl,
+      bearer_token: token,
+      crewing_id: activation.crewing_id || '',
+      organization_id: activation.organization_id || ((state.settings||{}).organization_id || ''),
+      company_name: companyName
     });
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
     showToast('Token valid for '+(activation.display_name || 'crewing'), 'success');
+    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
+    if (state.view === 'team') await refreshTeamMembers(false);
   } catch (e) {
     showToast('Token validation failed: '+e, 'error');
   }
@@ -5236,6 +5393,7 @@ async function saveSettings() {
     company_name: pick('s-company', s.company_name||''),
     user_display_name: s.user_display_name || '',
     team_role: s.team_role || '',
+    team_onboarding_seen: !!s.team_onboarding_seen,
     reply_to: pick('s-reply', s.reply_to||''),
     vault_path: pick('v-path', s.vault_path||''),
     recent_vaults: s.recent_vaults || [],
@@ -5417,7 +5575,8 @@ function applyTheme() {
   setupFileDragDrop();
 	  setTimeout(checkForUpdates, 2000);
 	  setTimeout(autoRegisterMessagingPubkey, 1500);
-	  maybePromptForFeedback('crewing-home');
+	  var onboardingShown = await maybeShowTeamOnboarding();
+	  if (!onboardingShown) maybePromptForFeedback('crewing-home');
   // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
   // applications) in sync with the server without surfacing any UI.
   setInterval(silentRefreshVacancies, 30000);

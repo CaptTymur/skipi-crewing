@@ -45,6 +45,7 @@ pub struct Settings {
     pub company_name: String,
     pub user_display_name: String,
     pub team_role: String,
+    pub team_onboarding_seen: bool,
     pub reply_to: String,
 
     // ----- Vault (multi-user shared storage) -----
