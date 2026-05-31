@@ -2,7 +2,7 @@
 #
 # Source stays in the private repository; public tester downloads are copied
 # to the public landing repo after the release job finishes.
-# macOS builds are paused from 2026-05-12 to save GitHub Actions minutes.
+# macOS builds are enabled for beta downloads published on skipi.app.
 
 name: Release
 
@@ -56,6 +56,12 @@ jobs:
           - platform: windows-latest
             rust_targets: x86_64-pc-windows-msvc
             name: Windows unsigned
+          - platform: macos-15-intel
+            rust_targets: x86_64-apple-darwin
+            name: macOS Intel
+          - platform: macos-latest
+            rust_targets: aarch64-apple-darwin
+            name: macOS Apple Silicon
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.name }})
@@ -120,8 +126,7 @@ jobs:
             |----------|------|
             | Windows | `.msi` / `.exe` (unsigned tester build) |
             | Linux | `.deb` / `.AppImage` / `.rpm` |
-
-            macOS beta artifacts are temporarily paused to save GitHub Actions minutes.
+            | macOS | `.dmg` / `.app.tar.gz` for Intel and Apple Silicon |
 
             > Private source build. Public tester links are published separately on skipi.app.
           releaseDraft: false

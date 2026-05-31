@@ -5,7 +5,8 @@ workflow now validates Azure Trusted Signing secrets before the Windows build
 and Tauri uses `src-tauri/tauri.windows.conf.json` to sign every Windows
 binary/installer with `trusted-signing-cli`.
 
-macOS builds are intentionally paused. This document covers Windows only.
+macOS beta artifacts are built unsigned for tester downloads. This document
+still covers Windows signing only.
 
 ## Current status
 
