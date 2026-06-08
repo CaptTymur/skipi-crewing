@@ -211,6 +211,25 @@ struct CrewingTeamMemberWire {
     role: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TeamChatMessage {
+    pub id: String,
+    pub broker_id: String,
+    pub sender_nickname: String,
+    pub body: String,
+    pub event_type: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct TeamChatMessageWire {
+    sender_nickname: String,
+    body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    event_type: Option<String>,
+    trigger_llm: bool,
+}
+
 fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
     let token = s.bearer_token.trim();
     if token.is_empty() {
@@ -225,6 +244,20 @@ fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
         token.to_string(),
         crewing_id.to_string(),
     ))
+}
+
+fn team_chat_nickname(s: &Settings) -> String {
+    let candidates = [
+        s.user_display_name.trim(),
+        s.company_name.trim(),
+        s.profile.legal_name.trim(),
+    ];
+    for candidate in candidates {
+        if !candidate.is_empty() {
+            return candidate.chars().take(40).collect();
+        }
+    }
+    "Crewing".to_string()
 }
 
 #[tauri::command]
@@ -291,15 +324,27 @@ fn claim_team_owner(
     let display = display_name
         .and_then(|v| {
             let trimmed = v.trim().to_string();
-            if trimmed.is_empty() { None } else { Some(trimmed) }
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
         })
         .or_else(|| {
             let trimmed = settings.user_display_name.trim();
-            if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
         })
         .or_else(|| {
             let trimmed = settings.company_name.trim();
-            if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
         });
     let body = CrewingTeamMemberWire {
         user_id: me.user_id,
@@ -307,13 +352,8 @@ fn claim_team_owner(
         role: "owner".into(),
     };
     let path = format!("/api/crewings/{}/team/owner", crewing_id);
-    let member: CrewingTeamMember = api::post_json(
-        Some(&server_url),
-        Some(&bearer_token),
-        &path,
-        &body,
-        15,
-    )?;
+    let member: CrewingTeamMember =
+        api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)?;
 
     let mut next = state.settings.lock().unwrap().clone();
     next.organization_id = member.organization_id.clone();
@@ -353,7 +393,11 @@ fn add_team_member(
         user_id: user_id.trim().to_string(),
         display_name: display_name.and_then(|v| {
             let trimmed = v.trim().to_string();
-            if trimmed.is_empty() { None } else { Some(trimmed) }
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
         }),
         role,
     };
@@ -367,6 +411,52 @@ fn remove_team_member(user_id: String, state: tauri::State<AppState>) -> Result<
     let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
     let path = format!("/api/crewings/{}/team/{}", crewing_id, user_id.trim());
     api::delete_empty(Some(&server_url), Some(&bearer_token), &path, 15)
+}
+
+#[tauri::command]
+fn fetch_team_chat_messages(
+    since: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<Vec<TeamChatMessage>, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let mut path = format!("/api/crewings/{}/team-chat/messages?limit=200", crewing_id);
+    if let Some(ts) = since.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
+        path.push_str("&since=");
+        path.push_str(&urlenc(ts));
+    }
+    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
+}
+
+#[tauri::command]
+fn send_team_chat_message(
+    body: String,
+    trigger_llm: Option<bool>,
+    event_type: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<TeamChatMessage, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        return Err("Empty message.".into());
+    }
+    let event_type = event_type.and_then(|v| {
+        let t = v.trim().to_string();
+        if t.is_empty() {
+            None
+        } else {
+            Some(t)
+        }
+    });
+    let payload = TeamChatMessageWire {
+        sender_nickname: team_chat_nickname(&settings),
+        body: trimmed.to_string(),
+        event_type,
+        trigger_llm: trigger_llm.unwrap_or(false),
+    };
+    let path = format!("/api/crewings/{}/team-chat/messages", crewing_id);
+    api::post_json(Some(&server_url), Some(&bearer_token), &path, &payload, 20)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -522,10 +612,7 @@ fn ensure_vacancy_connection_settings(settings: &Settings) -> Result<(), String>
     Ok(())
 }
 
-fn vacancy_wire_from_draft<'a>(
-    draft: &'a VacancyDraft,
-    settings: &'a Settings,
-) -> VacancyWire<'a> {
+fn vacancy_wire_from_draft<'a>(draft: &'a VacancyDraft, settings: &'a Settings) -> VacancyWire<'a> {
     let imo: Option<i64> = draft
         .vessel_imo
         .as_ref()
@@ -728,6 +815,12 @@ pub struct ServerVacancy {
     pub us_visa_required: bool,
     #[serde(default)]
     pub schengen_visa_required: bool,
+    #[serde(default)]
+    pub required_certs: Option<Vec<String>>,
+    #[serde(default)]
+    pub languages: Option<Vec<String>>,
+    #[serde(default)]
+    pub nationalities: Option<Vec<String>>,
     pub salary_negotiable: bool,
     pub description: Option<String>,
     pub reply_to: String,
@@ -856,7 +949,11 @@ fn fetch_compliance_profiles(
     let path = format!(
         "/api/compliance-profiles?crewing_id={}&include_archived={}",
         urlenc(&settings.crewing_id),
-        if include_archived.unwrap_or(false) { "true" } else { "false" }
+        if include_archived.unwrap_or(false) {
+            "true"
+        } else {
+            "false"
+        }
     );
     let parsed: ComplianceProfileListResp = api::get_json(
         Some(&settings.server_url),
@@ -1764,6 +1861,8 @@ pub fn run() {
             list_team_members,
             add_team_member,
             remove_team_member,
+            fetch_team_chat_messages,
+            send_team_chat_message,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,

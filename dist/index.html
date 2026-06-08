@@ -132,6 +132,48 @@ h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .team-onboarding-id code { flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); word-break: break-all; }
 .team-onboarding-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 @media (max-width: 760px) { .team-onboarding-options { grid-template-columns: 1fr; } .team-onboarding-actions { justify-content: stretch; } .team-onboarding-actions button { flex: 1; } }
+.team-workspace { max-width: 1120px; min-height: calc(100vh - 112px); display: flex; flex-direction: column; gap: 14px; }
+.team-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.team-head h1 { margin: 0 0 4px; }
+.team-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--text2); font-size: 12px; }
+.team-status .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); color: var(--text2); }
+.team-status .status-pill.ok { color: var(--ok); border-color: rgba(34,197,94,0.35); }
+.team-status .status-pill.warn { color: var(--warn); border-color: rgba(245,158,11,0.35); }
+.team-chat-shell { display: grid; grid-template-rows: auto minmax(300px, 1fr) auto auto; min-height: 520px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.team-chat-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.team-name-field { display: flex; align-items: center; gap: 7px; min-width: min(280px, 100%); }
+.team-name-field label { margin: 0; white-space: nowrap; }
+.team-name-field input { height: 30px; padding: 5px 8px; }
+.team-targets { display: inline-flex; gap: 4px; align-items: center; }
+.team-target-pill { padding: 5px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); cursor: pointer; user-select: none; font-size: 12px; }
+.team-target-pill:hover { color: var(--text); border-color: var(--accent); }
+.team-target-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+.team-target-pill.ai.active { background: #6554d9; border-color: #7a6bf2; }
+.team-chat-hint { color: var(--text2); font-size: 12px; margin-left: auto; }
+.team-chat-stream { min-height: 0; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 7px; background: var(--panel2); }
+.team-chat-empty { color: var(--text2); text-align: center; padding: 54px 20px; font-size: 13px; line-height: 1.5; }
+.team-chat-day { align-self: center; color: var(--text2); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; }
+.team-chat-msg { max-width: min(720px, 86%); padding: 8px 11px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); }
+.team-chat-msg.mine { align-self: flex-end; background: rgba(79,142,247,0.15); border-color: rgba(79,142,247,0.42); }
+.team-chat-msg.ai { align-self: flex-start; background: rgba(101,84,217,0.16); border-color: rgba(122,107,242,0.5); }
+.team-chat-msg.event { align-self: center; max-width: 86%; background: transparent; border: 0; color: var(--text2); font-size: 12px; text-align: center; padding: 3px 8px; }
+.team-chat-meta { display: flex; gap: 7px; align-items: center; color: var(--text2); font-size: 10px; margin-bottom: 3px; }
+.team-chat-meta .nick { color: var(--text); font-weight: 700; }
+.team-chat-msg.ai .team-chat-meta .nick { color: #a99dff; }
+.team-chat-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; font-size: 13px; }
+.team-composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: stretch; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--bg); }
+.team-composer textarea { min-height: 74px; max-height: 180px; resize: vertical; }
+.team-composer-actions { display: flex; flex-direction: column; gap: 7px; min-width: 142px; }
+.team-composer-actions button { min-height: 32px; padding: 7px 12px; }
+.team-chat-error { color: var(--warn); font-size: 12px; padding: 0 12px 10px; background: var(--bg); }
+.team-management { display: grid; grid-template-columns: minmax(0,1fr) minmax(300px,420px); gap: 14px; align-items: start; }
+.team-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.team-panel h3 { margin: 0 0 12px; font-size: 15px; }
+.team-members-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.team-members-table th { color: var(--text2); text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); padding: 8px 0; }
+.team-members-table td { border-bottom: 1px solid rgba(42,49,60,0.55); padding: 9px 6px 9px 0; vertical-align: top; }
+@media (max-width: 940px) { .team-management { grid-template-columns: 1fr; } .team-chat-hint { flex-basis: 100%; margin-left: 0; } }
+@media (max-width: 760px) { .team-head { flex-direction: column; } .team-composer { grid-template-columns: 1fr; } .team-composer-actions { flex-direction: row; min-width: 0; flex-wrap: wrap; } .team-composer-actions button { flex: 1; } .team-chat-msg { max-width: 94%; } }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .row.full { grid-template-columns: 1fr; }
 label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
@@ -478,6 +520,34 @@ function taxonomyLabels(kind) {
   return (t[kind]||[]).map(function(x){return x.label;});
 }
 
+function taxonomyItems(kind) {
+  var t = TAXONOMY || TAXONOMY_FALLBACK;
+  return t[kind] || [];
+}
+
+function canonicalTaxonomyLabel(kind, value) {
+  var raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  var needle = raw.toLowerCase();
+  if (kind === 'vessel_types' && needle === 'general cargo') return 'General Cargo / Heavy Lift';
+  var items = taxonomyItems(kind);
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i] || {};
+    var label = String(item.label || item.id || '').trim();
+    var candidates = [item.label, item.id].concat(item.aliases || []);
+    for (var j = 0; j < candidates.length; j++) {
+      if (String(candidates[j] == null ? '' : candidates[j]).trim().toLowerCase() === needle) {
+        return label || raw;
+      }
+    }
+  }
+  return raw;
+}
+
+function canonicalNationalityLabel(value) {
+  return canonicalTaxonomyLabel('nationalities', value);
+}
+
 function optionHtml(value, selectedValue) {
   var val = value || '';
   return '<option value="'+escapeAttr(val)+'"'+(val === (selectedValue || '') ? ' selected' : '')+'>'+escapeHtml(val)+'</option>';
@@ -621,7 +691,11 @@ function cdValues(id) {
 
 function setCdValues(id, values) {
   var want = {};
-  (values || []).forEach(function(v){ want[String(v)] = true; });
+  (values || []).forEach(function(v){
+    want[String(v)] = true;
+    var canonical = canonicalNationalityLabel(v);
+    if (canonical) want[canonical] = true;
+  });
   document.querySelectorAll('input[data-cd-group="'+id+'"]').forEach(function(cb){
     cb.checked = !!want[cb.value];
   });
@@ -741,6 +815,15 @@ var state = {
   teamMembers: [],
   teamLoading: false,
   lastTeamMemberToken: null,
+  teamChat: {
+    messages: [],
+    lastTs: null,
+    polling: false,
+    pollTimer: null,
+    sendTarget: 'ai',
+    draftText: '',
+    lastError: '',
+  },
   pendingUpdate: null,
   // Phase 2 messaging
   myIdentity: null,
@@ -921,7 +1004,9 @@ function suggestedCrewingVaultName() {
 
 // ------------- nav -------------
 function showView(v) {
+  var previousView = state.view;
   state.view = v;
+  if (previousView === 'team' && v !== 'team') stopTeamChatPoll();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
   ['vacancies','mailings','compliance','team','seafarers','documents'].forEach(function(k){
@@ -1136,13 +1221,28 @@ function renderTeamTree() {
     + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="refreshTeamMembers(true)" title="Refresh">↻</button></span>'
     + '</div>'
     + '<div class="panel-tree">'
-    + '<div class="tree-item active" style="padding-left:16px;"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+'</div></div></div>'
+    + '<div class="tree-item active" style="padding-left:16px;"><span>💬</span><div class="ti-title"><div>Team chat</div><div class="ti-meta">AI Assistant and teammates</div></div></div>'
+    + '<div class="tree-item" style="padding-left:16px;" onclick="var el=document.getElementById(\'team-access-section\');if(el)el.scrollIntoView({block:\'start\'});"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+'</div></div></div>'
     + '<div class="tree-item" style="padding-left:16px;" onclick="openTeamOnboarding(\'start\')"><span>?</span><div class="ti-title"><div>Setup guide</div><div class="ti-meta">Owner or member</div></div></div>'
     + '<div class="tree-item" style="padding-left:16px;" onclick="openSettings(\'connection\')"><span>🔌</span><div class="ti-title"><div>Company token</div><div class="ti-meta">Connection settings</div></div></div>'
     + '</div>';
 }
 
-function renderTeamMain() {
+function teamConnectionStatusHtml() {
+  var s = state.settings || {};
+  var hasConnection = !!(s.bearer_token && s.crewing_id);
+  var role = s.team_role || '';
+  var members = state.teamMembers || [];
+  return '<div class="team-status">'
+    + (hasConnection
+      ? '<span class="status-pill ok">● Connected</span><span class="status-pill">Crewing '+escapeHtml(String(s.crewing_id || '').slice(0,8))+'</span>'
+      : '<span class="status-pill warn">● Token not validated</span>')
+    + '<span class="status-pill">'+(role ? ('Role: '+escapeHtml(role)) : 'No team role')+'</span>'
+    + '<span class="status-pill">'+members.length+' member'+(members.length===1?'':'s')+'</span>'
+    + '</div>';
+}
+
+function renderTeamAccessManagementHtml() {
   var s = state.settings || {};
   var me = state.myIdentity || null;
   var hasConnection = !!(s.bearer_token && s.crewing_id);
@@ -1151,9 +1251,6 @@ function renderTeamMain() {
   var members = state.teamMembers || [];
   var userId = me && me.user_id ? me.user_id : 'loading...';
   var issued = state.lastTeamMemberToken || null;
-  var connectionHtml = hasConnection
-    ? '<span style="color:var(--ok);">● Connected</span><span style="color:var(--text2);margin-left:10px;">Crewing '+escapeHtml(s.crewing_id)+'</span>'
-    : '<span style="color:var(--warn);">● Company token not validated</span> <button class="ghost" onclick="openSettings(\'connection\')" style="padding:4px 10px;font-size:11px;margin-left:8px;">Open settings</button>';
   var teamRows = members.length ? members.map(function(m){
     var isMe = me && m.user_id === me.user_id;
     var remove = isMe
@@ -1167,16 +1264,9 @@ function renderTeamMain() {
       + '</tr>';
   }).join('') : '<tr><td colspan="4" style="color:var(--text2);padding:14px 0;">No team members yet.</td></tr>';
 
-  document.getElementById('main').innerHTML =
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;max-width:760px;">'
-    + '<div><h1>Team</h1><div class="sub">Organization access for HR managers.</div></div>'
-    + '<button class="ghost" onclick="openTeamOnboarding(\'start\')" style="padding:6px 12px;font-size:12px;">Setup guide</button>'
-    + '</div>'
-    + '<div class="card">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">'
-    + '<div>'+connectionHtml+'</div>'
-    + '<div style="color:var(--text2);font-size:12px;">'+(role ? ('Role: '+escapeHtml(role)) : 'No team role on this device')+'</div>'
-    + '</div>'
+  return '<div class="team-management" id="team-access-section">'
+    + '<div class="team-panel">'
+    + '<h3>Team access</h3>'
     + '<label>Your public user ID</label>'
     + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
     + '<code style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:9px 10px;word-break:break-all;">'+escapeHtml(userId)+'</code>'
@@ -1185,8 +1275,7 @@ function renderTeamMain() {
     + '<div class="row"><div><label>Your name</label><input id="team-display-name" type="text" value="'+escapeAttr(s.user_display_name || s.company_name || '')+'" placeholder="Name shown to teammates"></div>'
     + '<div style="display:flex;align-items:flex-end;"><button onclick="claimOwnerAccess()" '+(hasConnection?'':'disabled')+'>Claim owner access</button></div></div>'
     + '<div style="font-size:12px;color:var(--text2);line-height:1.5;">User ID is public. The private key stays on this device and is not sent to Skipi.</div>'
-    + '</div>'
-    + '<div class="card">'
+    + '<div style="height:1px;background:var(--border);margin:16px 0;"></div>'
     + '<h3 style="margin-top:0;">Add team member</h3>'
     + '<div class="row"><div><label>User ID</label><input id="team-new-user-id" type="text" placeholder="teammate public user ID"></div>'
     + '<div><label>Name</label><input id="team-new-display-name" type="text" placeholder="Optional"></div></div>'
@@ -1194,26 +1283,68 @@ function renderTeamMain() {
     + '<div style="display:flex;align-items:flex-end;"><button onclick="addTeamMember()" '+(hasConnection && canManageTeam?'':'disabled')+'>Add member</button></div></div>'
     + (!hasConnection ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;">Validate a company token before adding teammates.</div>' : (!canManageTeam ? '<div style="font-size:12px;color:var(--text2);line-height:1.5;">Only owners and admins can add teammates. If this is the first company device, claim owner access above.</div>' : ''))
     + '</div>'
-    + (issued ? '<div class="card" style="border-color:var(--ok);">'
+    + '<div class="team-panel">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
+    + '<h3 style="margin:0;">Members</h3>'
+    + '<button class="ghost" onclick="refreshTeamMembers(true)" style="padding:5px 12px;font-size:12px;">Refresh</button>'
+    + '</div>'
+    + (issued ? '<div style="border:1px solid rgba(34,197,94,0.5);border-radius:6px;padding:12px;margin-bottom:14px;">'
       + '<h3 style="margin-top:0;">Personal team token</h3>'
       + '<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">Give this token to '+escapeHtml(issued.user_id)+'. It is shown once here; the employee enters it in Settings → Company token.</div>'
       + '<div style="display:flex;gap:8px;align-items:center;"><code style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:9px 10px;word-break:break-all;">'+escapeHtml(issued.token)+'</code>'
       + '<button class="ghost" onclick="copyIssuedTeamToken()" style="padding:8px 12px;">Copy</button>'
       + '<button class="ghost" onclick="state.lastTeamMemberToken=null;renderTeamMain();" style="padding:8px 12px;">Hide</button></div>'
       + '</div>' : '')
-    + '<div class="card">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
-    + '<h3 style="margin:0;">Members</h3>'
-    + '<button class="ghost" onclick="refreshTeamMembers(true)" style="padding:5px 12px;font-size:12px;">Refresh</button>'
-    + '</div>'
     + (state.teamLoading ? '<div style="color:var(--text2);margin-bottom:10px;">Loading team...</div>' : '')
-    + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text2);text-align:left;border-bottom:1px solid var(--border);"><th style="padding:8px 0;">User ID</th><th>Name</th><th>Role</th><th></th></tr></thead><tbody>'+teamRows+'</tbody></table>'
+    + '<table class="team-members-table"><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th></th></tr></thead><tbody>'+teamRows+'</tbody></table>'
+    + '</div>'
     + '</div>';
+}
+
+function renderTeamMain() {
+  var s = state.settings || {};
+  var chat = state.teamChat || {};
+  var currentName = s.user_display_name || s.company_name || s.profile && s.profile.legal_name || '';
+  document.getElementById('main').innerHTML =
+    '<div class="team-workspace">'
+    + '<div class="team-head">'
+    + '<div><h1>Team</h1><div class="sub" style="margin-bottom:0;">Shared workspace for crewing operators and the AI Assistant.</div>'+teamConnectionStatusHtml()+'</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">'
+    + '<button class="ghost" onclick="openTeamOnboarding(\'start\')" style="padding:6px 12px;font-size:12px;">Setup guide</button>'
+    + '<button class="ghost" onclick="openSettings(\'connection\')" style="padding:6px 12px;font-size:12px;">Connection</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="team-chat-shell">'
+    + '<div class="team-chat-toolbar">'
+    + '<div class="team-name-field"><label>Name</label><input id="team-chat-display-name" type="text" value="'+escapeAttr(currentName)+'" placeholder="Shown in team chat" oninput="state.settings=state.settings||{};state.settings.user_display_name=this.value;renderTeamChatStream();" onblur="saveTeamChatNameInline()"></div>'
+    + '<div class="team-targets">'
+    + '<span class="team-target-pill ai" id="team-target-ai" onclick="setTeamChatTarget(\'ai\')">🤖 AI Assistant</span>'
+    + '<span class="team-target-pill" id="team-target-team" onclick="setTeamChatTarget(\'team\')">👥 Team</span>'
+    + '</div>'
+    + '<span class="team-chat-hint" id="team-chat-hint"></span>'
+    + '<button class="ghost" onclick="teamChatPollOnce(false,true)" style="padding:5px 10px;font-size:12px;margin-left:0;">↻</button>'
+    + '</div>'
+    + '<div class="team-chat-stream" id="team-chat-stream"></div>'
+    + '<div class="team-composer">'
+    + '<textarea id="team-chat-input" placeholder="Message" oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDown(event)">'+escapeHtml(chat.draftText || '')+'</textarea>'
+    + '<div class="team-composer-actions">'
+    + '<button id="team-chat-send-btn" onclick="sendTeamChatMessage()">Send</button>'
+    + '<button class="ghost" onclick="createVacancyDraftFromTeamText()">Draft vacancy</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="team-chat-error" id="team-chat-error" style="display:none;"></div>'
+    + '</div>'
+    + renderTeamAccessManagementHtml()
+    + '</div>';
+  setTeamChatTarget(chat.sendTarget || 'ai', true);
+  renderTeamChatStream();
+  renderTeamChatError();
 }
 
 async function renderTeamView() {
   renderTeamTree();
   renderTeamMain();
+  startTeamChatPoll();
   try {
     await ensureMyIdentityForTeam();
     if (state.view !== 'team') return;
@@ -1222,6 +1353,440 @@ async function renderTeamView() {
     showToast('Could not load local user ID: '+e, 'error');
   }
   await refreshTeamMembers(false);
+}
+
+function startTeamChatPoll() {
+  if (!state.teamChat) state.teamChat = {};
+  teamChatPollOnce(true, false);
+  if (state.teamChat.pollTimer) return;
+  state.teamChat.pollTimer = setInterval(function(){
+    if (document.hidden || state.view !== 'team') return;
+    teamChatPollOnce(false, false);
+  }, 10000);
+}
+
+function stopTeamChatPoll() {
+  if (state.teamChat && state.teamChat.pollTimer) {
+    clearInterval(state.teamChat.pollTimer);
+    state.teamChat.pollTimer = null;
+  }
+}
+
+async function teamChatPollOnce(initial, showErrors) {
+  var s = state.settings || {};
+  if (!state.teamChat) state.teamChat = {};
+  if (!s.bearer_token || !s.crewing_id) {
+    state.teamChat.lastError = 'Validate a company token to use team chat.';
+    renderTeamChatError();
+    return;
+  }
+  if (state.teamChat.polling) return;
+  state.teamChat.polling = true;
+  try {
+    var args = {};
+    if (state.teamChat.lastTs && !initial) args.since = state.teamChat.lastTs;
+    var rows = await invoke('fetch_team_chat_messages', args);
+    if (Array.isArray(rows)) {
+      if (initial && !(state.teamChat.messages || []).length) {
+        state.teamChat.messages = rows;
+      } else {
+        mergeTeamChatMessages(rows);
+      }
+      updateTeamChatLastTs();
+      state.teamChat.lastError = '';
+      renderTeamChatStream();
+    }
+  } catch (e) {
+    state.teamChat.lastError = ''+e;
+    if (showErrors) showToast('Team chat refresh failed: '+e, 'error');
+    renderTeamChatError();
+  } finally {
+    state.teamChat.polling = false;
+  }
+}
+
+function mergeTeamChatMessages(rows) {
+  var existing = {};
+  state.teamChat.messages = state.teamChat.messages || [];
+  state.teamChat.messages.forEach(function(m){ if (m && m.id) existing[m.id] = true; });
+  (rows || []).forEach(function(m){
+    if (m && m.id && !existing[m.id]) {
+      state.teamChat.messages.push(m);
+      existing[m.id] = true;
+    }
+  });
+  state.teamChat.messages.sort(function(a,b){
+    return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+  });
+}
+
+function updateTeamChatLastTs() {
+  var msgs = state.teamChat.messages || [];
+  if (!msgs.length) return;
+  state.teamChat.lastTs = msgs[msgs.length - 1].created_at || state.teamChat.lastTs;
+}
+
+function teamChatMyNickname() {
+  var s = state.settings || {};
+  var p = s.profile || {};
+  return (s.user_display_name || s.company_name || p.legal_name || 'Crewing').trim();
+}
+
+function teamChatIsAi(m) {
+  return /^(🤖|ai\b|assistant\b|llm\b)/i.test(String(m && m.sender_nickname || '').trim());
+}
+
+function formatTeamChatTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d)) return String(iso).slice(11,16);
+  return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderTeamChatStream() {
+  var stream = document.getElementById('team-chat-stream');
+  if (!stream) return;
+  var msgs = state.teamChat && state.teamChat.messages || [];
+  if (!msgs.length) {
+    stream.innerHTML = '<div class="team-chat-empty">Team chat is ready. Ask AI Assistant or send a message to the crew team.</div>';
+    return;
+  }
+  var mine = teamChatMyNickname();
+  var html = '';
+  var lastDay = '';
+  msgs.forEach(function(m){
+    var day = (m.created_at || '').slice(0,10);
+    if (day && day !== lastDay) {
+      html += '<div class="team-chat-day">'+escapeHtml(day)+'</div>';
+      lastDay = day;
+    }
+    if (m.event_type) {
+      html += '<div class="team-chat-msg event">'+escapeHtml(m.body || '')+' <span style="opacity:.7;">'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>';
+      return;
+    }
+    var isMine = String(m.sender_nickname || '') === mine;
+    var isAi = teamChatIsAi(m);
+    var cls = 'team-chat-msg' + (isAi ? ' ai' : (isMine ? ' mine' : ''));
+    html += '<div class="'+cls+'">'
+      + '<div class="team-chat-meta"><span class="nick">'+escapeHtml(m.sender_nickname || 'Crewing')+'</span><span>'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>'
+      + '<div class="team-chat-body">'+escapeHtml(m.body || '')+'</div>'
+      + '</div>';
+  });
+  stream.innerHTML = html;
+  requestAnimationFrame(function(){ stream.scrollTop = stream.scrollHeight; });
+}
+
+function renderTeamChatError() {
+  var el = document.getElementById('team-chat-error');
+  if (!el) return;
+  var msg = state.teamChat && state.teamChat.lastError || '';
+  el.style.display = msg ? '' : 'none';
+  el.textContent = msg;
+}
+
+async function saveTeamChatNameInline() {
+  var el = document.getElementById('team-chat-display-name');
+  if (!el) return;
+  var next = Object.assign({}, state.settings || {}, { user_display_name: (el.value || '').trim() });
+  try {
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    renderTeamChatStream();
+  } catch (e) {
+    showToast('Name save failed: '+e, 'error');
+  }
+}
+
+function setTeamChatTarget(target, noFocus) {
+  if (!state.teamChat) state.teamChat = {};
+  if (target !== 'team') target = 'ai';
+  state.teamChat.sendTarget = target;
+  var ai = document.getElementById('team-target-ai');
+  var team = document.getElementById('team-target-team');
+  var hint = document.getElementById('team-chat-hint');
+  var btn = document.getElementById('team-chat-send-btn');
+  var input = document.getElementById('team-chat-input');
+  if (ai) ai.classList.toggle('active', target === 'ai');
+  if (team) team.classList.toggle('active', target === 'team');
+  if (hint) hint.textContent = target === 'ai'
+    ? 'AI replies in this shared room.'
+    : 'Message goes to teammates only.';
+  if (btn) btn.textContent = target === 'ai' ? 'Ask AI' : 'Send';
+  if (input && !noFocus) input.focus();
+}
+
+function teamChatKeyDown(ev) {
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    sendTeamChatMessage();
+  }
+}
+
+async function sendTeamChatMessage() {
+  var ta = document.getElementById('team-chat-input');
+  if (!ta) return;
+  var body = (ta.value || '').trim();
+  if (!body) return;
+  var sendBtn = document.getElementById('team-chat-send-btn');
+  var triggerLlm = (state.teamChat && state.teamChat.sendTarget || 'ai') === 'ai';
+  ta.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
+  try {
+    var msg = await invoke('send_team_chat_message', { body: body, triggerLlm: triggerLlm, eventType: null });
+    state.teamChat.draftText = '';
+    ta.value = '';
+    mergeTeamChatMessages(msg ? [msg] : []);
+    updateTeamChatLastTs();
+    state.teamChat.lastError = '';
+    renderTeamChatStream();
+    renderTeamChatError();
+    if (triggerLlm) {
+      showToast('AI Assistant is working. The reply will appear in Team.', 'info');
+      setTimeout(function(){ teamChatPollOnce(false, false); }, 1400);
+      setTimeout(function(){ teamChatPollOnce(false, false); }, 4200);
+    }
+  } catch (e) {
+    state.teamChat.lastError = ''+e;
+    renderTeamChatError();
+    showToast('Send failed: '+e, 'error');
+  } finally {
+    ta.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
+    ta.focus();
+  }
+}
+
+function teamVacancyDraftSourceText() {
+  var ta = document.getElementById('team-chat-input');
+  var text = ta ? (ta.value || '').trim() : '';
+  if (text) return text;
+  var msgs = state.teamChat && state.teamChat.messages || [];
+  for (var i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i] && !msgs[i].event_type && msgs[i].body) return String(msgs[i].body).trim();
+  }
+  return '';
+}
+
+function createVacancyDraftFromTeamText() {
+  var text = teamVacancyDraftSourceText();
+  if (!text) {
+    showToast('Type vacancy details first, or select a recent team/AI message.', 'warn');
+    return;
+  }
+  var draft = parseVacancyDraftText(text);
+  state.newVacancyPrefill = draft;
+  state.editingVacancyId = null;
+  showToast('Vacancy draft prepared. Review required fields before posting.', 'success');
+  showView('new');
+}
+
+function firstFieldText(text, names) {
+  var lines = String(text || '').split(/\r?\n/);
+  var nameRe = names.map(function(n){ return n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|');
+  var reLine = new RegExp('^\\s*(?:' + nameRe + ')\\s*[:\\-]\\s*(.+)\\s*$', 'i');
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(reLine);
+    if (m && m[1]) return cleanDraftValue(m[1]);
+  }
+  var reInline = new RegExp('(?:' + nameRe + ')\\s*[:\\-]\\s*([^\\n.;]+)', 'i');
+  var found = String(text || '').match(reInline);
+  return found && found[1] ? cleanDraftValue(found[1]) : '';
+}
+
+function cleanDraftValue(value) {
+  return String(value || '').replace(/\s+/g, ' ').replace(/[,;.\s]+$/, '').trim();
+}
+
+function taxonomyLabelOrEmpty(kind, label) {
+  var canonical = canonicalTaxonomyLabel(kind, label);
+  var labels = taxonomyLabels(kind);
+  var lower = canonical.toLowerCase();
+  for (var i = 0; i < labels.length; i++) {
+    if (String(labels[i]).toLowerCase() === lower) return labels[i];
+  }
+  return canonical && canonical !== label ? canonical : '';
+}
+
+function detectDraftRank(text) {
+  var tests = [
+    ['Chief Engineer', /\b(c\/e|chief\s+engineer|chief\s+eng(?:ineer)?|ce)\b/i],
+    ['Second Engineer', /\b(2\/e|2nd\s+engineer|second\s+engineer|second\s+eng|2\s*eng)\b/i],
+    ['Third Engineer', /\b(3\/e|3rd\s+engineer|third\s+engineer|third\s+eng|3\s*eng)\b/i],
+    ['Electrical Technical Officer', /\b(eto|electro(?:\s+technical)?\s+officer)\b/i],
+    ['Chief Officer', /\b(c\/o|chief\s+officer|chief\s+mate|1st\s+officer|first\s+officer|1\s*off)\b/i],
+    ['Second Officer', /\b(2\/o|2nd\s+officer|second\s+officer|2\s*off|second\s+mate)\b/i],
+    ['Third Officer', /\b(3\/o|3rd\s+officer|third\s+officer|3\s*off|third\s+mate)\b/i],
+    ['Master', /\b(master|captain|capt)\b/i],
+    ['Bosun', /\b(bosun|boatswain)\b/i],
+    ['Able Seaman', /\b(ab|able\s+seaman)\b/i],
+    ['Ordinary Seaman', /\b(os|ordinary\s+seaman)\b/i],
+    ['Cook', /\b(cook|chief\s+cook)\b/i],
+    ['Motorman', /\b(motorman|oiler)\b/i],
+  ];
+  for (var i = 0; i < tests.length; i++) {
+    if (tests[i][1].test(text)) return taxonomyLabelOrEmpty('positions', tests[i][0]) || tests[i][0];
+  }
+  var labels = taxonomyLabels('positions');
+  var low = String(text || '').toLowerCase();
+  for (var j = 0; j < labels.length; j++) {
+    if (low.indexOf(String(labels[j]).toLowerCase()) !== -1) return labels[j];
+  }
+  return '';
+}
+
+function detectDraftVesselType(text) {
+  var tests = [
+    ['LNG Carrier', /\blng\b/i],
+    ['LPG Carrier', /\blpg\b/i],
+    ['Tanker (Chemical)', /\b(chemical\s+tanker|chem\s+tanker)\b/i],
+    ['Tanker (Crude)', /\b(crude\s+tanker|aframax|suezmax|vlcc)\b/i],
+    ['Tanker (Product)', /\b(product\s+tanker|mr\s+tanker|oil\s+tanker|tanker)\b/i],
+    ['Bulk Carrier', /\b(bulk\s*carrier|bulk\s*car\b|bulker|handymax|supramax|panamax|kamsarmax|cape(?:size)?)\b/i],
+    ['General Cargo / Heavy Lift', /\b(general\s+cargo|heavy\s+lift|mpp|multi\s*purpose)\b/i],
+    ['Container', /\b(container|boxship)\b/i],
+    ['RoRo', /\b(ro-?ro|roro)\b/i],
+    ['Reefer', /\breefer\b/i],
+    ['Offshore', /\b(offshore|psv|ahts)\b/i],
+    ['Cruise', /\bcruise\b/i],
+    ['Ferry', /\bferry\b/i],
+    ['Tug', /\btug\b/i],
+    ['Yacht', /\byacht\b/i],
+  ];
+  for (var i = 0; i < tests.length; i++) {
+    if (tests[i][1].test(text)) return taxonomyLabelOrEmpty('vessel_types', tests[i][0]) || tests[i][0];
+  }
+  var labels = taxonomyLabels('vessel_types');
+  var low = String(text || '').toLowerCase();
+  for (var j = 0; j < labels.length; j++) {
+    if (low.indexOf(String(labels[j]).toLowerCase()) !== -1) return labels[j];
+  }
+  return '';
+}
+
+function detectDraftNationalities(text) {
+  var candidates = [
+    ['Ukraine', /\b(ukraine|ukrainian|ukr)\b/i],
+    ['Russia', /\b(russia|russian|rus)\b/i],
+    ['India', /\b(india|indian)\b/i],
+    ['Philippines', /\b(philippines|filipino|philippine|ph)\b/i],
+    ['Indonesia', /\b(indonesia|indonesian)\b/i],
+    ['Sri Lanka', /\b(sri\s*lanka|sri\s*lankan)\b/i],
+    ['Georgia', /\b(georgia|georgian)\b/i],
+    ['Turkey', /\b(turkey|turkish)\b/i],
+    ['Romania', /\b(romania|romanian)\b/i],
+    ['Bulgaria', /\b(bulgaria|bulgarian)\b/i],
+    ['Poland', /\b(poland|polish)\b/i],
+    ['Latvia', /\b(latvia|latvian)\b/i],
+    ['Lithuania', /\b(lithuania|lithuanian)\b/i],
+    ['Estonia', /\b(estonia|estonian)\b/i],
+    ['Croatia', /\b(croatia|croatian)\b/i],
+    ['Serbia', /\b(serbia|serbian)\b/i],
+    ['China', /\b(china|chinese)\b/i],
+    ['Egypt', /\b(egypt|egyptian)\b/i],
+    ['Myanmar', /\b(myanmar|burmese)\b/i],
+    ['Pakistan', /\b(pakistan|pakistani)\b/i],
+    ['Bangladesh', /\b(bangladesh|bangladeshi)\b/i],
+    ['Greece', /\b(greece|greek)\b/i],
+    ['Vietnam', /\b(vietnam|vietnamese)\b/i],
+    ['United Kingdom', /\b(united\s+kingdom|british|uk\s+citizen|uk\s+work)\b/i],
+  ];
+  var out = [];
+  var seen = {};
+  candidates.forEach(function(c){
+    if (!c[1].test(text)) return;
+    var label = canonicalNationalityLabel(c[0]) || c[0];
+    if (!seen[label]) {
+      seen[label] = true;
+      out.push(label);
+    }
+  });
+  return out;
+}
+
+function parseDraftDate(text) {
+  var m = String(text || '').match(/\b(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})\b/);
+  if (m) {
+    var dd = parseInt(m[1], 10);
+    var mm = parseInt(m[2], 10);
+    var yy = parseInt(m[3], 10);
+    if (yy < 100) yy += 2000;
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+      return String(yy).padStart(4, '0') + '-' + String(mm).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+    }
+  }
+  var month = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+  var re = new RegExp('\\b(\\d{1,2})\\s+' + month + '\\s+(\\d{4})\\b', 'i');
+  var n = String(text || '').match(re);
+  if (!n) return '';
+  var names = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  var mon = names[n[2].slice(0,3).toLowerCase()];
+  return n[3] + '-' + String(mon).padStart(2, '0') + '-' + String(parseInt(n[1], 10)).padStart(2, '0');
+}
+
+function parseDraftSalary(text) {
+  var raw = String(text || '');
+  var currency = /\bEUR\b|€/.test(raw) ? 'EUR' : (/\bGBP\b|£/.test(raw) ? 'GBP' : 'USD');
+  var range = raw.match(/(?:salary|wage|rate|usd|eur|gbp|\$|€|£)?[^\d]{0,12}(\d{3,6})\s*(?:-|–|—|to|\/)\s*(\d{3,6})\s*(?:usd|eur|gbp|\$|€|£)?/i);
+  if (range) {
+    var a = parseFloat(range[1]);
+    var b = parseFloat(range[2]);
+    if (a > b) { var tmp = a; a = b; b = tmp; }
+    return { min: a, max: b, currency: currency };
+  }
+  var single = raw.match(/\b(?:salary|wage|rate)\b[^\d]{0,18}(\d{3,6})/i);
+  if (single) {
+    var v = parseFloat(single[1]);
+    return { min: v, max: v, currency: currency };
+  }
+  return null;
+}
+
+function parseVacancyDraftText(text) {
+  text = String(text || '').trim();
+  var rank = detectDraftRank(text);
+  var vesselType = detectDraftVesselType(text);
+  var nats = detectDraftNationalities(text);
+  var imoMatch = text.match(/\bIMO\s*[:#-]?\s*(\d{7})\b/i) || text.match(/\b(\d{7})\b/);
+  var salary = parseDraftSalary(text);
+  var contract = text.match(/\b(?:contract|duration)?[^\d\n]{0,12}(\d{1,2})\s*(?:months?|mos|mths|мес\.?|месяц)/i);
+  var minAge = text.match(/\b(?:min(?:imum)?\s+age|age\s+min)\D{0,8}(\d{2})\b/i);
+  var maxAge = text.match(/\b(?:max(?:imum)?\s+age|age\s+max|under|up\s+to)\D{0,8}(\d{2})\b/i);
+  var vesselName = firstFieldText(text, ['vessel name', 'ship name']);
+  if (!vesselName) {
+    var mv = text.match(/\b(?:m\/v|mv)\s+([A-Z0-9][A-Z0-9 .'\-]{2,40})(?:[,;\n.]|$)/i);
+    if (mv) vesselName = cleanDraftValue(mv[1]);
+  }
+  var tradingArea = firstFieldText(text, ['trading area', 'trade area', 'trading']);
+  if (!tradingArea) {
+    var area = text.match(/\b(europe|worldwide|mediterranean|black sea|atlantic|asia|middle east|west africa|far east)\b/i);
+    if (area) tradingArea = cleanDraftValue(area[1]).toUpperCase();
+  }
+  var draft = {
+    title: '',
+    client_name: firstFieldText(text, ['client', 'customer']),
+    nationalities: nats,
+    rank: rank,
+    vessel_type: vesselType,
+    vessel_name: vesselName,
+    vessel_imo: imoMatch ? imoMatch[1] : '',
+    flag: firstFieldText(text, ['flag']),
+    join_date: parseDraftDate(text),
+    join_port: firstFieldText(text, ['join port', 'joining port', 'embarkation port']),
+    contract_months: contract ? parseInt(contract[1], 10) : '',
+    salary_currency: salary ? salary.currency : 'USD',
+    salary_min: salary ? salary.min : '',
+    salary_max: salary ? salary.max : '',
+    min_age: minAge ? parseInt(minAge[1], 10) : '',
+    max_age: maxAge ? parseInt(maxAge[1], 10) : '',
+    us_visa_required: /\b(us\s+visa|c1\/d|c1d|b1\/b2)\b/i.test(text),
+    schengen_visa_required: /\bschengen\b/i.test(text),
+    trading_area: tradingArea,
+    trading_russia_ok: /\b(russia\s+trading\s+ok|russian\s+ports?|russia\s+ok)\b/i.test(text),
+    description: text,
+  };
+  var titleNat = nats.length === 1 ? (nats[0] + ' ') : '';
+  draft.title = titleNat + (rank || 'Crew') + (vesselType ? (' for ' + vesselType) : '');
+  return draft;
 }
 
 async function refreshTeamMembers(showErrors) {
@@ -3143,8 +3708,8 @@ function vacancyToPrefill(v, opts) {
   var copyTitle = v.title || (v.rank ? v.rank + ' for ' + (v.vessel_type || 'vessel') : '');
   return {
     title: copyTitle ? copyTitle.replace(/\s+\(copy\)$/i, '') + (opts.copy ? ' (copy)' : '') : '',
-    rank: v.rank || '',
-    vessel_type: v.vessel_type === 'General Cargo' ? 'General Cargo / Heavy Lift' : (v.vessel_type || ''),
+    rank: canonicalTaxonomyLabel('positions', v.rank || ''),
+    vessel_type: canonicalTaxonomyLabel('vessel_types', v.vessel_type || ''),
     vessel_name: v.vessel_name || '',
     vessel_imo: v.vessel_imo ? String(v.vessel_imo) : '',
     flag: v.flag || '',
@@ -3156,7 +3721,7 @@ function vacancyToPrefill(v, opts) {
     salary_currency: v.salary_currency || 'USD',
     trading_area: v.trading_area || '',
     trading_russia_ok: !!v.russia_trading,
-    nationalities: v.nationalities || [],
+    nationalities: (v.nationalities || []).map(canonicalNationalityLabel).filter(Boolean),
     description: v.description || '',
     client_name: v.client_name || '',
     compliance_profile_id: v.compliance_profile_id || '',
@@ -4975,8 +5540,8 @@ function renderNewVacancy() {
       + optionLabelsHtml(taxonomyLabels('vessel_types'), seed.vessel_type)
     + '</select></div>'
     + '<div><label>Vessel name</label><input type="text" id="f-vname" placeholder="MV ..."'+inputValueAttr(seed.vessel_name)+'></div></div>'
-    + '<div class="row"><div><label>IMO (optional, 7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric"'+inputValueAttr(seed.vessel_imo)+'>'
-    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Leave blank if owner/crewing does not disclose IMO.</div></div>'
+    + '<div class="row"><div><label>IMO* (7 digits)</label><input type="text" id="f-imo" placeholder="9554488" maxlength="7" pattern="\\d{7}" inputmode="numeric" required'+inputValueAttr(seed.vessel_imo)+'>'
+    + '<div style="font-size:11px;color:var(--text2);margin-top:4px;">Required for Jobs vacancies. Use Mailings for standing rank/vessel-type requests without IMO.</div></div>'
     + '<div><label>Flag (optional)</label><input type="text" id="f-flag" placeholder="e.g. Marshall Islands"'+inputValueAttr(seed.flag)+'></div></div>'
     + '<div class="row"><div><label>Join date (optional)</label><input type="date" lang="en" id="f-jdate"'+inputValueAttr(seed.join_date)+'></div>'
     + '<div><label>Join port (optional)</label><input type="text" id="f-jport"'+inputValueAttr(seed.join_port)+'></div></div>'
@@ -5044,8 +5609,10 @@ async function submitVacancy() {
     showToast('Min age cannot be higher than max age.', 'error');
     return;
   }
-  // IMO is optional for vacancies because many crewings do not disclose it.
-  // If provided, keep it clean so vessel lookup and ratings can work.
+  if (!draft.vessel_imo) {
+    showToast('IMO is required for Jobs vacancies. Use Mailings for standing rank/vessel-type requests without IMO.', 'error');
+    return;
+  }
   if (draft.vessel_imo && !/^\d{7}$/.test(String(draft.vessel_imo))) {
     showToast('IMO must be exactly 7 digits (e.g. 9554488).', 'error');
     return;
