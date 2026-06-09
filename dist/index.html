@@ -147,7 +147,19 @@ h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .team-name-row label { margin: 0; font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
 .team-name-row input { flex: 1; height: 24px; padding: 3px 6px; background: var(--panel2); border: 1px solid var(--border); border-radius: 3px; outline: none; font-size: 11px; color: var(--text); }
 .team-name-row input:focus { border-color: var(--accent); }
+.team-stream-wrap { position: relative; display: flex; flex: 1; min-height: 0; }
 .team-stream { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--panel2); }
+.team-scroll-bottom { position: absolute; right: 14px; bottom: 12px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel); color: var(--text); box-shadow: 0 6px 18px rgba(0,0,0,0.28); display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 2; font-size: 16px; line-height: 1; }
+.team-scroll-bottom:hover { border-color: var(--accent); color: #fff; background: var(--accent); }
+.team-scroll-bottom.visible { display: flex; }
+.team-attachments-preview { display: none; gap: 8px; flex-wrap: wrap; padding: 7px 10px; border-top: 1px solid var(--border); background: var(--panel); }
+.team-attachments-preview.visible { display: flex; }
+.team-pending-attachment { display: grid; grid-template-columns: 42px minmax(0, 1fr) 24px; align-items: center; gap: 7px; width: min(230px, 100%); padding: 5px 6px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel2); }
+.team-pending-attachment img { width: 42px; height: 32px; object-fit: cover; border-radius: 3px; background: #000; }
+.team-pending-attachment .att-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--text); }
+.team-pending-attachment .att-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: var(--text2); }
+.team-pending-attachment button { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; padding: 0; line-height: 1; }
+.team-pending-attachment button:hover { color: var(--err); border-color: var(--err); }
 .team-empty { color: var(--text2); font-size: 11px; text-align: center; padding: 18px 12px; line-height: 1.5; }
 .team-day-sep { text-align: center; color: var(--text2); font-size: 9px; margin: 4px 0; text-transform: uppercase; letter-spacing: 0.06em; }
 .team-msg { display: flex; flex-direction: column; max-width: 88%; padding: 5px 9px; border-radius: 7px; background: var(--panel); border: 1px solid var(--border); cursor: context-menu; }
@@ -157,6 +169,12 @@ h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .team-msg-meta .nick { color: var(--text); font-weight: 600; }
 .team-msg.ai-llm .nick { color: #a895ff; }
 .team-msg-body { font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+.team-msg-body:empty { display: none; }
+.team-msg-attachments { display: grid; gap: 6px; margin-top: 6px; }
+.team-msg-attachment { display: block; width: min(260px, 100%); padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 5px; background: var(--panel2); color: var(--text); cursor: pointer; text-align: left; }
+.team-msg-attachment:hover { border-color: var(--accent); }
+.team-msg-attachment img { display: block; width: 100%; aspect-ratio: 16 / 10; max-height: 220px; object-fit: cover; background: #000; }
+.team-msg-attachment-meta { display: block; padding: 5px 7px; font-size: 10px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-event { font-size: 10px; color: var(--text2); text-align: center; padding: 2px 8px; line-height: 1.4; font-style: italic; }
 .team-target-row { display: flex; align-items: center; gap: 6px; padding: 5px 10px 0; background: var(--panel); flex-shrink: 0; font-size: 11px; }
 .tt-label { color: var(--text2); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -833,6 +851,9 @@ var state = {
     sendTarget: 'ai',
     draftText: '',
     lastError: '',
+    followBottom: true,
+    scrollTop: 0,
+    pendingAttachments: [],
   },
   pendingUpdate: null,
   // Phase 2 messaging
@@ -1367,17 +1388,21 @@ function renderTeamMain() {
     + '<label>Имя</label>'
     + '<input id="team-chat-display-name" type="text" value="'+escapeAttr(currentName)+'" placeholder="Ваше имя" oninput="state.settings=state.settings||{};state.settings.user_display_name=this.value;renderTeamChatStream();" onblur="saveTeamChatNameInline()">'
     + '</div>'
-    + '<div class="team-stream" id="team-chat-stream"></div>'
+    + '<div class="team-stream-wrap">'
+    + '<div class="team-stream" id="team-chat-stream" onscroll="handleTeamChatScroll()"></div>'
+    + '<button class="team-scroll-bottom" id="team-chat-bottom-btn" onclick="scrollTeamChatToBottom(true)" title="В конец чата" aria-label="В конец чата">↓</button>'
+    + '</div>'
     + '<div class="team-target-row">'
     + '<span class="tt-label">Кому:</span>'
     + renderTeamTargetPills(chat.sendTarget || 'ai')
     + '<span class="tt-hint" id="team-chat-hint"></span>'
     + '</div>'
     + '<div class="team-chat-error" id="team-chat-error" style="display:none;"></div>'
+    + '<div class="team-attachments-preview" id="team-chat-attachments-preview"></div>'
     + '<div class="team-composer">'
     + '<button class="team-attach-btn" onclick="teamChatPollOnce(false,true)" title="Refresh">↻</button>'
     + '<button class="team-attach-btn" onclick="createVacancyDraftFromTeamText()" title="Create vacancy draft from text">＋</button>'
-    + '<textarea id="team-chat-input" placeholder="Вопрос AI Assistant (видно всей команде)..." oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDown(event)">'+escapeHtml(chat.draftText || '')+'</textarea>'
+    + '<textarea id="team-chat-input" placeholder="Вопрос AI Assistant (видно всей команде)..." oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDown(event)" onpaste="teamChatPaste(event)">'+escapeHtml(chat.draftText || '')+'</textarea>'
     + '<button class="btn btn-accent btn-sm" id="team-chat-send-btn" onclick="sendTeamChatMessage()" title="Send">▶</button>'
     + '</div>'
     + '</div>'
@@ -1387,6 +1412,7 @@ function renderTeamMain() {
   setTeamChatTarget(chat.sendTarget || 'ai', true);
   renderTeamChatStream();
   renderTeamChatError();
+  renderTeamChatAttachmentPreview();
 }
 
 async function renderTeamView() {
@@ -1491,12 +1517,222 @@ function formatTeamChatTime(iso) {
   return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
 
+var TEAM_CHAT_MAX_ATTACHMENTS = 4;
+var TEAM_CHAT_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function teamChatNormalizeImageMime(mime) {
+  mime = String(mime || 'image/png').toLowerCase();
+  if (mime === 'image/jpg') return 'image/jpeg';
+  return mime;
+}
+
+function teamChatAllowedImageType(mime) {
+  return /^(image\/png|image\/jpeg|image\/webp|image\/gif)$/.test(teamChatNormalizeImageMime(mime));
+}
+
+function teamChatImageExtension(mime) {
+  mime = teamChatNormalizeImageMime(mime);
+  if (mime === 'image/jpeg') return 'jpg';
+  if (mime === 'image/webp') return 'webp';
+  if (mime === 'image/gif') return 'gif';
+  return 'png';
+}
+
+function teamChatClipboardFilename(file, mime) {
+  var name = String(file && file.name || '').trim();
+  if (name) return name;
+  var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
+  return 'screenshot-' + stamp + '.' + teamChatImageExtension(mime);
+}
+
+function teamChatAttachmentDataUrl(att) {
+  if (!att || !att.data_b64) return '';
+  return 'data:' + teamChatNormalizeImageMime(att.mime_type) + ';base64,' + att.data_b64;
+}
+
+function teamChatPaste(ev) {
+  var data = ev && ev.clipboardData;
+  var items = data && data.items;
+  if (!items || !items.length) return;
+  var files = [];
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (item && item.kind === 'file' && /^image\//i.test(item.type || '')) {
+      var file = item.getAsFile && item.getAsFile();
+      if (file) files.push(file);
+    }
+  }
+  if (!files.length) return;
+  ev.preventDefault();
+  for (var j = 0; j < files.length; j++) addTeamChatImageAttachment(files[j]);
+}
+
+function addTeamChatImageAttachment(file) {
+  if (!file) return;
+  if (!state.teamChat) state.teamChat = {};
+  var pending = state.teamChat.pendingAttachments || (state.teamChat.pendingAttachments = []);
+  if (pending.length >= TEAM_CHAT_MAX_ATTACHMENTS) {
+    showToast('Можно добавить максимум 4 изображения к одному сообщению.', 'warn');
+    return;
+  }
+  var mime = teamChatNormalizeImageMime(file.type || 'image/png');
+  if (!teamChatAllowedImageType(mime)) {
+    showToast('Поддерживаются только PNG, JPG, WebP или GIF.', 'warn');
+    return;
+  }
+  if (file.size > TEAM_CHAT_MAX_IMAGE_BYTES) {
+    showToast('Скриншот слишком большой. Максимум 5 MB.', 'warn');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(){
+    var result = String(reader.result || '');
+    var comma = result.indexOf(',');
+    var dataB64 = comma >= 0 ? result.slice(comma + 1) : '';
+    if (!dataB64) {
+      showToast('Не удалось прочитать изображение из буфера.', 'error');
+      return;
+    }
+    pending = state.teamChat.pendingAttachments || (state.teamChat.pendingAttachments = []);
+    if (pending.length >= TEAM_CHAT_MAX_ATTACHMENTS) {
+      showToast('Можно добавить максимум 4 изображения к одному сообщению.', 'warn');
+      return;
+    }
+    pending.push({
+      kind: 'image',
+      mime_type: mime,
+      filename: teamChatClipboardFilename(file, mime),
+      size_bytes: file.size,
+      data_b64: dataB64,
+      preview_url: 'data:' + mime + ';base64,' + dataB64
+    });
+    renderTeamChatAttachmentPreview();
+  };
+  reader.onerror = function(){ showToast('Не удалось прочитать изображение из буфера.', 'error'); };
+  reader.readAsDataURL(file);
+}
+
+function renderTeamChatAttachmentPreview() {
+  var host = document.getElementById('team-chat-attachments-preview');
+  if (!host) return;
+  var pending = state.teamChat && state.teamChat.pendingAttachments || [];
+  host.classList.toggle('visible', !!pending.length);
+  if (!pending.length) {
+    host.innerHTML = '';
+    return;
+  }
+  var html = '';
+  pending.forEach(function(att, i){
+    var url = att.preview_url || teamChatAttachmentDataUrl(att);
+    var meta = attachmentSizeLabel(att.size_bytes);
+    if (att.mime_type) meta += (meta ? ' · ' : '') + att.mime_type;
+    html += '<div class="team-pending-attachment">'
+      + '<img src="'+escapeAttr(url)+'" alt="">'
+      + '<div style="min-width:0;">'
+      + '<div class="att-name" title="'+escapeAttr(att.filename || 'screenshot')+'">'+escapeHtml(att.filename || 'screenshot')+'</div>'
+      + '<div class="att-meta">'+escapeHtml(meta)+'</div>'
+      + '</div>'
+      + '<button type="button" onclick="removeTeamChatAttachment('+i+')" title="Remove">&times;</button>'
+      + '</div>';
+  });
+  host.innerHTML = html;
+}
+
+function removeTeamChatAttachment(index) {
+  var pending = state.teamChat && state.teamChat.pendingAttachments || [];
+  if (index >= 0 && index < pending.length) pending.splice(index, 1);
+  renderTeamChatAttachmentPreview();
+}
+
+function teamChatPendingAttachmentPayloads() {
+  var pending = state.teamChat && state.teamChat.pendingAttachments || [];
+  return pending.map(function(att){
+    return {
+      kind: 'image',
+      mime_type: teamChatNormalizeImageMime(att.mime_type),
+      filename: att.filename || null,
+      size_bytes: Number(att.size_bytes) || 0,
+      data_b64: att.data_b64 || ''
+    };
+  }).filter(function(att){
+    return att.data_b64 && att.size_bytes > 0 && teamChatAllowedImageType(att.mime_type);
+  });
+}
+
+function renderTeamChatAttachments(attachments, messageId) {
+  if (!Array.isArray(attachments) || !attachments.length) return '';
+  var parts = [];
+  attachments.forEach(function(att, i){
+    if (!att || (att.kind && att.kind !== 'image')) return;
+    var url = teamChatAttachmentDataUrl(att);
+    if (!url) return;
+    var filename = att.filename || 'screenshot';
+    var meta = filename;
+    var size = attachmentSizeLabel(att.size_bytes);
+    if (size) meta += ' · ' + size;
+    parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')" title="'+escapeAttr(filename)+'">'
+      + '<img src="'+escapeAttr(url)+'" alt="'+escapeAttr(filename)+'">'
+      + '<span class="team-msg-attachment-meta">'+escapeHtml(meta)+'</span>'
+      + '</button>');
+  });
+  return parts.length ? '<div class="team-msg-attachments">'+parts.join('')+'</div>' : '';
+}
+
+function openTeamChatImage(messageId, attachmentIndex) {
+  var msgs = state.teamChat && state.teamChat.messages || [];
+  var msg = null;
+  for (var i = 0; i < msgs.length; i++) {
+    if (String(msgs[i] && msgs[i].id || '') === String(messageId || '')) {
+      msg = msgs[i];
+      break;
+    }
+  }
+  var att = msg && msg.attachments && msg.attachments[attachmentIndex];
+  var url = teamChatAttachmentDataUrl(att);
+  if (!url) {
+    showToast('Image preview is unavailable.', 'error');
+    return;
+  }
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  var modal = document.createElement('div');
+  modal.style.cssText = 'max-width:min(1100px,96vw);max-height:92vh;display:flex;flex-direction:column;gap:10px;color:var(--text);';
+  var bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;';
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:12px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  title.textContent = att.filename || 'screenshot';
+  var close = document.createElement('button');
+  close.textContent = '×';
+  close.title = 'Close';
+  close.style.cssText = 'width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.35);background:rgba(0,0,0,0.35);color:#fff;cursor:pointer;font-size:20px;line-height:1;';
+  var img = document.createElement('img');
+  img.src = url;
+  img.alt = att.filename || 'screenshot';
+  img.style.cssText = 'display:block;max-width:96vw;max-height:calc(92vh - 42px);object-fit:contain;background:#000;border:1px solid rgba(255,255,255,0.16);border-radius:6px;';
+  bar.appendChild(title);
+  bar.appendChild(close);
+  modal.appendChild(bar);
+  modal.appendChild(img);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  close.onclick = function(){ document.body.removeChild(overlay); };
+  overlay.onclick = function(e){ if (e.target === overlay) document.body.removeChild(overlay); };
+}
+
 function renderTeamChatStream() {
   var stream = document.getElementById('team-chat-stream');
   if (!stream) return;
+  if (!state.teamChat) state.teamChat = {};
+  var chat = state.teamChat;
+  var wasNearBottom = teamChatIsNearBottom(stream);
+  var shouldFollowBottom = chat.followBottom !== false || wasNearBottom || !chat.hasRenderedStream;
+  var savedScrollTop = typeof chat.scrollTop === 'number' ? chat.scrollTop : stream.scrollTop;
   var msgs = state.teamChat && state.teamChat.messages || [];
   if (!msgs.length) {
     stream.innerHTML = '<div class="team-empty">Командный чат готов. Можно написать AI Assistant или всей команде.</div>';
+    chat.hasRenderedStream = true;
+    requestAnimationFrame(updateTeamChatScrollButton);
     return;
   }
   var mine = teamChatMyNickname();
@@ -1518,10 +1754,50 @@ function renderTeamChatStream() {
     html += '<div class="'+cls+'">'
       + '<div class="team-msg-meta"><span class="nick">'+escapeHtml(m.sender_nickname || 'Crewing')+'</span><span>'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>'
       + '<div class="team-msg-body">'+escapeHtml(m.body || '')+'</div>'
+      + renderTeamChatAttachments(m.attachments || [], m.id || '')
       + '</div>';
   });
   stream.innerHTML = html;
-  requestAnimationFrame(function(){ stream.scrollTop = stream.scrollHeight; });
+  chat.hasRenderedStream = true;
+  requestAnimationFrame(function(){
+    if (shouldFollowBottom) {
+      scrollTeamChatToBottom(false);
+    } else {
+      var maxTop = Math.max(0, stream.scrollHeight - stream.clientHeight);
+      stream.scrollTop = Math.min(savedScrollTop, maxTop);
+      updateTeamChatScrollButton();
+    }
+  });
+}
+
+function teamChatIsNearBottom(stream) {
+  if (!stream) return true;
+  return (stream.scrollHeight - stream.scrollTop - stream.clientHeight) <= 48;
+}
+
+function updateTeamChatScrollButton() {
+  var stream = document.getElementById('team-chat-stream');
+  var btn = document.getElementById('team-chat-bottom-btn');
+  if (!stream) return;
+  if (!state.teamChat) state.teamChat = {};
+  var atBottom = teamChatIsNearBottom(stream);
+  state.teamChat.followBottom = atBottom;
+  state.teamChat.scrollTop = stream.scrollTop;
+  if (btn) btn.classList.toggle('visible', !atBottom);
+}
+
+function handleTeamChatScroll() {
+  updateTeamChatScrollButton();
+}
+
+function scrollTeamChatToBottom(userRequested) {
+  var stream = document.getElementById('team-chat-stream');
+  if (!stream) return;
+  if (!state.teamChat) state.teamChat = {};
+  state.teamChat.followBottom = true;
+  stream.scrollTop = stream.scrollHeight;
+  state.teamChat.scrollTop = stream.scrollTop;
+  updateTeamChatScrollButton();
 }
 
 function renderTeamChatError() {
@@ -1577,10 +1853,11 @@ async function sendTeamChatMessage() {
   var ta = document.getElementById('team-chat-input');
   if (!ta) return;
   var body = (ta.value || '').trim();
-  if (!body) return;
+  var attachments = teamChatPendingAttachmentPayloads();
+  if (!body && !attachments.length) return;
   var sendBtn = document.getElementById('team-chat-send-btn');
   var target = state.teamChat && state.teamChat.sendTarget || 'ai';
-  var triggerLlm = target === 'ai';
+  var triggerLlm = target === 'ai' && !!body;
   var bodyToSend = body;
   if (String(target).indexOf('member:') === 0) {
     var targetName = teamTargetName(target);
@@ -1589,12 +1866,15 @@ async function sendTeamChatMessage() {
   ta.disabled = true;
   if (sendBtn) sendBtn.disabled = true;
   try {
-    var msg = await invoke('send_team_chat_message', { body: bodyToSend, triggerLlm: triggerLlm, eventType: null });
+    var msg = await invoke('send_team_chat_message', { body: bodyToSend, triggerLlm: triggerLlm, eventType: null, attachments: attachments });
     state.teamChat.draftText = '';
+    state.teamChat.pendingAttachments = [];
     ta.value = '';
+    renderTeamChatAttachmentPreview();
     mergeTeamChatMessages(msg ? [msg] : []);
     updateTeamChatLastTs();
     state.teamChat.lastError = '';
+    state.teamChat.followBottom = true;
     renderTeamChatStream();
     renderTeamChatError();
     if (triggerLlm) {

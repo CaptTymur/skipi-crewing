@@ -218,7 +218,18 @@ pub struct TeamChatMessage {
     pub sender_nickname: String,
     pub body: String,
     pub event_type: Option<String>,
+    #[serde(default)]
+    pub attachments: Vec<TeamChatAttachment>,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TeamChatAttachment {
+    pub kind: String,
+    pub mime_type: String,
+    pub filename: Option<String>,
+    pub size_bytes: u64,
+    pub data_b64: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -228,6 +239,8 @@ struct TeamChatMessageWire {
     #[serde(skip_serializing_if = "Option::is_none")]
     event_type: Option<String>,
     trigger_llm: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    attachments: Vec<TeamChatAttachment>,
 }
 
 fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
@@ -433,12 +446,14 @@ fn send_team_chat_message(
     body: String,
     trigger_llm: Option<bool>,
     event_type: Option<String>,
+    attachments: Option<Vec<TeamChatAttachment>>,
     state: tauri::State<AppState>,
 ) -> Result<TeamChatMessage, String> {
     let settings = state.settings.lock().unwrap().clone();
     let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
     let trimmed = body.trim();
-    if trimmed.is_empty() {
+    let attachments = attachments.unwrap_or_default();
+    if trimmed.is_empty() && attachments.is_empty() {
         return Err("Empty message.".into());
     }
     let event_type = event_type.and_then(|v| {
@@ -454,6 +469,7 @@ fn send_team_chat_message(
         body: trimmed.to_string(),
         event_type,
         trigger_llm: trigger_llm.unwrap_or(false),
+        attachments,
     };
     let path = format!("/api/crewings/{}/team-chat/messages", crewing_id);
     api::post_json(Some(&server_url), Some(&bearer_token), &path, &payload, 20)
