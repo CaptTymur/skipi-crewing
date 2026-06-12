@@ -200,6 +200,14 @@ pub struct CrewingTeamMember {
     pub status: String,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub last_seen_at: Option<String>,
+    #[serde(default)]
+    pub pubkey_last_seen_at: Option<String>,
+    #[serde(default)]
+    pub online: Option<bool>,
+    #[serde(default)]
+    pub is_online: Option<bool>,
     pub token: Option<String>,
     pub token_prefix: Option<String>,
 }

@@ -182,6 +182,9 @@ h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .tt-pill:hover { color: var(--text); border-color: var(--accent); }
 .tt-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
 .tt-pill.ai.active { background: rgba(108,92,231,0.85); border-color: rgba(108,92,231,1); }
+.tt-pill .team-presence { min-width: auto; gap: 0; vertical-align: -1px; }
+.tt-pill .team-presence span:last-child { display: none; }
+.tt-pill .team-presence-dot { width: 7px; height: 7px; margin-right: 5px; }
 .tt-hint { color: var(--text2); font-size: 10px; margin-left: auto; }
 .team-chat-error { color: var(--warn); font-size: 11px; padding: 5px 10px 0; background: var(--panel); }
 .team-composer { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--panel); }
@@ -200,8 +203,18 @@ h1 + .sub { color: var(--text2); margin-bottom: 24px; font-size: 13px; }
 .team-members-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .team-members-table th { color: var(--text2); text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); padding: 8px 0; }
 .team-members-table td { border-bottom: 1px solid rgba(42,49,60,0.55); padding: 9px 6px 9px 0; vertical-align: top; }
+.team-presence { display: inline-flex; align-items: center; gap: 7px; min-width: 108px; color: var(--text2); font-size: 12px; white-space: nowrap; }
+.team-presence-dot { position: relative; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #657080; box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
+.team-presence-dot.online { background: var(--ok); box-shadow: 0 0 0 1px rgba(34,197,94,0.3), 0 0 10px rgba(34,197,94,0.55); }
+.team-presence-dot.online::after { content: ""; position: absolute; inset: -5px; border: 1px solid rgba(34,197,94,0.55); border-radius: 50%; animation: teamPresencePulse 1.4s ease-out infinite; }
+.team-presence-dot.stale { background: var(--warn); box-shadow: 0 0 0 1px rgba(245,158,11,0.25); }
+.team-member-primary { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.team-member-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-member-id { display: block; margin-top: 3px; color: var(--text2); font-family: monospace; font-size: 11px; word-break: break-all; }
+.team-token-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid rgba(70,130,180,0.36); border-radius: 10px; color: var(--text2); background: rgba(70,130,180,0.12); font-size: 11px; white-space: nowrap; }
+@keyframes teamPresencePulse { 0% { transform: scale(0.65); opacity: 0.9; } 80%, 100% { transform: scale(1.75); opacity: 0; } }
 @media (max-width: 940px) { .team-management { grid-template-columns: 1fr; } .tt-hint { flex-basis: 100%; margin-left: 0; } .team-block { max-height: none; } }
-@media (max-width: 760px) { .team-main { padding: 10px; } .team-col-head { align-items: flex-start; flex-direction: column; } .team-target-row { flex-wrap: wrap; } .team-msg { max-width: 94%; } .team-composer { flex-wrap: wrap; } .team-composer textarea { flex-basis: calc(100% - 84px); } }
+@media (max-width: 760px) { .team-main { padding: 10px; } .team-col-head { align-items: flex-start; flex-direction: column; } .team-target-row { flex-wrap: wrap; } .team-msg { max-width: 94%; } .team-composer { flex-wrap: wrap; } .team-composer textarea { flex-basis: calc(100% - 84px); } .team-members-table, .team-members-table thead, .team-members-table tbody, .team-members-table tr, .team-members-table th, .team-members-table td { display: block; } .team-members-table thead { display: none; } .team-members-table tr { padding: 10px 0; border-bottom: 1px solid rgba(42,49,60,0.55); } .team-members-table td { border: 0; padding: 4px 0; } }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 .row.full { grid-template-columns: 1fr; }
 label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; }
@@ -347,6 +360,34 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 .chat-status { font-size: 10px; color: var(--text2); padding: 4px 12px 0; display: flex; justify-content: space-between; align-items: center; }
 .chat-day-sep { display: flex; justify-content: center; margin: 8px 0; }
 .chat-day-sep span { background: var(--panel2); color: var(--text2); font-size: 11px; padding: 3px 10px; border-radius: 10px; }
+/* team chat polish: unread badge, new-messages floating badge, reply-quote, custom confirm */
+.team-col-head .team-unread { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--accent, #7c6ff7); color: #fff; font-size: 10px; font-weight: 700; margin-left: 6px; }
+.team-col-head .team-unread:empty { display: none; }
+.team-stream-wrap { position: relative; }
+.team-new-badge { position: absolute; right: 14px; bottom: 14px; z-index: 10; background: var(--accent, #7c6ff7); color: #fff; border: none; padding: 8px 14px; border-radius: 16px; cursor: pointer; font-size: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.team-new-badge:hover { filter: brightness(1.1); }
+.team-ctx-menu { position: fixed; z-index: 9999; background: var(--panel, #1e1f24); border: 1px solid var(--border, rgba(255,255,255,.12)); border-radius: 6px; padding: 4px 0; min-width: 140px; box-shadow: 0 8px 20px rgba(0,0,0,.4); }
+.team-ctx-menu .item { padding: 6px 12px; cursor: pointer; font-size: 12px; color: var(--text, #eee); }
+.team-ctx-menu .item:hover { background: rgba(255,255,255,.08); }
+.team-msg { cursor: context-menu; }
+.team-reply-quote { padding: 3px 7px; border-left: 3px solid var(--accent, #7c6ff7); background: rgba(124,111,247,0.08); margin-bottom: 3px; font-size: 10px; line-height: 1.4; }
+.team-reply-quote .nick { color: var(--accent, #7c6ff7); font-weight: 600; margin-right: 5px; }
+.team-reply-quote .snippet { color: var(--text2, #aaa); }
+.team-pending-reply { display: none; align-items: center; gap: 6px; padding: 5px 8px; margin: 4px 0; background: rgba(124,111,247,.10); border: 1px solid rgba(124,111,247,.3); border-radius: 4px; font-size: 11px; }
+.team-pending-reply.visible { display: flex; }
+.team-pending-reply .label { color: var(--accent, #7c6ff7); }
+.team-pending-reply .nick { font-weight: 600; color: var(--text, #eee); }
+.team-pending-reply .snippet { color: var(--text2, #aaa); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-pending-reply .cancel { cursor: pointer; color: var(--text2, #aaa); padding: 0 4px; }
+.team-pending-reply .cancel:hover { color: var(--text, #eee); }
+.team-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99998; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.team-confirm-modal { background: var(--panel, #1e1f24); border: 1px solid var(--border, rgba(255,255,255,.12)); border-radius: 8px; padding: 20px; max-width: 420px; width: 100%; color: var(--text, #eee); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+.team-confirm-modal .title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.team-confirm-modal .body { font-size: 12px; color: var(--text2, #aaa); margin-bottom: 14px; line-height: 1.5; }
+.team-confirm-modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
+.team-confirm-modal button { padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border, rgba(255,255,255,.12)); background: var(--panel2, #2a2c33); color: var(--text, #eee); }
+.team-confirm-modal button.primary { background: var(--accent, #7c6ff7); color: #fff; border-color: var(--accent, #7c6ff7); }
+.team-confirm-modal button.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 </style>
 </head>
 <body>
@@ -1249,16 +1290,88 @@ async function syncTeamRoleFromMembers() {
 function renderTeamTree() {
   var lp = document.getElementById('left-panel');
   var count = (state.teamMembers || []).length;
+  var online = teamPresenceCount(state.teamMembers || []).online;
   lp.innerHTML =
     '<div class="panel-header"><span class="title">'+tr('left.team')+'</span>'
     + '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="refreshTeamMembers(true)" title="Refresh">↻</button></span>'
     + '</div>'
     + '<div class="panel-tree">'
     + '<div class="tree-item active" style="padding-left:16px;"><span>💬</span><div class="ti-title"><div>Team chat</div><div class="ti-meta">AI Assistant and teammates</div></div></div>'
-    + '<div class="tree-item" style="padding-left:16px;" onclick="var el=document.getElementById(\'team-access-section\');if(el)el.scrollIntoView({block:\'start\'});"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+'</div></div></div>'
+    + '<div class="tree-item" style="padding-left:16px;" onclick="var el=document.getElementById(\'team-access-section\');if(el)el.scrollIntoView({block:\'start\'});"><span>👥</span><div class="ti-title"><div>Team access</div><div class="ti-meta">'+count+' member'+(count===1?'':'s')+' · '+online+' online</div></div></div>'
     + '<div class="tree-item" style="padding-left:16px;" onclick="openTeamOnboarding(\'start\')"><span>?</span><div class="ti-title"><div>Setup guide</div><div class="ti-meta">Owner or member</div></div></div>'
     + '<div class="tree-item" style="padding-left:16px;" onclick="openSettings(\'connection\')"><span>🔌</span><div class="ti-title"><div>Company token</div><div class="ti-meta">Connection settings</div></div></div>'
     + '</div>';
+}
+
+function teamMemberIsCurrentDevice(m) {
+  return !!(m && state.myIdentity && state.myIdentity.user_id
+    && String(m.user_id || '') === String(state.myIdentity.user_id));
+}
+
+function teamMemberLastSeenValue(m) {
+  if (!m) return '';
+  return m.last_seen_at || m.lastSeenAt || m.pubkey_last_seen_at || m.pubkeyLastSeenAt || m.presence_at || m.presenceAt || '';
+}
+
+function teamMemberLastSeenDate(m) {
+  var raw = teamMemberLastSeenValue(m);
+  if (!raw) return null;
+  var d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function teamPresenceAgeLabel(d) {
+  if (!d) return '';
+  var diff = Math.max(0, Date.now() - d.getTime());
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'только что';
+  if (mins < 60) return mins + ' мин назад';
+  var hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + ' ч назад';
+  var days = Math.floor(hours / 24);
+  return days + ' д назад';
+}
+
+function teamMemberPresence(m) {
+  var isMe = teamMemberIsCurrentDevice(m);
+  var lastSeen = teamMemberLastSeenDate(m);
+  var explicitOnline = !!(m && (m.online === true || m.is_online === true || m.online_now === true || m.onlineNow === true));
+  var freshSeen = lastSeen && (Date.now() - lastSeen.getTime()) <= 90000;
+  var online = explicitOnline || isMe || !!freshSeen;
+  return {
+    online: online,
+    className: online ? 'online' : (lastSeen ? 'stale' : ''),
+    label: online ? 'на связи' : (lastSeen ? ('был ' + teamPresenceAgeLabel(lastSeen)) : 'нет сигнала'),
+    title: online
+      ? (isMe ? 'Этот компьютер сейчас в сети' : 'Участник сейчас в сети')
+      : (lastSeen ? ('Последний сигнал: ' + lastSeen.toLocaleString()) : 'Сервер пока не передал presence для этого участника')
+  };
+}
+
+function teamPresenceHtml(m) {
+  var p = teamMemberPresence(m);
+  return '<span class="team-presence" title="'+escapeAttr(p.title)+'">'
+    + '<span class="team-presence-dot '+escapeAttr(p.className)+'"></span>'
+    + '<span>'+escapeHtml(p.label)+'</span>'
+    + '</span>';
+}
+
+function teamPresenceCount(members) {
+  var rows = members || [];
+  var online = 0;
+  rows.forEach(function(m){ if (teamMemberPresence(m).online) online++; });
+  return { online: online, total: rows.length };
+}
+
+function teamMemberTokenChip(m, issued) {
+  var prefix = String((m && (m.token_prefix || m.tokenPrefix)) || '').trim();
+  if (!prefix && issued && String(issued.user_id || '') === String(m && m.user_id || '')) {
+    prefix = String(issued.token_prefix || issued.token || '').slice(0, 12);
+  }
+  return '<span class="team-token-chip" title="Участнику предоставлен доступ к команде по токену">'
+    + '<span>токен выдан</span>'
+    + (prefix ? '<code>'+escapeHtml(prefix)+'</code>' : '')
+    + '</span>';
 }
 
 function teamConnectionStatusHtml() {
@@ -1266,12 +1379,14 @@ function teamConnectionStatusHtml() {
   var hasConnection = !!(s.bearer_token && s.crewing_id);
   var role = s.team_role || '';
   var members = state.teamMembers || [];
+  var presence = teamPresenceCount(members);
   return '<div class="team-status">'
     + (hasConnection
       ? '<span class="status-pill ok">● Connected</span><span class="status-pill">Crewing '+escapeHtml(String(s.crewing_id || '').slice(0,8))+'</span>'
       : '<span class="status-pill warn">● Token not validated</span>')
     + '<span class="status-pill">'+(role ? ('Role: '+escapeHtml(role)) : 'No team role')+'</span>'
     + '<span class="status-pill">'+members.length+' member'+(members.length===1?'':'s')+'</span>'
+    + '<span class="status-pill ok">На связи: '+presence.online+'</span>'
     + '</div>';
 }
 
@@ -1290,12 +1405,13 @@ function renderTeamAccessManagementHtml() {
       ? '<span style="color:var(--text2);font-size:12px;">this device</span>'
       : '<button class="ghost" onclick="removeTeamMember(\''+escapeAttr(m.user_id)+'\')" style="padding:4px 10px;font-size:11px;">Remove</button>';
     return '<tr>'
-      + '<td><code style="font-size:12px;">'+escapeHtml(m.user_id)+'</code>'+(isMe?' <span style="color:var(--ok);font-size:11px;">you</span>':'')+'</td>'
-      + '<td>'+escapeHtml(m.display_name || '')+'</td>'
+      + '<td>'+teamPresenceHtml(m)+'</td>'
+      + '<td><div class="team-member-primary"><span class="team-member-name">'+escapeHtml(teamMemberDisplayName(m))+'</span>'+(isMe?' <span style="color:var(--ok);font-size:11px;">you</span>':'')+'</div><code class="team-member-id">'+escapeHtml(m.user_id)+'</code></td>'
+      + '<td>'+teamMemberTokenChip(m, issued)+'</td>'
       + '<td>'+escapeHtml(m.role || '')+'</td>'
       + '<td style="text-align:right;">'+remove+'</td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="4" style="color:var(--text2);padding:14px 0;">No team members yet.</td></tr>';
+  }).join('') : '<tr><td colspan="5" style="color:var(--text2);padding:14px 0;">No team members yet.</td></tr>';
 
   return '<div class="team-management" id="team-access-section">'
     + '<div class="team-panel">'
@@ -1318,7 +1434,7 @@ function renderTeamAccessManagementHtml() {
     + '</div>'
     + '<div class="team-panel">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
-    + '<h3 style="margin:0;">Members</h3>'
+    + '<h3 style="margin:0;">Участники с доступом</h3>'
     + '<button class="ghost" onclick="refreshTeamMembers(true)" style="padding:5px 12px;font-size:12px;">Refresh</button>'
     + '</div>'
     + (issued ? '<div style="border:1px solid rgba(34,197,94,0.5);border-radius:6px;padding:12px;margin-bottom:14px;">'
@@ -1327,9 +1443,9 @@ function renderTeamAccessManagementHtml() {
       + '<div style="display:flex;gap:8px;align-items:center;"><code style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:9px 10px;word-break:break-all;">'+escapeHtml(issued.token)+'</code>'
       + '<button class="ghost" onclick="copyIssuedTeamToken()" style="padding:8px 12px;">Copy</button>'
       + '<button class="ghost" onclick="state.lastTeamMemberToken=null;renderTeamMain();" style="padding:8px 12px;">Hide</button></div>'
-      + '</div>' : '')
+    + '</div>' : '')
     + (state.teamLoading ? '<div style="color:var(--text2);margin-bottom:10px;">Loading team...</div>' : '')
-    + '<table class="team-members-table"><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th></th></tr></thead><tbody>'+teamRows+'</tbody></table>'
+    + '<table class="team-members-table"><thead><tr><th>На связи</th><th>Участник</th><th>Токен доступа</th><th>Role</th><th></th></tr></thead><tbody>'+teamRows+'</tbody></table>'
     + '</div>'
     + '</div>';
 }
@@ -1350,7 +1466,7 @@ function renderTeamTargetPills(activeTarget) {
   } else {
     members.forEach(function(m, idx){
       var target = 'member:' + String(m.user_id || idx);
-      html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(target)+'\')">👤 <span class="tt-name">'+escapeHtml(teamMemberDisplayName(m))+'</span></span>';
+      html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(target)+'\')">'+teamPresenceHtml(m)+' <span class="tt-name">'+escapeHtml(teamMemberDisplayName(m))+'</span></span>';
     });
   }
   if (members.length > 1) {
@@ -1380,7 +1496,7 @@ function renderTeamMain() {
     '<div class="team-workspace">'
     + '<div class="team-block">'
     + '<div class="team-col-head">'
-    + '<span>👥 КОМАНДА</span>'
+    + '<span>👥 КОМАНДА <span class="team-unread" id="team-chat-unread"></span></span>'
     + '<span class="team-head-actions">'+teamConnectionStatusHtml()+'<button class="ghost" onclick="openTeamOnboarding(\'start\')" style="padding:3px 8px;font-size:11px;">Setup</button><button class="ghost" onclick="openSettings(\'connection\')" style="padding:3px 8px;font-size:11px;">Connection</button></span>'
     + '</div>'
     + '<div class="team-pane">'
@@ -1398,9 +1514,11 @@ function renderTeamMain() {
     + '<span class="tt-hint" id="team-chat-hint"></span>'
     + '</div>'
     + '<div class="team-chat-error" id="team-chat-error" style="display:none;"></div>'
+    + '<div class="team-pending-reply" id="team-chat-pending-reply"><span class="label">↩</span><span class="nick" id="team-chat-pending-reply-nick"></span><span class="snippet" id="team-chat-pending-reply-snippet"></span><span class="cancel" onclick="cancelTeamChatReply()">×</span></div>'
     + '<div class="team-attachments-preview" id="team-chat-attachments-preview"></div>'
     + '<div class="team-composer">'
     + '<button class="team-attach-btn" onclick="teamChatPollOnce(false,true)" title="Refresh">↻</button>'
+    + '<button class="team-attach-btn" id="team-chat-sound-btn" onclick="toggleTeamChatSound(event)" title="Звук уведомлений">🔔</button>'
     + '<button class="team-attach-btn" onclick="createVacancyDraftFromTeamText()" title="Create vacancy draft from text">＋</button>'
     + '<textarea id="team-chat-input" placeholder="Вопрос AI Assistant (видно всей команде)..." oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDown(event)" onpaste="teamChatPaste(event)">'+escapeHtml(chat.draftText || '')+'</textarea>'
     + '<button class="btn btn-accent btn-sm" id="team-chat-send-btn" onclick="sendTeamChatMessage()" title="Send">▶</button>'
@@ -1461,12 +1579,26 @@ async function teamChatPollOnce(initial, showErrors) {
     if (state.teamChat.lastTs && !initial) args.since = state.teamChat.lastTs;
     var rows = await invoke('fetch_team_chat_messages', args);
     if (Array.isArray(rows)) {
+      var mine = teamChatMyNickname();
+      var hadNewFromOthers = false;
       if (initial && !(state.teamChat.messages || []).length) {
         state.teamChat.messages = rows;
       } else {
+        var existing = {};
+        (state.teamChat.messages || []).forEach(function(m){ if (m && m.id) existing[m.id] = true; });
+        (rows || []).forEach(function(m){
+          if (m && m.id && !existing[m.id] && String(m.sender_nickname || '') !== mine) {
+            hadNewFromOthers = true;
+          }
+        });
         mergeTeamChatMessages(rows);
       }
       updateTeamChatLastTs();
+      if (hadNewFromOthers && !initial) {
+        _playTeamChatBeep();
+      }
+      if (state.teamChat.lastSeenTs == null) state.teamChat.lastSeenTs = state.teamChat.lastTs;
+      _recomputeTeamChatUnread();
       state.teamChat.lastError = '';
       renderTeamChatStream();
     }
@@ -1733,6 +1865,8 @@ function renderTeamChatStream() {
     stream.innerHTML = '<div class="team-empty">Командный чат готов. Можно написать AI Assistant или всей команде.</div>';
     chat.hasRenderedStream = true;
     requestAnimationFrame(updateTeamChatScrollButton);
+    _hideTeamChatNewBadge();
+    renderTeamChatUnread();
     return;
   }
   var mine = teamChatMyNickname();
@@ -1745,15 +1879,16 @@ function renderTeamChatStream() {
       lastDay = day;
     }
     if (m.event_type) {
-      html += '<div class="team-event">'+escapeHtml(m.body || '')+' <span style="opacity:.7;">'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>';
+      html += '<div class="team-event"><span style="font-weight:600;">'+escapeHtml(m.sender_nickname || '')+'</span> '+escapeHtml(m.body || '')+' <span style="opacity:.7;">'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>';
       return;
     }
     var isMine = String(m.sender_nickname || '') === mine;
     var isAi = teamChatIsAi(m);
     var cls = 'team-msg' + (isAi ? ' ai-llm' : (isMine ? ' mine' : ''));
-    html += '<div class="'+cls+'">'
+    var msgIdAttr = escapeAttr(String(m.id || ''));
+    html += '<div class="'+cls+'" oncontextmenu="_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')">'
       + '<div class="team-msg-meta"><span class="nick">'+escapeHtml(m.sender_nickname || 'Crewing')+'</span><span>'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>'
-      + '<div class="team-msg-body">'+escapeHtml(m.body || '')+'</div>'
+      + '<div class="team-msg-body">'+_renderTeamChatBody(m.body || '')+'</div>'
       + renderTeamChatAttachments(m.attachments || [], m.id || '')
       + '</div>';
   });
@@ -1762,11 +1897,16 @@ function renderTeamChatStream() {
   requestAnimationFrame(function(){
     if (shouldFollowBottom) {
       scrollTeamChatToBottom(false);
+      chat.lastSeenTs = chat.lastTs;
+      chat.unread = 0;
+      _hideTeamChatNewBadge();
     } else {
       var maxTop = Math.max(0, stream.scrollHeight - stream.clientHeight);
       stream.scrollTop = Math.min(savedScrollTop, maxTop);
       updateTeamChatScrollButton();
+      if ((chat.unread || 0) > 0) _showTeamChatNewBadge();
     }
+    renderTeamChatUnread();
   });
 }
 
@@ -1784,6 +1924,12 @@ function updateTeamChatScrollButton() {
   state.teamChat.followBottom = atBottom;
   state.teamChat.scrollTop = stream.scrollTop;
   if (btn) btn.classList.toggle('visible', !atBottom);
+  if (atBottom) {
+    state.teamChat.lastSeenTs = state.teamChat.lastTs;
+    state.teamChat.unread = 0;
+    _hideTeamChatNewBadge();
+    renderTeamChatUnread();
+  }
 }
 
 function handleTeamChatScroll() {
@@ -2196,7 +2342,7 @@ async function addTeamMember() {
       role: roleEl ? roleEl.value : 'member'
     });
     if (member && member.token) {
-      state.lastTeamMemberToken = { user_id: member.user_id || userId, token: member.token };
+      state.lastTeamMemberToken = { user_id: member.user_id || userId, token: member.token, token_prefix: member.token_prefix || '' };
     }
     if (userEl) userEl.value = '';
     if (nameEl) nameEl.value = '';
@@ -6552,6 +6698,297 @@ function registerMessagingPubkey() {
 function serverUrlArg() {
   return (state.settings && state.settings.server_url) || '';
 }
+
+// ---------- Team Chat polish: unread / new-messages badge / sound / reply-quote / customConfirm / events ----------
+
+function _recomputeTeamChatUnread() {
+  if (!state.teamChat) state.teamChat = {};
+  var mine = teamChatMyNickname();
+  var lastSeen = state.teamChat.lastSeenTs || '';
+  var unread = 0;
+  (state.teamChat.messages || []).forEach(function(m){
+    if (!m) return;
+    if (String(m.sender_nickname || '') === mine) return;
+    if ((m.created_at || '') > lastSeen) unread++;
+  });
+  state.teamChat.unread = unread;
+}
+
+function renderTeamChatUnread() {
+  var el = document.getElementById('team-chat-unread');
+  if (!el) return;
+  var n = (state.teamChat && state.teamChat.unread) || 0;
+  el.textContent = n > 0 ? String(n) : '';
+}
+
+function _showTeamChatNewBadge() {
+  if (document.getElementById('team-chat-new-badge')) return;
+  var wrap = document.querySelector('.team-stream-wrap');
+  if (!wrap) return;
+  var badge = document.createElement('button');
+  badge.id = 'team-chat-new-badge';
+  badge.className = 'team-new-badge';
+  badge.textContent = '⬇ Новые сообщения';
+  badge.onclick = function(){ scrollTeamChatToBottom(true); _hideTeamChatNewBadge(); };
+  wrap.appendChild(badge);
+}
+
+function _hideTeamChatNewBadge() {
+  var b = document.getElementById('team-chat-new-badge');
+  if (b) b.remove();
+}
+
+// ---------- Sound on incoming messages ----------
+
+var _teamChatAudioCtx = null;
+function _primeTeamChatAudio() {
+  try {
+    if (!_teamChatAudioCtx) {
+      var Ctor = window.AudioContext || window.webkitAudioContext;
+      if (Ctor) _teamChatAudioCtx = new Ctor();
+    }
+    if (_teamChatAudioCtx && _teamChatAudioCtx.state === 'suspended' && _teamChatAudioCtx.resume) {
+      _teamChatAudioCtx.resume();
+    }
+  } catch (_) {}
+}
+
+function _teamChatSoundEnabled() {
+  try {
+    var v = localStorage.getItem('skipi-crewing-chat-sound');
+    if (v === '0') return false;
+  } catch (_) {}
+  return true;
+}
+
+function _playTeamChatBeep() {
+  if (!_teamChatSoundEnabled()) return;
+  try {
+    _primeTeamChatAudio();
+    if (!_teamChatAudioCtx) return;
+    var ctx = _teamChatAudioCtx;
+    var now = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+    osc.frequency.linearRampToValueAtTime(660, now + 0.18);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+    osc.start(now); osc.stop(now + 0.22);
+  } catch (_) {}
+}
+
+function _renderTeamChatSoundBtn() {
+  var b = document.getElementById('team-chat-sound-btn');
+  if (!b) return;
+  var on = _teamChatSoundEnabled();
+  b.textContent = on ? '🔔' : '🔕';
+  b.title = on
+    ? 'Звук уведомлений включён. Клик — тест, Shift+клик — выключить'
+    : 'Звук уведомлений выключен. Клик — тест, Shift+клик — включить';
+}
+
+function toggleTeamChatSound(ev) {
+  if (ev && ev.shiftKey) {
+    var on = _teamChatSoundEnabled();
+    try { localStorage.setItem('skipi-crewing-chat-sound', on ? '0' : '1'); } catch (_) {}
+    _renderTeamChatSoundBtn();
+    showToast(on ? '🔕 звук уведомлений выключен' : '🔔 звук уведомлений включён', 'success');
+    return;
+  }
+  _primeTeamChatAudio();
+  _playTeamChatBeep();
+}
+
+// ---------- Reply-to (right-click on a message) ----------
+
+function _closeTeamChatCtxMenu() {
+  var m = document.getElementById('team-chat-ctx-menu');
+  if (m) m.remove();
+}
+
+document.addEventListener('click', function(){ _closeTeamChatCtxMenu(); });
+document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') _closeTeamChatCtxMenu(); });
+
+function _onTeamChatMsgContextMenu(ev, msgId) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  var msg = ((state.teamChat && state.teamChat.messages) || []).filter(function(m){ return String(m && m.id || '') === String(msgId || ''); })[0];
+  if (!msg) return;
+  _closeTeamChatCtxMenu();
+  var menu = document.createElement('div');
+  menu.className = 'team-ctx-menu';
+  menu.id = 'team-chat-ctx-menu';
+  menu.innerHTML = '<div class="item" onclick="_chooseTeamChatReplyTo(\''+escapeAttr(msgId)+'\')">↩ Ответить</div>';
+  document.body.appendChild(menu);
+  var x = ev.clientX, y = ev.clientY;
+  var rect = menu.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth) x = window.innerWidth - rect.width - 6;
+  if (y + rect.height > window.innerHeight) y = window.innerHeight - rect.height - 6;
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+
+function _chooseTeamChatReplyTo(msgId) {
+  _closeTeamChatCtxMenu();
+  var msg = ((state.teamChat && state.teamChat.messages) || []).filter(function(m){ return String(m && m.id || '') === String(msgId || ''); })[0];
+  if (!msg) return;
+  state.teamChat.pendingReplyTo = {
+    id: msgId,
+    nick: msg.sender_nickname || 'anon',
+    snippet: String(msg.body || '').replace(/\[img:[^\]]+\]/g, '[img]').slice(0, 140)
+  };
+  _renderTeamChatPendingReply();
+  var ta = document.getElementById('team-chat-input');
+  if (ta) ta.focus();
+}
+
+function cancelTeamChatReply() {
+  if (state.teamChat) state.teamChat.pendingReplyTo = null;
+  _renderTeamChatPendingReply();
+}
+
+function _renderTeamChatPendingReply() {
+  var bar = document.getElementById('team-chat-pending-reply');
+  if (!bar) return;
+  var p = state.teamChat && state.teamChat.pendingReplyTo;
+  if (!p) { bar.classList.remove('visible'); return; }
+  var n = document.getElementById('team-chat-pending-reply-nick');
+  var s = document.getElementById('team-chat-pending-reply-snippet');
+  if (n) n.textContent = '@' + p.nick;
+  if (s) s.textContent = p.snippet;
+  bar.classList.add('visible');
+}
+
+function _consumeTeamChatReplyPrefix() {
+  var p = state.teamChat && state.teamChat.pendingReplyTo;
+  if (!p) return '';
+  state.teamChat.pendingReplyTo = null;
+  _renderTeamChatPendingReply();
+  return '> @' + p.nick + ': ' + p.snippet + '\n\n';
+}
+
+// ---------- Render body: parse leading `> @nick: snippet` quote lines into styled blocks ----------
+
+function _renderTeamChatBody(body) {
+  if (!body) return '';
+  var quoteHtml = '';
+  var rest = String(body);
+  var qMatch = rest.match(/^((?:>[^\n]*\n)+)/);
+  if (qMatch) {
+    var qBlock = qMatch[1];
+    rest = rest.slice(qBlock.length).replace(/^\n+/, '');
+    var lines = qBlock.split('\n').filter(function(s){ return s.length > 0; });
+    lines.forEach(function(line){
+      var inner = line.replace(/^>\s?/, '');
+      var nickMatch = inner.match(/^@([^:\s]+):\s*(.*)$/);
+      if (nickMatch) {
+        quoteHtml += '<div class="team-reply-quote">'
+          + '<span class="nick">@'+escapeHtml(nickMatch[1])+'</span>'
+          + '<span class="snippet">'+escapeHtml(nickMatch[2])+'</span>'
+          + '</div>';
+      } else {
+        quoteHtml += '<div class="team-reply-quote">'
+          + '<span class="snippet">'+escapeHtml(inner)+'</span>'
+          + '</div>';
+      }
+    });
+  }
+  return quoteHtml + escapeHtml(rest);
+}
+
+// ---------- customConfirm: Promise-based modal (window.confirm unreliable in Tauri webview) ----------
+
+function customConfirm(opts) {
+  opts = opts || {};
+  return new Promise(function(resolve){
+    var overlay = document.createElement('div');
+    overlay.className = 'team-confirm-overlay';
+    var modal = document.createElement('div');
+    modal.className = 'team-confirm-modal';
+    var title = (opts.title || 'Подтверждение');
+    var body = (opts.body || opts.message || 'Вы уверены?');
+    var okLabel = (opts.okLabel || 'OK');
+    var cancelLabel = (opts.cancelLabel || 'Отмена');
+    var danger = opts.danger === true;
+    modal.innerHTML = '<div class="title"></div><div class="body"></div><div class="actions">'
+      + '<button class="cancel-btn"></button>'
+      + '<button class="'+(danger ? 'danger' : 'primary')+' ok-btn"></button>'
+      + '</div>';
+    modal.querySelector('.title').textContent = title;
+    modal.querySelector('.body').textContent = body;
+    modal.querySelector('.ok-btn').textContent = okLabel;
+    modal.querySelector('.cancel-btn').textContent = cancelLabel;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    function close(val){
+      try { document.body.removeChild(overlay); } catch (_) {}
+      document.removeEventListener('keydown', onKey, true);
+      resolve(val);
+    }
+    function onKey(ev){
+      if (ev.key === 'Escape') { ev.preventDefault(); close(false); }
+      if (ev.key === 'Enter')  { ev.preventDefault(); close(true); }
+    }
+    modal.querySelector('.ok-btn').onclick = function(){ close(true); };
+    modal.querySelector('.cancel-btn').onclick = function(){ close(false); };
+    overlay.onclick = function(e){ if (e.target === overlay) close(false); };
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(function(){
+      try { modal.querySelector('.ok-btn').focus(); } catch (_) {}
+    }, 30);
+  });
+}
+
+// ---------- emitTeamChatEvent: post a system event line (event_type set, no LLM trigger) ----------
+
+async function emitTeamChatEvent(eventType, summary) {
+  var s = state.settings || {};
+  if (!s.bearer_token || !s.crewing_id) return;
+  if (!eventType || !summary) return;
+  try {
+    var msg = await invoke('send_team_chat_message', {
+      body: String(summary),
+      triggerLlm: false,
+      eventType: String(eventType),
+      attachments: []
+    });
+    if (msg) { mergeTeamChatMessages([msg]); updateTeamChatLastTs(); renderTeamChatStream(); }
+  } catch (e) {
+    console.warn('emitTeamChatEvent failed', e);
+  }
+}
+
+// ---------- sendTeamChatMessage interception: prepend reply-quote prefix on send ----------
+
+if (typeof sendTeamChatMessage === 'function' && !sendTeamChatMessage._wrappedReply) {
+  var _origSendTeamChatMessage = sendTeamChatMessage;
+  window.sendTeamChatMessage = async function() {
+    var ta = document.getElementById('team-chat-input');
+    var prefix = _consumeTeamChatReplyPrefix();
+    if (ta && prefix && (ta.value || '').indexOf(prefix) !== 0) {
+      ta.value = prefix + (ta.value || '');
+    }
+    return _origSendTeamChatMessage.apply(this, arguments);
+  };
+  window.sendTeamChatMessage._wrappedReply = true;
+}
+
+// Ensure sound button label refreshes after every team view render.
+(function(){
+  var _origRenderTeamMain = (typeof renderTeamMain === 'function') ? renderTeamMain : null;
+  if (_origRenderTeamMain && !_origRenderTeamMain._wrappedSoundBtn) {
+    window.renderTeamMain = function() {
+      var r = _origRenderTeamMain.apply(this, arguments);
+      try { _renderTeamChatSoundBtn(); renderTeamChatUnread(); _renderTeamChatPendingReply(); } catch (_) {}
+      return r;
+    };
+    window.renderTeamMain._wrappedSoundBtn = true;
+  }
+})();
+
 </script>
 </body>
 </html>
