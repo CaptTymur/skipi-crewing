@@ -8,6 +8,12 @@ use crate::VacancyDraft;
 static CONN: Mutex<Option<Connection>> = Mutex::new(None);
 
 fn default_data_dir() -> PathBuf {
+    #[cfg(target_os = "android")]
+    {
+        return crate::app_data_dir();
+    }
+
+    #[cfg(not(target_os = "android"))]
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("skipi-crewing")

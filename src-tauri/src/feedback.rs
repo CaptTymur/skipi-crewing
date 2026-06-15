@@ -103,9 +103,14 @@ struct ServerDiagnostic<'a> {
 }
 
 fn feedback_db_path() -> PathBuf {
+    #[cfg(target_os = "android")]
+    let dir = crate::app_data_dir();
+
+    #[cfg(not(target_os = "android"))]
     let dir = dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("skipi-crewing");
+
     let _ = std::fs::create_dir_all(&dir);
     dir.join("feedback.sqlite")
 }

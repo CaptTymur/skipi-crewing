@@ -38,10 +38,15 @@ fn safe_file_component(input: &str) -> String {
 }
 
 fn keys_dir() -> PathBuf {
+    #[cfg(target_os = "android")]
+    let dir = crate::app_data_dir().join("keys");
+
+    #[cfg(not(target_os = "android"))]
     let dir = dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("skipi-crewing")
         .join("keys");
+
     std::fs::create_dir_all(&dir).ok();
     dir
 }
@@ -118,10 +123,7 @@ mod tests {
         assert_eq!(first.user_id.len(), 16);
         assert!(!first.pubkey_b64.is_empty());
 
-        let sk_path = root
-            .join("skipi-crewing")
-            .join("keys")
-            .join(SK_FILENAME);
+        let sk_path = root.join("skipi-crewing").join("keys").join(SK_FILENAME);
         let bytes = std::fs::read(&sk_path).expect("secret key written");
         assert_eq!(bytes.len(), 32);
 
@@ -566,8 +568,8 @@ pub fn extract_documents_bundle(
         if let Some(parent) = out_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let mut out_file =
-            std::fs::File::create(&out_path).map_err(|e| format!("create {}: {e}", out_path.display()))?;
+        let mut out_file = std::fs::File::create(&out_path)
+            .map_err(|e| format!("create {}: {e}", out_path.display()))?;
         std::io::copy(&mut entry, &mut out_file)
             .map_err(|e| format!("extract {}: {e}", out_path.display()))?;
         if rel == std::path::Path::new("manifest.json") {

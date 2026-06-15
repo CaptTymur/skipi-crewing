@@ -7,6 +7,11 @@ mod db;
 mod feedback;
 mod messaging;
 
+#[cfg(target_os = "android")]
+pub(crate) fn app_data_dir() -> PathBuf {
+    PathBuf::from("/data/data/app.skipi.crewing.mobile/files").join("skipi-crewing")
+}
+
 // ---------- Settings ----------
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -63,9 +68,14 @@ pub struct Settings {
 
 impl Settings {
     fn config_path() -> PathBuf {
+        #[cfg(target_os = "android")]
+        let dir = app_data_dir();
+
+        #[cfg(not(target_os = "android"))]
         let dir = dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("skipi-crewing");
+
         std::fs::create_dir_all(&dir).ok();
         dir.join("settings.json")
     }
@@ -1603,6 +1613,9 @@ fn mime_from_path(path: &str) -> String {
 }
 
 fn open_with_default_app(path: &str) -> Result<(), String> {
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    let _ = path;
+
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
@@ -1863,6 +1876,7 @@ fn attach_demo_to_template(
 
 // ---------- App entry ----------
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let settings = Settings::load();
     db::init(&settings.vault_path).expect("db init");
@@ -1870,12 +1884,10 @@ pub fn run() {
         settings: Mutex::new(settings),
     };
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
             get_settings,
@@ -1939,7 +1951,14 @@ pub fn run() {
             feedback::postpone_app_feedback,
             feedback::submit_app_feedback,
             feedback::list_app_feedback,
-        ])
+        ]);
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+
+    builder
         .run(tauri::generate_context!())
         .expect("error while running Skipi Crewing");
 }

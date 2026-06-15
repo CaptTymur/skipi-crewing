@@ -388,6 +388,77 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 .team-confirm-modal button { padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border, rgba(255,255,255,.12)); background: var(--panel2, #2a2c33); color: var(--text, #eee); }
 .team-confirm-modal button.primary { background: var(--accent, #7c6ff7); color: #fff; border-color: var(--accent, #7c6ff7); }
 .team-confirm-modal button.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+body.mobile-shell { display: block; min-height: 100dvh; overflow: hidden; background: var(--bg); }
+body.mobile-shell .modules-bar,
+body.mobile-shell .app { display: none; }
+#mobile-root { display: none; }
+body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
+.mobile-app { min-height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); color: var(--text); }
+.mobile-top { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mobile-title { min-width: 0; }
+.mobile-title strong { display: block; font-size: 16px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-title span { display: block; margin-top: 2px; font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-top-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.mobile-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
+.mobile-main { min-height: 0; overflow-y: auto; padding: 12px 12px 92px; }
+.mobile-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 7px 8px calc(env(safe-area-inset-bottom, 0px) + 7px); background: rgba(26,31,38,0.96); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; z-index: 40; }
+.mobile-bottom button { height: 48px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10px; cursor: pointer; min-width: 0; }
+.mobile-bottom button .ico { font-size: 17px; line-height: 1; }
+.mobile-bottom button.active { color: #fff; background: var(--accent); border-color: var(--accent2); font-weight: 700; }
+.mobile-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.mobile-section-title { margin: 16px 2px 8px; color: var(--text2); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.mobile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.mobile-row.full { grid-template-columns: 1fr; }
+.mobile-field label { display: block; margin: 0 0 4px; font-size: 11px; color: var(--text2); }
+.mobile-field input,
+.mobile-field select,
+.mobile-field textarea { width: 100%; min-height: 42px; padding: 9px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font: inherit; font-size: 14px; outline: none; }
+.mobile-field textarea { min-height: 98px; resize: vertical; line-height: 1.4; }
+.mobile-field input:focus,
+.mobile-field select:focus,
+.mobile-field textarea:focus { border-color: var(--accent); }
+.mobile-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.mobile-actions button,
+.mobile-primary,
+.mobile-secondary,
+.mobile-danger { min-height: 40px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-weight: 700; cursor: pointer; }
+.mobile-primary { background: var(--accent); border-color: var(--accent2); color: #fff; }
+.mobile-danger { border-color: rgba(239,68,68,0.7); color: var(--err); }
+.mobile-muted { color: var(--text2); font-size: 12px; line-height: 1.45; }
+.mobile-status { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 3px 8px; border-radius: 12px; border: 1px solid var(--border); color: var(--text2); background: var(--panel2); font-size: 11px; }
+.mobile-status.ok { color: var(--ok); border-color: rgba(34,197,94,0.35); }
+.mobile-status.warn { color: var(--warn); border-color: rgba(245,158,11,0.35); }
+.mobile-list-item { width: 100%; text-align: left; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+.mobile-list-item:active { transform: translateY(1px); }
+.mobile-list-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-weight: 750; font-size: 14px; line-height: 1.25; }
+.mobile-list-meta { margin-top: 5px; color: var(--text2); font-size: 12px; line-height: 1.35; }
+.mobile-badge { flex-shrink: 0; min-width: 22px; min-height: 22px; padding: 3px 7px; border-radius: 12px; background: rgba(239,68,68,0.18); color: #ff8d8d; font-size: 11px; text-align: center; }
+.mobile-empty { padding: 40px 16px; text-align: center; color: var(--text2); font-size: 13px; line-height: 1.5; }
+.mobile-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.mobile-detail-head h1 { margin: 0; font-size: 18px; line-height: 1.22; }
+.mobile-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mobile-kpi { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 9px; }
+.mobile-kpi label { margin: 0 0 4px; font-size: 10px; color: var(--text2); }
+.mobile-kpi strong { display: block; font-size: 17px; }
+.mobile-chat { min-height: calc(100dvh - 196px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; }
+.mobile-chat .team-stream-wrap { min-height: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.mobile-chat .team-stream { min-height: 0; padding: 8px; }
+.mobile-chat .team-composer { border: 1px solid var(--border); border-radius: 8px; padding: 6px; margin: 0; }
+.mobile-chat .team-composer textarea { min-height: 42px; font-size: 13px; }
+.mobile-chat .team-target-row { padding: 0; background: transparent; }
+.mobile-compact-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.mobile-compact-tabs button { flex: 0 0 auto; min-height: 32px; border-radius: 16px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); }
+.mobile-compact-tabs button.active { color: #fff; background: var(--accent); border-color: var(--accent2); }
+body.mobile-shell .settings-overlay { padding: 12px; align-items: flex-start; overflow-y: auto; }
+body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
+@media (max-width: 420px) {
+  .mobile-row { grid-template-columns: 1fr; }
+  .mobile-kpis { grid-template-columns: 1fr 1fr; }
+  .mobile-actions button,
+  .mobile-primary,
+  .mobile-secondary,
+  .mobile-danger { flex: 1 1 auto; }
+}
 </style>
 </head>
 <body>
@@ -6613,8 +6684,544 @@ function applyTheme() {
   document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
 }
 
+// ------------- Android / compact mobile shell -------------
+var mobileState = {
+  view: 'connection',
+  draftText: '',
+  lastVacancyError: '',
+};
+
+function shouldUseMobileShell() {
+  if (String(location.hash || '').indexOf('desktop') !== -1) return false;
+  if (String(location.hash || '').indexOf('mobile') !== -1) return true;
+  var ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 760;
+}
+
+function isMobileShellActive() {
+  return document.body && document.body.classList.contains('mobile-shell');
+}
+
+function mobileHasConnection() {
+  var s = state.settings || {};
+  return !!(s.server_url && s.bearer_token && s.crewing_id);
+}
+
+function mobileEnsureRoot() {
+  var root = document.getElementById('mobile-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'mobile-root';
+    document.body.insertBefore(root, document.getElementById('update-banner-host') || document.body.firstChild);
+  }
+  return root;
+}
+
+function mobileViewChromeTitle(view) {
+  if (view === 'team') return ['Team', mobileHasConnection() ? 'AI Assistant and crewing chat' : 'Connect company token'];
+  if (view === 'settings' || view === 'connection') return ['Connection', mobileHasConnection() ? 'Production API connected' : 'Company token required'];
+  if (view === 'draft') return [state.editingVacancyId ? 'Edit vacancy' : 'Vacancy draft', 'Create from simple text'];
+  if (view === 'vacancy') {
+    var v = state.selectedVacancy || {};
+    return [mobileVacancyTitle(v) || 'Vacancy', (v.rank || '') + (v.vessel_type ? ' · ' + v.vessel_type : '')];
+  }
+  return ['My vacancies', mobileHasConnection() ? mobileApiHostLabel() : 'Connect company token'];
+}
+
+function mobileApiHostLabel() {
+  var url = (state.settings && state.settings.server_url) || '';
+  return url.replace(/^https?:\/\//, '').replace(/\/+$/, '') || 'production API';
+}
+
+function mobileRenderChrome(view) {
+  var root = mobileEnsureRoot();
+  var title = mobileViewChromeTitle(view);
+  var navView = view === 'vacancy' ? 'vacancies' : view;
+  var showBack = view === 'vacancy' || view === 'draft';
+  root.innerHTML =
+    '<div class="mobile-app">'
+    + '<header class="mobile-top">'
+    + '<div class="mobile-title"><strong>'+escapeHtml(title[0])+'</strong><span>'+escapeHtml(title[1] || '')+'</span></div>'
+    + '<div class="mobile-top-actions">'
+    + (showBack ? '<button class="mobile-icon-btn" onclick="mobileBack()" title="Back">‹</button>' : '')
+    + (view === 'vacancies' ? '<button class="mobile-icon-btn" onclick="mobileLoadVacancies(true)" title="Refresh">↻</button>' : '')
+    + '<button class="mobile-icon-btn" onclick="mobileShow(\'settings\')" title="Settings">⚙</button>'
+    + '</div>'
+    + '</header>'
+    + '<main class="mobile-main" id="mobile-main"></main>'
+    + '<nav class="mobile-bottom">'
+    + mobileNavButton('vacancies', navView, '☰', 'Vacancies')
+    + mobileNavButton('team', navView, '◉', 'Team')
+    + mobileNavButton('draft', navView, '+', 'Draft')
+    + mobileNavButton('settings', navView, '⚙', 'Settings')
+    + '</nav>'
+    + '</div>';
+}
+
+function mobileNavButton(view, active, icon, label) {
+  return '<button class="'+(active===view?'active':'')+'" onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span>'+label+'</span></button>';
+}
+
+async function bootMobile() {
+  document.body.classList.add('mobile-shell');
+  mobileEnsureRoot();
+  try { state.settings = await invoke('get_settings'); } catch(e) { state.settings = state.settings || {}; }
+  applyTheme();
+  try { await loadTaxonomy(); } catch(e) {}
+  if (!state.teamChat) state.teamChat = {};
+  if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
+  mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+}
+
+function mobileShow(view) {
+  if (!mobileHasConnection() && (view === 'vacancies' || view === 'team' || view === 'draft')) {
+    view = 'connection';
+  }
+  if (state.view === 'team' && view !== 'team') stopTeamChatPoll();
+  mobileState.view = view;
+  state.view = view === 'team' ? 'team' : 'mobile-' + view;
+  document.body.classList.add('mobile-shell');
+  mobileRenderChrome(view);
+  if (view === 'connection') return mobileRenderConnection();
+  if (view === 'settings') return mobileRenderSettings();
+  if (view === 'team') return mobileRenderTeam();
+  if (view === 'draft') return mobileRenderDraft();
+  if (view === 'vacancy') return mobileRenderVacancyDetail();
+  return mobileRenderVacancies();
+}
+
+function mobileBack() {
+  if (mobileState.view === 'draft') {
+    state.editingVacancyId = null;
+    state.newVacancyPrefill = null;
+  }
+  mobileShow('vacancies');
+}
+
+function mobileMain(html) {
+  var main = document.getElementById('mobile-main');
+  if (main) main.innerHTML = html;
+}
+
+function mobileConnectionHtml(mode) {
+  var s = state.settings || {};
+  var isSettings = mode === 'settings';
+  return '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Production connection</div>'
+    + '<div class="mobile-muted" style="margin-bottom:10px;">Use the company token issued by Skipi after verification. The default endpoint is production.</div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Server URL</label><input id="m-server-url" type="text" value="'+escapeAttr(s.server_url || 'https://api-ru.skipi.app')+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Company token</label><input id="m-token" type="password" value="'+escapeAttr(s.bearer_token || '')+'" placeholder="Paste company token" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Crewing ID</label><input id="m-crewing-id" type="text" value="'+escapeAttr(s.crewing_id || '')+'" placeholder="Filled after validation" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Company display name</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="e.g. Marlow Crewing Ltd"></div></div>'
+    + (isSettings ? '<div class="mobile-row full"><div class="mobile-field"><label>Reply-to email</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to || '')+'" placeholder="hr@company.com"></div></div>' : '')
+    + '<div class="mobile-actions">'
+    + '<button class="mobile-secondary" onclick="mobileSaveConnection(true)">Save</button>'
+    + '<button class="mobile-primary" onclick="mobileValidateConnection()">Validate</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function mobileRenderConnection() {
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<span class="mobile-status warn">Token required</span>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">Connect Skipi Crewing</h1>'
+    + '<div class="mobile-muted">After validation, the first screen is your vacancies list. Production API is used by default.</div>'
+    + '</div>'
+    + mobileConnectionHtml('connection')
+  );
+}
+
+function mobileRenderSettings() {
+  var s = state.settings || {};
+  mobileMain(
+    '<div class="mobile-card">'
+    + (mobileHasConnection()
+      ? '<span class="mobile-status ok">Connected</span>'
+      : '<span class="mobile-status warn">Not connected</span>')
+    + '<div class="mobile-section-title">Current device</div>'
+    + '<div class="mobile-muted">API: '+escapeHtml(mobileApiHostLabel())+'<br>Crewing: '+escapeHtml(s.crewing_id || 'not set')+'</div>'
+    + '</div>'
+    + mobileConnectionHtml('settings')
+  );
+}
+
+function mobileReadConnection() {
+  var pick = function(id, fallback) {
+    var el = document.getElementById(id);
+    return el ? (el.value || '').trim() : (fallback || '');
+  };
+  var s = state.settings || {};
+  return {
+    server_url: pick('m-server-url', s.server_url || 'https://api-ru.skipi.app'),
+    bearer_token: pick('m-token', s.bearer_token || ''),
+    crewing_id: pick('m-crewing-id', s.crewing_id || ''),
+    company_name: pick('m-company', s.company_name || ''),
+    reply_to: pick('m-reply', s.reply_to || '')
+  };
+}
+
+async function mobileSaveConnection(showToastOnSave) {
+  var s = state.settings || {};
+  var c = mobileReadConnection();
+  var next = Object.assign({}, s, {
+    server_url: c.server_url,
+    bearer_token: c.bearer_token,
+    crewing_id: c.crewing_id,
+    company_name: c.company_name,
+    reply_to: c.reply_to || s.reply_to || '',
+    profile: s.profile || {},
+    interface: s.interface || { theme: 'dark', language: 'en' },
+    recent_vaults: s.recent_vaults || []
+  });
+  await invoke('save_settings', { newSettings: next });
+  state.settings = next;
+  if (showToastOnSave !== false) showToast('Connection saved', 'success');
+  return next;
+}
+
+async function mobileValidateConnection() {
+  var c = mobileReadConnection();
+  if (!c.server_url || !c.bearer_token) {
+    showToast('Server URL and company token are required', 'error');
+    return;
+  }
+  showToast('Validating company token...', 'info');
+  try {
+    var activation = await invoke('activate_crewing_token', {
+      serverUrl: c.server_url,
+      bearerToken: c.bearer_token
+    });
+    var s = state.settings || {};
+    var next = Object.assign({}, s, {
+      server_url: c.server_url,
+      bearer_token: c.bearer_token,
+      crewing_id: activation.crewing_id || c.crewing_id || '',
+      organization_id: activation.organization_id || s.organization_id || '',
+      company_name: c.company_name || activation.display_name || s.company_name || '',
+      reply_to: c.reply_to || s.reply_to || '',
+      profile: s.profile || {},
+      interface: s.interface || { theme: 'dark', language: 'en' },
+      recent_vaults: s.recent_vaults || []
+    });
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
+    showToast('Connected to '+(activation.display_name || 'Skipi Crewing'), 'success');
+    state.vacancies = [];
+    mobileShow('vacancies');
+  } catch (e) {
+    showToast('Token validation failed: '+e, 'error');
+  }
+}
+
+function mobileVacancyTitle(v) {
+  if (!v) return '';
+  return v.title || [v.rank, v.vessel_type].filter(Boolean).join(' · ');
+}
+
+function mobileVacancyStatus(v) {
+  if (!v) return '';
+  if (v.status === 'active') return '<span class="mobile-status ok">Active</span>';
+  if (v.status === 'closed') return '<span class="mobile-status warn">Closed</span>';
+  return '<span class="mobile-status">'+escapeHtml(v.status || 'unknown')+'</span>';
+}
+
+function mobileRenderVacancies() {
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+    + '<div>'+ (mobileHasConnection() ? '<span class="mobile-status ok">Connected</span>' : '<span class="mobile-status warn">Not connected</span>') + '</div>'
+    + '<button class="mobile-primary" onclick="mobileNewDraft()">New</button>'
+    + '</div>'
+    + '<div class="mobile-muted" style="margin-top:10px;">Vacancies from production API. New applications are highlighted in the list.</div>'
+    + '</div>'
+    + '<div id="mobile-vacancy-list"><div class="mobile-empty">Loading vacancies...</div></div>'
+  );
+  mobileLoadVacancies(false);
+}
+
+async function mobileLoadVacancies(force) {
+  var host = document.getElementById('mobile-vacancy-list');
+  if (!host) return;
+  if (!force && state.vacancies && state.vacancies.length) {
+    mobilePaintVacancyList();
+    return;
+  }
+  host.innerHTML = '<div class="mobile-empty">Loading vacancies...</div>';
+  try {
+    state.vacancies = await invoke('fetch_my_vacancies');
+    mobilePaintVacancyList();
+  } catch (e) {
+    mobileState.lastVacancyError = '' + e;
+    host.innerHTML = '<div class="mobile-card"><div class="mobile-status warn">Load failed</div><div class="mobile-muted" style="margin-top:8px;">'+escapeHtml(''+e)+'</div><div class="mobile-actions" style="margin-top:12px;"><button class="mobile-primary" onclick="mobileShow(\'settings\')">Settings</button></div></div>';
+  }
+}
+
+function mobilePaintVacancyList() {
+  var host = document.getElementById('mobile-vacancy-list');
+  if (!host) return;
+  var rows = (state.vacancies || []).slice().sort(sortComparator(state.sortBy || 'open_first'));
+  if (!rows.length) {
+    host.innerHTML = '<div class="mobile-empty">No vacancies posted yet.<br><br><button class="mobile-primary" onclick="mobileNewDraft()">Create vacancy</button></div>';
+    return;
+  }
+  host.innerHTML = rows.map(function(v){
+    var newCount = v.new_applications_count || 0;
+    var meta = [v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].filter(Boolean).join(' · ');
+    return '<button class="mobile-list-item" onclick="mobileOpenVacancy(\''+escapeAttr(v.id)+'\')">'
+      + '<div class="mobile-list-title"><span>'+escapeHtml(mobileVacancyTitle(v))+'</span>'+(newCount ? '<span class="mobile-badge">'+newCount+'</span>' : '')+'</div>'
+      + '<div class="mobile-list-meta">'+escapeHtml(meta)+(v.reply_count ? ' · '+v.reply_count+' applied' : '')+'</div>'
+      + (v.client_name ? '<div class="mobile-list-meta" style="color:var(--accent);">Client: '+escapeHtml(v.client_name)+'</div>' : '')
+      + '</button>';
+  }).join('');
+}
+
+function mobileOpenVacancy(id) {
+  state.selectedVacancy = (state.vacancies || []).find(function(v){ return String(v.id) === String(id); }) || null;
+  mobileShow('vacancy');
+}
+
+function mobileRenderVacancyDetail() {
+  var v = state.selectedVacancy;
+  if (!v) return mobileShow('vacancies');
+  var salary = v.salary_min ? (v.salary_currency || 'USD') + ' ' + v.salary_min + (v.salary_max && v.salary_max !== v.salary_min ? '-' + v.salary_max : '') + '/mo' : '—';
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<div class="mobile-detail-head"><h1>'+escapeHtml(mobileVacancyTitle(v))+'</h1>'+mobileVacancyStatus(v)+'</div>'
+    + '<div class="mobile-muted">'+escapeHtml([v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].join(' · '))+'</div>'
+    + '</div>'
+    + '<div class="mobile-card mobile-kpis">'
+    + '<div class="mobile-kpi"><label>Apply clicks</label><strong>'+Number(v.apply_click_count || 0)+'</strong></div>'
+    + '<div class="mobile-kpi"><label>Applications</label><strong>'+Number(v.reply_count || 0)+'</strong></div>'
+    + '<div class="mobile-kpi"><label>New</label><strong>'+Number(v.new_applications_count || 0)+'</strong></div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Vessel</label><div>'+escapeHtml(v.vessel_name || '—')+(v.vessel_imo ? ' · IMO '+escapeHtml(v.vessel_imo) : '')+'</div></div>'
+    + '<div class="mobile-field"><label>Salary</label><div>'+escapeHtml(salary)+'</div></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Join</label><div>'+escapeHtml((v.joining_window_from || '').slice(0,10) || '—')+(v.join_port ? ' · '+escapeHtml(v.join_port) : '')+'</div></div>'
+    + '<div class="mobile-field"><label>Contract</label><div>'+(v.contract_months ? escapeHtml(v.contract_months + ' months') : '—')+'</div></div></div>'
+    + (v.client_name ? '<div class="mobile-row full"><div class="mobile-field"><label>Client</label><div>'+escapeHtml(v.client_name)+'</div></div></div>' : '')
+    + (v.description ? '<div class="mobile-row full"><div class="mobile-field"><label>Description</label><div style="white-space:pre-wrap;line-height:1.45;">'+escapeHtml(v.description)+'</div></div></div>' : '')
+    + '</div>'
+    + '<div class="mobile-card"><div class="mobile-actions">'
+    + '<button class="mobile-secondary" onclick="mobileEditVacancy()">Edit</button>'
+    + '<button class="mobile-secondary" onclick="mobileCopyVacancy()">Copy</button>'
+    + (v.status === 'active'
+      ? '<button class="mobile-danger" onclick="mobileCloseVacancy()">Close</button>'
+      : '<button class="mobile-primary" onclick="mobileReopenVacancy()">Reopen</button>')
+    + '</div></div>'
+  );
+}
+
+function mobileEditVacancy() {
+  if (!state.selectedVacancy) return;
+  state.newVacancyPrefill = vacancyToPrefill(state.selectedVacancy);
+  state.editingVacancyId = state.selectedVacancy.id;
+  mobileShow('draft');
+}
+
+function mobileCopyVacancy() {
+  if (!state.selectedVacancy) return;
+  state.newVacancyPrefill = vacancyToPrefill(state.selectedVacancy, { copy: true });
+  state.editingVacancyId = null;
+  mobileShow('draft');
+}
+
+async function mobileCloseVacancy() {
+  var v = state.selectedVacancy;
+  if (!v) return;
+  var ok = await inAppConfirm('Close this vacancy?', { confirmLabel: 'Close' });
+  if (!ok) return;
+  try {
+    await invoke('close_vacancy_remote', { vacancyId: v.id });
+    showToast('Vacancy closed', 'success');
+    state.vacancies = await invoke('fetch_my_vacancies');
+    state.selectedVacancy = (state.vacancies || []).find(function(x){ return x.id === v.id; }) || null;
+    mobileShow(state.selectedVacancy ? 'vacancy' : 'vacancies');
+  } catch(e) { showToast('Close failed: '+e, 'error'); }
+}
+
+async function mobileReopenVacancy() {
+  var v = state.selectedVacancy;
+  if (!v) return;
+  try {
+    await invoke('reopen_vacancy_remote', { vacancyId: v.id });
+    showToast('Vacancy reopened', 'success');
+    state.vacancies = await invoke('fetch_my_vacancies');
+    state.selectedVacancy = (state.vacancies || []).find(function(x){ return x.id === v.id; }) || null;
+    mobileShow(state.selectedVacancy ? 'vacancy' : 'vacancies');
+  } catch(e) { showToast('Reopen failed: '+e, 'error'); }
+}
+
+function mobileNewDraft() {
+  state.newVacancyPrefill = null;
+  state.editingVacancyId = null;
+  mobileState.draftText = '';
+  mobileShow('draft');
+}
+
+function mobileRenderDraft() {
+  var seed = state.newVacancyPrefill || {};
+  state.newVacancyPrefill = null;
+  mobileState.draftText = seed.description || mobileState.draftText || '';
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<div class="mobile-field"><label>Paste vacancy text</label><textarea id="m-draft-text" placeholder="Chief Officer, Oil/Chem tanker, IMO 9554488, 4 months, USD 8500, Ukraine/Philippines...">'+escapeHtml(mobileState.draftText || '')+'</textarea></div>'
+    + '<div class="mobile-actions" style="margin-top:10px;"><button class="mobile-secondary" onclick="mobileParseDraftText()">Parse text</button></div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + (state.editingVacancyId ? '<span class="mobile-status warn">Editing published vacancy</span>' : '<span class="mobile-status">Draft</span>')
+    + '<div class="mobile-row full" style="margin-top:10px;"><div class="mobile-field"><label>Title*</label><input id="m-title" type="text" value="'+escapeAttr(seed.title || '')+'"></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Rank*</label><select id="m-rank">'+optionLabelsHtml(taxonomyLabels('positions'), seed.rank || '')+'</select></div>'
+    + '<div class="mobile-field"><label>Vessel type*</label><select id="m-vtype">'+optionLabelsHtml(taxonomyLabels('vessel_types'), seed.vessel_type || '')+'</select></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>IMO*</label><input id="m-imo" type="text" inputmode="numeric" maxlength="7" value="'+escapeAttr(seed.vessel_imo || '')+'"></div>'
+    + '<div class="mobile-field"><label>Vessel name</label><input id="m-vname" type="text" value="'+escapeAttr(seed.vessel_name || '')+'"></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Join date</label><input id="m-jdate" type="date" value="'+escapeAttr(seed.join_date || '')+'"></div>'
+    + '<div class="mobile-field"><label>Contract months</label><input id="m-months" type="number" min="1" max="12" value="'+escapeAttr(seed.contract_months || '')+'"></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Salary min</label><input id="m-smin" type="number" min="0" value="'+escapeAttr(seed.salary_min || '')+'"></div>'
+    + '<div class="mobile-field"><label>Salary max</label><input id="m-smax" type="number" min="0" value="'+escapeAttr(seed.salary_max || '')+'"></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>Currency</label><select id="m-cur">'+['USD','EUR','GBP'].map(function(c){return optionHtml(c, seed.salary_currency || 'USD');}).join('')+'</select></div>'
+    + '<div class="mobile-field"><label>Client</label><input id="m-client" type="text" value="'+escapeAttr(seed.client_name || '')+'"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Citizenship*</label>'+nationalitySelectHtml('m-nationalities')+'</div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Description</label><textarea id="m-desc">'+escapeHtml(seed.description || '')+'</textarea></div></div>'
+    + '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileBack()">Cancel</button><button class="mobile-primary" onclick="mobileSubmitVacancy()">'+(state.editingVacancyId ? 'Save' : 'Post')+'</button></div>'
+    + '</div>'
+  );
+  setCdValues('m-nationalities', seed.nationalities || []);
+}
+
+function mobileParseDraftText() {
+  var el = document.getElementById('m-draft-text');
+  var text = el ? (el.value || '').trim() : '';
+  if (!text) {
+    showToast('Paste vacancy text first', 'warn');
+    return;
+  }
+  mobileState.draftText = text;
+  state.newVacancyPrefill = parseVacancyDraftText(text);
+  mobileShow('draft');
+}
+
+function mobileReadDraft() {
+  var pick = function(id) {
+    var el = document.getElementById(id);
+    return el ? (el.value || '').trim() : '';
+  };
+  return {
+    title: pick('m-title'),
+    rank: pick('m-rank'),
+    vessel_type: pick('m-vtype'),
+    vessel_imo: pick('m-imo') || null,
+    vessel_name: pick('m-vname') || null,
+    flag: null,
+    join_date: pick('m-jdate') || null,
+    join_port: null,
+    contract_months: pick('m-months') ? parseInt(pick('m-months'), 10) : null,
+    salary_min: pick('m-smin') ? parseFloat(pick('m-smin')) : null,
+    salary_max: pick('m-smax') ? parseFloat(pick('m-smax')) : null,
+    salary_currency: pick('m-cur') || 'USD',
+    min_age: null,
+    max_age: null,
+    us_visa_required: false,
+    schengen_visa_required: false,
+    trading_area: null,
+    trading_russia_ok: false,
+    languages: null,
+    nationalities: cdValues('m-nationalities'),
+    description: pick('m-desc') || null,
+    client_name: pick('m-client') || null,
+    compliance_profile_id: null,
+  };
+}
+
+async function mobileSubmitVacancy() {
+  var draft = mobileReadDraft();
+  if (!draft.title || !draft.rank || !draft.vessel_type) {
+    showToast('Title, rank and vessel type are required', 'error');
+    return;
+  }
+  if (!draft.vessel_imo || !/^\d{7}$/.test(String(draft.vessel_imo))) {
+    showToast('IMO must be exactly 7 digits', 'error');
+    return;
+  }
+  if (!draft.nationalities || !draft.nationalities.length) {
+    showToast('Select at least one citizenship', 'error');
+    return;
+  }
+  try {
+    var editId = state.editingVacancyId || null;
+    var saved = editId
+      ? await invoke('update_vacancy_remote', { vacancyId: editId, draft: draft })
+      : await invoke('post_vacancy', { draft: draft });
+    showToast(editId ? 'Vacancy updated' : 'Vacancy posted', 'success');
+    state.editingVacancyId = null;
+    state.newVacancyPrefill = null;
+    mobileState.draftText = '';
+    state.vacancies = await invoke('fetch_my_vacancies');
+    var id = saved && saved.id;
+    state.selectedVacancy = id ? (state.vacancies || []).find(function(v){ return v.id === id; }) : null;
+    mobileShow(state.selectedVacancy ? 'vacancy' : 'vacancies');
+  } catch (e) {
+    showToast('Save failed: '+e, 'error');
+  }
+}
+
+function mobileRenderTeam() {
+  var s = state.settings || {};
+  if (!mobileHasConnection()) return mobileShow('connection');
+  if (!state.teamChat) state.teamChat = {};
+  if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
+  var name = s.user_display_name || s.company_name || (s.profile && s.profile.legal_name) || '';
+  mobileMain(
+    '<div class="mobile-chat">'
+    + '<div class="mobile-card" style="margin-bottom:0;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+    + '<span class="mobile-status ok">Connected</span>'
+    + '<button class="mobile-secondary" onclick="mobileDraftFromTeamText()">Draft from chat</button>'
+    + '</div>'
+    + '<div class="mobile-row full" style="margin-top:10px;margin-bottom:0;"><div class="mobile-field"><label>Your name</label><input id="team-chat-display-name" type="text" value="'+escapeAttr(name)+'" oninput="state.settings=state.settings||{};state.settings.user_display_name=this.value;renderTeamChatStream();" onblur="saveTeamChatNameInline()"></div></div>'
+    + '</div>'
+    + '<div class="team-target-row"><span class="tt-label">To:</span>'+renderTeamTargetPills(state.teamChat.sendTarget || 'ai')+'<span class="tt-hint" id="team-chat-hint"></span></div>'
+    + '<div class="team-chat-error" id="team-chat-error" style="display:none;"></div>'
+    + '<div class="team-stream-wrap">'
+    + '<div class="team-stream" id="team-chat-stream" onscroll="handleTeamChatScroll()"></div>'
+    + '<button class="team-scroll-bottom" id="team-chat-bottom-btn" onclick="scrollTeamChatToBottom(true)" title="Bottom">↓</button>'
+    + '</div>'
+    + '<div class="team-attachments-preview" id="team-chat-attachments-preview"></div>'
+    + '<div class="team-composer">'
+    + '<button class="team-attach-btn" onclick="teamChatPollOnce(false,true)" title="Refresh">↻</button>'
+    + '<textarea id="team-chat-input" placeholder="Message AI Assistant or team..." oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDown(event)" onpaste="teamChatPaste(event)">'+escapeHtml(state.teamChat.draftText || '')+'</textarea>'
+    + '<button class="btn btn-accent btn-sm" id="team-chat-send-btn" onclick="sendTeamChatMessage()" title="Send">▶</button>'
+    + '</div>'
+    + '</div>'
+  );
+  setTeamChatTarget(state.teamChat.sendTarget || 'ai', true);
+  renderTeamChatStream();
+  renderTeamChatError();
+  renderTeamChatAttachmentPreview();
+  startTeamChatPoll();
+  ensureMyIdentityForTeam().then(function(me){ state.myIdentity = me; }).catch(function(){});
+}
+
+function mobileDraftFromTeamText() {
+  var text = teamVacancyDraftSourceText();
+  if (!text) {
+    showToast('Type or receive vacancy text in Team first', 'warn');
+    return;
+  }
+  mobileState.draftText = text;
+  state.newVacancyPrefill = parseVacancyDraftText(text);
+  state.editingVacancyId = null;
+  mobileShow('draft');
+}
+
 // ------------- boot -------------
 (async function(){
+  if (shouldUseMobileShell()) {
+    await bootMobile();
+    return;
+  }
   try { state.settings = await invoke('get_settings'); } catch(e){}
   applyTheme();
   applyI18nChrome();
