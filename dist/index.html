@@ -449,6 +449,18 @@ body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
 .mobile-compact-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .mobile-compact-tabs button { flex: 0 0 auto; min-height: 32px; border-radius: 16px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); }
 .mobile-compact-tabs button.active { color: #fff; background: var(--accent); border-color: var(--accent2); }
+.mobile-apps-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mobile-apps-head h2 { margin: 0; font-size: 16px; line-height: 1.25; }
+body.mobile-shell #apps-list .empty { padding: 24px 12px; font-size: 13px; }
+body.mobile-shell #apps-list .empty .icon { font-size: 30px; margin-bottom: 8px; }
+body.mobile-shell #apps-list .vac-row.app-card { display: block; padding: 12px; margin-bottom: 8px; background: var(--panel); border-radius: 8px; }
+body.mobile-shell #apps-list .vac-row.app-card .tag { font-size: 10px; }
+body.mobile-shell #apps-list .app-details { margin-top: 10px; padding-top: 10px; }
+body.mobile-shell #apps-list .chat-pane { max-height: 58dvh; min-height: 220px; border-radius: 8px; }
+body.mobile-shell #apps-list .msg-bubble { max-width: 86%; font-size: 13px; }
+body.mobile-shell #apps-list .chat-status { align-items: stretch; flex-direction: column; gap: 8px; }
+body.mobile-shell #apps-list .chat-status > span:last-child { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px; }
+body.mobile-shell #apps-list .chat-status button { min-height: 34px; padding: 4px 8px !important; }
 body.mobile-shell .settings-overlay { padding: 12px; align-items: flex-start; overflow-y: auto; }
 body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 @media (max-width: 420px) {
@@ -7011,7 +7023,44 @@ function mobileRenderVacancyDetail() {
       ? '<button class="mobile-danger" onclick="mobileCloseVacancy()">Close</button>'
       : '<button class="mobile-primary" onclick="mobileReopenVacancy()">Reopen</button>')
     + '</div></div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-apps-head"><div><h2>Applications</h2><div class="mobile-muted">Replies from seafarers via Skipi Package Link</div></div>'
+    + '<button class="mobile-secondary" onclick="mobileRefreshApplications()">Refresh</button></div>'
+    + '</div>'
+    + '<div id="apps-list"><div class="mobile-empty">Loading applications...</div></div>'
   );
+  mobileLoadApplicationsForVacancy(v.id, false);
+}
+
+function mobileRefreshApplications() {
+  if (!state.selectedVacancy) return;
+  mobileLoadApplicationsForVacancy(state.selectedVacancy.id, true);
+}
+
+function mobileLoadApplicationsForVacancy(vacancyId, force) {
+  var host = document.getElementById('apps-list');
+  if (!host || !vacancyId) return;
+  var filter = { include_compliance: true };
+  var cacheKey = applicationsCacheKey(vacancyId, currentComplianceFilter(vacancyId));
+  var cached = state.applicationsByVacancy[cacheKey];
+  if (!force && cached) {
+    state.applications = cached;
+    paintApplicationsList(cached);
+    return;
+  }
+  host.innerHTML = '<div class="mobile-empty">Loading applications...</div>';
+  invoke('fetch_applications_for_vacancy', {
+    vacancyId: vacancyId,
+    filter: filter,
+  }).then(function(apps){
+    state.applicationsByVacancy[cacheKey] = apps;
+    if (!state.selectedVacancy || state.selectedVacancy.id !== vacancyId) return;
+    state.applications = apps;
+    paintApplicationsList(apps || []);
+  }).catch(function(e){
+    if (!state.selectedVacancy || state.selectedVacancy.id !== vacancyId) return;
+    host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">Applications failed</span><div class="mobile-muted" style="margin-top:8px;">'+escapeHtml(''+e)+'</div></div>';
+  });
 }
 
 function mobileEditVacancy() {
