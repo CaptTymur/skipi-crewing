@@ -388,28 +388,30 @@ code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; font-siz
 .team-confirm-modal button { padding: 6px 14px; font-size: 12px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border, rgba(255,255,255,.12)); background: var(--panel2, #2a2c33); color: var(--text, #eee); }
 .team-confirm-modal button.primary { background: var(--accent, #7c6ff7); color: #fff; border-color: var(--accent, #7c6ff7); }
 .team-confirm-modal button.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
-body.mobile-shell { display: block; min-height: 100dvh; overflow: hidden; background: var(--bg); }
+body.mobile-shell { display: block; width: 100vw; max-width: 100vw; min-height: 100dvh; overflow: hidden; background: var(--bg); }
 body.mobile-shell .modules-bar,
 body.mobile-shell .app { display: none; }
 #mobile-root { display: none; }
-body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
-.mobile-app { min-height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); color: var(--text); }
-.mobile-top { padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.mobile-title { min-width: 0; }
+body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; }
+.mobile-app { width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); color: var(--text); }
+.mobile-top { width: 100%; max-width: 100%; overflow: hidden; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mobile-title { min-width: 0; overflow: hidden; flex: 1 1 0; }
 .mobile-title strong { display: block; font-size: 16px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mobile-title span { display: block; margin-top: 2px; font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mobile-top-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.mobile-top-actions { position: relative; z-index: 2; display: flex; gap: 8px; flex: 0 0 auto; margin-left: auto; }
 .mobile-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
-.mobile-main { min-height: 0; overflow-y: auto; padding: 12px 12px 92px; }
+.mobile-main { width: 100%; max-width: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 10px 10px calc(86px + env(safe-area-inset-bottom, 0px)); }
 .mobile-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 7px 8px calc(env(safe-area-inset-bottom, 0px) + 7px); background: rgba(26,31,38,0.96); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; z-index: 40; }
 .mobile-bottom button { height: 48px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10px; cursor: pointer; min-width: 0; }
 .mobile-bottom button .ico { font-size: 17px; line-height: 1; }
 .mobile-bottom button.active { color: #fff; background: var(--accent); border-color: var(--accent2); font-weight: 700; }
-.mobile-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.mobile-card { max-width: 100%; overflow: hidden; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 .mobile-section-title { margin: 16px 2px 8px; color: var(--text2); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
-.mobile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-.mobile-row.full { grid-template-columns: 1fr; }
+.mobile-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-bottom: 10px; }
+.mobile-row.full { grid-template-columns: minmax(0, 1fr); }
+.mobile-field { min-width: 0; }
 .mobile-field label { display: block; margin: 0 0 4px; font-size: 11px; color: var(--text2); }
+.mobile-field > div { min-width: 0; overflow-wrap: anywhere; }
 .mobile-field input,
 .mobile-field select,
 .mobile-field textarea { width: 100%; min-height: 42px; padding: 9px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font: inherit; font-size: 14px; outline: none; }
@@ -421,7 +423,7 @@ body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
 .mobile-actions button,
 .mobile-primary,
 .mobile-secondary,
-.mobile-danger { min-height: 40px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-weight: 700; cursor: pointer; }
+.mobile-danger { min-width: 0; min-height: 40px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-primary { background: var(--accent); border-color: var(--accent2); color: #fff; }
 .mobile-danger { border-color: rgba(239,68,68,0.7); color: var(--err); }
 .mobile-muted { color: var(--text2); font-size: 12px; line-height: 1.45; }
@@ -435,11 +437,14 @@ body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
 .mobile-badge { flex-shrink: 0; min-width: 22px; min-height: 22px; padding: 3px 7px; border-radius: 12px; background: rgba(239,68,68,0.18); color: #ff8d8d; font-size: 11px; text-align: center; }
 .mobile-empty { padding: 40px 16px; text-align: center; color: var(--text2); font-size: 13px; line-height: 1.5; }
 .mobile-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.mobile-detail-head h1 { margin: 0; font-size: 18px; line-height: 1.22; }
+.mobile-detail-head h1 { margin: 0; min-width: 0; font-size: 17px; line-height: 1.22; overflow-wrap: anywhere; }
+.mobile-detail-head .mobile-status { flex-shrink: 0; }
 .mobile-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .mobile-kpi { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 9px; }
-.mobile-kpi label { margin: 0 0 4px; font-size: 10px; color: var(--text2); }
+.mobile-kpi label { display: block; margin: 0 0 4px; font-size: 10px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mobile-kpi strong { display: block; font-size: 17px; }
+.mobile-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mobile-detail-actions button { width: 100%; }
 .mobile-chat { min-height: calc(100dvh - 196px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; }
 .mobile-chat .team-stream-wrap { min-height: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .mobile-chat .team-stream { min-height: 0; padding: 8px; }
@@ -449,13 +454,32 @@ body.mobile-shell #mobile-root { display: block; min-height: 100dvh; }
 .mobile-compact-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .mobile-compact-tabs button { flex: 0 0 auto; min-height: 32px; border-radius: 16px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); }
 .mobile-compact-tabs button.active { color: #fff; background: var(--accent); border-color: var(--accent2); }
-.mobile-apps-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mobile-apps-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .mobile-apps-head h2 { margin: 0; font-size: 16px; line-height: 1.25; }
+.mobile-apps-head button { max-width: 124px; }
+.mobile-app-card { display: block; padding: 12px; margin-bottom: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.mobile-app-card:active { transform: translateY(1px); }
+.mobile-app-card.app-expanded { border-color: rgba(64,126,255,0.55); }
+.mobile-app-card-head { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: start; }
+.mobile-app-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+.mobile-app-main { min-width: 0; }
+.mobile-app-topline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
+.mobile-app-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 14px; line-height: 1.25; }
+.mobile-app-time { color: var(--text2); font-size: 11px; white-space: nowrap; }
+.mobile-app-preview { margin-top: 4px; color: var(--text2); font-size: 12px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.mobile-app-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.mobile-app-status { min-height: 20px; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border); color: var(--text2); font-size: 10px; }
+.mobile-app-status.new { color: var(--ok); border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.08); }
+.mobile-app-caret { margin-left: auto; color: var(--text2); font-weight: 800; }
+.mobile-app-details { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.mobile-app-thread { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.mobile-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.8; }
+.mobile-apps-empty { min-height: 132px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 body.mobile-shell #apps-list .empty { padding: 24px 12px; font-size: 13px; }
 body.mobile-shell #apps-list .empty .icon { font-size: 30px; margin-bottom: 8px; }
 body.mobile-shell #apps-list .vac-row.app-card { display: block; padding: 12px; margin-bottom: 8px; background: var(--panel); border-radius: 8px; }
 body.mobile-shell #apps-list .vac-row.app-card .tag { font-size: 10px; }
-body.mobile-shell #apps-list .app-details { margin-top: 10px; padding-top: 10px; }
+body.mobile-shell #apps-list .app-details { margin-top: 10px; padding-top: 10px; overflow-x: auto; }
 body.mobile-shell #apps-list .chat-pane { max-height: 58dvh; min-height: 220px; border-radius: 8px; }
 body.mobile-shell #apps-list .msg-bubble { max-width: 86%; font-size: 13px; }
 body.mobile-shell #apps-list .chat-status { align-items: stretch; flex-direction: column; gap: 8px; }
@@ -466,6 +490,7 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 @media (max-width: 420px) {
   .mobile-row { grid-template-columns: 1fr; }
   .mobile-kpis { grid-template-columns: 1fr 1fr; }
+  .mobile-detail-actions { grid-template-columns: 1fr; }
   .mobile-actions button,
   .mobile-primary,
   .mobile-secondary,
@@ -522,7 +547,7 @@ var UI_STRINGS = {
     'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
     'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
-    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.team':'Team','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed',
+    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.team':'Team','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
@@ -532,7 +557,7 @@ var UI_STRINGS = {
 	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.compliance':'Профили соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
 	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профили соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
-	    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.team':'Команда','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки',
+    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.team':'Команда','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
@@ -4421,7 +4446,7 @@ async function renderVacancyDetail() {
   var cached = state.applicationsByVacancy[cacheKey];
   if (cached) {
     state.applications = cached;
-    paintApplicationsList(cached);
+    paintApplicationsListForShell(cached);
   } else {
     document.getElementById('apps-list').innerHTML =
       '<div class="empty"><div style="color:var(--text2);font-size:12px;">Loading…</div></div>';
@@ -4440,7 +4465,7 @@ async function renderVacancyDetail() {
       // Only repaint if user is still viewing this vacancy.
       if (state.selectedVacancy && state.selectedVacancy.id === v.id) {
         state.applications = apps;
-        paintApplicationsList(apps);
+        paintApplicationsListForShell(apps);
       }
     })
     .catch(function(e){
@@ -4580,7 +4605,7 @@ function refreshApplicationsList() {
   var cached = state.applicationsByVacancy[cacheKey];
   if (cached) {
     state.applications = cached;
-    paintApplicationsList(cached);
+    paintApplicationsListForShell(cached);
     // Re-render the bar so Reset button visibility updates.
     var host = document.getElementById('compliance-filter-bar');
     if (host && host.parentElement) {
@@ -4600,7 +4625,7 @@ function refreshApplicationsList() {
     state.applicationsByVacancy[cacheKey] = apps;
     if (state.selectedVacancy && state.selectedVacancy.id === v.id) {
       state.applications = apps;
-      paintApplicationsList(apps);
+      paintApplicationsListForShell(apps);
       var host = document.getElementById('compliance-filter-bar');
       if (host && host.parentElement) {
         host.outerHTML = renderComplianceFilterBar(v);
@@ -4687,6 +4712,72 @@ function paintApplicationsList(apps) {
     html += '</div>';
     // Inline thread (stops click bubbling so clicks inside don't re-toggle).
     html += '<div id="appthread-'+escapeAttr(a.id)+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);" onclick="event.stopPropagation()"></div>';
+    html += '</div>';
+  });
+  var expandedId = state.focusedApplicationId;
+  list.innerHTML = html;
+  var expandedApp = null;
+  if (expandedId) {
+    expandedApp = apps.find(function(x){ return x.id === expandedId; }) || null;
+  }
+  if (expandedApp) {
+    setTimeout(function(){
+      toggleApplicationChat(expandedApp.id, sUidOf(expandedApp), true);
+    }, 0);
+  } else {
+    state.focusedApplicationId = null;
+    applyApplicationFocus();
+  }
+}
+
+function paintApplicationsListForShell(apps) {
+  if (isMobileShellActive()) {
+    mobilePaintApplicationsList(apps || []);
+    return;
+  }
+  paintApplicationsList(apps || []);
+}
+
+function mobilePaintApplicationsList(apps) {
+  var list = document.getElementById('apps-list');
+  if (!list) return;
+  apps = apps || [];
+  prefetchApplicationsMessages(apps);
+  if (!apps.length) {
+    state.focusedApplicationId = null;
+    list.innerHTML = '<div class="mobile-empty mobile-apps-empty"><div class="mobile-empty-icon">✉</div><div>'+escapeHtml(mobileTr('no_applications'))+'</div></div>';
+    return;
+  }
+  var html = '';
+  apps.forEach(function(a){
+    var sum = a.summary || {};
+    var sUid = sUidOf(a);
+    var preview = lastMessagePreview(a.id, a.message);
+    var initials = (sum.redacted_initials || '?').slice(0, 2);
+    var title = (sum.redacted_initials || mobileTr('candidate')) + (sum.rank ? ' · ' + sum.rank : '');
+    var previewText = preview.text
+      ? (preview.mine ? 'You: ' : '') + preview.text
+      : ((a.message || '').slice(0, 120) || sumLineMeta(sum) || mobileTr('open_candidate'));
+    var badge = renderComplianceBadge(a);
+    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="mobile-app-card" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
+    html += '<div class="mobile-app-card-head">';
+    html += '<div class="mobile-app-avatar">'+escapeHtml(initials)+'</div>';
+    html += '<div class="mobile-app-main">';
+    html += '<div class="mobile-app-topline">';
+    html += '<div class="mobile-app-name">'+escapeHtml(title)+'</div>';
+    html += '<div class="mobile-app-time">'+escapeHtml(formatChatRowTime(preview.time || a.received_at))+'</div>';
+    html += '</div>';
+    html += '<div class="mobile-app-preview meta">'+escapeHtml(previewText)+'</div>';
+    html += '<div class="mobile-app-tags">';
+    if (badge) html += badge;
+    html += '<span class="mobile-app-status '+(a.status === 'new' ? 'new' : '')+'">'+escapeHtml(a.status || 'new')+'</span>';
+    html += '<span id="app-caret-'+escapeAttr(a.id)+'" class="mobile-app-caret">></span>';
+    html += '</div>';
+    html += '</div></div>';
+    html += '<div id="appdetails-'+escapeAttr(a.id)+'" class="app-details mobile-app-details" style="display:none;" onclick="event.stopPropagation()">';
+    html += renderApplicationSnapshot(a, sum, sUid);
+    html += '</div>';
+    html += '<div id="appthread-'+escapeAttr(a.id)+'" class="mobile-app-thread" style="display:none;" onclick="event.stopPropagation()"></div>';
     html += '</div>';
   });
   var expandedId = state.focusedApplicationId;
@@ -6785,10 +6876,14 @@ async function bootMobile() {
   mobileEnsureRoot();
   try { state.settings = await invoke('get_settings'); } catch(e) { state.settings = state.settings || {}; }
   applyTheme();
-  try { await loadTaxonomy(); } catch(e) {}
   if (!state.teamChat) state.teamChat = {};
   if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
   mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+  loadTaxonomy().then(function(){
+    if (mobileState.view === 'draft') mobileShow('draft');
+  }).catch(function(e){
+    console.warn('mobile taxonomy load failed', e);
+  });
 }
 
 function mobileShow(view) {
@@ -7010,24 +7105,24 @@ function mobileRenderVacancyDetail() {
     + '<div class="mobile-muted">'+escapeHtml([v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].join(' · '))+'</div>'
     + '</div>'
     + '<div class="mobile-card mobile-kpis">'
-    + '<div class="mobile-kpi"><label>Apply clicks</label><strong>'+Number(v.apply_click_count || 0)+'</strong></div>'
-    + '<div class="mobile-kpi"><label>Applications</label><strong>'+Number(v.reply_count || 0)+'</strong></div>'
-    + '<div class="mobile-kpi"><label>New</label><strong>'+Number(v.new_applications_count || 0)+'</strong></div>'
+    + '<div class="mobile-kpi"><label>'+escapeHtml(mobileTr('apply_clicks'))+'</label><strong>'+Number(v.apply_click_count || 0)+'</strong></div>'
+    + '<div class="mobile-kpi"><label>'+escapeHtml(mobileTr('applications'))+'</label><strong>'+Number(v.reply_count || 0)+'</strong></div>'
+    + '<div class="mobile-kpi"><label>'+escapeHtml(mobileTr('new_applications'))+'</label><strong>'+Number(v.new_applications_count || 0)+'</strong></div>'
     + '</div>'
     + '<div class="mobile-card">'
-    + '<div class="mobile-row"><div class="mobile-field"><label>Vessel</label><div>'+escapeHtml(v.vessel_name || '—')+(v.vessel_imo ? ' · IMO '+escapeHtml(v.vessel_imo) : '')+'</div></div>'
-    + '<div class="mobile-field"><label>Salary</label><div>'+escapeHtml(salary)+'</div></div></div>'
-    + '<div class="mobile-row"><div class="mobile-field"><label>Join</label><div>'+escapeHtml((v.joining_window_from || '').slice(0,10) || '—')+(v.join_port ? ' · '+escapeHtml(v.join_port) : '')+'</div></div>'
-    + '<div class="mobile-field"><label>Contract</label><div>'+(v.contract_months ? escapeHtml(v.contract_months + ' months') : '—')+'</div></div></div>'
-    + (v.client_name ? '<div class="mobile-row full"><div class="mobile-field"><label>Client</label><div>'+escapeHtml(v.client_name)+'</div></div></div>' : '')
-    + (v.description ? '<div class="mobile-row full"><div class="mobile-field"><label>Description</label><div style="white-space:pre-wrap;line-height:1.45;">'+escapeHtml(v.description)+'</div></div></div>' : '')
+    + '<div class="mobile-row"><div class="mobile-field"><label>'+escapeHtml(mobileTr('vessel'))+'</label><div>'+escapeHtml(v.vessel_name || '—')+(v.vessel_imo ? ' · IMO '+escapeHtml(v.vessel_imo) : '')+'</div></div>'
+    + '<div class="mobile-field"><label>'+escapeHtml(mobileTr('salary'))+'</label><div>'+escapeHtml(salary)+'</div></div></div>'
+    + '<div class="mobile-row"><div class="mobile-field"><label>'+escapeHtml(mobileTr('join'))+'</label><div>'+escapeHtml((v.joining_window_from || '').slice(0,10) || '—')+(v.join_port ? ' · '+escapeHtml(v.join_port) : '')+'</div></div>'
+    + '<div class="mobile-field"><label>'+escapeHtml(mobileTr('contract'))+'</label><div>'+(v.contract_months ? escapeHtml(v.contract_months + ' months') : '—')+'</div></div></div>'
+    + (v.client_name ? '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('client'))+'</label><div>'+escapeHtml(v.client_name)+'</div></div></div>' : '')
+    + (v.description ? '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('description'))+'</label><div style="white-space:pre-wrap;line-height:1.45;">'+escapeHtml(v.description)+'</div></div></div>' : '')
     + '</div>'
-    + '<div class="mobile-card"><div class="mobile-actions">'
-    + '<button class="mobile-secondary" onclick="mobileEditVacancy()">Edit</button>'
-    + '<button class="mobile-secondary" onclick="mobileCopyVacancy()">Copy</button>'
+    + '<div class="mobile-card"><div class="mobile-actions mobile-detail-actions">'
+    + '<button class="mobile-secondary" onclick="mobileEditVacancy()">'+escapeHtml(mobileTr('edit'))+'</button>'
+    + '<button class="mobile-secondary" onclick="mobileCopyVacancy()">'+escapeHtml(mobileTr('copy'))+'</button>'
     + (v.status === 'active'
-      ? '<button class="mobile-danger" onclick="mobileCloseVacancy()">Close</button>'
-      : '<button class="mobile-primary" onclick="mobileReopenVacancy()">Reopen</button>')
+      ? '<button class="mobile-danger" onclick="mobileCloseVacancy()">'+escapeHtml(mobileTr('close'))+'</button>'
+      : '<button class="mobile-primary" onclick="mobileReopenVacancy()">'+escapeHtml(mobileTr('reopen'))+'</button>')
     + '</div></div>'
     + '<div class="mobile-card">'
     + '<div class="mobile-apps-head"><div><h2>'+escapeHtml(mobileTr('applications'))+'</h2><div class="mobile-muted">'+escapeHtml(mobileTr('applications_desc'))+'</div></div>'
@@ -7051,7 +7146,7 @@ function mobileLoadApplicationsForVacancy(vacancyId, force) {
   var cached = state.applicationsByVacancy[cacheKey];
   if (!force && cached) {
     state.applications = cached;
-    paintApplicationsList(cached);
+    paintApplicationsListForShell(cached);
     return;
   }
   host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('loading_applications'))+'</div>';
@@ -7062,7 +7157,7 @@ function mobileLoadApplicationsForVacancy(vacancyId, force) {
     state.applicationsByVacancy[cacheKey] = apps;
     if (!state.selectedVacancy || state.selectedVacancy.id !== vacancyId) return;
     state.applications = apps;
-    paintApplicationsList(apps || []);
+    paintApplicationsListForShell(apps || []);
   }).catch(function(e){
     if (!state.selectedVacancy || state.selectedVacancy.id !== vacancyId) return;
     host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('applications_failed'))+'</span><div class="mobile-muted" style="margin-top:8px;">'+escapeHtml(''+e)+'</div></div>';
@@ -7324,7 +7419,7 @@ async function silentRefreshVacancies() {
             // keeps that conversation fresh on its own. Only repaint
             // when nothing is expanded.
             var anyOpen = document.querySelector('[id^="appthread-"][data-loaded="1"]');
-            if (!anyOpen) paintApplicationsList(apps);
+            if (!anyOpen) paintApplicationsListForShell(apps);
           }
         } catch(e){}
       }
