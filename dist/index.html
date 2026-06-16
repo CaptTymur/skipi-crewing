@@ -12,7 +12,10 @@
   --text: #e6e8ec;
   --text2: #8a93a3;
   --accent: #4f8ef7;
+  --accent-rgb: 79,142,247;
   --accent2: #2563eb;
+  --accent-bg: rgba(var(--accent-rgb),0.12);
+  --accent-bg2: rgba(var(--accent-rgb),0.28);
   --ok: #22c55e;
   --warn: #f59e0b;
   --err: #ef4444;
@@ -25,7 +28,10 @@
   --text: #1a1f26;
   --text2: #5a6573;
   --accent: #2563eb;
+  --accent-rgb: 37,99,235;
   --accent2: #1d4ed8;
+  --accent-bg: rgba(var(--accent-rgb),0.1);
+  --accent-bg2: rgba(var(--accent-rgb),0.22);
   --ok: #16a34a;
   --warn: #d97706;
   --err: #dc2626;
@@ -393,20 +399,39 @@ body.mobile-shell .modules-bar,
 body.mobile-shell .app { display: none; }
 #mobile-root { display: none; }
 body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; }
-.mobile-app { width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); color: var(--text); }
-.mobile-top { width: 100%; max-width: 100%; overflow: hidden; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* Mobile shell mirrors Skipi Seafarer Android navigation and spacing. */
+.mobile-app { width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+.mobile-top { min-height: 54px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 7px) 10px 7px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.mobile-brand-wrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; }
+.mobile-top-home { width: 40px; height: 40px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 19px; line-height: 1; cursor: pointer; }
+.mobile-top-home.active { border-color: var(--accent-bg2); background: var(--accent-bg); color: var(--accent); }
+.mobile-top-home:active { transform: translateY(1px); }
+.mobile-brand { min-width: 0; overflow: hidden; }
+.mobile-brand-title { font-size: 15px; font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-brand-sub { display: block; margin-top: 2px; max-width: 58vw; font-size: 10px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mobile-title { min-width: 0; overflow: hidden; flex: 1 1 0; }
 .mobile-title strong { display: block; font-size: 16px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mobile-title span { display: block; margin-top: 2px; font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mobile-top-actions { position: relative; z-index: 2; display: flex; gap: 8px; flex: 0 0 auto; margin-left: auto; }
-.mobile-icon-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
-.mobile-main { width: 100%; max-width: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 10px 10px calc(86px + env(safe-area-inset-bottom, 0px)); }
-.mobile-bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 7px 8px calc(env(safe-area-inset-bottom, 0px) + 7px); background: rgba(26,31,38,0.96); border-top: 1px solid var(--border); display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; z-index: 40; }
-.mobile-bottom::-webkit-scrollbar { display: none; }
-.mobile-bottom button { flex: 0 0 82px; height: 48px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10px; cursor: pointer; min-width: 0; }
-.mobile-bottom button .ico { font-size: 17px; line-height: 1; }
-.mobile-bottom button.active { color: #fff; background: var(--accent); border-color: var(--accent2); font-weight: 700; }
-.mobile-card { max-width: 100%; overflow: hidden; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.mobile-icon-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+.mobile-icon-btn:active { transform: translateY(1px); }
+.mobile-main { flex: 1; width: 100%; max-width: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; padding-bottom: 16px; }
+.mobile-bottom,
+.mobile-bottom-nav { min-height: 64px; flex-shrink: 0; display: flex; flex-direction: column; gap: 7px; padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); background: var(--panel); }
+.mobile-module-rail-wrap { position: relative; min-width: 0; }
+.mobile-module-rail-wrap::before,
+.mobile-module-rail-wrap::after { position: absolute; top: 0; bottom: 1px; width: 34px; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 24px; font-weight: 900; pointer-events: none; z-index: 2; opacity: 0; transition: opacity .16s ease; }
+.mobile-module-rail-wrap::before { content: '‹'; left: 0; background: linear-gradient(to right,var(--panel) 36%,rgba(255,255,255,0)); }
+.mobile-module-rail-wrap::after { content: '›'; right: 0; background: linear-gradient(to left,var(--panel) 36%,rgba(255,255,255,0)); }
+.mobile-module-rail-wrap.has-before::before,
+.mobile-module-rail-wrap.has-more::after { opacity: .96; }
+.mobile-module-rail { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 0 28px 1px 0; scrollbar-width: none; scroll-snap-type: x proximity; }
+.mobile-module-rail::-webkit-scrollbar { display: none; }
+.mobile-nav-btn { flex: 0 0 96px; min-height: 50px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); font-size: 10px; font-weight: 800; display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; scroll-snap-align: start; cursor: pointer; min-width: 0; }
+.mobile-nav-btn .ico { font-size: 17px; line-height: 1; }
+.mobile-nav-label { display: block; max-width: 100%; line-height: 1.1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-nav-btn.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-bg2); }
+.mobile-card { max-width: 100%; overflow: hidden; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 13px; margin-bottom: 10px; }
 .mobile-section-title { margin: 16px 2px 8px; color: var(--text2); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
 .mobile-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-bottom: 10px; }
 .mobile-row.full { grid-template-columns: minmax(0, 1fr); }
@@ -509,6 +534,7 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
   .mobile-row { grid-template-columns: 1fr; }
   .mobile-kpis { grid-template-columns: 1fr 1fr; }
   .mobile-detail-actions { grid-template-columns: 1fr; }
+  .mobile-brand-sub { max-width: 44vw; }
   .mobile-actions button,
   .mobile-primary,
   .mobile-secondary,
@@ -565,7 +591,7 @@ var UI_STRINGS = {
     'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
     'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
-    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Compliance','mobile.nav.team':'Team','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable candidate requirement profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
+    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Compliance','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable candidate requirement profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
@@ -575,7 +601,7 @@ var UI_STRINGS = {
 	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.compliance':'Профили соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
 	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профили соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
-    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Профили','mobile.nav.team':'Команда','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые требования к кандидатам.','mobile.no_profiles':'Профилей пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
+    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Профили','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые требования к кандидатам.','mobile.no_profiles':'Профилей пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
@@ -6844,37 +6870,47 @@ function mobileTr(key) {
   return tr('mobile.' + key);
 }
 
+function mobileModuleLabel(view) {
+  var map = {
+    vacancies: 'nav.vacancies',
+    mailings: 'nav.mailings',
+    compliance: 'nav.compliance',
+    seafarers: 'nav.seafarers',
+    documents: 'nav.documents',
+  };
+  return tr(map[view] || 'nav.vacancies');
+}
+
 function mobileViewChromeTitle(view) {
-  if (view === 'mailings') return [mobileTr('nav.mailings'), mobileTr('mailings_desc')];
+  if (view === 'mailings') return [mobileModuleLabel('mailings'), mobileTr('mailings_desc')];
   if (view === 'mailing') {
     var mr = state.selectedMailingRequest || {};
-    return [mr.title || mobileTr('nav.mailings'), [mr.rank, mr.vessel_type].filter(Boolean).join(' · ')];
+    return [mr.title || mobileModuleLabel('mailings'), [mr.rank, mr.vessel_type].filter(Boolean).join(' · ')];
   }
   if (view === 'mailing_new') return [mobileTr('create_mailing'), mobileTr('mailings_desc')];
-  if (view === 'compliance') return [mobileTr('nav.compliance'), mobileTr('compliance_desc')];
+  if (view === 'compliance') return [mobileModuleLabel('compliance'), mobileTr('compliance_desc')];
   if (view === 'compliance_profile') {
     var cp = state.selectedComplianceProfile || {};
-    return [cp.name || mobileTr('nav.compliance'), cp.status || ''];
+    return [cp.name || mobileModuleLabel('compliance'), cp.status || ''];
   }
   if (view === 'compliance_form') return [state.selectedComplianceProfile ? mobileTr('edit') : mobileTr('create_profile'), mobileTr('compliance_desc')];
-  if (view === 'seafarers') return [mobileTr('nav.seafarers'), mobileTr('seafarers_desc')];
+  if (view === 'seafarers') return [mobileModuleLabel('seafarers'), mobileTr('seafarers_desc')];
   if (view === 'seafarer') {
     var sf = state.selectedSeafarer || {};
-    return [sf.display_name || mobileTr('nav.seafarers'), [sf.rank || sf.position, sf.nationality].filter(Boolean).join(' · ')];
+    return [sf.display_name || mobileModuleLabel('seafarers'), [sf.rank || sf.position, sf.nationality].filter(Boolean).join(' · ')];
   }
-  if (view === 'documents') return [mobileTr('nav.documents'), mobileTr('documents_desc')];
+  if (view === 'documents') return [mobileModuleLabel('documents'), mobileTr('documents_desc')];
   if (view === 'document') {
     var doc = state.selectedDocument || {};
-    return [doc.name || mobileTr('nav.documents'), doc.category || ''];
+    return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
   }
-  if (view === 'team') return [mobileTr('nav.team'), mobileHasConnection() ? 'AI Assistant and crewing chat' : mobileTr('connect_token')];
   if (view === 'settings' || view === 'connection') return [mobileTr('connection'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
   if (view === 'draft') return [state.editingVacancyId ? 'Edit vacancy' : 'Vacancy draft', 'Create from simple text'];
   if (view === 'vacancy') {
     var v = state.selectedVacancy || {};
     return [mobileVacancyTitle(v) || 'Vacancy', (v.rank || '') + (v.vessel_type ? ' · ' + v.vessel_type : '')];
   }
-  return [mobileTr('nav.vacancies'), mobileHasConnection() ? mobileApiHostLabel() : mobileTr('connect_token')];
+  return [mobileModuleLabel('vacancies'), mobileHasConnection() ? mobileApiHostLabel() : mobileTr('connect_token')];
 }
 
 function mobileApiHostLabel() {
@@ -6891,7 +6927,10 @@ function mobileRenderChrome(view) {
   root.innerHTML =
     '<div class="mobile-app">'
     + '<header class="mobile-top">'
-    + '<div class="mobile-title"><strong>'+escapeHtml(title[0])+'</strong><span>'+escapeHtml(title[1] || '')+'</span></div>'
+    + '<div class="mobile-brand-wrap">'
+    + '<button class="mobile-top-home'+(navView === 'vacancies' ? ' active' : '')+'" onclick="mobileShow(\'vacancies\')" title="'+escapeAttr(mobileModuleLabel('vacancies'))+'">☰</button>'
+    + '<div class="mobile-brand"><div class="mobile-brand-title">'+escapeHtml(title[0])+'</div><div class="mobile-brand-sub">'+escapeHtml(title[1] || '')+'</div></div>'
+    + '</div>'
     + '<div class="mobile-top-actions">'
     + (showBack ? '<button class="mobile-icon-btn" onclick="mobileBack()" title="'+escapeAttr(mobileTr('back'))+'">‹</button>' : '')
     + (canRefresh ? '<button class="mobile-icon-btn" onclick="mobileRefreshCurrent()" title="'+escapeAttr(mobileTr('refresh'))+'">↻</button>' : '')
@@ -6899,17 +6938,17 @@ function mobileRenderChrome(view) {
     + '</div>'
     + '</header>'
     + '<main class="mobile-main" id="mobile-main"></main>'
-    + '<nav class="mobile-bottom">'
-    + mobileNavButton('vacancies', navView, '☰', mobileTr('nav.vacancies'))
-    + mobileNavButton('mailings', navView, '✉', mobileTr('nav.mailings'))
-    + mobileNavButton('compliance', navView, '▣', mobileTr('nav.compliance'))
-    + mobileNavButton('team', navView, '◉', mobileTr('nav.team'))
-    + mobileNavButton('seafarers', navView, '👤', mobileTr('nav.seafarers'))
-    + mobileNavButton('documents', navView, '📄', mobileTr('nav.documents'))
-    + mobileNavButton('draft', navView, '+', mobileTr('nav.draft'))
-    + mobileNavButton('settings', navView, '⚙', mobileTr('nav.settings'))
+    + '<nav class="mobile-bottom mobile-bottom-nav" id="mobile-bottom-nav">'
+    + '<div class="mobile-module-rail-wrap" id="mobile-module-rail-wrap"><div class="mobile-module-rail" id="mobile-module-rail">'
+    + mobileNavButton('vacancies', navView, '☰', mobileModuleLabel('vacancies'))
+    + mobileNavButton('mailings', navView, '✉', mobileModuleLabel('mailings'))
+    + mobileNavButton('compliance', navView, '▣', mobileModuleLabel('compliance'))
+    + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
+    + mobileNavButton('documents', navView, '📄', mobileModuleLabel('documents'))
+    + '</div></div>'
     + '</nav>'
     + '</div>';
+  setTimeout(mobileSyncModuleRail, 0);
 }
 
 function mobileParentView(view) {
@@ -6921,12 +6960,36 @@ function mobileParentView(view) {
     compliance_form: 'compliance',
     seafarer: 'seafarers',
     document: 'documents',
+    draft: 'vacancies',
   };
   return map[view] || view;
 }
 
 function mobileNavButton(view, active, icon, label) {
-  return '<button class="'+(active===view?'active':'')+'" onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span>'+label+'</span></button>';
+  return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'" onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
+}
+
+function mobileUpdateModuleRailHint() {
+  var rail = document.getElementById('mobile-module-rail');
+  var wrap = document.getElementById('mobile-module-rail-wrap');
+  if (!rail || !wrap) return;
+  var max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+  wrap.classList.toggle('has-before', max > 2 && rail.scrollLeft > 2);
+  wrap.classList.toggle('has-more', max > 2 && rail.scrollLeft < max - 2);
+}
+
+function mobileSyncModuleRail() {
+  var rail = document.getElementById('mobile-module-rail');
+  if (!rail) return;
+  if (!rail.__skipiRailBound) {
+    rail.__skipiRailBound = true;
+    rail.addEventListener('scroll', mobileUpdateModuleRailHint, {passive: true});
+  }
+  var active = rail.querySelector('.mobile-nav-btn.active');
+  if (active && active.scrollIntoView) {
+    try { active.scrollIntoView({block: 'nearest', inline: 'nearest'}); } catch(e) {}
+  }
+  mobileUpdateModuleRailHint();
 }
 
 async function bootMobile() {
@@ -6945,12 +7008,13 @@ async function bootMobile() {
 }
 
 function mobileShow(view) {
-  if (!mobileHasConnection() && ['vacancies','mailings','compliance','team','draft'].indexOf(view) !== -1) {
+  if (view === 'team') view = 'vacancies';
+  if (!mobileHasConnection() && ['vacancies','mailings','compliance','draft'].indexOf(view) !== -1) {
     view = 'connection';
   }
-  if (state.view === 'team' && view !== 'team') stopTeamChatPoll();
+  if (state.view === 'team') stopTeamChatPoll();
   mobileState.view = view;
-  state.view = view === 'team' ? 'team' : 'mobile-' + view;
+  state.view = 'mobile-' + view;
   document.body.classList.add('mobile-shell');
   mobileRenderChrome(view);
   if (view === 'connection') return mobileRenderConnection();
@@ -6965,7 +7029,6 @@ function mobileShow(view) {
   if (view === 'seafarer') return mobileRenderSeafarerDetail();
   if (view === 'documents') return mobileRenderDocuments();
   if (view === 'document') return mobileRenderDocumentDetail();
-  if (view === 'team') return mobileRenderTeam();
   if (view === 'draft') return mobileRenderDraft();
   if (view === 'vacancy') return mobileRenderVacancyDetail();
   return mobileRenderVacancies();
@@ -7406,7 +7469,7 @@ async function mobileSubmitVacancy() {
 function mobileRenderMailings() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileTr('nav.mailings'))+'</span><button class="mobile-primary" onclick="mobileNewMailing()">'+escapeHtml(mobileTr('new'))+'</button></div>'
+    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('mailings'))+'</span><button class="mobile-primary" onclick="mobileNewMailing()">'+escapeHtml(mobileTr('new'))+'</button></div>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('mailings_desc'))+'</div>'
     + '</div>'
     + '<div class="mobile-search"><input id="mobile-mailing-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.mailingSearch || '')+'" oninput="state.mailingSearch=this.value.toLowerCase();mobilePaintMailingList();"></div>'
@@ -7581,7 +7644,7 @@ async function mobileDeleteMailing() {
 function mobileRenderCompliance() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileTr('nav.compliance'))+'</span><button class="mobile-primary" onclick="mobileNewComplianceProfile()">'+escapeHtml(mobileTr('new'))+'</button></div>'
+    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('compliance'))+'</span><button class="mobile-primary" onclick="mobileNewComplianceProfile()">'+escapeHtml(mobileTr('new'))+'</button></div>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('compliance_desc'))+'</div>'
     + '</div>'
     + '<div id="mobile-compliance-list"><div class="mobile-empty">Loading...</div></div>'
@@ -7739,7 +7802,7 @@ async function mobileRestoreComplianceProfile() {
 function mobileRenderSeafarers() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileTr('nav.seafarers'))+'</span><button class="mobile-secondary" onclick="mobileLoadSeafarers(true)">'+escapeHtml(mobileTr('refresh'))+'</button></div>'
+    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('seafarers'))+'</span><button class="mobile-secondary" onclick="mobileLoadSeafarers(true)">'+escapeHtml(mobileTr('refresh'))+'</button></div>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('seafarers_desc'))+'</div>'
     + '</div>'
     + '<div class="mobile-search"><input id="mobile-seafarer-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.seafarerSearch || '')+'" oninput="state.seafarerSearch=this.value.toLowerCase();mobilePaintSeafarerList();"></div>'
@@ -7907,7 +7970,7 @@ async function mobileRefreshSavedSeafarerReplies() {
 function mobileRenderDocuments() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileTr('nav.documents'))+'</span><button class="mobile-secondary" onclick="mobileLoadDocuments(true)">'+escapeHtml(mobileTr('refresh'))+'</button></div>'
+    + '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('documents'))+'</span><button class="mobile-secondary" onclick="mobileLoadDocuments(true)">'+escapeHtml(mobileTr('refresh'))+'</button></div>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('documents_desc'))+'</div>'
     + '</div>'
     + '<div class="mobile-search"><input id="mobile-doc-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.docsSearch || '')+'" oninput="state.docsSearch=this.value.toLowerCase();mobilePaintDocumentList();"></div>'
