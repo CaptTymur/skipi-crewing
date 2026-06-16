@@ -678,6 +678,7 @@ function applyI18nChrome() {
     var span = el.querySelector('span');
     if (span) span.textContent = tr(p[1]);
   });
+  updateTeamNavVisibility();
   var vault = document.getElementById('mb-vault'); if (vault) vault.title = tr('common.switch_vault');
   var gear = document.querySelector('.mb-gear'); if (gear) gear.title = tr('common.settings');
 }
@@ -1229,10 +1230,29 @@ function suggestedCrewingVaultName() {
 }
 
 // ------------- nav -------------
+function hasTokenScope(scope) {
+  var scopes = (state.settings && state.settings.token_scopes) || [];
+  return scopes.indexOf('*') !== -1 || scopes.indexOf(scope) !== -1;
+}
+
+function hasTeamAccess() {
+  return hasTokenScope('team:read') || hasTokenScope('team:write');
+}
+
+function updateTeamNavVisibility() {
+  var el = document.getElementById('mt-team');
+  if (el) el.style.display = hasTeamAccess() ? '' : 'none';
+}
+
 function showView(v) {
+  if (v === 'team' && !hasTeamAccess()) {
+    showToast('Team module requires a special Skipi token.', 'warn');
+    v = 'vacancies';
+  }
   var previousView = state.view;
   state.view = v;
   if (previousView === 'team' && v !== 'team') stopTeamChatPoll();
+  updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
   ['vacancies','mailings','compliance','team','seafarers','documents'].forEach(function(k){
@@ -6430,6 +6450,7 @@ function renderSettingsModal() {
           '<div style="display:flex;gap:8px;align-items:center;">'
         + inputCtrl('s-token', s.bearer_token, 'password', 'Paste company token', '240px')
         + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Validate</button>'
+        + '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">Start 30-day trial</button>'
         + '</div>')
       + settingRow('Crewing ID', 'Server-side UUID of your accredited crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
       + settingRow('Company display name', 'Shown in the app title only — not sent to the server.', inputCtrl('s-company', s.company_name, 'text', 'e.g. Marlow Crewing Ltd', '240px'))
@@ -6633,6 +6654,8 @@ async function activateCompanyToken() {
       bearer_token: token,
       crewing_id: activation.crewing_id || '',
       organization_id: activation.organization_id || ((state.settings||{}).organization_id || ''),
+      token_scopes: activation.scopes || [],
+      token_expires_at: activation.expires_at || null,
       company_name: companyName
     });
     await invoke('save_settings', { newSettings: next });
@@ -6642,6 +6665,44 @@ async function activateCompanyToken() {
     if (state.view === 'team') await refreshTeamMembers(false);
   } catch (e) {
     showToast('Token validation failed: '+e, 'error');
+  }
+}
+
+async function startTrialAccess() {
+  var urlEl = document.getElementById('s-url');
+  var companyEl = document.getElementById('s-company');
+  var replyEl = document.getElementById('s-reply');
+  var idEl = document.getElementById('s-crewing-id');
+  var tokenEl = document.getElementById('s-token');
+  var serverUrl = urlEl ? urlEl.value.trim() : ((state.settings||{}).server_url || 'https://api-ru.skipi.app');
+  var companyName = companyEl ? companyEl.value.trim() : ((state.settings||{}).company_name || '');
+  var replyTo = replyEl ? replyEl.value.trim() : ((state.settings||{}).reply_to || '');
+  showToast('Creating trial access...', 'info');
+  try {
+    var issued = await invoke('issue_crewing_trial_token', {
+      serverUrl: serverUrl,
+      displayName: companyName || null,
+      contactEmail: replyTo || null
+    });
+    if (idEl) idEl.value = issued.crewing_id || '';
+    if (tokenEl) tokenEl.value = issued.token || '';
+    var next = Object.assign({}, state.settings || {}, {
+      server_url: serverUrl,
+      bearer_token: issued.token || '',
+      crewing_id: issued.crewing_id || '',
+      organization_id: issued.organization_id || ((state.settings||{}).organization_id || ''),
+      token_scopes: issued.scopes || [],
+      token_expires_at: issued.expires_at || null,
+      company_name: companyName || ((state.settings||{}).company_name || ''),
+      reply_to: replyTo || ((state.settings||{}).reply_to || '')
+    });
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    updateTeamNavVisibility();
+    showToast('Trial access is active for 30 days', 'success');
+    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
+  } catch (e) {
+    showToast('Trial access failed: '+e, 'error');
   }
 }
 
@@ -6662,6 +6723,8 @@ async function saveSettings() {
     organization_id: s.organization_id || '',
     company_name: pick('s-company', s.company_name||''),
     user_display_name: s.user_display_name || '',
+    token_scopes: s.token_scopes || [],
+    token_expires_at: s.token_expires_at || null,
     team_role: s.team_role || '',
     team_onboarding_seen: !!s.team_onboarding_seen,
     reply_to: pick('s-reply', s.reply_to||''),
@@ -7078,6 +7141,7 @@ function mobileConnectionHtml(mode) {
     + '<div class="mobile-actions">'
     + '<button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button>'
     + '<button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button>'
+    + '<button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button>'
     + '</div>'
     + '</div>';
 }
@@ -7131,6 +7195,8 @@ async function mobileSaveConnection(showToastOnSave) {
     crewing_id: c.crewing_id,
     company_name: c.company_name,
     reply_to: c.reply_to || s.reply_to || '',
+    token_scopes: s.token_scopes || [],
+    token_expires_at: s.token_expires_at || null,
     profile: s.profile || {},
     interface: s.interface || { theme: 'dark', language: getUiLang() },
     recent_vaults: s.recent_vaults || []
@@ -7161,6 +7227,8 @@ async function mobileValidateConnection() {
       organization_id: activation.organization_id || s.organization_id || '',
       company_name: c.company_name || activation.display_name || s.company_name || '',
       reply_to: c.reply_to || s.reply_to || '',
+      token_scopes: activation.scopes || [],
+      token_expires_at: activation.expires_at || null,
       profile: s.profile || {},
       interface: s.interface || { theme: 'dark', language: getUiLang() },
       recent_vaults: s.recent_vaults || []
@@ -7173,6 +7241,41 @@ async function mobileValidateConnection() {
     mobileShow('vacancies');
   } catch (e) {
     showToast('Token validation failed: '+e, 'error');
+  }
+}
+
+async function mobileStartTrialAccess() {
+  var c = mobileReadConnection();
+  var serverUrl = c.server_url || 'https://api-ru.skipi.app';
+  showToast('Creating trial access...', 'info');
+  try {
+    var issued = await invoke('issue_crewing_trial_token', {
+      serverUrl: serverUrl,
+      displayName: c.company_name || null,
+      contactEmail: c.reply_to || null
+    });
+    var s = state.settings || {};
+    var next = Object.assign({}, s, {
+      server_url: serverUrl,
+      bearer_token: issued.token || '',
+      crewing_id: issued.crewing_id || '',
+      organization_id: issued.organization_id || s.organization_id || '',
+      company_name: c.company_name || s.company_name || '',
+      reply_to: c.reply_to || s.reply_to || '',
+      token_scopes: issued.scopes || [],
+      token_expires_at: issued.expires_at || null,
+      profile: s.profile || {},
+      interface: s.interface || { theme: 'dark', language: getUiLang() },
+      recent_vaults: s.recent_vaults || []
+    });
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
+    showToast('Trial access is active for 30 days', 'success');
+    state.vacancies = [];
+    mobileShow('vacancies');
+  } catch (e) {
+    showToast('Trial access failed: '+e, 'error');
   }
 }
 

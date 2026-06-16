@@ -49,6 +49,8 @@ pub struct Settings {
     pub organization_id: String,
     pub company_name: String,
     pub user_display_name: String,
+    pub token_scopes: Vec<String>,
+    pub token_expires_at: Option<String>,
     pub team_role: String,
     pub team_onboarding_seen: bool,
     pub reply_to: String,
@@ -196,6 +198,24 @@ pub struct CrewingTokenActivation {
     pub token_id: String,
     pub token_prefix: String,
     pub token_status: String,
+    pub expires_at: Option<String>,
+    pub scopes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrewingTrialTokenRequest {
+    pub display_name: Option<String>,
+    pub contact_email: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrewingTrialTokenIssued {
+    pub crewing_id: String,
+    pub organization_id: Option<String>,
+    pub token: String,
+    pub token_prefix: String,
+    pub label: Option<String>,
+    pub expires_at: Option<String>,
     pub scopes: Vec<String>,
 }
 
@@ -342,6 +362,37 @@ fn activate_crewing_token(
         "/api/crewings/token/activate",
         15,
     )
+}
+
+#[tauri::command]
+fn issue_crewing_trial_token(
+    server_url: String,
+    display_name: Option<String>,
+    contact_email: Option<String>,
+) -> Result<CrewingTrialTokenIssued, String> {
+    let base = server_url.trim().trim_end_matches('/');
+    if base.is_empty() {
+        return Err("No server URL configured.".into());
+    }
+    let body = CrewingTrialTokenRequest {
+        display_name: display_name.and_then(|v| {
+            let trimmed = v.trim().to_string();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        }),
+        contact_email: contact_email.and_then(|v| {
+            let trimmed = v.trim().to_string();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        }),
+    };
+    api::post_json(Some(base), None, "/api/crewings/trial-token", &body, 20)
 }
 
 #[tauri::command]
@@ -1893,6 +1944,7 @@ pub fn run() {
             get_settings,
             save_settings,
             activate_crewing_token,
+            issue_crewing_trial_token,
             claim_team_owner,
             list_team_members,
             add_team_member,
