@@ -2,7 +2,7 @@
 
 Employer-side Skipi application for verified crewing companies and shipowner HR teams.
 
-Current repo version: `0.4.121`.
+Current repo version: `0.4.122`.
 
 ## Product Scope
 
@@ -105,7 +105,7 @@ Smoke screenshots are in `/tmp/skipi-crewing-mobile-*.png` and `/tmp/skipi-crewi
 
 - `https://api.skipi.app` is the canonical API on Contabo.
 - `https://api-ru.skipi.app` is the Timeweb RF bridge. JSON API calls work, but the live bridge currently needs the multipart proxy fix from `/home/linux/Skipi/Timeweb/api-ru-public_html-multipart-fix-2026-06-16.zip` before it can proxy public application uploads.
-- `https://api.skipi.app/crewing/latest.json` returns `0.4.121`.
+- `https://api.skipi.app/crewing/latest.json` returns `0.4.122`.
 - `https://api-ru.skipi.app/crewing/latest.json` can lag until the Timeweb static mirror is manually updated.
 - On the shared Android test phone, Skipi Seafarer and Skipi Crewing can confuse manual smoke if Seafarer is already focused. For deterministic testing, start Crewing explicitly with `adb shell am start -n app.skipi.crewing.mobile/.MainActivity`.
 

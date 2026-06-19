@@ -1,14 +1,35 @@
 # Skipi Crewing Handoff
 
-Date: 2026-06-16
+Date: 2026-06-19
 
 ## Current State
 
-- Repo/app version: `0.4.121`.
-- Desktop release binary launches and shows `Skipi Crewing 0.4.121`.
-- Android APK builds and installs as `app.skipi.crewing.mobile` with `versionName=0.4.121`, `versionCode=4121`.
+- Repo/app version: `0.4.122`.
+- Mobile bottom nav now fits all five modules without a horizontal swipe
+  (`.mobile-nav-btn` uses `flex: 1 1 0`). Verified on Pixel 7.
+- Refreshed app icon set (new higher-res `source.png` regen) shipped in this release.
+- GitHub release `v0.4.122` is published (all desktop platforms + `latest.json`).
+- Prod `https://api.skipi.app/crewing/latest.json` updated to `0.4.122` (file at
+  `/opt/skipi-server/releases/crewing/latest.json` on Contabo, served by FastAPI).
+- Android APK builds and installs as `app.skipi.crewing.mobile` with `versionName=0.4.122`, `versionCode=4122`.
 - Team module is removed from mobile navigation and remains desktop-only for special team-scoped tokens.
 - Trial token path is live on production after the server-side flush fix.
+
+## Release recipe (for next time)
+
+1. Bump version in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` (`version`
+   AND window `title`), `dist/index.html` (`appVersion`),
+   `src-tauri/gen/android/app/tauri.properties` (versionName + versionCode), and
+   the `skipi-crewing` package line in `src-tauri/Cargo.lock`.
+2. `git commit` + `git tag vX.Y.Z` + `git push origin main && git push origin vX.Y.Z`.
+   The tag push triggers `.github/workflows/release.yml` (CI builds Linux/Windows/
+   macOS×2 and publishes the GitHub release with `latest.json`). CI does NOT build Android.
+3. Update prod manifest:
+   `gh release download vX.Y.Z --pattern latest.json` then
+   `scp` it to `root@167.86.105.152:/opt/skipi-server/releases/crewing/latest.json`.
+4. Android: `cargo tauri android build --apk --debug` (debug) — see `docs/ANDROID_RELEASE.md`
+   for the signed-release/Play path.
+5. RU bridge mirror: `python /home/linux/Skipi/Timeweb/mirror_crewing_release.py X.Y.Z`.
 
 ## Smoke Result
 
