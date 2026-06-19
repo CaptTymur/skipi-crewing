@@ -425,9 +425,9 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-module-rail-wrap::after { content: '›'; right: 0; background: linear-gradient(to left,var(--panel) 36%,rgba(255,255,255,0)); }
 .mobile-module-rail-wrap.has-before::before,
 .mobile-module-rail-wrap.has-more::after { opacity: .96; }
-.mobile-module-rail { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 0 28px 1px 0; scrollbar-width: none; scroll-snap-type: x proximity; }
+.mobile-module-rail { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 0 0 1px 0; scrollbar-width: none; scroll-snap-type: x proximity; }
 .mobile-module-rail::-webkit-scrollbar { display: none; }
-.mobile-nav-btn { flex: 0 0 96px; min-height: 50px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); font-size: 10px; font-weight: 800; display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; scroll-snap-align: start; cursor: pointer; min-width: 0; }
+.mobile-nav-btn { flex: 1 1 0; min-height: 50px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text2); font-size: 10px; font-weight: 800; display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; scroll-snap-align: start; cursor: pointer; min-width: 0; }
 .mobile-nav-btn .ico { font-size: 17px; line-height: 1; }
 .mobile-nav-label { display: block; max-width: 100%; line-height: 1.1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mobile-nav-btn.active { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-bg2); }
@@ -1057,7 +1057,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.121',
+  appVersion: '0.4.122',
 };
 
 // ------------- toasts -------------
