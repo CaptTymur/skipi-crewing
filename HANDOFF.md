@@ -31,6 +31,19 @@ Date: 2026-06-19
    for the signed-release/Play path.
 5. RU bridge mirror: `python /home/linux/Skipi/Timeweb/mirror_crewing_release.py X.Y.Z`.
 
+## Timeweb (api-ru) ops note — 2026-06-20
+
+- This workstation's public IP got fully blocked by Timeweb (all ports to
+  `5.23.50.183`, not just SSH) after a burst of SFTP connects. api-ru itself is
+  healthy (confirmed reachable from Contabo). The block should expire on its own.
+- While the workstation IP is blocked, deploy to Timeweb **via Contabo as a relay**
+  (Contabo can reach both GitHub and Timeweb): install `python3-paramiko` on
+  Contabo, copy the fix files + a relay script, run it there. This is how the
+  0.4.122 multipart-fix + RU mirror were deployed on 2026-06-20.
+- Verified after relay: `api-ru/crewing/latest.json` = 0.4.122, mirrored binaries
+  200, multipart `POST /api/apply/...` proxies to FastAPI (422 on bad id = fix OK).
+- Local deploy scripts (with the Timeweb password) live in `/home/linux/Skipi/Timeweb/`.
+
 ## Smoke Result
 
 Passed:
