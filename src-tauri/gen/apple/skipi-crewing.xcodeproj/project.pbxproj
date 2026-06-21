@@ -1,0 +1,468 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		043B96AB873966C670634178 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9BB4C59AE4CDE096FAEDBF7F /* Assets.xcassets */; };
+		28FD0618370DE9843D473043 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BDB904BA4C18F987DC883283 /* LaunchScreen.storyboard */; };
+		3DEF0D9EACD224A78B23B063 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 25787F2B4FC4586718AC0DE6 /* Security.framework */; };
+		58BE1FE37564034FC8A0BB84 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B11FA7B499A6880909399FEE /* UIKit.framework */; };
+		8F2EF63EBB37AE8C3BBF4FAC /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 431123D9EB1A1BAC0163065D /* CoreGraphics.framework */; };
+		99A7760CAF30FAE0BE98639D /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 62BA6851E2CA76CCEB82A262 /* assets */; };
+		9F44E2575A279CAC5C3FE731 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 501AE5903169B3982AAFEFA7 /* main.mm */; };
+		AF1FD18EFF8CF029746AE807 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E3E58759CBA7D59EAC05843 /* Metal.framework */; };
+		CC5106833E05F3266D2D388F /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 956DB3A87A24D901050F1163 /* MetalKit.framework */; };
+		E6387E2D2B44B9DF4949EF9D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 080A834DE7B2308BFB614D3D /* QuartzCore.framework */; };
+		EAAF37369F841B439BF8537C /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3588F78CAFF26AA0BB53F86D /* libapp.a */; };
+		F4E7B5B35075FEFC0B2FB226 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2BC0672E04AEDA6E4C64116 /* WebKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		080A834DE7B2308BFB614D3D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		084388FD91B3B19579B9C6AB /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		0E3E58759CBA7D59EAC05843 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		25787F2B4FC4586718AC0DE6 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		3588F78CAFF26AA0BB53F86D /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		3728056AC744EA9218C314F6 /* api.rs */ = {isa = PBXFileReference; path = api.rs; sourceTree = "<group>"; };
+		431123D9EB1A1BAC0163065D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		4581023339684EA7DA4ED097 /* feedback.rs */ = {isa = PBXFileReference; path = feedback.rs; sourceTree = "<group>"; };
+		501AE5903169B3982AAFEFA7 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		62BA6851E2CA76CCEB82A262 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		7AD13E63C0FFADB6D809B3B5 /* skipi-crewing_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "skipi-crewing_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9162AA172BE7F3CCC25EC843 /* db.rs */ = {isa = PBXFileReference; path = db.rs; sourceTree = "<group>"; };
+		91AF6208CBD8C4C29BCFA1BD /* skipi-crewing_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "skipi-crewing_iOS.entitlements"; sourceTree = "<group>"; };
+		956DB3A87A24D901050F1163 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		9BB4C59AE4CDE096FAEDBF7F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB077F077A41A221B201DF14 /* messaging.rs */ = {isa = PBXFileReference; path = messaging.rs; sourceTree = "<group>"; };
+		B11FA7B499A6880909399FEE /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		B25EC2B40DD74E3926064500 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		BDB904BA4C18F987DC883283 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		C2BC0672E04AEDA6E4C64116 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		C50B0FD80CDF9E96D5FA2165 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		C9C8666CA3A6C0A3780071DE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1C68B22E7886FBAABD58FC86 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EAAF37369F841B439BF8537C /* libapp.a in Frameworks */,
+				8F2EF63EBB37AE8C3BBF4FAC /* CoreGraphics.framework in Frameworks */,
+				AF1FD18EFF8CF029746AE807 /* Metal.framework in Frameworks */,
+				CC5106833E05F3266D2D388F /* MetalKit.framework in Frameworks */,
+				E6387E2D2B44B9DF4949EF9D /* QuartzCore.framework in Frameworks */,
+				3DEF0D9EACD224A78B23B063 /* Security.framework in Frameworks */,
+				58BE1FE37564034FC8A0BB84 /* UIKit.framework in Frameworks */,
+				F4E7B5B35075FEFC0B2FB226 /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0296C94EB1558874727F7AF3 /* skipi-crewing_iOS */ = {
+			isa = PBXGroup;
+			children = (
+				C9C8666CA3A6C0A3780071DE /* Info.plist */,
+				91AF6208CBD8C4C29BCFA1BD /* skipi-crewing_iOS.entitlements */,
+			);
+			path = "skipi-crewing_iOS";
+			sourceTree = "<group>";
+		};
+		44F852D0C38C2E673E2273BA /* Externals */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Externals;
+			sourceTree = "<group>";
+		};
+		4646C0ACE814C2561D9FAC58 /* bindings */ = {
+			isa = PBXGroup;
+			children = (
+				B25EC2B40DD74E3926064500 /* bindings.h */,
+			);
+			path = bindings;
+			sourceTree = "<group>";
+		};
+		692DBF451B616319BC15E11B = {
+			isa = PBXGroup;
+			children = (
+				62BA6851E2CA76CCEB82A262 /* assets */,
+				9BB4C59AE4CDE096FAEDBF7F /* Assets.xcassets */,
+				BDB904BA4C18F987DC883283 /* LaunchScreen.storyboard */,
+				44F852D0C38C2E673E2273BA /* Externals */,
+				0296C94EB1558874727F7AF3 /* skipi-crewing_iOS */,
+				F23A6A830E0DF5DEEA98FE7F /* Sources */,
+				9E2E56D4F6BDE048D3E48CA7 /* src */,
+				DF6D123900C55DFAF7E21F7C /* Frameworks */,
+				CBAE84D289CC2ABF9B64932A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		97FAF59DF6419ABD640C5E97 /* skipi-crewing */ = {
+			isa = PBXGroup;
+			children = (
+				501AE5903169B3982AAFEFA7 /* main.mm */,
+				4646C0ACE814C2561D9FAC58 /* bindings */,
+			);
+			path = "skipi-crewing";
+			sourceTree = "<group>";
+		};
+		9E2E56D4F6BDE048D3E48CA7 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				3728056AC744EA9218C314F6 /* api.rs */,
+				9162AA172BE7F3CCC25EC843 /* db.rs */,
+				4581023339684EA7DA4ED097 /* feedback.rs */,
+				084388FD91B3B19579B9C6AB /* lib.rs */,
+				C50B0FD80CDF9E96D5FA2165 /* main.rs */,
+				AB077F077A41A221B201DF14 /* messaging.rs */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		CBAE84D289CC2ABF9B64932A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7AD13E63C0FFADB6D809B3B5 /* skipi-crewing_iOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DF6D123900C55DFAF7E21F7C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				431123D9EB1A1BAC0163065D /* CoreGraphics.framework */,
+				3588F78CAFF26AA0BB53F86D /* libapp.a */,
+				0E3E58759CBA7D59EAC05843 /* Metal.framework */,
+				956DB3A87A24D901050F1163 /* MetalKit.framework */,
+				080A834DE7B2308BFB614D3D /* QuartzCore.framework */,
+				25787F2B4FC4586718AC0DE6 /* Security.framework */,
+				B11FA7B499A6880909399FEE /* UIKit.framework */,
+				C2BC0672E04AEDA6E4C64116 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F23A6A830E0DF5DEEA98FE7F /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				97FAF59DF6419ABD640C5E97 /* skipi-crewing */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		93C01D88A1743731E8FE9A64 /* skipi-crewing_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBAB290C19FC9D2919FF6747 /* Build configuration list for PBXNativeTarget "skipi-crewing_iOS" */;
+			buildPhases = (
+				EDD0CA6296A8F1CD2E4CB7DD /* Build Rust Code */,
+				6FB3A8F236BA73A79C6AFFE7 /* Sources */,
+				9152303C9F226772A189DFF4 /* Resources */,
+				1C68B22E7886FBAABD58FC86 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "skipi-crewing_iOS";
+			packageProductDependencies = (
+			);
+			productName = "skipi-crewing_iOS";
+			productReference = 7AD13E63C0FFADB6D809B3B5 /* skipi-crewing_iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A89C678351B17BCFFE79FFCE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = ABB425AD239756BF063DA3DC /* Build configuration list for PBXProject "skipi-crewing" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 692DBF451B616319BC15E11B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CBAE84D289CC2ABF9B64932A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				93C01D88A1743731E8FE9A64 /* skipi-crewing_iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9152303C9F226772A189DFF4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				043B96AB873966C670634178 /* Assets.xcassets in Resources */,
+				28FD0618370DE9843D473043 /* LaunchScreen.storyboard in Resources */,
+				99A7760CAF30FAE0BE98639D /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		EDD0CA6296A8F1CD2E4CB7DD /* Build Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a",
+				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6FB3A8F236BA73A79C6AFFE7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9F44E2575A279CAC5C3FE731 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0AE7CB8B910CF9C1176D43A5 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = release;
+		};
+		34058F550F801B5DBF621853 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "skipi-crewing_iOS/skipi-crewing_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "skipi-crewing_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.skipi.crewing;
+				PRODUCT_NAME = "Skipi Crewing";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		8695F6DEA5ECE428180D9E99 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = debug;
+		};
+		F025D1E8449DD99A4F7671F6 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "skipi-crewing_iOS/skipi-crewing_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "skipi-crewing_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.skipi.crewing;
+				PRODUCT_NAME = "Skipi Crewing";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ABB425AD239756BF063DA3DC /* Build configuration list for PBXProject "skipi-crewing" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8695F6DEA5ECE428180D9E99 /* debug */,
+				0AE7CB8B910CF9C1176D43A5 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		CBAB290C19FC9D2919FF6747 /* Build configuration list for PBXNativeTarget "skipi-crewing_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34058F550F801B5DBF621853 /* debug */,
+				F025D1E8449DD99A4F7671F6 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A89C678351B17BCFFE79FFCE /* Project object */;
+}
