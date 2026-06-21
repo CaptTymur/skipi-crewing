@@ -752,6 +752,42 @@ function demoInvoke(cmd, args){
 function enterDemoMode(){ try { localStorage.setItem('skipi_crewing_demo','1'); } catch(e){} __demoMode = true; location.reload(); }
 function exitDemoMode(){ try { localStorage.removeItem('skipi_crewing_demo'); } catch(e){} __demoMode = false; location.reload(); }
 
+// ---- First-run entry choice: must come BEFORE everything else. The user
+// picks "use the app" (-> normal onboarding/connection) or "demonstration"
+// (-> enterDemoMode). The 'use' choice is remembered so it never blocks again.
+function entryChoiceMade(){ try { return localStorage.getItem('skipi_crewing_entry') === 'use'; } catch(e){ return false; } }
+function shouldShowEntryChoice(){
+  if (__demoMode) return false;
+  var s = state.settings || {};
+  if (s.bearer_token || s.crewing_id) return false; // already connected
+  return !entryChoiceMade();
+}
+function chooseUseApp(next){
+  try { localStorage.setItem('skipi_crewing_entry','use'); } catch(e){}
+  var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
+  if (typeof next === 'function') next();
+}
+function renderEntryChoice(next){
+  if (document.getElementById('entry-choice-overlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'entry-choice-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0f1115);padding:24px;';
+  ov.innerHTML =
+    '<div style="max-width:520px;width:100%;text-align:center;">'
+    + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
+    + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
+    + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<button id="ec-use" style="padding:14px 18px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Использовать Skipi Crewing</button>'
+    + '<button id="ec-demo" style="padding:14px 18px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;">🎬 Показать демонстрацию</button>'
+    + '</div>'
+    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
+    + '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('ec-use').onclick = function(){ chooseUseApp(next); };
+  document.getElementById('ec-demo').onclick = function(){ enterDemoMode(); };
+}
+
 function demoToast(msg){
   try {
     var t = document.getElementById('demo-toast');
@@ -775,6 +811,50 @@ function renderDemoBanner(){
   document.body.appendChild(b);
   // Nudge content below the fixed bar so nothing is hidden under it.
   document.body.style.paddingTop = '28px';
+}
+
+// Mandatory entry gate: the FIRST screen on every launch (unless already in
+// demo) asks the user to choose — use the app for real, or load the demo —
+// before anything else happens. Parity with Skipi Seafarer's welcome screen.
+var __entryChosen = false;
+function renderEntryGate(){
+  if (document.getElementById('entry-gate')) return;
+  var ru = ((state.settings && state.settings.interface && state.settings.interface.language) || 'en') === 'ru';
+  var t = ru ? {
+    sub:'Skipi — United Seafarers',
+    lead:'Как продолжить?',
+    use:'Пользоваться приложением', useHint:'Подключить токен компании и работать с реальными данными.',
+    demo:'Показать демонстрацию', demoHint:'Заполненный пример: вакансии, заявки, кандидаты, профили и документы. Без токена.'
+  } : {
+    sub:'Skipi — United Seafarers',
+    lead:'How would you like to continue?',
+    use:'Use the app', useHint:'Connect your company token and work with real data.',
+    demo:'Load demonstration', demoHint:'A filled example: vacancies, applications, candidates, profiles and documents. No token needed.'
+  };
+  var g = document.createElement('div');
+  g.id = 'entry-gate';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:#0b1220;color:#e8edf4;padding:24px;';
+  g.innerHTML =
+      '<div style="max-width:440px;width:100%;text-align:center;">'
+    + '<div style="font-size:30px;font-weight:800;letter-spacing:.5px;">Skipi Crewing</div>'
+    + '<div style="opacity:.7;margin:6px 0 26px;font-size:14px;">'+escapeHtml(t.sub)+'</div>'
+    + '<div style="opacity:.85;margin-bottom:18px;font-size:15px;">'+escapeHtml(t.lead)+'</div>'
+    + '<button onclick="gateChooseUse()" style="display:block;width:100%;margin:0 0 12px;padding:14px 16px;border:0;border-radius:12px;background:#4f8ef7;color:#fff;font-size:16px;font-weight:700;cursor:pointer;">'+escapeHtml(t.use)+'</button>'
+    + '<div style="opacity:.55;font-size:12px;margin:-6px 0 18px;">'+escapeHtml(t.useHint)+'</div>'
+    + '<button onclick="enterDemoMode()" style="display:block;width:100%;margin:0;padding:14px 16px;border:1px solid rgba(232,237,244,.35);border-radius:12px;background:transparent;color:#e8edf4;font-size:16px;font-weight:700;cursor:pointer;">'+escapeHtml(t.demo)+'</button>'
+    + '<div style="opacity:.55;font-size:12px;margin-top:6px;">'+escapeHtml(t.demoHint)+'</div>'
+    + '</div>';
+  document.body.appendChild(g);
+}
+function gateChooseUse(){
+  __entryChosen = true;
+  var g = document.getElementById('entry-gate'); if (g) g.remove();
+  if (shouldUseMobileShell()) {
+    renderDemoBanner();
+    mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+  } else if (typeof desktopEnterApp === 'function') {
+    desktopEnterApp();
+  }
 }
 // =================== END DEMO MODE ===================
 
@@ -7265,6 +7345,8 @@ async function bootMobile() {
   if (!state.teamChat) state.teamChat = {};
   if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
   renderDemoBanner();
+  // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
+  if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('connection'); }); return; }
   mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
@@ -7346,6 +7428,10 @@ function mobileConnectionHtml(mode) {
     + '<button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button>'
     + '<button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button>'
     + '</div>'
+    + '</div>'
+    + '<div class="mobile-card" style="text-align:center;">'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">Просто посмотреть, как устроено приложение?</div>'
+    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Загрузить демонстрацию</button>'
     + '</div>';
 }
 
@@ -7357,10 +7443,6 @@ function mobileRenderConnection() {
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('connect_desc'))+'</div>'
     + '</div>'
     + mobileConnectionHtml('connection')
-    + '<div class="mobile-card" style="text-align:center;">'
-    + '<div class="mobile-muted" style="margin-bottom:8px;">Просто посмотреть, как устроено приложение?</div>'
-    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Загрузить демонстрацию</button>'
-    + '</div>'
   );
 }
 
@@ -8434,6 +8516,21 @@ function mobileDraftFromTeamText() {
 }
 
 // ------------- boot -------------
+async function bootDesktopMain(){
+  startAppDiagnostics();
+  await loadTaxonomy();
+  updateVaultLabel();
+  renderDemoBanner();
+  showView('vacancies');
+  setupFileDragDrop();
+  setTimeout(checkForUpdates, 2000);
+  setTimeout(autoRegisterMessagingPubkey, 1500);
+  var onboardingShown = await maybeShowTeamOnboarding();
+  if (!onboardingShown) maybePromptForFeedback('crewing-home');
+  // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
+  // applications) in sync with the server without surfacing any UI.
+  setInterval(silentRefreshVacancies, 30000);
+}
 (async function(){
   if (shouldUseMobileShell()) {
     await bootMobile();
@@ -8442,19 +8539,9 @@ function mobileDraftFromTeamText() {
   try { state.settings = await invoke('get_settings'); } catch(e){}
   applyTheme();
   applyI18nChrome();
-  startAppDiagnostics();
-  await loadTaxonomy();
-  updateVaultLabel();
-  renderDemoBanner();
-  showView('vacancies');
-  setupFileDragDrop();
-	  setTimeout(checkForUpdates, 2000);
-	  setTimeout(autoRegisterMessagingPubkey, 1500);
-	  var onboardingShown = await maybeShowTeamOnboarding();
-	  if (!onboardingShown) maybePromptForFeedback('crewing-home');
-  // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
-  // applications) in sync with the server without surfacing any UI.
-  setInterval(silentRefreshVacancies, 30000);
+  // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
+  if (shouldShowEntryChoice()) { renderEntryChoice(bootDesktopMain); return; }
+  await bootDesktopMain();
 })();
 
 async function silentRefreshVacancies() {
