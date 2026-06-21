@@ -813,49 +813,9 @@ function renderDemoBanner(){
   document.body.style.paddingTop = '28px';
 }
 
-// Mandatory entry gate: the FIRST screen on every launch (unless already in
-// demo) asks the user to choose — use the app for real, or load the demo —
-// before anything else happens. Parity with Skipi Seafarer's welcome screen.
-var __entryChosen = false;
-function renderEntryGate(){
-  if (document.getElementById('entry-gate')) return;
-  var ru = ((state.settings && state.settings.interface && state.settings.interface.language) || 'en') === 'ru';
-  var t = ru ? {
-    sub:'Skipi — United Seafarers',
-    lead:'Как продолжить?',
-    use:'Пользоваться приложением', useHint:'Подключить токен компании и работать с реальными данными.',
-    demo:'Показать демонстрацию', demoHint:'Заполненный пример: вакансии, заявки, кандидаты, профили и документы. Без токена.'
-  } : {
-    sub:'Skipi — United Seafarers',
-    lead:'How would you like to continue?',
-    use:'Use the app', useHint:'Connect your company token and work with real data.',
-    demo:'Load demonstration', demoHint:'A filled example: vacancies, applications, candidates, profiles and documents. No token needed.'
-  };
-  var g = document.createElement('div');
-  g.id = 'entry-gate';
-  g.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:#0b1220;color:#e8edf4;padding:24px;';
-  g.innerHTML =
-      '<div style="max-width:440px;width:100%;text-align:center;">'
-    + '<div style="font-size:30px;font-weight:800;letter-spacing:.5px;">Skipi Crewing</div>'
-    + '<div style="opacity:.7;margin:6px 0 26px;font-size:14px;">'+escapeHtml(t.sub)+'</div>'
-    + '<div style="opacity:.85;margin-bottom:18px;font-size:15px;">'+escapeHtml(t.lead)+'</div>'
-    + '<button onclick="gateChooseUse()" style="display:block;width:100%;margin:0 0 12px;padding:14px 16px;border:0;border-radius:12px;background:#4f8ef7;color:#fff;font-size:16px;font-weight:700;cursor:pointer;">'+escapeHtml(t.use)+'</button>'
-    + '<div style="opacity:.55;font-size:12px;margin:-6px 0 18px;">'+escapeHtml(t.useHint)+'</div>'
-    + '<button onclick="enterDemoMode()" style="display:block;width:100%;margin:0;padding:14px 16px;border:1px solid rgba(232,237,244,.35);border-radius:12px;background:transparent;color:#e8edf4;font-size:16px;font-weight:700;cursor:pointer;">'+escapeHtml(t.demo)+'</button>'
-    + '<div style="opacity:.55;font-size:12px;margin-top:6px;">'+escapeHtml(t.demoHint)+'</div>'
-    + '</div>';
-  document.body.appendChild(g);
-}
-function gateChooseUse(){
-  __entryChosen = true;
-  var g = document.getElementById('entry-gate'); if (g) g.remove();
-  if (shouldUseMobileShell()) {
-    renderDemoBanner();
-    mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
-  } else if (typeof desktopEnterApp === 'function') {
-    desktopEnterApp();
-  }
-}
+// Note: the live first-run entry gate is renderEntryChoice() / shouldShowEntryChoice()
+// / chooseUseApp() (defined above, wired into both boot paths). An earlier
+// duplicate (renderEntryGate/gateChooseUse) was removed during cleanup.
 // =================== END DEMO MODE ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
@@ -1337,7 +1297,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.122',
+  appVersion: '0.4.123',
 };
 
 // ------------- toasts -------------

@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Skipi Crewing 0.4.122",
+        "title": "Skipi Crewing 0.4.123",
         "width": 1100,
         "height": 750,
         "resizable": true,
