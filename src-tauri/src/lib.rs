@@ -31,7 +31,7 @@ pub struct CrewingProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct InterfacePrefs {
-    /// "dark" | "light" (placeholder, dark only for now)
+    /// "dark" | "light"
     pub theme: String,
     /// "en" | "ru" (placeholder)
     pub language: String,

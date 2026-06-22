@@ -497,6 +497,19 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-compact-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .mobile-compact-tabs button { flex: 0 0 auto; min-height: 32px; border-radius: 16px; padding: 0 12px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); }
 .mobile-compact-tabs button.active { color: #fff; background: var(--accent); border-color: var(--accent2); }
+.mobile-segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel2); }
+.mobile-segmented button { min-height: 38px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--text2); font-weight: 800; }
+.mobile-segmented button.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+.mobile-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.mobile-setting-row:first-of-type { border-top: 0; padding-top: 0; }
+.mobile-setting-row .mobile-muted { flex: 1; }
+.mobile-role-grid { display: grid; gap: 10px; }
+.mobile-role-choice { width: 100%; min-height: 112px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); text-align: left; display: block; }
+.mobile-role-choice strong { display: block; font-size: 15px; margin-bottom: 5px; }
+.mobile-role-choice span { display: block; color: var(--text2); font-size: 12px; line-height: 1.45; }
+.mobile-role-choice:active { transform: translateY(1px); }
+.mobile-public-id { display: flex; gap: 8px; align-items: center; margin: 10px 0; }
+.mobile-public-id code { flex: 1; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel2); word-break: break-all; font-size: 12px; }
 .mobile-apps-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .mobile-apps-head h2 { margin: 0; font-size: 16px; line-height: 1.25; }
 .mobile-apps-head button { max-width: 124px; }
@@ -778,7 +791,7 @@ function renderEntryChoice(next){
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
     + '<div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<button id="ec-use" style="padding:14px 18px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Использовать Skipi Crewing</button>'
+    + '<button id="ec-use" style="padding:14px 18px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Работать в Skipi Crewing</button>'
     + '<button id="ec-demo" style="padding:14px 18px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;">🎬 Показать демонстрацию</button>'
     + '</div>'
     + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
@@ -1297,7 +1310,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.123',
+  appVersion: '0.4.124',
 };
 
 // ------------- toasts -------------
@@ -7164,6 +7177,45 @@ function mobileHasConnection() {
   return !!(s.server_url && s.bearer_token && s.crewing_id);
 }
 
+function mobileWorkRole() {
+  try { return localStorage.getItem('skipi_crewing_work_role') || ''; } catch(e) { return ''; }
+}
+
+function mobileRememberWorkRole(role) {
+  try { localStorage.setItem('skipi_crewing_work_role', role || ''); } catch(e) {}
+}
+
+function shouldShowMobileWorkRoleChoice() {
+  if (__demoMode || mobileHasConnection()) return false;
+  if (!entryChoiceMade()) return false;
+  return !mobileWorkRole();
+}
+
+function mobileWorkRoleLabel(role) {
+  if (role === 'owner') return 'Team lead';
+  if (role === 'member') return 'Team member';
+  return 'Not selected';
+}
+
+async function mobileSetTheme(theme) {
+  var chosen = theme === 'dark' ? 'dark' : 'light';
+  var s = state.settings || {};
+  var iface = Object.assign({}, s.interface || {}, {
+    theme: chosen,
+    language: (s.interface && s.interface.language) || getUiLang()
+  });
+  var next = Object.assign({}, s, { interface: iface });
+  try {
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    applyTheme();
+    mobileRenderSettings();
+    showToast(chosen === 'light' ? 'Light theme enabled' : 'Dark theme enabled', 'success');
+  } catch (e) {
+    showToast('Theme save failed: '+e, 'error');
+  }
+}
+
 function mobileEnsureRoot() {
   var root = document.getElementById('mobile-root');
   if (!root) {
@@ -7212,7 +7264,10 @@ function mobileViewChromeTitle(view) {
     var doc = state.selectedDocument || {};
     return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
   }
-  if (view === 'settings' || view === 'connection') return [mobileTr('connection'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
+  if (view === 'settings') return ['Settings', mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
+  if (view === 'work_role') return ['Work setup', 'Choose how this device joins the team'];
+  if (view === 'member_join') return ['Join team', 'Send your public ID to the team lead'];
+  if (view === 'connection') return [mobileTr('connection'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
   if (view === 'draft') return [state.editingVacancyId ? 'Edit vacancy' : 'Vacancy draft', 'Create from simple text'];
   if (view === 'vacancy') {
     var v = state.selectedVacancy || {};
@@ -7269,6 +7324,8 @@ function mobileParentView(view) {
     seafarer: 'seafarers',
     document: 'documents',
     draft: 'vacancies',
+    member_join: 'work_role',
+    work_role: 'connection',
   };
   return map[view] || view;
 }
@@ -7309,7 +7366,8 @@ async function bootMobile() {
   if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
   renderDemoBanner();
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
-  if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('connection'); }); return; }
+  if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('work_role'); }); return; }
+  if (shouldShowMobileWorkRoleChoice()) { mobileShow('work_role'); return; }
   mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
@@ -7328,6 +7386,8 @@ function mobileShow(view) {
   state.view = 'mobile-' + view;
   document.body.classList.add('mobile-shell');
   mobileRenderChrome(view);
+  if (view === 'work_role') return mobileRenderWorkRoleChoice();
+  if (view === 'member_join') return mobileRenderMemberJoin();
   if (view === 'connection') return mobileRenderConnection();
   if (view === 'settings') return mobileRenderSettings();
   if (view === 'mailings') return mobileRenderMailings();
@@ -7346,6 +7406,8 @@ function mobileShow(view) {
 }
 
 function mobileBack() {
+  if (mobileState.view === 'member_join') return mobileShow('work_role');
+  if (mobileState.view === 'work_role') return mobileShow('connection');
   if (mobileState.view === 'draft') {
     state.editingVacancyId = null;
     state.newVacancyPrefill = null;
@@ -7373,6 +7435,88 @@ function mobileRefreshCurrent() {
   if (view === 'compliance') return mobileLoadCompliance(true);
   if (view === 'seafarers') return mobileLoadSeafarers(true);
   if (view === 'documents') return mobileLoadDocuments(true);
+}
+
+function mobileChooseWorkRole(role) {
+  var chosen = role === 'member' ? 'member' : 'owner';
+  mobileRememberWorkRole(chosen);
+  if (chosen === 'member') return mobileShow('member_join');
+  mobileShow('connection');
+}
+
+function mobileChangeWorkRole() {
+  try { localStorage.removeItem('skipi_crewing_work_role'); } catch(e) {}
+  mobileShow('work_role');
+}
+
+function mobileRenderWorkRoleChoice() {
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<span class="mobile-status warn">Work mode</span>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">How will you use Skipi Crewing?</h1>'
+    + '<div class="mobile-muted">Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.</div>'
+    + '</div>'
+    + '<div class="mobile-role-grid">'
+    + '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'owner\')">'
+    + '<strong>Team lead / manager</strong>'
+    + '<span>I run the crewing company account, validate the company token, post vacancies, and invite teammates.</span>'
+    + '</button>'
+    + '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'member\')">'
+    + '<strong>Team member</strong>'
+    + '<span>I join an existing company team. I need my public user ID and then a personal team token from the manager.</span>'
+    + '</button>'
+    + '</div>'
+    + '<div class="mobile-card" style="text-align:center;margin-top:10px;">'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">Just want to look around?</div>'
+    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Open demo</button>'
+    + '</div>'
+  );
+}
+
+function mobileRenderMemberJoin() {
+  var me = state.myIdentity || null;
+  var userId = me && me.user_id ? me.user_id : 'Generating local user ID...';
+  mobileMain(
+    '<div class="mobile-card">'
+    + '<span class="mobile-status warn">Team member</span>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">Join an existing team</h1>'
+    + '<div class="mobile-muted">Send this public user ID to your team lead. Your private key stays on this device.</div>'
+    + '<div class="mobile-public-id"><code id="mobile-team-user-id">'+escapeHtml(userId)+'</code><button class="mobile-secondary" onclick="copyMyTeamUserId()">Copy</button></div>'
+    + '<div class="mobile-muted">After the lead adds you, paste the personal team token in Connection and press Validate.</div>'
+    + '<div class="mobile-actions" style="margin-top:12px;">'
+    + '<button class="mobile-secondary" onclick="mobileChangeWorkRole()">Back</button>'
+    + '<button class="mobile-primary" onclick="mobileShow(\'connection\')">I have a token</button>'
+    + '</div>'
+    + '</div>'
+  );
+  if (!(me && me.user_id)) {
+    ensureMyIdentityForTeam()
+      .then(function(){
+        if (mobileState.view === 'member_join') mobileRenderMemberJoin();
+      })
+      .catch(function(e){ showToast('Could not create local user ID: '+e, 'error'); });
+  }
+}
+
+function mobileConnectionIntroHtml() {
+  var role = mobileWorkRole();
+  if (role === 'owner') {
+    return '<div class="mobile-card">'
+      + '<span class="mobile-status ok">Team lead</span>'
+      + '<div class="mobile-section-title" style="margin-top:10px;">Manager setup</div>'
+      + '<div class="mobile-muted">Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.</div>'
+      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change role</button></div>'
+      + '</div>';
+  }
+  if (role === 'member') {
+    return '<div class="mobile-card">'
+      + '<span class="mobile-status warn">Team member</span>'
+      + '<div class="mobile-section-title" style="margin-top:10px;">Member setup</div>'
+      + '<div class="mobile-muted">Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.</div>'
+      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileShow(\'member_join\')">Show my ID</button><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change role</button></div>'
+      + '</div>';
+  }
+  return '';
 }
 
 function mobileConnectionHtml(mode) {
@@ -7405,21 +7549,41 @@ function mobileRenderConnection() {
     + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('connect_title'))+'</h1>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('connect_desc'))+'</div>'
     + '</div>'
+    + mobileConnectionIntroHtml()
     + mobileConnectionHtml('connection')
   );
 }
 
 function mobileRenderSettings() {
   var s = state.settings || {};
+  var theme = ((s.interface && s.interface.theme) || 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
+  var role = mobileWorkRole();
   mobileMain(
     '<div class="mobile-card">'
     + (mobileHasConnection()
       ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
       : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
-    + '<div class="mobile-section-title">'+escapeHtml(mobileTr('current_device'))+'</div>'
-    + '<div class="mobile-muted">API: '+escapeHtml(mobileApiHostLabel())+'<br>Crewing: '+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">Settings</h1>'
+    + '<div class="mobile-muted">Connection, appearance, device and app information.</div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Appearance</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Theme</strong>Fresh installs open in Light. Existing saved preferences are respected.</div>'
+    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">Light</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">Dark</button></div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Language</strong>'+escapeHtml((s.interface && s.interface.language) || getUiLang())+'</div></div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Access</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Work role</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">API</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
     + '</div>'
     + mobileConnectionHtml('settings')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">About</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Version</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Updates</strong>Manual update checks are available on desktop builds.</div></div>'
+    + '</div>'
   );
 }
 
