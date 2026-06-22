@@ -818,12 +818,12 @@ function renderDemoBanner(){
   if (document.getElementById('demo-banner')) return;
   var b = document.createElement('div');
   b.id = 'demo-banner';
-  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:calc(env(safe-area-inset-top,0px) + 5px) 10px 5px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
   b.innerHTML = 'DEMO — демонстрационные данные '
     + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">Выйти из демо</button>';
   document.body.appendChild(b);
   // Nudge content below the fixed bar so nothing is hidden under it.
-  document.body.style.paddingTop = '28px';
+  document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
 }
 
 // Note: the live first-run entry gate is renderEntryChoice() / shouldShowEntryChoice()
@@ -847,6 +847,7 @@ var UI_STRINGS = {
     'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Compliance','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable candidate requirement profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
+	    'mobile.settings_title':'Settings','mobile.settings_desc':'Connection, appearance, device and app information.','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.work_mode':'Work mode','mobile.work_question':'How will you use Skipi Crewing?','mobile.work_desc':'Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.','mobile.role_owner':'Team lead / manager','mobile.role_owner_desc':'I run the crewing company account, validate the company token, post vacancies, and invite teammates.','mobile.role_member':'Team member','mobile.role_member_desc':'I join an existing company team. I need my public user ID and then a personal team token from the manager.','mobile.exploring':'Just want to look around?','mobile.open_demo':'Open demo','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.member_title':'Join an existing team','mobile.member_desc':'Send this public user ID to your team lead. Your private key stays on this device.','mobile.member_after':'After the lead adds you, paste the personal team token in Connection and press Validate.','mobile.i_have_token':'I have a token','mobile.manager_setup':'Manager setup','mobile.manager_desc':'Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.','mobile.member_setup':'Member setup','mobile.member_setup_desc':'Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.','mobile.show_my_id':'Show my ID','mobile.change_role':'Change role','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.work_role':'Work role','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
@@ -857,6 +858,7 @@ var UI_STRINGS = {
     'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Профили','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые требования к кандидатам.','mobile.no_profiles':'Профилей пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
+	    'mobile.settings_title':'Настройки','mobile.settings_desc':'Подключение, внешний вид, устройство и сведения о приложении.','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.work_mode':'Рабочий режим','mobile.work_question':'Как вы будете использовать Skipi Crewing?','mobile.work_desc':'Выбор роли только помогает настроить приложение. Реальные права всё равно задаются токеном компании и доступом команды.','mobile.role_owner':'Глава команды / менеджер','mobile.role_owner_desc':'Я управляю аккаунтом крюинговой компании, проверяю токен, публикую вакансии и приглашаю коллег.','mobile.role_member':'Член команды','mobile.role_member_desc':'Я присоединяюсь к существующей команде. Мне нужен мой публичный ID, затем персональный токен от менеджера.','mobile.exploring':'Хотите просто посмотреть?','mobile.open_demo':'Открыть демонстрацию','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.member_title':'Присоединиться к команде','mobile.member_desc':'Отправьте этот публичный ID главе команды. Приватный ключ остаётся на устройстве.','mobile.member_after':'Когда менеджер добавит вас, вставьте персональный токен команды в подключении и нажмите Проверить.','mobile.i_have_token':'У меня есть токен','mobile.manager_setup':'Настройка менеджера','mobile.manager_desc':'Проверьте токен компании, затем публикуйте вакансии и приглашайте коллег из командных инструментов на desktop.','mobile.member_setup':'Настройка члена команды','mobile.member_setup_desc':'Вставьте персональный токен, выданный главой команды. Если вам нужен публичный ID, откройте экран входа в команду.','mobile.show_my_id':'Показать мой ID','mobile.change_role':'Сменить роль','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.work_role':'Рабочая роль','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
@@ -7192,9 +7194,9 @@ function shouldShowMobileWorkRoleChoice() {
 }
 
 function mobileWorkRoleLabel(role) {
-  if (role === 'owner') return 'Team lead';
-  if (role === 'member') return 'Team member';
-  return 'Not selected';
+  if (role === 'owner') return mobileTr('role_owner');
+  if (role === 'member') return mobileTr('role_member');
+  return mobileTr('not_set');
 }
 
 async function mobileSetTheme(theme) {
@@ -7210,7 +7212,7 @@ async function mobileSetTheme(theme) {
     state.settings = next;
     applyTheme();
     mobileRenderSettings();
-    showToast(chosen === 'light' ? 'Light theme enabled' : 'Dark theme enabled', 'success');
+    showToast(chosen === 'light' ? mobileTr('light_enabled') : mobileTr('dark_enabled'), 'success');
   } catch (e) {
     showToast('Theme save failed: '+e, 'error');
   }
@@ -7264,9 +7266,9 @@ function mobileViewChromeTitle(view) {
     var doc = state.selectedDocument || {};
     return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
   }
-  if (view === 'settings') return ['Settings', mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
-  if (view === 'work_role') return ['Work setup', 'Choose how this device joins the team'];
-  if (view === 'member_join') return ['Join team', 'Send your public ID to the team lead'];
+  if (view === 'settings') return [mobileTr('settings_title'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
+  if (view === 'work_role') return [mobileTr('work_setup'), mobileTr('work_setup_desc')];
+  if (view === 'member_join') return [mobileTr('join_team'), mobileTr('join_team_desc')];
   if (view === 'connection') return [mobileTr('connection'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
   if (view === 'draft') return [state.editingVacancyId ? 'Edit vacancy' : 'Vacancy draft', 'Create from simple text'];
   if (view === 'vacancy') {
@@ -7287,6 +7289,7 @@ function mobileRenderChrome(view) {
   var navView = mobileParentView(view);
   var showBack = view !== navView || view === 'draft';
   var canRefresh = ['vacancies','mailings','compliance','seafarers','documents'].indexOf(view) !== -1;
+  var showBottomNav = mobileHasConnection() || __demoMode;
   root.innerHTML =
     '<div class="mobile-app">'
     + '<header class="mobile-top">'
@@ -7301,7 +7304,7 @@ function mobileRenderChrome(view) {
     + '</div>'
     + '</header>'
     + '<main class="mobile-main" id="mobile-main"></main>'
-    + '<nav class="mobile-bottom mobile-bottom-nav" id="mobile-bottom-nav">'
+    + (showBottomNav ? '<nav class="mobile-bottom mobile-bottom-nav" id="mobile-bottom-nav">'
     + '<div class="mobile-module-rail-wrap" id="mobile-module-rail-wrap"><div class="mobile-module-rail" id="mobile-module-rail">'
     + mobileNavButton('vacancies', navView, '☰', mobileModuleLabel('vacancies'))
     + mobileNavButton('mailings', navView, '✉', mobileModuleLabel('mailings'))
@@ -7309,7 +7312,7 @@ function mobileRenderChrome(view) {
     + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
     + mobileNavButton('documents', navView, '📄', mobileModuleLabel('documents'))
     + '</div></div>'
-    + '</nav>'
+    + '</nav>' : '')
     + '</div>';
   setTimeout(mobileSyncModuleRail, 0);
 }
@@ -7452,23 +7455,23 @@ function mobileChangeWorkRole() {
 function mobileRenderWorkRoleChoice() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<span class="mobile-status warn">Work mode</span>'
-    + '<h1 style="font-size:20px;margin:12px 0 6px;">How will you use Skipi Crewing?</h1>'
-    + '<div class="mobile-muted">Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.</div>'
+    + '<span class="mobile-status warn">'+escapeHtml(mobileTr('work_mode'))+'</span>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('work_question'))+'</h1>'
+    + '<div class="mobile-muted">'+escapeHtml(mobileTr('work_desc'))+'</div>'
     + '</div>'
     + '<div class="mobile-role-grid">'
     + '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'owner\')">'
-    + '<strong>Team lead / manager</strong>'
-    + '<span>I run the crewing company account, validate the company token, post vacancies, and invite teammates.</span>'
+    + '<strong>'+escapeHtml(mobileTr('role_owner'))+'</strong>'
+    + '<span>'+escapeHtml(mobileTr('role_owner_desc'))+'</span>'
     + '</button>'
     + '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'member\')">'
-    + '<strong>Team member</strong>'
-    + '<span>I join an existing company team. I need my public user ID and then a personal team token from the manager.</span>'
+    + '<strong>'+escapeHtml(mobileTr('role_member'))+'</strong>'
+    + '<span>'+escapeHtml(mobileTr('role_member_desc'))+'</span>'
     + '</button>'
     + '</div>'
     + '<div class="mobile-card" style="text-align:center;margin-top:10px;">'
-    + '<div class="mobile-muted" style="margin-bottom:8px;">Just want to look around?</div>'
-    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Open demo</button>'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">'+escapeHtml(mobileTr('exploring'))+'</div>'
+    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">'+escapeHtml(mobileTr('open_demo'))+'</button>'
     + '</div>'
   );
 }
@@ -7478,14 +7481,14 @@ function mobileRenderMemberJoin() {
   var userId = me && me.user_id ? me.user_id : 'Generating local user ID...';
   mobileMain(
     '<div class="mobile-card">'
-    + '<span class="mobile-status warn">Team member</span>'
-    + '<h1 style="font-size:20px;margin:12px 0 6px;">Join an existing team</h1>'
-    + '<div class="mobile-muted">Send this public user ID to your team lead. Your private key stays on this device.</div>'
-    + '<div class="mobile-public-id"><code id="mobile-team-user-id">'+escapeHtml(userId)+'</code><button class="mobile-secondary" onclick="copyMyTeamUserId()">Copy</button></div>'
-    + '<div class="mobile-muted">After the lead adds you, paste the personal team token in Connection and press Validate.</div>'
+    + '<span class="mobile-status warn">'+escapeHtml(mobileTr('role_member'))+'</span>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('member_title'))+'</h1>'
+    + '<div class="mobile-muted">'+escapeHtml(mobileTr('member_desc'))+'</div>'
+    + '<div class="mobile-public-id"><code id="mobile-team-user-id">'+escapeHtml(userId)+'</code><button class="mobile-secondary" onclick="copyMyTeamUserId()">'+escapeHtml(mobileTr('copy'))+'</button></div>'
+    + '<div class="mobile-muted">'+escapeHtml(mobileTr('member_after'))+'</div>'
     + '<div class="mobile-actions" style="margin-top:12px;">'
-    + '<button class="mobile-secondary" onclick="mobileChangeWorkRole()">Back</button>'
-    + '<button class="mobile-primary" onclick="mobileShow(\'connection\')">I have a token</button>'
+    + '<button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('back'))+'</button>'
+    + '<button class="mobile-primary" onclick="mobileShow(\'connection\')">'+escapeHtml(mobileTr('i_have_token'))+'</button>'
     + '</div>'
     + '</div>'
   );
@@ -7502,18 +7505,18 @@ function mobileConnectionIntroHtml() {
   var role = mobileWorkRole();
   if (role === 'owner') {
     return '<div class="mobile-card">'
-      + '<span class="mobile-status ok">Team lead</span>'
-      + '<div class="mobile-section-title" style="margin-top:10px;">Manager setup</div>'
-      + '<div class="mobile-muted">Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.</div>'
-      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change role</button></div>'
+      + '<span class="mobile-status ok">'+escapeHtml(mobileTr('role_owner'))+'</span>'
+      + '<div class="mobile-section-title" style="margin-top:10px;">'+escapeHtml(mobileTr('manager_setup'))+'</div>'
+      + '<div class="mobile-muted">'+escapeHtml(mobileTr('manager_desc'))+'</div>'
+      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
       + '</div>';
   }
   if (role === 'member') {
     return '<div class="mobile-card">'
-      + '<span class="mobile-status warn">Team member</span>'
-      + '<div class="mobile-section-title" style="margin-top:10px;">Member setup</div>'
-      + '<div class="mobile-muted">Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.</div>'
-      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileShow(\'member_join\')">Show my ID</button><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change role</button></div>'
+      + '<span class="mobile-status warn">'+escapeHtml(mobileTr('role_member'))+'</span>'
+      + '<div class="mobile-section-title" style="margin-top:10px;">'+escapeHtml(mobileTr('member_setup'))+'</div>'
+      + '<div class="mobile-muted">'+escapeHtml(mobileTr('member_setup_desc'))+'</div>'
+      + '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileShow(\'member_join\')">'+escapeHtml(mobileTr('show_my_id'))+'</button><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
       + '</div>';
   }
   return '';
@@ -7563,26 +7566,26 @@ function mobileRenderSettings() {
     + (mobileHasConnection()
       ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
       : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
-    + '<h1 style="font-size:20px;margin:12px 0 6px;">Settings</h1>'
-    + '<div class="mobile-muted">Connection, appearance, device and app information.</div>'
+    + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('settings_title'))+'</h1>'
+    + '<div class="mobile-muted">'+escapeHtml(mobileTr('settings_desc'))+'</div>'
     + '</div>'
     + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">Appearance</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Theme</strong>Fresh installs open in Light. Existing saved preferences are respected.</div>'
-    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">Light</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">Dark</button></div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Language</strong>'+escapeHtml((s.interface && s.interface.language) || getUiLang())+'</div></div>'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
+    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('language'))+'</strong>'+escapeHtml((s.interface && s.interface.language) || getUiLang())+'</div></div>'
     + '</div>'
     + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">Access</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Work role</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">Change</button></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">API</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('access'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
     + '</div>'
     + mobileConnectionHtml('settings')
     + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">About</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Version</strong>'+escapeHtml(state.appVersion)+'</div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Updates</strong>Manual update checks are available on desktop builds.</div></div>'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('about'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('updates'))+'</strong>'+escapeHtml(mobileTr('updates_desc'))+'</div></div>'
     + '</div>'
   );
 }
