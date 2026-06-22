@@ -502,7 +502,17 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-segmented button.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
 .mobile-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
 .mobile-setting-row:first-of-type { border-top: 0; padding-top: 0; }
-.mobile-setting-row .mobile-muted { flex: 1; }
+.mobile-setting-row .mobile-muted { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+/* Keep the right-side control (button / segmented / select) inside the row at
+   narrow widths — the label column shrinks instead of pushing it off-screen. */
+.mobile-setting-row > .mobile-secondary,
+.mobile-setting-row > .mobile-segmented { flex: 0 0 auto; }
+/* Settings tabs — Broker-style: settings are split into tabs, not one long page.
+   On mobile the nav is a horizontal scrollable pill row (like Broker mobile modal). */
+.mobile-settings-nav { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 0 0 4px 0; margin: 2px 0 12px; scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.mobile-settings-nav::-webkit-scrollbar { display: none; }
+.mobile-settings-tab { flex: 0 0 auto; white-space: nowrap; min-height: 38px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; scroll-snap-align: start; }
+.mobile-settings-tab.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
 .mobile-role-grid { display: grid; gap: 10px; }
 .mobile-role-choice { width: 100%; min-height: 112px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); text-align: left; display: block; }
 .mobile-role-choice strong { display: block; font-size: 15px; margin-bottom: 5px; }
@@ -7161,6 +7171,7 @@ var mobileState = {
   view: 'connection',
   draftText: '',
   lastVacancyError: '',
+  settingsTab: 'access',
 };
 
 function shouldUseMobileShell() {
@@ -7557,10 +7568,128 @@ function mobileRenderConnection() {
   );
 }
 
-function mobileRenderSettings() {
+// ── Settings — Broker-style tabbed layout ───────────────────────────────
+// Mirrors Skipi Broker (openSettings/renderSettingsNav/renderSettingsBody +
+// state.settingsTab): settings are NOT one long page. A scrollable tab row
+// selects one section; only that section's body is shown. Tabs:
+//   access    — Access / Connection (token, server, Crewing ID, role, status)
+//   interface — Light/Dark theme
+//   language  — language selector
+//   about     — version / updates / about
+function mobileSettingsTabs() {
+  return [
+    { id: 'access',    label: mobileTr('access') },
+    { id: 'interface', label: mobileTr('appearance') },
+    { id: 'language',  label: mobileTr('language') },
+    { id: 'about',     label: mobileTr('about') },
+  ];
+}
+
+function mobileSettingsTabId() {
+  var t = mobileState.settingsTab;
+  return ['access','interface','language','about'].indexOf(t) === -1 ? 'access' : t;
+}
+
+// Returns the tab buttons only (the .mobile-settings-nav wrapper lives in
+// mobileRenderSettings so mobileOpenSettingsTab can swap innerHTML in place).
+function mobileRenderSettingsNav() {
+  var cur = mobileSettingsTabId();
+  return mobileSettingsTabs().map(function(t){
+    return '<button class="mobile-settings-tab'+(cur===t.id?' active':'')+'" onclick="mobileOpenSettingsTab(\''+t.id+'\')">'+escapeHtml(t.label)+'</button>';
+  }).join('');
+}
+
+function mobileSettingsAccessHtml() {
+  var s = state.settings || {};
+  var role = mobileWorkRole();
+  // Status + role/API/Crewing summary, role-aware intro (manager token setup /
+  // member public-ID flow), then the existing connection form (save/validate).
+  return '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('access'))+'</div>'
+    + (mobileHasConnection()
+      ? '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span></div>'
+      : '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span></div>')
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
+    + '</div>'
+    + mobileConnectionIntroHtml()
+    + mobileConnectionHtml('settings');
+}
+
+function mobileSettingsInterfaceHtml() {
   var s = state.settings || {};
   var theme = ((s.interface && s.interface.theme) || 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
-  var role = mobileWorkRole();
+  return '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
+    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
+    + '</div>';
+}
+
+function mobileSettingsLanguageHtml() {
+  var cur = getUiLang();
+  var opts = UI_LANG_OPTIONS.map(function(o){
+    return '<option value="'+escapeAttr(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+escapeHtml(o[1])+'</option>';
+  }).join('');
+  // Stacked field (label over a full-width select), matching the connection
+  // form density — a row layout would squeeze the label, since the widest
+  // language option makes the select naturally wide.
+  return '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('language'))+'</div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('language'))+'</label>'
+    + '<select onchange="mobileSetLanguage(this.value)">'+opts+'</select></div></div>'
+    + '</div>';
+}
+
+function mobileSettingsAboutHtml() {
+  return '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('about'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('updates'))+'</strong>'+escapeHtml(mobileTr('updates_desc'))+'</div></div>'
+    + '</div>';
+}
+
+function mobileRenderSettingsBody() {
+  var tab = mobileSettingsTabId();
+  if (tab === 'interface') return mobileSettingsInterfaceHtml();
+  if (tab === 'language')  return mobileSettingsLanguageHtml();
+  if (tab === 'about')     return mobileSettingsAboutHtml();
+  return mobileSettingsAccessHtml();
+}
+
+// Switch the active settings tab in place (Broker renderSettingsNav/Body parity).
+function mobileOpenSettingsTab(tab) {
+  mobileState.settingsTab = tab;
+  var nav = document.getElementById('mobile-settings-nav');
+  var body = document.getElementById('mobile-settings-body');
+  if (nav) nav.innerHTML = mobileRenderSettingsNav();
+  if (body) body.innerHTML = mobileRenderSettingsBody();
+}
+
+// Language change on mobile. We intentionally do NOT call setUiLang(): that
+// helper also re-opens the DESKTOP settings modal (renderSettingsModal) which,
+// living in #modal-host (a top-level node not hidden by .mobile-shell), would
+// pop over the mobile UI. Instead we persist the language the same way mobile
+// theme does — localStorage (read first by getUiLang) + save_settings — then
+// re-render the settings shell on the Language tab.
+async function mobileSetLanguage(lang) {
+  if (!UI_STRINGS[lang]) lang = 'ru';
+  try { localStorage.setItem(UI_LANG_KEY, lang); } catch (e) {}
+  var s = state.settings || {};
+  var iface = Object.assign({}, s.interface || {}, {
+    theme: (s.interface && s.interface.theme) || 'light',
+    language: lang
+  });
+  var next = Object.assign({}, s, { interface: iface });
+  try { await invoke('save_settings', { newSettings: next }); } catch (e) {}
+  state.settings = next;
+  document.documentElement.lang = lang;
+  mobileState.settingsTab = 'language';
+  mobileShow('settings');
+}
+
+function mobileRenderSettings() {
   mobileMain(
     '<div class="mobile-card">'
     + (mobileHasConnection()
@@ -7569,24 +7698,8 @@ function mobileRenderSettings() {
     + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('settings_title'))+'</h1>'
     + '<div class="mobile-muted">'+escapeHtml(mobileTr('settings_desc'))+'</div>'
     + '</div>'
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
-    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('language'))+'</strong>'+escapeHtml((s.interface && s.interface.language) || getUiLang())+'</div></div>'
-    + '</div>'
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('access'))+'</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
-    + '</div>'
-    + mobileConnectionHtml('settings')
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('about'))+'</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('updates'))+'</strong>'+escapeHtml(mobileTr('updates_desc'))+'</div></div>'
-    + '</div>'
+    + '<div class="mobile-settings-nav" id="mobile-settings-nav">'+mobileRenderSettingsNav()+'</div>'
+    + '<div id="mobile-settings-body">'+mobileRenderSettingsBody()+'</div>'
   );
 }
 
