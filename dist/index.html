@@ -575,9 +575,249 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 <div id="toast-container"></div>
 
 <script>
-var invoke = window.__TAURI__.core.invoke;
+var __realInvoke = window.__TAURI__.core.invoke;
+// Demo mode: read the persisted flag BEFORE the first invoke (boot calls
+// get_settings immediately). When on, known commands are served from local
+// fixtures by demoInvoke(); everything else passes straight through unchanged,
+// so the real (non-demo) flow is never touched.
+var __demoMode = (function(){ try { return localStorage.getItem('skipi_crewing_demo') === '1'; } catch(e){ return false; } })();
+var invoke = function(cmd, args){
+  if (__demoMode) return demoInvoke(cmd, args);
+  return __realInvoke(cmd, args);
+};
 var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFileSrc)
     || function(p){ return 'file://'+p; };
+
+// ===================== DEMO MODE (client-side fixtures) =====================
+// A self-contained demonstration profile: when active, read commands return the
+// fixtures below and the app behaves as a connected crewing with sample data.
+// No server, no token, no Rust changes. Mutations are blocked with a friendly
+// notice. Toggled from the connection screen; persisted in localStorage.
+var DEMO = {
+  settings: {
+    server_url: 'https://api.skipi.app', bearer_token: 'demo', crewing_id: 'demo-crewing',
+    organization_id: 'demo-org', company_name: 'Demo Crewing Agency', user_display_name: 'Demo User',
+    token_scopes: ['vacancies:read','applications:read'], token_expires_at: null,
+    team_role: 'member', team_onboarding_seen: true, reply_to: 'crew@demo-agency.example',
+    vault_path: '', recent_vaults: [],
+    profile: { legal_name: 'Demo Crewing Agency Ltd', jurisdiction: 'Cyprus', registration_number: 'HE000000',
+      mlc_cert_number: 'MLC-DEMO-01', mlc_cert_valid_to: '2027-06-30', contact_email: 'crew@demo-agency.example',
+      contact_phone: '+357 99 000000', slug: 'demo-crewing', public_description: 'Demonstration crewing agency.' },
+    interface: { theme: 'light', language: 'en' }
+  },
+  vacancies: [
+    { id:'demo-v1', crewing_id:'demo-crewing', crewing_ref:'DEMO-001', rank:'Master', vessel_type:'Bulk Carrier',
+      vessel_imo:9301234, flag:'Panama', trading_area:'Worldwide', russia_trading:false,
+      joining_window_from:'2026-07-10T00:00:00Z', joining_window_to:'2026-07-25T00:00:00Z', contract_months:4,
+      salary_min:11000, salary_max:12000, salary_currency:'USD', min_age:null, max_age:null,
+      us_visa_required:true, schengen_visa_required:false, required_certs:['coc_master','gmdss'], languages:['English'],
+      nationalities:['Ukraine','Philippines'], salary_negotiable:false, description:'Handysize bulker, dry cargo, worldwide trading.',
+      reply_to:'crew@demo-agency.example', title:'Master — Bulk Carrier', vessel_name:'MV Demo Trader', join_port:'Gibraltar',
+      client_name:'Demo Shipowner GmbH', compliance_profile_id:'demo-cp1', compliance_profile_snapshot:null,
+      published_at:'2026-06-18T08:00:00Z', expires_at:null, status:'open',
+      reply_count:2, apply_click_count:14, hide_count:0, new_applications_count:2 },
+    { id:'demo-v2', crewing_id:'demo-crewing', crewing_ref:'DEMO-002', rank:'Chief Officer', vessel_type:'Container Ship',
+      vessel_imo:9412345, flag:'Liberia', trading_area:'Europe / Med', russia_trading:false,
+      joining_window_from:'2026-07-05T00:00:00Z', joining_window_to:null, contract_months:5,
+      salary_min:8500, salary_max:9000, salary_currency:'USD', min_age:null, max_age:null,
+      us_visa_required:false, schengen_visa_required:true, required_certs:['coc_chief_mate','ecdis'], languages:['English'],
+      nationalities:null, salary_negotiable:true, description:'2500 TEU feeder, fixed European rotation.',
+      reply_to:'crew@demo-agency.example', title:'Chief Officer — Container', vessel_name:'MV Demo Express', join_port:'Rotterdam',
+      client_name:'Demo Liner Services', compliance_profile_id:null, compliance_profile_snapshot:null,
+      published_at:'2026-06-16T09:30:00Z', expires_at:null, status:'open',
+      reply_count:1, apply_click_count:9, hide_count:1, new_applications_count:0 },
+    { id:'demo-v3', crewing_id:'demo-crewing', crewing_ref:'DEMO-003', rank:'2nd Engineer', vessel_type:'Oil/Chemical Tanker',
+      vessel_imo:9523456, flag:'Marshall Islands', trading_area:'Worldwide', russia_trading:false,
+      joining_window_from:'2026-08-01T00:00:00Z', joining_window_to:null, contract_months:4,
+      salary_min:9500, salary_max:10500, salary_currency:'USD', min_age:null, max_age:null,
+      us_visa_required:false, schengen_visa_required:false, required_certs:['coc_2nd_eng','tanker_advanced'], languages:['English'],
+      nationalities:null, salary_negotiable:false, description:'IMO II chemical tanker, dollar earner.',
+      reply_to:'crew@demo-agency.example', title:'2nd Engineer — Chem Tanker', vessel_name:'MV Demo Spirit', join_port:'Singapore',
+      client_name:'Demo Tanker Co', compliance_profile_id:null, compliance_profile_snapshot:null,
+      published_at:'2026-06-12T11:00:00Z', expires_at:null, status:'closed',
+      reply_count:0, apply_click_count:5, hide_count:0, new_applications_count:0 }
+  ],
+  appsByVac: {
+    'demo-v1': [
+      { id:'demo-a1', vacancy_id:'demo-v1', received_at:'2026-06-19T14:20:00Z', contact_for_reply:'master.candidate@example.com',
+        message:'Available from early July, last vessel handysize bulker. Documents ready on request.',
+        summary:{ name:'Oleksandr K.', rank:'Master', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
+        seafarer_user_id:'demo-sf1',
+        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
+      { id:'demo-a2', vacancy_id:'demo-v1', received_at:'2026-06-18T10:05:00Z', contact_for_reply:'+63 900 0000000',
+        message:'Interested. Filipino master, 4 contracts on bulkers.',
+        summary:{ name:'Ramon S.', rank:'Master', nationality:'Philippines', available_from:'2026-07-20' }, status:'new',
+        seafarer_user_id:'demo-sf2',
+        compliance:{ assessed:true, is_fully_compliant:true, coverage_ratio:1.0, present:8, required_total:8, blocking_issues_count:0 } }
+    ],
+    'demo-v2': [
+      { id:'demo-a3', vacancy_id:'demo-v2', received_at:'2026-06-17T08:40:00Z', contact_for_reply:'chiefmate@example.com',
+        message:'Chief Officer, ECDIS Transas, Schengen valid.',
+        summary:{ name:'Marko P.', rank:'Chief Officer', nationality:'Croatia', available_from:'2026-07-05' }, status:'reviewed',
+        seafarer_user_id:'demo-sf3',
+        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.5, present:3, required_total:6, blocking_issues_count:3 } }
+    ]
+  },
+  mailings: [
+    { id:'demo-m1', crewing_id:'demo-crewing', crewing_ref:'DEMO-M01', title:'Standing search — Bulk Carrier Masters',
+      rank:'Master', vessel_type:'Bulk Carrier', reply_to:'crew@demo-agency.example', client_name:'Demo Shipowner GmbH',
+      description:'Always collecting CVs of experienced bulker Masters.', min_experience_years:3,
+      required_certs:['coc_master'], languages:['English'], published_at:'2026-06-01T08:00:00Z', expires_at:null,
+      status:'open', send_click_count:21, hide_count:0 },
+    { id:'demo-m2', crewing_id:'demo-crewing', crewing_ref:'DEMO-M02', title:'Tanker engineers pool',
+      rank:'2nd Engineer', vessel_type:'Oil/Chemical Tanker', reply_to:'crew@demo-agency.example', client_name:'Demo Tanker Co',
+      description:'Building a pool of tanker engineers with advanced cert.', min_experience_years:2,
+      required_certs:['tanker_advanced'], languages:['English'], published_at:'2026-06-05T08:00:00Z', expires_at:null,
+      status:'open', send_click_count:8, hide_count:0 }
+  ],
+  compliance: [
+    { id:'demo-cp1', crewing_id:'demo-crewing', name:'Bulk Carrier Master — standard', description:'Standard requirements for our bulker client.',
+      mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','sso'],
+      extra_requirements:[ {id:'us_visa',label:'US C1/D valid ≥ 6mo',weight:5,category:'visa',description:null},
+        {id:'ces_english_70',label:'CES English ≥ 70%',weight:3,category:'test',description:null} ],
+      status:'active', created_at:'2026-05-10T10:00:00Z', updated_at:'2026-06-10T12:00:00Z' },
+    { id:'demo-cp2', crewing_id:'demo-crewing', name:'Chemical Tanker Officer', description:'IMO II/III chemical tanker officers.',
+      mandatory_certs:['passport','medical_cert','bst','tanker_basic','tanker_advanced','coc_chief_mate'],
+      extra_requirements:[ {id:'ecdis_transas',label:'ECDIS Transas familiarisation',weight:3,category:'equipment',description:null} ],
+      status:'active', created_at:'2026-05-12T10:00:00Z', updated_at:'2026-06-08T12:00:00Z' }
+  ],
+  seafarers: [
+    { id:'demo-sf1', display_name:'Oleksandr K.', rank:'Master', position:null, nationality:'Ukraine', available_from:'2026-07-08',
+      source_application_id:'demo-a1', first_seen_at:'2026-06-19T14:20:00Z', last_received_at:'2026-06-19T14:20:00Z',
+      ex_crew:true, status:'candidate', notes:'Strong handysize background. Ex-crew of our client.', summary:{name:'Oleksandr K.',rank:'Master',nationality:'Ukraine'},
+      manifest:{}, docs_dir:null, cv_path:null, availability_status:'available', last_ping_at:'2026-06-19T15:00:00Z',
+      last_reply_at:'2026-06-19T16:10:00Z', last_reply_text:'Yes, available from July 8.', doc_count:6 },
+    { id:'demo-sf2', display_name:'Ramon S.', rank:'Master', position:null, nationality:'Philippines', available_from:'2026-07-20',
+      source_application_id:'demo-a2', first_seen_at:'2026-06-18T10:05:00Z', last_received_at:'2026-06-18T10:05:00Z',
+      ex_crew:false, status:'prospect', notes:'', summary:{name:'Ramon S.',rank:'Master',nationality:'Philippines'},
+      manifest:{}, docs_dir:null, cv_path:null, availability_status:'pinged', last_ping_at:'2026-06-18T11:00:00Z',
+      last_reply_at:null, last_reply_text:null, doc_count:8 },
+    { id:'demo-sf3', display_name:'Marko P.', rank:'Chief Officer', position:null, nationality:'Croatia', available_from:'2026-07-05',
+      source_application_id:'demo-a3', first_seen_at:'2026-06-17T08:40:00Z', last_received_at:'2026-06-17T08:40:00Z',
+      ex_crew:false, status:'candidate', notes:'ECDIS Transas, Schengen valid.', summary:{name:'Marko P.',rank:'Chief Officer',nationality:'Croatia'},
+      manifest:{}, docs_dir:null, cv_path:null, availability_status:'replied', last_ping_at:'2026-06-17T09:00:00Z',
+      last_reply_at:'2026-06-17T12:00:00Z', last_reply_text:'Available, ECDIS Transas done.', doc_count:4 }
+  ],
+  documents: [
+    { id:'demo-d1', name:'Manning Agency Licence', doc_type:'license', stored_path:'', original_filename:'licence.pdf', size_bytes:240000,
+      notes:'Demo licence.', created_at:'2026-05-01T10:00:00Z', category:'Licences', template_id:'manning_licence',
+      valid_to:'2027-05-01T00:00:00Z', has_expiry:true, issuer:'Maritime Authority', issue_date:'2025-05-01T00:00:00Z', cert_number:'LIC-DEMO-01' },
+    { id:'demo-d2', name:'MLC Certificate', doc_type:'mlc_cert', stored_path:'', original_filename:'mlc.pdf', size_bytes:180000,
+      notes:'', created_at:'2026-05-01T10:00:00Z', category:'Certifications', template_id:'mlc_cert',
+      valid_to:'2027-06-30T00:00:00Z', has_expiry:true, issuer:'Flag State', issue_date:'2025-06-30T00:00:00Z', cert_number:'MLC-DEMO-01' },
+    { id:'demo-d3', name:'P&I Insurance Cover', doc_type:'other', stored_path:'', original_filename:'pandi.pdf', size_bytes:150000,
+      notes:'', created_at:'2026-05-01T10:00:00Z', category:'Insurance', template_id:'pi_insurance',
+      valid_to:'2027-02-20T00:00:00Z', has_expiry:true, issuer:'P&I Club', issue_date:'2026-02-20T00:00:00Z', cert_number:'PI-DEMO-01' },
+    { id:'demo-d4', name:'Seafarer Info Pack (template)', doc_type:'template', stored_path:'', original_filename:'infopack.pdf', size_bytes:90000,
+      notes:'Template sent to candidates.', created_at:'2026-05-01T10:00:00Z', category:'Templates', template_id:'info_pack',
+      valid_to:null, has_expiry:false, issuer:null, issue_date:null, cert_number:null },
+    { id:'demo-d5', name:'Joining Checklist (template)', doc_type:'checklist', stored_path:'', original_filename:'checklist.pdf', size_bytes:70000,
+      notes:'', created_at:'2026-05-01T10:00:00Z', category:'Checklists', template_id:'joining_checklist',
+      valid_to:null, has_expiry:false, issuer:null, issue_date:null, cert_number:null }
+  ]
+};
+
+// Commands served from fixtures while in demo mode.
+var DEMO_READS = {
+  get_settings: function(){ return DEMO.settings; },
+  fetch_my_vacancies: function(){ return DEMO.vacancies; },
+  fetch_applications_for_vacancy: function(a){ return (DEMO.appsByVac[a && a.vacancyId] || []); },
+  fetch_my_mailing_requests: function(){ return DEMO.mailings; },
+  fetch_compliance_profiles: function(){ return DEMO.compliance; },
+  loadComplianceProfilesForPicker: function(){ return DEMO.compliance; },
+  list_saved_seafarers: function(){ return DEMO.seafarers; },
+  list_saved_seafarer_documents: function(){ return []; },
+  list_documents: function(){ return DEMO.documents; },
+  fetch_attachments_for_application: function(){ return []; },
+  fetch_messages: function(){ return []; },
+  fetch_team_chat_messages: function(){ return []; },
+  list_team_members: function(){ return []; },
+  refresh_saved_seafarer_replies: function(){ return DEMO.seafarers; },
+  get_my_identity: function(){ return { messaging_user_id: 'demo-crewing-user', public_key: '' }; },
+  get_feedback_prompt_state: function(){ return { should_prompt: false }; }
+};
+// Benign no-ops (telemetry / settings persistence) — resolve quietly in demo.
+var DEMO_NOOPS = { save_settings:1, app_heartbeat:1, record_app_diagnostic:1, init_app_diagnostics:1,
+  mark_app_shutdown:1, postpone_app_feedback:1, submit_app_feedback:1, register_my_pubkey:1,
+  autoRegisterMessagingPubkey:1, sync_crewing_profile:1, ensure_vault_folder:1 };
+
+function demoInvoke(cmd, args){
+  if (DEMO_READS[cmd]) { try { return Promise.resolve(DEMO_READS[cmd](args)); } catch(e){ return Promise.reject(e); } }
+  if (DEMO_NOOPS[cmd]) return Promise.resolve(null);
+  // Anything else is a mutation/server action — not available in the demo.
+  demoToast('Это демонстрация — изменения недоступны. Подключите токен компании для реальной работы.');
+  return Promise.reject(new Error('demo_read_only'));
+}
+
+function enterDemoMode(){ try { localStorage.setItem('skipi_crewing_demo','1'); } catch(e){} __demoMode = true; location.reload(); }
+function exitDemoMode(){ try { localStorage.removeItem('skipi_crewing_demo'); } catch(e){} __demoMode = false; location.reload(); }
+
+// ---- First-run entry choice: must come BEFORE everything else. The user
+// picks "use the app" (-> normal onboarding/connection) or "demonstration"
+// (-> enterDemoMode). The 'use' choice is remembered so it never blocks again.
+function entryChoiceMade(){ try { return localStorage.getItem('skipi_crewing_entry') === 'use'; } catch(e){ return false; } }
+function shouldShowEntryChoice(){
+  if (__demoMode) return false;
+  var s = state.settings || {};
+  if (s.bearer_token || s.crewing_id) return false; // already connected
+  return !entryChoiceMade();
+}
+function chooseUseApp(next){
+  try { localStorage.setItem('skipi_crewing_entry','use'); } catch(e){}
+  var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
+  if (typeof next === 'function') next();
+}
+function renderEntryChoice(next){
+  if (document.getElementById('entry-choice-overlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'entry-choice-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0f1115);padding:24px;';
+  ov.innerHTML =
+    '<div style="max-width:520px;width:100%;text-align:center;">'
+    + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
+    + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
+    + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<button id="ec-use" style="padding:14px 18px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Использовать Skipi Crewing</button>'
+    + '<button id="ec-demo" style="padding:14px 18px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;">🎬 Показать демонстрацию</button>'
+    + '</div>'
+    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
+    + '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('ec-use').onclick = function(){ chooseUseApp(next); };
+  document.getElementById('ec-demo').onclick = function(){ enterDemoMode(); };
+}
+
+function demoToast(msg){
+  try {
+    var t = document.getElementById('demo-toast');
+    if (!t){ t = document.createElement('div'); t.id = 'demo-toast';
+      t.style.cssText = 'position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:99999;background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;max-width:88%;box-shadow:0 6px 24px rgba(0,0,0,.35);text-align:center;';
+      document.body.appendChild(t); }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(t.__h); t.__h = setTimeout(function(){ t.style.opacity = '0'; }, 3200);
+  } catch(e){}
+}
+
+// Persistent banner so the user always knows it's a demonstration + can exit.
+function renderDemoBanner(){
+  if (!__demoMode) return;
+  if (document.getElementById('demo-banner')) return;
+  var b = document.createElement('div');
+  b.id = 'demo-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+  b.innerHTML = 'DEMO — демонстрационные данные '
+    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">Выйти из демо</button>';
+  document.body.appendChild(b);
+  // Nudge content below the fixed bar so nothing is hidden under it.
+  document.body.style.paddingTop = '28px';
+}
+
+// Note: the live first-run entry gate is renderEntryChoice() / shouldShowEntryChoice()
+// / chooseUseApp() (defined above, wired into both boot paths). An earlier
+// duplicate (renderEntryGate/gateChooseUse) was removed during cleanup.
+// =================== END DEMO MODE ===================
+
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
 var UI_LANG_OPTIONS = [
   ['ru','Русский'],
@@ -1057,7 +1297,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.122',
+  appVersion: '0.4.123',
 };
 
 // ------------- toasts -------------
@@ -6455,6 +6695,8 @@ function renderSettingsModal() {
       + settingRow('Crewing ID', 'Server-side UUID of your accredited crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
       + settingRow('Company display name', 'Shown in the app title only — not sent to the server.', inputCtrl('s-company', s.company_name, 'text', 'e.g. Marlow Crewing Ltd', '240px'))
       + settingRow('Reply-to email (optional)', 'Override for application replies. Falls back to the crewing contact email if blank.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@yourcompany.com', '240px'))
+      + settingRow('Just exploring?', 'Load a demonstration with sample vacancies, applications, candidates, profiles and documents — no token needed. See exactly how Skipi Crewing works.',
+          '<button type="button" class="ghost" onclick="enterDemoMode()" style="padding:6px 14px;font-size:12px;">Load demonstration</button>')
       + '</div>';
   } else if (settingsTab==='profile') {
     body = '<div class="settings-section"><h3>Crewing profile</h3>'
@@ -6771,6 +7013,9 @@ function escapeHtml(s){ return String(s == null ? '' : s).replace(/[<>&"]/g, fun
 
 // ------------- updater (banner, not dialog) -------------
 async function checkForUpdates() {
+  // Demo mode is a self-contained, offline preview — never hit the real
+  // updater network check (avoids needless requests and stray updater toasts).
+  if (__demoMode) return;
   try {
     var updater = window.__TAURI__.updater;
     var update = null;
@@ -7062,6 +7307,9 @@ async function bootMobile() {
   applyTheme();
   if (!state.teamChat) state.teamChat = {};
   if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
+  renderDemoBanner();
+  // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
+  if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('connection'); }); return; }
   mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
@@ -7143,6 +7391,10 @@ function mobileConnectionHtml(mode) {
     + '<button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button>'
     + '<button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button>'
     + '</div>'
+    + '</div>'
+    + '<div class="mobile-card" style="text-align:center;">'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">Просто посмотреть, как устроено приложение?</div>'
+    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Загрузить демонстрацию</button>'
     + '</div>';
 }
 
@@ -8227,6 +8479,21 @@ function mobileDraftFromTeamText() {
 }
 
 // ------------- boot -------------
+async function bootDesktopMain(){
+  startAppDiagnostics();
+  await loadTaxonomy();
+  updateVaultLabel();
+  renderDemoBanner();
+  showView('vacancies');
+  setupFileDragDrop();
+  setTimeout(checkForUpdates, 2000);
+  setTimeout(autoRegisterMessagingPubkey, 1500);
+  var onboardingShown = await maybeShowTeamOnboarding();
+  if (!onboardingShown) maybePromptForFeedback('crewing-home');
+  // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
+  // applications) in sync with the server without surfacing any UI.
+  setInterval(silentRefreshVacancies, 30000);
+}
 (async function(){
   if (shouldUseMobileShell()) {
     await bootMobile();
@@ -8235,18 +8502,9 @@ function mobileDraftFromTeamText() {
   try { state.settings = await invoke('get_settings'); } catch(e){}
   applyTheme();
   applyI18nChrome();
-  startAppDiagnostics();
-  await loadTaxonomy();
-  updateVaultLabel();
-  showView('vacancies');
-  setupFileDragDrop();
-	  setTimeout(checkForUpdates, 2000);
-	  setTimeout(autoRegisterMessagingPubkey, 1500);
-	  var onboardingShown = await maybeShowTeamOnboarding();
-	  if (!onboardingShown) maybePromptForFeedback('crewing-home');
-  // Silent periodic refresh — keeps the vacancy list (and selected vacancy's
-  // applications) in sync with the server without surfacing any UI.
-  setInterval(silentRefreshVacancies, 30000);
+  // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
+  if (shouldShowEntryChoice()) { renderEntryChoice(bootDesktopMain); return; }
+  await bootDesktopMain();
 })();
 
 async function silentRefreshVacancies() {
