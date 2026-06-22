@@ -6751,7 +6751,7 @@ function renderSettingsModal() {
   } else if (settingsTab==='appearance') {
     body = '<div class="settings-section"><h3>'+tr('settings.appearance_title')+'</h3>'
       + '<div class="section-desc">'+tr('settings.appearance_desc')+'</div>'
-      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'dark', [['dark','Dark'],['light','Light']]))
+      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'light', [['dark','Dark'],['light','Light']]))
       + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
       + '</div>';
 	  } else if (settingsTab==='about') {
@@ -6984,7 +6984,7 @@ async function saveSettings() {
       public_description:   pick('p-public-desc', p.public_description||''),
     },
     interface: {
-      theme:    pick('i-theme', iface.theme||'dark'),
+      theme:    pick('i-theme', iface.theme||'light'),
       language: pick('i-lang',  iface.language||'en'),
     },
   };
@@ -7137,7 +7137,7 @@ async function setupFileDragDrop() {
 }
 
 function applyTheme() {
-  var t = ((state.settings && state.settings.interface && state.settings.interface.theme) || 'dark').toLowerCase();
+  var t = ((state.settings && state.settings.interface && state.settings.interface.theme) || 'light').toLowerCase();
   document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
 }
 
@@ -7450,7 +7450,7 @@ async function mobileSaveConnection(showToastOnSave) {
     token_scopes: s.token_scopes || [],
     token_expires_at: s.token_expires_at || null,
     profile: s.profile || {},
-    interface: s.interface || { theme: 'dark', language: getUiLang() },
+    interface: s.interface || { theme: 'light', language: getUiLang() },
     recent_vaults: s.recent_vaults || []
   });
   await invoke('save_settings', { newSettings: next });
@@ -7482,7 +7482,7 @@ async function mobileValidateConnection() {
       token_scopes: activation.scopes || [],
       token_expires_at: activation.expires_at || null,
       profile: s.profile || {},
-      interface: s.interface || { theme: 'dark', language: getUiLang() },
+      interface: s.interface || { theme: 'light', language: getUiLang() },
       recent_vaults: s.recent_vaults || []
     });
     await invoke('save_settings', { newSettings: next });
@@ -7517,7 +7517,7 @@ async function mobileStartTrialAccess() {
       token_scopes: issued.scopes || [],
       token_expires_at: issued.expires_at || null,
       profile: s.profile || {},
-      interface: s.interface || { theme: 'dark', language: getUiLang() },
+      interface: s.interface || { theme: 'light', language: getUiLang() },
       recent_vaults: s.recent_vaults || []
     });
     await invoke('save_settings', { newSettings: next });
