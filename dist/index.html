@@ -7013,6 +7013,9 @@ function escapeHtml(s){ return String(s == null ? '' : s).replace(/[<>&"]/g, fun
 
 // ------------- updater (banner, not dialog) -------------
 async function checkForUpdates() {
+  // Demo mode is a self-contained, offline preview — never hit the real
+  // updater network check (avoids needless requests and stray updater toasts).
+  if (__demoMode) return;
   try {
     var updater = window.__TAURI__.updater;
     var update = null;
