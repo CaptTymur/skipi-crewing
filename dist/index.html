@@ -513,6 +513,33 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-settings-nav::-webkit-scrollbar { display: none; }
 .mobile-settings-tab { flex: 0 0 auto; white-space: nowrap; min-height: 38px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; scroll-snap-align: start; }
 .mobile-settings-tab.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+/* Apps / plugin host (bundled first-party). Works in desktop #main and mobile #mobile-main. */
+.apps-wrap { padding: 16px; max-width: 960px; }
+.apps-head h2 { margin: 0 0 4px; font-size: 20px; }
+.apps-muted { color: var(--text2); font-size: 12px; line-height: 1.45; }
+.apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+.apps-tile { text-align: left; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.apps-tile:hover { border-color: var(--accent); }
+.apps-tile .at-name { font-weight: 700; font-size: 14px; }
+.apps-tile .at-cat { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); }
+.apps-tile .at-sum { font-size: 12px; color: var(--text2); line-height: 1.4; }
+.apps-badge { align-self: flex-start; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text2); }
+.apps-badge.installed { color: #fff; background: var(--accent); border-color: var(--accent); }
+.apps-badge.available { color: var(--accent); border-color: var(--accent); }
+.apps-detail { padding: 16px; max-width: 720px; }
+.apps-detail h2 { margin: 6px 0 2px; font-size: 20px; }
+.apps-section { margin-top: 16px; }
+.apps-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--text2); margin: 0 0 6px; }
+.apps-perm { display: inline-block; font-size: 11px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px; margin: 0 6px 6px 0; color: var(--text); }
+.apps-guard { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--text2); line-height: 1.5; background: var(--panel); }
+.apps-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.apps-btn { min-height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; }
+.apps-btn.secondary { background: transparent; color: var(--text); border-color: var(--border); }
+.apps-back { background: transparent; border: 0; color: var(--text2); font-size: 13px; cursor: pointer; padding: 4px 0; }
+.apps-host-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.apps-host-bar .aht { font-weight: 700; }
+.apps-host-container { padding: 16px; }
+.apps-demo p { margin: 6px 0; font-size: 13px; }
 .mobile-role-grid { display: grid; gap: 10px; }
 .mobile-role-choice { width: 100%; min-height: 112px; padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); text-align: left; display: block; }
 .mobile-role-choice strong { display: block; font-size: 15px; margin-bottom: 5px; }
@@ -584,6 +611,9 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
   </div>
   <div class="mod-tab" id="mt-documents" onclick="showView('documents')" title="Crewing documents (templates, checklists, license, MLC cert)">
     <span>Documents</span>
+  </div>
+  <div class="mod-tab" id="mt-apps" onclick="showView('apps')" title="Apps & plugins">
+    <span>Apps</span>
   </div>
   <div class="mb-spacer"></div>
   <div class="mb-vault" id="mb-vault" onclick="openSettings('vaults')" title="Switch vault"><span>📁</span><span class="mb-vault-name" id="mb-vault-name">Vault</span></div>
@@ -1517,10 +1547,11 @@ function showView(v) {
   var previousView = state.view;
   state.view = v;
   if (previousView === 'team' && v !== 'team') stopTeamChatPoll();
+  if (previousView === 'apps' && v !== 'apps') pluginUnmountCurrent();
   updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
-  ['vacancies','mailings','compliance','team','seafarers','documents'].forEach(function(k){
+  ['vacancies','mailings','compliance','team','seafarers','documents','apps'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -1562,6 +1593,11 @@ function showView(v) {
   if (v==='team') {
     document.getElementById('left-panel').style.display = 'none';
     renderTeamView();
+    return;
+  }
+  if (v==='apps') {
+    document.getElementById('left-panel').style.display = 'none';
+    renderAppsView();
     return;
   }
   if (v==='new_profile') {
@@ -7164,7 +7200,171 @@ async function setupFileDragDrop() {
 function applyTheme() {
   var t = ((state.settings && state.settings.interface && state.settings.interface.theme) || 'light').toLowerCase();
   document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  if (typeof pluginNotifyTheme === 'function') pluginNotifyTheme();
 }
+
+// ===================== Apps / Plugin host (bundled first-party MVP) =====================
+// Crewing as a HOST for bundled first-party plugins. Spec: vault notes
+// "Skipi Plugin Update Mechanism — bundled first-party MVP" + per-home handoff
+// "Crewing plugin host readiness". MVP = Apps shell + local Install/Open/Disable
+// + thin mount adapter + narrow host API. GUARDRAIL: plugins get NO crewing data
+// by default (no candidate PII/contacts, no team/manager tokens, no live
+// vacancies, no crew chat, no private notes). No remote code. No marketplace.
+var CREWING_PLUGINS = [
+  { id:'crewing-host-demo', name:'Host Demo', category:'Developer', version:'0.1.0',
+    summary:'Sample plugin that verifies the Apps host (theme bridge, plugin storage, mount/unmount). Placeholder until reviewed plugins ship.',
+    state:'available', permissions:['local_storage','theme'],
+    safety:'Sample/developer tile. Runs locally inside Crewing. No access to candidates, contacts, vacancies, team tokens, or chat.' },
+  { id:'interview-checklist', name:'Interview checklist', category:'Crewing', state:'coming_soon',
+    summary:'Structured interview checklist for crewing staff.' },
+  { id:'vacancy-quality-checker', name:'Vacancy quality checker', category:'Crewing', state:'coming_soon',
+    summary:'Flags missing or weak fields before a vacancy is published.' },
+  { id:'cert-stcw-checklist', name:'Certificate / STCW checklist', category:'Compliance', state:'coming_soon',
+    summary:'Checklist of required certificates and STCW endorsements.' },
+  { id:'crew-change-checklist', name:'Crew change checklist', category:'Operations', state:'coming_soon',
+    summary:'Step-by-step crew change preparation checklist.' },
+  { id:'candidate-redaction', name:'Candidate redaction / export', category:'Privacy', state:'coming_soon',
+    summary:'Helper to redact and export a candidate profile — explicit user action only.' },
+  { id:'training-education', name:'Training / Education', category:'Crewing', state:'coming_soon',
+    summary:'Training and education tile for crewing staff.' }
+];
+
+var appsState = { screen: 'list', pluginId: null };
+var __pluginMounted = null;     // { id, reg }
+var __pluginThemeSubs = [];     // [{ id, cb }]
+
+function pluginMeta(id){ for (var i=0;i<CREWING_PLUGINS.length;i++){ if (CREWING_PLUGINS[i].id===id) return CREWING_PLUGINS[i]; } return null; }
+function pluginsLoadState(){ try { return JSON.parse(localStorage.getItem('skipi_crewing_plugins') || '{}'); } catch(e){ return {}; } }
+function pluginsSaveState(s){ try { localStorage.setItem('skipi_crewing_plugins', JSON.stringify(s)); } catch(e){} }
+function pluginInstall(id){ var s=pluginsLoadState(); s[id]=Object.assign({installed_at:'local'}, s[id], { installed:true, enabled:true, version:(pluginMeta(id)||{}).version||'' }); pluginsSaveState(s); }
+function pluginSetEnabled(id, on){ var s=pluginsLoadState(); if (s[id]) { s[id].enabled=!!on; pluginsSaveState(s); } }
+function pluginTileState(p){
+  if (p.state==='coming_soon') return 'coming_soon';
+  var st=pluginsLoadState()[p.id];
+  if (st && st.installed && st.enabled) return 'installed';
+  if (st && st.installed && !st.enabled) return 'disabled';
+  return 'available';
+}
+function pluginStateLabel(s){ return s==='installed'?'Installed':s==='disabled'?'Disabled':s==='coming_soon'?'Coming soon':'Available'; }
+
+// Narrow host API — deliberately exposes NO crewing domain data.
+function crewingHostApi(pluginId){
+  var ns = 'skipi_crewing_plugin_store_' + pluginId;
+  function readStore(){ try { return JSON.parse(localStorage.getItem(ns) || '{}'); } catch(e){ return {}; } }
+  function writeStore(o){ try { localStorage.setItem(ns, JSON.stringify(o)); } catch(e){} }
+  return {
+    theme: {
+      get: function(){ return document.documentElement.getAttribute('data-theme')==='dark' ? 'dark' : 'light'; },
+      subscribe: function(cb){ __pluginThemeSubs.push({ id:pluginId, cb:cb }); return function(){ __pluginThemeSubs = __pluginThemeSubs.filter(function(s){ return s.cb!==cb; }); }; }
+    },
+    storage: {
+      get: function(k){ return readStore()[k]; },
+      set: function(k,v){ var o=readStore(); o[k]=v; writeStore(o); },
+      remove: function(k){ var o=readStore(); delete o[k]; writeStore(o); }
+    },
+    audio: { playLoop: function(){}, stop: function(){} },     // no native bridge yet
+    navigation: { closePlugin: function(){ pluginCloseHost(); }, setTitle: function(t){ var el=document.getElementById('apps-host-title'); if (el) el.textContent = t || ''; } },
+    permissions: { listGranted: function(){ return (pluginMeta(pluginId)||{}).permissions || []; } }
+  };
+}
+function pluginNotifyTheme(){ var t = document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; __pluginThemeSubs.forEach(function(s){ try { s.cb(t); } catch(e){} }); }
+
+// Bundled fixture plugin (placeholder host-contract demo — NOT domain logic).
+window.SkipiPlugins = window.SkipiPlugins || {};
+window.SkipiPlugins['crewing-host-demo'] = {
+  manifest: { id:'crewing-host-demo', name:'Host Demo', version:'0.1.0' },
+  mount: function(container, host){
+    var n = (host.storage.get('opens') || 0) + 1; host.storage.set('opens', n);
+    this._unsub = host.theme.subscribe(function(t){ var b=container.querySelector('[data-demo-theme]'); if (b) b.textContent = t; });
+    container.innerHTML =
+      '<div class="apps-demo">'
+      + '<p>Sample plugin running inside the Crewing Apps host.</p>'
+      + '<p>Host theme (live): <b data-demo-theme>'+escapeHtml(host.theme.get())+'</b></p>'
+      + '<p>Times opened (plugin-scoped storage): <b>'+n+'</b></p>'
+      + '<p class="apps-muted">This plugin has no access to candidates, vacancies, tokens, or chat.</p>'
+      + '<button class="apps-btn secondary" id="apps-demo-close">Close</button>'
+      + '</div>';
+    var c = container.querySelector('#apps-demo-close'); if (c) c.onclick = function(){ host.navigation.closePlugin(); };
+  },
+  unmount: function(){ if (this._unsub) { try { this._unsub(); } catch(e){} this._unsub=null; } }
+};
+
+// ---- render ----
+function appsActiveContainer(){ return document.getElementById(isMobileShellActive() ? 'mobile-main' : 'main'); }
+function appsRender(){
+  var host = appsActiveContainer();
+  if (!host) return;
+  if (appsState.screen==='detail' && appsState.pluginId) { host.innerHTML = appsDetailHtml(appsState.pluginId); return; }
+  if (appsState.screen==='host' && appsState.pluginId) { host.innerHTML = appsHostHtml(appsState.pluginId); pluginMountCurrent(); return; }
+  host.innerHTML = appsListHtml();
+}
+function appsListHtml(){
+  var tiles = CREWING_PLUGINS.map(function(p){
+    var st = pluginTileState(p);
+    return '<div class="apps-tile" onclick="appsOpenDetail(\''+p.id+'\')">'
+      + '<span class="apps-badge '+st+'">'+escapeHtml(pluginStateLabel(st))+'</span>'
+      + '<div class="at-name">'+escapeHtml(p.name)+'</div>'
+      + '<div class="at-cat">'+escapeHtml(p.category||'')+'</div>'
+      + '<div class="at-sum">'+escapeHtml(p.summary||'')+'</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="apps-wrap">'
+    + '<div class="apps-head"><h2>Apps</h2>'
+    + '<div class="apps-muted">First-party tools for your crewing team. Plugins run locally and get no candidate, vacancy, or token data by default.</div></div>'
+    + '<div class="apps-grid">'+tiles+'</div>'
+    + '</div>';
+}
+function appsDetailHtml(id){
+  var p = pluginMeta(id); if (!p) return appsListHtml();
+  var st = pluginTileState(p);
+  var perms = (p.permissions && p.permissions.length)
+    ? p.permissions.map(function(x){ return '<span class="apps-perm">'+escapeHtml(x)+'</span>'; }).join('')
+    : '<span class="apps-muted">No special permissions requested.</span>';
+  var actions;
+  if (st==='coming_soon') actions = '<div class="apps-muted">This plugin is coming soon.</div>';
+  else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+id+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+id+'\')">Disable</button>';
+  else if (st==='disabled') actions = '<button class="apps-btn" onclick="appsEnable(\''+id+'\')">Enable</button>';
+  else actions = '<button class="apps-btn" onclick="appsInstall(\''+id+'\')">Install</button>';
+  return '<div class="apps-detail">'
+    + '<button class="apps-back" onclick="appsBackToList()">‹ Apps</button>'
+    + '<span class="apps-badge '+st+'">'+escapeHtml(pluginStateLabel(st))+'</span>'
+    + '<h2>'+escapeHtml(p.name)+'</h2>'
+    + '<div class="apps-muted">'+escapeHtml(p.category||'')+(p.version?(' · v'+escapeHtml(p.version)):'')+'</div>'
+    + '<div class="apps-section"><div class="at-sum">'+escapeHtml(p.summary||'')+'</div></div>'
+    + '<div class="apps-section"><h3>Permissions</h3>'+perms+'</div>'
+    + (p.safety ? '<div class="apps-section"><h3>Safety</h3><div class="apps-muted">'+escapeHtml(p.safety)+'</div></div>' : '')
+    + '<div class="apps-section"><h3>Data access</h3><div class="apps-guard">By default this plugin cannot read or write candidate data, contacts, vacancies, team/manager tokens, or crew chat. Any such access requires an explicit permission and a separate review.</div></div>'
+    + '<div class="apps-actions">'+actions+'</div>'
+    + '</div>';
+}
+function appsHostHtml(id){
+  var p = pluginMeta(id) || { name:id };
+  return '<div class="apps-host">'
+    + '<div class="apps-host-bar"><span class="aht" id="apps-host-title">'+escapeHtml(p.name)+'</span>'
+    + '<button class="apps-btn secondary" onclick="pluginCloseHost()">Close</button></div>'
+    + '<div class="apps-host-container" id="apps-host-container"></div>'
+    + '</div>';
+}
+// ---- actions ----
+function appsOpenDetail(id){ appsState = { screen:'detail', pluginId:id }; appsRender(); }
+function appsBackToList(){ pluginUnmountCurrent(); appsState = { screen:'list', pluginId:null }; appsRender(); }
+function appsInstall(id){ pluginInstall(id); if (typeof showToast==='function') showToast('Installed', 'success'); appsState = { screen:'detail', pluginId:id }; appsRender(); }
+function appsDisable(id){ pluginUnmountCurrent(); pluginSetEnabled(id, false); appsState = { screen:'detail', pluginId:id }; appsRender(); }
+function appsEnable(id){ pluginSetEnabled(id, true); appsState = { screen:'detail', pluginId:id }; appsRender(); }
+function appsOpen(id){ if (!window.SkipiPlugins || !window.SkipiPlugins[id]) { if (typeof showToast==='function') showToast('Plugin not bundled in this build', 'error'); return; } appsState = { screen:'host', pluginId:id }; appsRender(); }
+function pluginMountCurrent(){
+  var id = appsState.pluginId; var reg = window.SkipiPlugins && window.SkipiPlugins[id];
+  var c = document.getElementById('apps-host-container'); if (!reg || !c) return;
+  pluginUnmountCurrent();
+  try { reg.mount(c, crewingHostApi(id)); __pluginMounted = { id:id, reg:reg }; }
+  catch(e){ c.innerHTML = '<div class="apps-muted">Plugin failed to mount: '+escapeHtml(''+e)+'</div>'; }
+}
+function pluginUnmountCurrent(){ if (__pluginMounted && __pluginMounted.reg && __pluginMounted.reg.unmount) { try { __pluginMounted.reg.unmount(); } catch(e){} } __pluginMounted = null; }
+function pluginCloseHost(){ pluginUnmountCurrent(); appsState = { screen:'detail', pluginId:appsState.pluginId }; appsRender(); }
+// ---- entry points ----
+function renderAppsView(){ appsState = { screen:'list', pluginId:null }; appsRender(); }       // desktop (#main)
+function mobileRenderApps(){ appsState = { screen:'list', pluginId:null }; appsRender(); }      // mobile (#mobile-main)
+
 
 // ------------- Android / compact mobile shell -------------
 var mobileState = {
@@ -7273,6 +7473,7 @@ function mobileViewChromeTitle(view) {
     return [sf.display_name || mobileModuleLabel('seafarers'), [sf.rank || sf.position, sf.nationality].filter(Boolean).join(' · ')];
   }
   if (view === 'documents') return [mobileModuleLabel('documents'), mobileTr('documents_desc')];
+  if (view === 'apps') return ['Apps', 'Plugins for your team'];
   if (view === 'document') {
     var doc = state.selectedDocument || {};
     return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
@@ -7322,6 +7523,7 @@ function mobileRenderChrome(view) {
     + mobileNavButton('compliance', navView, '▣', mobileModuleLabel('compliance'))
     + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
     + mobileNavButton('documents', navView, '📄', mobileModuleLabel('documents'))
+    + mobileNavButton('apps', navView, '🧩', 'Apps')
     + '</div></div>'
     + '</nav>' : '')
     + '</div>';
@@ -7396,6 +7598,7 @@ function mobileShow(view) {
     view = 'connection';
   }
   if (state.view === 'team') stopTeamChatPoll();
+  if (mobileState.view === 'apps' && view !== 'apps') pluginUnmountCurrent();
   mobileState.view = view;
   state.view = 'mobile-' + view;
   document.body.classList.add('mobile-shell');
@@ -7413,6 +7616,7 @@ function mobileShow(view) {
   if (view === 'seafarers') return mobileRenderSeafarers();
   if (view === 'seafarer') return mobileRenderSeafarerDetail();
   if (view === 'documents') return mobileRenderDocuments();
+  if (view === 'apps') return mobileRenderApps();
   if (view === 'document') return mobileRenderDocumentDetail();
   if (view === 'draft') return mobileRenderDraft();
   if (view === 'vacancy') return mobileRenderVacancyDetail();
