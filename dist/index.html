@@ -53,7 +53,7 @@
 .cd-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;
   font-size: 13px; color: var(--text); user-select: none; }
 .cd-item:hover { background: var(--panel2); }
-.cd-item input[type="checkbox"] { margin: 0; cursor: pointer; }
+.cd-item input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; min-height: 0; margin: 0; cursor: pointer; }
 .cd-separator { border-top: 1px dashed var(--border); margin: 4px 0; }
 .cd-preset { margin-bottom: 6px; }
 * { box-sizing: border-box; }
@@ -402,6 +402,14 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 /* Mobile shell mirrors Skipi Seafarer Android navigation and spacing. */
 .mobile-app { width: 100vw; max-width: 100vw; height: 100dvh; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
 .mobile-top { min-height: 54px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 7px) 10px 7px; border-bottom: 1px solid var(--border); background: var(--panel); }
+/* Demo banner — in-flow at the top of the mobile shell (NOT a fixed overlay),
+   so it never covers the status bar, header, or action buttons. The banner
+   itself absorbs the top safe-area; the header below drops its safe-area pad. */
+.mobile-top.mt-with-banner { padding-top: 7px; }
+.mobile-demo-banner { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #e67e22; color: #fff; font-weight: 800; font-size: 12px; padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px; }
+.mobile-demo-banner .mdb-text { min-width: 0; line-height: 1.2; overflow-wrap: anywhere; }
+.mobile-demo-banner .mdb-exit { flex: 0 0 auto; min-height: 40px; padding: 8px 16px; background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.75); border-radius: 9px; font-weight: 800; font-size: 13px; cursor: pointer; }
+.mobile-demo-banner .mdb-exit:active { background: rgba(255,255,255,.32); }
 .mobile-brand-wrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; }
 .mobile-top-home { width: 40px; height: 40px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 19px; line-height: 1; cursor: pointer; }
 .mobile-top-home.active { border-color: var(--accent-bg2); background: var(--accent-bg); color: var(--accent); }
@@ -854,16 +862,35 @@ function demoToast(msg){
 
 // Persistent banner so the user always knows it's a demonstration + can exit.
 function renderDemoBanner(){
-  if (!__demoMode) return;
-  if (document.getElementById('demo-banner')) return;
+  var existing = document.getElementById('demo-banner');
+  // Mobile shell renders an IN-FLOW banner inside mobileRenderChrome() — never
+  // use the fixed body overlay there: it overlapped the status bar and made the
+  // "Выйти из демо" button hard to tap (Yana mobile QA, 2026-06-24).
+  if (isMobileShellActive()) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
+  if (!__demoMode) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
+  if (existing) return;
   var b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:calc(env(safe-area-inset-top,0px) + 5px) 10px 5px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
   b.innerHTML = 'DEMO — демонстрационные данные '
     + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">Выйти из демо</button>';
   document.body.appendChild(b);
-  // Nudge content below the fixed bar so nothing is hidden under it.
+  // Nudge content below the fixed bar so nothing is hidden under it (desktop).
   document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
+}
+
+// Convert a raw API/publish error into a short localized message. The raw text
+// (may include HTTP status / JSON) is logged for devs but never shown in a toast.
+function friendlyPublishError(e){
+  var raw = (e && e.message) ? e.message : ('' + e);
+  try { console.warn('[crewing] publish error:', raw); } catch(_){}
+  if (/invalid token|forbidden|unauthor|\b401\b|\b403\b/i.test(raw)) {
+    return 'Токен компании не принят. Откройте «Подключение», вставьте токен из приглашения и нажмите «Проверить».';
+  }
+  if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) {
+    return 'Не удалось связаться с сервером. Проверьте интернет и повторите попытку.';
+  }
+  return 'Не удалось опубликовать. Проверьте поля и повторите попытку.';
 }
 
 // Note: the live first-run entry gate is renderEntryChoice() / shouldShowEntryChoice()
@@ -1129,21 +1156,27 @@ var NATIONALITY_FALLBACK = [
   { id: 'VN', label: 'Vietnam' },
 ];
 
-var NATIONALITY_PRESETS = {
-  anywhere: null,
-  international: ['Ukraine', 'Russia', 'India', 'Philippines', 'Indonesia', 'Sri Lanka'],
-  baltic: ['Estonia', 'Latvia', 'Lithuania'],
-  eu: ['Bulgaria', 'Croatia', 'Estonia', 'Greece', 'Latvia', 'Lithuania', 'Poland', 'Romania'],
-  russia: ['Russia'],
-  ukraine: ['Ukraine'],
-  uk_work: ['United Kingdom'],
-};
+// Popular crewing nationalities shown first (operator-preferred order),
+// then the rest of the taxonomy alphabetically. Group presets ("Anywhere /
+// Only Ukraine" etc.) were removed — a vacancy picks concrete nationalities
+// via checkboxes, not abstract groups (Yana mobile QA, 2026-06-24).
+var NATIONALITY_TOP = ['Ukraine', 'India', 'Russia', 'Philippines', 'Indonesia'];
+var NATIONALITY_TOP_SET = {}; NATIONALITY_TOP.forEach(function(l){ NATIONALITY_TOP_SET[l] = true; });
 
 function nationalityList() {
   var t = TAXONOMY || TAXONOMY_FALLBACK;
-  var list = t.nationalities;
-  if (!list || !list.length) list = NATIONALITY_FALLBACK;
-  return list;
+  var src = (t.nationalities && t.nationalities.length) ? t.nationalities : NATIONALITY_FALLBACK;
+  var norm = src.map(function(n){ return (typeof n === 'string') ? { id: n, label: n } : n; });
+  var byLabel = {};
+  norm.forEach(function(n){ var l = n.label || n.id || ''; if (l && !byLabel[l]) byLabel[l] = n; });
+  var top = [];
+  NATIONALITY_TOP.forEach(function(l){ if (byLabel[l]) top.push(byLabel[l]); });
+  var rest = norm.filter(function(n){ return !NATIONALITY_TOP_SET[n.label || n.id]; })
+                 .sort(function(a, b){ return String(a.label || a.id || '').localeCompare(String(b.label || b.id || '')); });
+  return top.concat(rest);
+}
+function nationalityTopCount(list) {
+  return (list || []).filter(function(n){ return NATIONALITY_TOP_SET[n.label || n.id]; }).length;
 }
 
 // Render checkbox-dropdown. `id` is the wrap id; the underlying state
@@ -1151,19 +1184,11 @@ function nationalityList() {
 // widget is stateless from JS state's point of view.
 function nationalitySelectHtml(id) {
   var list = nationalityList();
-  var presets = '<select class="cd-preset" onchange="applyNationalityPreset(\''+escapeAttr(id)+'\', this.value)">'
-    + '<option value="">Preset / group…</option>'
-    + '<option value="anywhere">Anywhere</option>'
-    + '<option value="international">International supply</option>'
-    + '<option value="baltic">Only Baltic</option>'
-    + '<option value="eu">Only EU</option>'
-    + '<option value="russia">Only Russia</option>'
-    + '<option value="ukraine">Only Ukraine</option>'
-    + '<option value="uk_work">UK or UK Work Permit</option>'
-    + '</select>';
+  var topCount = nationalityTopCount(list);
   var items = list.map(function(n, i){
     var label = n.label || n.id || '';
-    var sep = (i === NATIONALITY_PRIMARY_COUNT) ? '<div class="cd-separator"></div>' : '';
+    // Divider after the popular block, before the alphabetical rest.
+    var sep = (i === topCount && topCount > 0 && i < list.length) ? '<div class="cd-separator"></div>' : '';
     return sep
       + '<label class="cd-item">'
       +   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(id)+'\')">'
@@ -1171,7 +1196,6 @@ function nationalitySelectHtml(id) {
       + '</label>';
   }).join('');
   return '<div class="cd-wrap" id="'+id+'-wrap">'
-    +   presets
     +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
     +     '<span id="'+id+'-label">Select nationalities…</span>'
     +     '<span class="cd-arrow">▾</span>'
@@ -1221,14 +1245,8 @@ function setCdValues(id, values) {
   cdUpdateLabel(id);
 }
 
-function applyNationalityPreset(id, preset) {
-  if (!preset) return;
-  var list = nationalityList().map(function(n){ return n.label || n.id || ''; }).filter(Boolean);
-  var selected = preset === 'anywhere' ? list : (NATIONALITY_PRESETS[preset] || []);
-  var available = {};
-  list.forEach(function(label){ available[label] = true; });
-  setCdValues(id, selected.filter(function(label){ return available[label]; }));
-}
+// applyNationalityPreset / NATIONALITY_PRESETS removed — group presets were
+// dropped from the vacancy form in favour of concrete checkbox multi-select.
 
 function cdUpdateLabel(id) {
   var btn = document.getElementById(id+'-btn');
@@ -6657,7 +6675,7 @@ async function submitVacancy() {
       showView('vacancies');
     }
   } catch (e) {
-    showToast(''+e, 'error');
+    showToast(friendlyPublishError(e), 'error');
   }
 }
 
@@ -7504,7 +7522,8 @@ function mobileRenderChrome(view) {
   var showBottomNav = mobileHasConnection() || __demoMode;
   root.innerHTML =
     '<div class="mobile-app">'
-    + '<header class="mobile-top">'
+    + (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">DEMO — демонстрационные данные</span><button class="mdb-exit" onclick="exitDemoMode()">Выйти из демо</button></div>' : '')
+    + '<header class="mobile-top'+(__demoMode ? ' mt-with-banner' : '')+'">'
     + '<div class="mobile-brand-wrap">'
     + '<button class="mobile-top-home'+(navView === 'vacancies' ? ' active' : '')+'" onclick="mobileShow(\'vacancies\')" title="'+escapeAttr(mobileModuleLabel('vacancies'))+'">☰</button>'
     + '<div class="mobile-brand"><div class="mobile-brand-title">'+escapeHtml(title[0])+'</div><div class="mobile-brand-sub">'+escapeHtml(title[1] || '')+'</div></div>'
@@ -8300,7 +8319,7 @@ async function mobileSubmitVacancy() {
     state.selectedVacancy = id ? (state.vacancies || []).find(function(v){ return v.id === id; }) : null;
     mobileShow(state.selectedVacancy ? 'vacancy' : 'vacancies');
   } catch (e) {
-    showToast('Save failed: '+e, 'error');
+    showToast(friendlyPublishError(e), 'error');
   }
 }
 
@@ -8438,7 +8457,7 @@ async function mobileSubmitMailing() {
     state.selectedMailingRequest = (state.mailingRequests || []).find(function(r){ return r.id === posted.id; }) || null;
     mobileShow(state.selectedMailingRequest ? 'mailing' : 'mailings');
   } catch(e) {
-    showToast('Publish failed: '+e, 'error');
+    showToast(friendlyPublishError(e), 'error');
   }
 }
 
