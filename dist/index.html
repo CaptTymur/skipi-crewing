@@ -520,9 +520,8 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-setting-row > .mobile-segmented { flex: 0 0 auto; }
 /* Settings tabs — Broker-style: settings are split into tabs, not one long page.
    On mobile the nav is a horizontal scrollable pill row (like Broker mobile modal). */
-.mobile-settings-nav { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 0 0 4px 0; margin: 2px 0 12px; scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-.mobile-settings-nav::-webkit-scrollbar { display: none; }
-.mobile-settings-tab { flex: 0 0 auto; white-space: nowrap; min-height: 38px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; scroll-snap-align: start; }
+.mobile-settings-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 2px 0 12px; }
+.mobile-settings-tab { flex: 0 1 auto; white-space: nowrap; min-height: 38px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; }
 .mobile-settings-tab.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
 /* Apps / plugin host (bundled first-party). Works in desktop #main and mobile #mobile-main. */
 .apps-wrap { padding: 16px; max-width: 960px; }
@@ -835,15 +834,15 @@ function renderEntryChoice(next){
   if (document.getElementById('entry-choice-overlay')) return;
   var ov = document.createElement('div');
   ov.id = 'entry-choice-overlay';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0f1115);padding:24px;';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0f1115);padding:24px 18px;overflow-x:hidden;box-sizing:border-box;';
   ov.innerHTML =
-    '<div style="max-width:520px;width:100%;text-align:center;">'
+    '<div style="max-width:520px;width:100%;text-align:center;box-sizing:border-box;">'
     + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
     + '<div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<button id="ec-use" style="padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;">Работать в Skipi Crewing<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">Реальная работа: вход по токену компании или команды.</div></button>'
-    + '<button id="ec-demo" style="padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;">🎬 Показать демонстрацию<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">Без регистрации и без токена — пример на готовых данных.</div></button>'
+    + '<button id="ec-use" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Работать в Skipi Crewing<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">Реальная работа: вход по токену компании или команды.</div></button>'
+    + '<button id="ec-demo" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;">🎬 Показать демонстрацию<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">Без регистрации и без токена — пример на готовых данных.</div></button>'
     + '</div>'
     + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
     + '</div>';
@@ -7540,7 +7539,7 @@ function mobileRenderChrome(view) {
     + '<main class="mobile-main" id="mobile-main"></main>'
     + (showBottomNav ? '<nav class="mobile-bottom mobile-bottom-nav" id="mobile-bottom-nav">'
     + '<div class="mobile-module-rail-wrap" id="mobile-module-rail-wrap"><div class="mobile-module-rail" id="mobile-module-rail">'
-    + mobileNavButton('vacancies', navView, '☰', mobileModuleLabel('vacancies'))
+    + mobileNavButton('vacancies', navView, '&#8962;', mobileModuleLabel('vacancies'))
     + mobileNavButton('mailings', navView, '✉', mobileModuleLabel('mailings'))
     + mobileNavButton('compliance', navView, '▣', mobileModuleLabel('compliance'))
     + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
