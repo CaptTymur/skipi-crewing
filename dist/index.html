@@ -11,9 +11,14 @@
   --panel2: #232932;
   --text: #e6e8ec;
   --text2: #8a93a3;
-  --accent: #4f8ef7;
-  --accent-rgb: 79,142,247;
-  --accent2: #2563eb;
+  /* Canonical Skipi primary (shared across Seafarer/Broker/Crewing) = #004564.
+     On the dark theme the accent is a legible lighter tint of the same petrol
+     hue (deep #004564 would be near-invisible as link text on a dark bg); the
+     deep canonical value is kept as --accent2 / --skipi-primary. */
+  --skipi-primary: #004564;
+  --accent: #2d88ad;
+  --accent-rgb: 45,136,173;
+  --accent2: #004564;
   --accent-bg: rgba(var(--accent-rgb),0.12);
   --accent-bg2: rgba(var(--accent-rgb),0.28);
   --ok: #22c55e;
@@ -27,9 +32,11 @@
   --panel2: #eef0f4;
   --text: #1a1f26;
   --text2: #5a6573;
-  --accent: #2563eb;
-  --accent-rgb: 37,99,235;
-  --accent2: #1d4ed8;
+  /* Light theme uses the exact canonical petrol primary #004564. */
+  --skipi-primary: #004564;
+  --accent: #004564;
+  --accent-rgb: 0,69,100;
+  --accent2: #013a52;
   --accent-bg: rgba(var(--accent-rgb),0.1);
   --accent-bg2: rgba(var(--accent-rgb),0.22);
   --ok: #16a34a;
@@ -273,11 +280,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   padding: 12px 0; overflow-y: auto; flex-shrink: 0; }
 .settings-nav-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--text2); padding: 12px 16px 4px; font-weight: 600; }
-.settings-nav-item { padding: 7px 16px; font-size: 13px; cursor: pointer; color: var(--text);
-  display: flex; align-items: center; gap: 8px; }
+.settings-nav-item { padding: 8px 10px; margin: 0 8px; border-radius: 10px; font-size: 13px; cursor: pointer;
+  color: var(--text); display: flex; align-items: center; gap: 9px; font-weight: 600; }
 .settings-nav-item:hover { background: var(--panel2); }
-.settings-nav-item.active { background: rgba(79,142,247,0.18); color: var(--accent); }
-.settings-nav-item .nav-icon { width: 18px; text-align: center; font-size: 14px; opacity: 0.7; }
+.settings-nav-item.active { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+/* Obsidian-style letter badge (canonical desktop settings) */
+.settings-nav-item .nav-icon { width: 24px; height: 24px; flex: 0 0 auto; border-radius: 7px; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--accent);
+  background: var(--panel); border: 1px solid var(--border); opacity: 1; }
+.settings-nav-item.active .nav-icon { background: var(--accent); color: #fff; border-color: var(--accent); }
+.settings-nav-header { padding: 2px 16px 14px; }
+.settings-nav-header h2 { margin: 0 0 4px; font-size: 19px; line-height: 1.2; }
+.settings-nav-header p { margin: 0; font-size: 12px; color: var(--text2); line-height: 1.4; }
+.settings-main-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 6px; }
+.settings-status-pill { display: inline-flex; align-items: center; min-height: 26px; padding: 0 11px; border-radius: 999px;
+  color: var(--accent); background: var(--accent-bg); font-size: 12px; font-weight: 800; white-space: nowrap; flex: 0 0 auto; }
+.settings-boundary { margin-top: 18px; border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: 12px; padding: 13px 15px; background: var(--accent-bg); }
+.settings-boundary strong { display: block; margin-bottom: 4px; font-size: 13px; }
+.settings-boundary p { margin: 0; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
+.settings-section .section-title { margin: 22px 0 8px; color: var(--text2); font-size: 12px; line-height: 1.2; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+.settings-group { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel); margin-bottom: 14px; }
+.settings-group .setting-row { background: var(--panel); }
+.settings-group .setting-row:last-of-type { border-bottom: none; }
 .settings-body { flex: 1; overflow-y: auto; padding: 28px 32px; }
 .settings-section { margin-bottom: 32px; }
 .settings-section h3 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
@@ -546,6 +571,70 @@ body.mobile-shell .cd-wrap.cd-mobile-inline .cd-item input[type="checkbox"] {
 .mobile-settings-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 2px 0 12px; }
 .mobile-settings-tab { flex: 0 1 auto; white-space: nowrap; min-height: 38px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; }
 .mobile-settings-tab.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+/* ── Common connect dialog (Open existing profile / pair a device) ──────────
+   Shell-agnostic overlay: launched from the desktop entry screen, the mobile
+   work-role screen, and Settings → Paired devices. Token tab is the real
+   working connection path; QR tab is structure + camera fallback. */
+.connect-overlay { position: fixed; inset: 0; z-index: 100002; display: flex; align-items: center;
+  justify-content: center; background: rgba(0,0,0,.55); padding: 18px; box-sizing: border-box; overflow-x: hidden; }
+.connect-card { width: 100%; max-width: 440px; box-sizing: border-box; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 14px; padding: 20px 18px; max-height: 92vh; overflow-y: auto; }
+.connect-card h2 { margin: 0 0 4px; font-size: 19px; color: var(--text); }
+.connect-card .connect-sub { margin: 0; color: var(--text2); font-size: 13px; line-height: 1.45; }
+.connect-close { float: right; margin: -6px -4px 0 0; background: transparent; border: none; color: var(--text2);
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 6px; }
+.connect-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--panel2); margin: 14px 0; }
+.connect-tab { min-height: 40px; border-radius: 7px; border: 1px solid transparent; background: transparent;
+  color: var(--text2); font-weight: 800; font-size: 13px; cursor: pointer; }
+.connect-tab.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+.connect-field { margin: 12px 0; }
+.connect-field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 700; }
+.connect-field input { width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: 14px; }
+.connect-help { font-size: 12px; color: var(--text2); line-height: 1.45; margin: 8px 0 0; }
+.connect-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.connect-primary { flex: 1 1 auto; min-width: 140px; box-sizing: border-box; padding: 12px 16px; border-radius: 10px;
+  border: 1px solid var(--accent2); background: var(--accent); color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
+.connect-primary[disabled] { opacity: .6; cursor: default; }
+.connect-ghost { flex: 0 0 auto; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: transparent; color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; }
+.connect-error { display: none; margin-top: 10px; padding: 9px 11px; border-radius: 9px;
+  background: rgba(220,38,38,.12); color: var(--err); font-size: 12.5px; line-height: 1.4; border: 1px solid rgba(220,38,38,.35); }
+.connect-error.show { display: block; }
+.connect-qr-stage { margin-top: 4px; border: 1px dashed var(--border); border-radius: 12px; background: var(--panel2);
+  padding: 26px 16px; text-align: center; }
+.connect-qr-stage .qr-ico { font-size: 34px; opacity: .55; }
+.connect-qr-stage .qr-text { font-size: 13px; color: var(--text2); line-height: 1.5; margin: 10px 0 0; }
+.connect-qr-stage .qr-note { font-size: 11px; color: var(--text2); opacity: .8; margin: 8px 0 0; }
+/* ── Paired devices (Settings) ── */
+.paired-device-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--border); }
+.paired-device-row:first-of-type { border-top: 0; }
+.paired-device-row .pd-main { flex: 1 1 auto; min-width: 0; }
+.paired-device-row .pd-name { font-size: 13.5px; color: var(--text); font-weight: 700; }
+.paired-device-row .pd-meta { font-size: 11.5px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+.paired-device-row .pd-badge { flex: 0 0 auto; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+  color: #fff; background: var(--accent); }
+.paired-empty { padding: 16px 4px; text-align: center; color: var(--text2); font-size: 12.5px; line-height: 1.5; }
+.paired-soon { margin-top: 10px; padding: 10px 12px; border-radius: 9px; background: var(--accent-bg);
+  border: 1px solid var(--border); font-size: 12px; color: var(--text2); line-height: 1.5; }
+/* ── Mobile settings — iOS grouped (light), canonical IA drill-down ────────── */
+body.mobile-shell .ios-sec { margin: 18px 2px 7px; color: var(--text2); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+body.mobile-shell .ios-group { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+body.mobile-shell .ios-row { width: 100%; text-align: left; min-height: 60px; display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 11px; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; }
+body.mobile-shell .ios-row:last-child { border-bottom: 0; }
+body.mobile-shell .ios-badge { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: var(--accent); font-size: 13px; font-weight: 800; }
+body.mobile-shell .ios-row strong { display: block; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+body.mobile-shell .ios-row .ios-sub { display: block; margin-top: 3px; color: var(--text2); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+body.mobile-shell .ios-right { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-size: 12px; white-space: nowrap; }
+body.mobile-shell .ios-chevron { color: #9aa3af; font-size: 20px; line-height: 1; }
+body.mobile-shell .ios-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 9px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); font-size: 11px; font-weight: 800; }
+body.mobile-shell .ios-back { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; color: var(--accent); font-size: 15px; font-weight: 700; cursor: pointer; padding: 4px 0; margin: 2px 0 6px; }
+body.mobile-shell .ios-detail-title { font-size: 22px; margin: 2px 0 4px; }
+body.mobile-shell .ios-detail-desc { color: var(--text2); font-size: 13px; line-height: 1.45; margin: 0 2px 8px; }
+body.mobile-shell .ios-boundary { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; background: var(--accent-bg); margin-top: 14px; }
+body.mobile-shell .ios-boundary strong { display:block; margin-bottom:4px; font-size:14px; }
+body.mobile-shell .ios-boundary .ios-sub { color: var(--text2); font-size: 12.5px; line-height: 1.45; }
 /* Apps / plugin host (bundled first-party). Works in desktop #main and mobile #mobile-main. */
 .apps-wrap { padding: 16px; max-width: 960px; }
 .apps-head h2 { margin: 0 0 4px; font-size: 20px; }
@@ -864,13 +953,15 @@ function renderEntryChoice(next){
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
     + '<div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<button id="ec-use" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Работать в Skipi Crewing<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">Реальная работа: вход по токену компании или команды.</div></button>'
+    + '<button id="ec-open" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Открыть существующий профиль<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">Подключитесь по токену или QR-коду, показанному на другом устройстве.</div></button>'
+    + '<button id="ec-create" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Создать профиль<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">Новая компания или команда: настройте подключение и токен Skipi.</div></button>'
     + '<button id="ec-demo" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;">🎬 Показать демонстрацию<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">Без регистрации и без токена — пример на готовых данных.</div></button>'
     + '</div>'
     + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
     + '</div>';
   document.body.appendChild(ov);
-  document.getElementById('ec-use').onclick = function(){ chooseUseApp(next); };
+  document.getElementById('ec-open').onclick = function(){ openConnectDialog({ context: 'profile' }); };
+  document.getElementById('ec-create').onclick = function(){ chooseUseApp(next); };
   document.getElementById('ec-demo').onclick = function(){ enterDemoMode(); };
 }
 
@@ -922,6 +1013,153 @@ function friendlyPublishError(e){
 // / chooseUseApp() (defined above, wired into both boot paths). An earlier
 // duplicate (renderEntryGate/gateChooseUse) was removed during cleanup.
 // =================== END DEMO MODE ===================
+
+// =================== CONNECT DIALOG (Open existing profile / pair device) ====
+// Shared two-method (Token / QR) connect surface, shell-agnostic (renders into a
+// fixed overlay so it works in both desktop and mobile). Used by:
+//   - the launch screen      → "Открыть существующий профиль"
+//   - Settings → Devices     → "Подключить новое устройство"
+// The Token method is the REAL working connection path (activate_crewing_token).
+// The QR method is structured UI + camera fallback only — there is no native
+// camera bridge yet, and we never fake a successful scan.
+function platformLabel(){
+  var ua = (navigator.userAgent || '');
+  if (/android/i.test(ua)) return 'Android';
+  if (/iphone|ipad|ipod/i.test(ua)) return 'iOS';
+  if (/macintosh|mac os x/i.test(ua)) return 'macOS';
+  if (/windows/i.test(ua)) return 'Windows';
+  if (/linux/i.test(ua)) return 'Linux';
+  return 'Это устройство';
+}
+
+function openConnectDialog(opts){
+  opts = opts || {};
+  closeConnectDialog();
+  var title = opts.title || 'Открыть существующий профиль';
+  var lead = (opts.context === 'device')
+    ? 'Подключите это устройство к существующему профилю Skipi Crewing.'
+    : 'Подключитесь к уже созданному профилю компании или команды.';
+  var ov = document.createElement('div');
+  ov.id = 'connect-dialog-overlay';
+  ov.className = 'connect-overlay';
+  ov.onclick = function(e){ if (e.target === ov) closeConnectDialog(); };
+  ov.innerHTML =
+    '<div class="connect-card" role="dialog" aria-modal="true">'
+    + '<button class="connect-close" onclick="closeConnectDialog()" aria-label="Закрыть">×</button>'
+    + '<h2>'+escapeHtml(title)+'</h2>'
+    + '<p class="connect-sub">'+escapeHtml(lead)+'</p>'
+    + '<div class="connect-tabs">'
+    + '<button class="connect-tab" id="connect-tab-token" onclick="connectShowTab(\'token\')">Токен</button>'
+    + '<button class="connect-tab" id="connect-tab-qr" onclick="connectShowTab(\'qr\')">QR-код</button>'
+    + '</div>'
+    + '<div id="connect-pane-token">'
+    + '<div class="connect-field"><label for="connect-token-input">Токен подключения</label>'
+    + '<input id="connect-token-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставьте токен с другого устройства"></div>'
+    + '<p class="connect-help">Токен показан на другом устройстве в Skipi: «Настройки → Сопряжённые устройства». Это не пароль.</p>'
+    + '<div class="connect-error" id="connect-error"></div>'
+    + '<div class="connect-actions">'
+    + '<button class="connect-ghost" onclick="connectClearToken()">Очистить</button>'
+    + '<button class="connect-primary" id="connect-submit" onclick="connectSubmitToken()">Подключить</button>'
+    + '</div>'
+    + '</div>'
+    + '<div id="connect-pane-qr" style="display:none;">'
+    + '<div class="connect-qr-stage">'
+    + '<div class="qr-ico">&#9930;</div>'
+    + '<p class="qr-text">Сканирование QR-кода требует доступа к камере устройства.</p>'
+    + '<p class="qr-note">Камера ещё не подключена в этой сборке — используйте ввод токена.</p>'
+    + '</div>'
+    + '<div class="connect-actions">'
+    + '<button class="connect-primary" onclick="connectShowTab(\'token\')">Ввести токен вручную</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  connectShowTab('token');
+  setTimeout(function(){ var i = document.getElementById('connect-token-input'); if (i) i.focus(); }, 30);
+}
+
+function closeConnectDialog(){
+  var o = document.getElementById('connect-dialog-overlay');
+  if (o) o.remove();
+}
+
+function connectShowTab(tab){
+  var isQr = tab === 'qr';
+  var pt = document.getElementById('connect-pane-token');
+  var pq = document.getElementById('connect-pane-qr');
+  var tt = document.getElementById('connect-tab-token');
+  var tq = document.getElementById('connect-tab-qr');
+  if (pt) pt.style.display = isQr ? 'none' : '';
+  if (pq) pq.style.display = isQr ? '' : 'none';
+  if (tt) tt.classList.toggle('active', !isQr);
+  if (tq) tq.classList.toggle('active', isQr);
+}
+
+function connectClearToken(){
+  var i = document.getElementById('connect-token-input');
+  if (i) { i.value = ''; i.focus(); }
+  connectShowError('');
+}
+
+function connectShowError(msg){
+  var el = document.getElementById('connect-error');
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.classList.add('show'); }
+  else { el.textContent = ''; el.classList.remove('show'); }
+}
+
+// Map a raw activation error to a short localized message. The raw token is
+// never logged.
+function connectFriendlyError(e){
+  var raw = (e && e.message) ? e.message : ('' + e);
+  try { console.warn('[crewing] connect failed'); } catch(_){}
+  if (/already.*connect|conflict|\b409\b/i.test(raw)) return 'Это устройство уже подключено к профилю.';
+  if (/invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw)) return 'Токен недействителен или истёк. Проверьте код на другом устройстве и попробуйте снова.';
+  if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) return 'Сервер недоступен. Проверьте интернет и повторите попытку.';
+  return 'Не удалось подключиться. Проверьте токен и повторите попытку.';
+}
+
+async function connectSubmitToken(){
+  var input = document.getElementById('connect-token-input');
+  var token = input ? (input.value || '').trim() : '';
+  if (!token) { connectShowError('Введите токен подключения.'); if (input) input.focus(); return; }
+  var btn = document.getElementById('connect-submit');
+  connectShowError('');
+  if (btn) { btn.disabled = true; btn.textContent = 'Подключаю…'; }
+  var s = state.settings || {};
+  var url = s.server_url || 'https://api-ru.skipi.app';
+  try {
+    var activation = await invoke('activate_crewing_token', { serverUrl: url, bearerToken: token });
+    var next = Object.assign({}, s, {
+      server_url: url,
+      bearer_token: token,
+      crewing_id: activation.crewing_id || s.crewing_id || '',
+      organization_id: activation.organization_id || s.organization_id || '',
+      company_name: s.company_name || activation.display_name || '',
+      reply_to: s.reply_to || '',
+      token_scopes: activation.scopes || [],
+      token_expires_at: activation.expires_at || null,
+      profile: s.profile || {},
+      interface: s.interface || { theme: 'light', language: getUiLang() },
+      recent_vaults: s.recent_vaults || []
+    });
+    await invoke('save_settings', { newSettings: next });
+    state.settings = next;
+    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
+    try { localStorage.setItem('skipi_crewing_entry', 'use'); } catch(e) {}
+    if (input) input.value = '';                 // do not leave the raw token in the DOM
+    closeConnectDialog();
+    var eo = document.getElementById('entry-choice-overlay'); if (eo) eo.remove();
+    showToast('Подключено к ' + (activation.display_name || 'Skipi Crewing'), 'success');
+    state.vacancies = [];
+    if (isMobileShellActive()) mobileShow('vacancies');
+    else location.reload();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Подключить'; }
+    connectShowError(connectFriendlyError(e));
+  }
+}
+// =================== END CONNECT DIALOG ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
 var UI_LANG_OPTIONS = [
@@ -6727,10 +6965,19 @@ function parseIntOrNull(id){ var v=val(id); return v===''?null:parseInt(v,10); }
 function parseFloatOrNull(id){ var v=val(id); return v===''?null:parseFloat(v); }
 
 // ------------- settings (Obsidian-style modal) -------------
-var settingsTab = 'connection';
+// Canonical Crewing settings IA (2026-06-25 UI Standard):
+//   org → Организация · data → Данные организации · work → Вакансии / Рассылки
+//   devices → Сопряжённые устройства · access → Доступ / токены · app → Приложение
+var settingsTab = 'org';
+// Map legacy tab ids (used by other call sites) onto the canonical IA.
+function mapSettingsTab(t){
+  var m = { connection:'access', profile:'org', vaults:'data', vault:'data',
+            appearance:'app', about:'app', interface:'app', language:'app' };
+  return m[t] || t;
+}
 
 async function openSettings(tab) {
-  if (tab) settingsTab = tab;
+  if (tab) settingsTab = mapSettingsTab(tab);
   if (!state.settings) state.settings = await invoke('get_settings');
   renderSettingsModal();
 }
@@ -6781,103 +7028,144 @@ function renderSettingsModal() {
   var p = s.profile || {};
   var iface = s.interface || {};
 
-  var navItem = function(id, icon, label) {
+  var navItem = function(id, badge, label) {
     return '<div class="settings-nav-item'+(settingsTab===id?' active':'')
       + '" onclick="openSettings(\''+id+'\')">'
-      + '<span class="nav-icon">'+icon+'</span> '+label+'</div>';
+      + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span></div>';
   };
 
+  // Canonical Crewing settings IA (UI Standard 2026-06-25), Obsidian-style sidebar.
   var nav =
-    '<div class="settings-nav-title">Crewing app</div>'
-    + navItem('connection', '🔌', tr('settings.connection'))
-    + navItem('profile',    '🏢', tr('settings.profile'))
-    + navItem('vaults',     '📁', tr('settings.vaults'))
-    + '<div class="settings-nav-title">'+tr('settings.interface')+'</div>'
-    + navItem('appearance', '🎨', tr('settings.appearance'))
-    + '<div class="settings-nav-title">'+tr('settings.help')+'</div>'
-    + navItem('about',      'ⓘ', tr('settings.about'));
+    '<div class="settings-nav-header"><h2>Настройки</h2>'
+    + '<p>Организационное рабочее пространство: вакансии, рассылки, кандидаты.</p></div>'
+    + navItem('org',     'O', 'Организация')
+    + navItem('data',    'D', 'Данные организации')
+    + navItem('work',    'V', 'Вакансии / Рассылки')
+    + navItem('devices', 'U', 'Сопряжённые устройства')
+    + navItem('access',  'K', 'Доступ / токены')
+    + navItem('app',     'A', 'Приложение');
+
+  var mainHeader = function(title, desc, pill){
+    return '<div class="settings-main-header"><div><h3>'+escapeHtml(title)+'</h3>'
+      + (desc ? '<div class="section-desc">'+desc+'</div>' : '')
+      + '</div>' + (pill ? '<span class="settings-status-pill">'+escapeHtml(pill)+'</span>' : '') + '</div>';
+  };
+  var grp = function(rows){ return '<div class="settings-group">'+rows+'</div>'; };
+  var sectionTitle = function(t){ return '<div class="section-title">'+escapeHtml(t)+'</div>'; };
+  var connected = !!(s.bearer_token || s.crewing_id);
 
   var body = '';
-  if (settingsTab==='connection') {
-    body = '<div class="settings-section"><h3>Connection</h3>'
-      + '<div class="section-desc">Server endpoint and credentials issued by Skipi after company verification.</div>'
-      + settingRow('Server URL', 'Leave default for automatic production access via <code>https://api-ru.skipi.app</code>, with Contabo fallback to <code>https://api.skipi.app</code>. Use <code>http://127.0.0.1:8000</code> only for dev.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
-      + settingRow('Company token', 'Issued by Skipi after manual accreditation. Used for vacancies, mailings, applications, and E2E key registration.',
-          '<div style="display:flex;gap:8px;align-items:center;">'
-        + inputCtrl('s-token', s.bearer_token, 'password', 'Paste company token', '240px')
-        + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Validate</button>'
-        + '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">Start 30-day trial</button>'
-        + '</div>')
-      + settingRow('Crewing ID', 'Server-side UUID of your accredited crewing record.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
-      + settingRow('Company display name', 'Shown in the app title only — not sent to the server.', inputCtrl('s-company', s.company_name, 'text', 'e.g. Marlow Crewing Ltd', '240px'))
-      + settingRow('Reply-to email (optional)', 'Override for application replies. Falls back to the crewing contact email if blank.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@yourcompany.com', '240px'))
-      + settingRow('Just exploring?', 'Load a demonstration with sample vacancies, applications, candidates, profiles and documents — no token needed. See exactly how Skipi Crewing works.',
-          '<button type="button" class="ghost" onclick="enterDemoMode()" style="padding:6px 14px;font-size:12px;">Load demonstration</button>')
+  if (settingsTab==='org') {
+    body = '<div class="settings-section">'
+      + mainHeader('Организация', 'Профиль организации, контакты и роли.', 'Workspace')
+      + sectionTitle('Скипи Крюинг')
+      + grp(
+          settingRow('Название организации', 'Отображается в рабочем пространстве Crewing. На сервер не отправляется.', inputCtrl('s-company', s.company_name, 'text', 'например, Marlow Crewing Ltd', '240px'))
+        + settingRow('Контактный email', 'Для переписки по верификации и связи с организацией.', inputCtrl('p-email', p.contact_email, 'text', 'hr@company.com', '240px'))
+        + settingRow('Контактный телефон', 'Необязательно. Используется на профилях после company_verified.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+        )
+      + sectionTitle('Данные для верификации')
+      + grp(
+          settingRow('Юридическое название', 'Полное зарегистрированное название организации.', inputCtrl('p-legal', p.legal_name, 'text', 'Marlow Navigation Co. Ltd', '240px'))
+        + settingRow('Юрисдикция', 'Код страны ISO 3166 регистрации организации.', inputCtrl('p-jur', p.jurisdiction, 'text', 'CY / GR / GE...', '120px'))
+        + settingRow('Регистрационный номер', 'Номер компании в реестре.', inputCtrl('p-reg', p.registration_number, 'text', 'HE 12345', '240px'))
+        + settingRow('Номер MLC-сертификата', 'Идентификатор сертификата Maritime Labour Convention.', inputCtrl('p-mlc', p.mlc_cert_number, 'text', 'MLC-CY-2025-0042', '240px'))
+        + settingRow('MLC действует до', 'Дата окончания MLC-сертификата.', inputCtrl('p-mlc-to', p.mlc_cert_valid_to, 'date', '', '160px'))
+        + settingRow('Публичный slug', 'URL-безопасный идентификатор публичного профиля организации.', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
+        + settingRow('Публичное описание', 'Показывается морякам в вакансиях после company_verified.', textareaCtrl('p-public-desc', p.public_description, 'Короткий профиль: лицензия, типы судов, география, процесс найма', '320px', 5))
+        )
       + '</div>';
-  } else if (settingsTab==='profile') {
-    body = '<div class="settings-section"><h3>Crewing profile</h3>'
-      + '<div class="section-desc">Public-facing details of your crewing company. Sent to Skipi during the verification ladder (<code>email_verified → company_verified → industry_verified</code>). Not shown to seafarers until <code>company_verified</code>.</div>'
-      + settingRow('Legal name', 'Full registered name as it appears on your incorporation paperwork.', inputCtrl('p-legal', p.legal_name, 'text', 'Marlow Navigation Co. Ltd', '240px'))
-      + settingRow('Public slug', 'URL-safe identifier used in the public crewing profile (later).', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
-      + settingRow('Jurisdiction', 'ISO 3166 country code where the company is registered.', inputCtrl('p-jur', p.jurisdiction, 'text', 'CY / GR / GE...', '120px'))
-      + settingRow('Registration number', 'Company number issued by the registrar.', inputCtrl('p-reg', p.registration_number, 'text', 'HE 12345', '240px'))
-      + settingRow('MLC certificate number', 'Maritime Labour Convention certificate identifier.', inputCtrl('p-mlc', p.mlc_cert_number, 'text', 'MLC-CY-2025-0042', '240px'))
-      + settingRow('MLC valid to', 'Expiry date of the MLC certificate.', inputCtrl('p-mlc-to', p.mlc_cert_valid_to, 'date', '', '160px'))
-      + settingRow('Contact email', 'Reaches the crewing — e.g. for verification correspondence.', inputCtrl('p-email', p.contact_email, 'text', 'hr@marlow.cy', '240px'))
-      + settingRow('Contact phone', 'Optional. Used only on company_verified profiles.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
-      + settingRow('Public description', 'Shown to seafarers in job offers after company verification.', textareaCtrl('p-public-desc', p.public_description, 'Short factual profile: license, vessel focus, geography, hiring process', '320px', 5))
-      + '</div>';
-  } else if (settingsTab==='vaults' || settingsTab==='vault') {
-    var current = s.vault_path || '(default — ~/.local/share/skipi-crewing)';
+  } else if (settingsTab==='data') {
+    var current = s.vault_path || '(по умолчанию — ~/.local/share/skipi-crewing)';
     var recent = (s.recent_vaults || []).filter(function(v){return v && v !== s.vault_path;});
     var suggested = suggestedCrewingVaultName();
     var recentHtml = '';
     if (recent.length) {
-      recentHtml = '<div class="settings-section"><h3>Recent vaults</h3>'
-        + '<div class="section-desc">Vault folders you have used recently. Click "Switch" to point Skipi Crewing at one of them.</div>'
-        + recent.map(function(p){
-            return '<div class="setting-row">'
-              + '<div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(p)+'</div></div>'
-              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(p)+'\')">Switch</button>'
-              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(p)+'\')" title="Remove from recent list">Forget</button></div>'
-              + '</div>';
-          }).join('')
-        + '</div>';
+      recentHtml = sectionTitle('Недавние папки')
+        + grp(recent.map(function(pp){
+            return '<div class="setting-row"><div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(pp)+'</div></div>'
+              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Переключить</button>'
+              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Убрать из списка">Забыть</button></div></div>';
+          }).join(''));
     }
-    body = '<div class="settings-section"><h3>Vaults</h3>'
-      + '<div class="section-desc">Each vault is a clearly named folder containing the Skipi Crewing database and uploaded documents. Suggested name: <code>'+escapeHtml(suggested)+'</code>. <strong>For multi-user crewing teams</strong> point the vault at a shared network folder (SMB / NFS) so all HR managers work against the same data.</div>'
-      + '<div class="setting-row"><div class="setting-info">'
-      + '<div class="setting-label">Current vault</div>'
-      + '<div class="setting-desc" style="font-family:monospace;font-size:11px;word-break:break-all;">'+escapeHtml(current)+'</div></div>'
-      + '<div class="setting-control"></div></div>'
-      + '<div class="setting-row"><div class="setting-info">'
-      + '<div class="setting-label">Create/select named vault</div>'
-      + '<div class="setting-desc">Pick a parent folder. Skipi Crewing will use <code>'+escapeHtml(suggested)+'</code> inside it, so the vault is easy to find in your file manager.</div></div>'
-      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="createNamedCrewingVault()">Create named…</button></div></div>'
-      + '<div class="setting-row"><div class="setting-info">'
-      + '<div class="setting-label">Open existing vault folder</div>'
-      + '<div class="setting-desc">Pick an existing named folder, for example <code>Skipi Crewing - Marlow Navigation</code>. The switch takes effect on next app start.</div></div>'
-      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openVaultPickerInline()">Open existing…</button></div></div>'
-      + '<div class="setting-row"><div class="setting-info">'
-      + '<div class="setting-label">Reset to default</div>'
-      + '<div class="setting-desc">Drop the current vault path so the per-user default location is used.</div></div>'
-      + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\'\')">Reset</button></div></div>'
-      + '</div>'
-      + recentHtml;
-  } else if (settingsTab==='appearance') {
-    body = '<div class="settings-section"><h3>'+tr('settings.appearance_title')+'</h3>'
-      + '<div class="section-desc">'+tr('settings.appearance_desc')+'</div>'
-      + settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'light', [['dark','Dark'],['light','Light']]))
-      + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
+    body = '<div class="settings-section">'
+      + mainHeader('Данные организации', 'Рабочая папка, хранилище данных и диагностика.', 'Рабочие данные')
+      + sectionTitle('Хранилище данных')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Текущая рабочая папка</div><div class="setting-desc" style="font-family:monospace;font-size:11px;word-break:break-all;">'+escapeHtml(current)+'</div></div><div class="setting-control"></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Создать именованную папку</div><div class="setting-desc">Выберите родительскую папку — Skipi Crewing создаст внутри <code>'+escapeHtml(suggested)+'</code>. Для команды укажите общую сетевую папку (SMB / NFS).</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="createNamedCrewingVault()">Создать…</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Открыть существующую папку</div><div class="setting-desc">Выберите уже созданную папку данных. Изменение применится при следующем запуске.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openVaultPickerInline()">Открыть…</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сбросить к стандартной</div><div class="setting-desc">Использовать стандартную папку данных пользователя.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\'\')">Сбросить</button></div></div>'
+        )
+      + recentHtml
+      + sectionTitle('Диагностика')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Crewing ID</div><div class="setting-desc">Серверный идентификатор аккредитованной записи организации.</div></div><div class="setting-control"><code>'+escapeHtml(s.crewing_id || '—')+'</code></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия приложения</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+        )
       + '</div>';
-	  } else if (settingsTab==='about') {
-	    body = '<div class="settings-section"><h3>About Skipi Crewing</h3>'
-	      + '<div class="section-desc">Skipi - United Seafarers. The employer-side companion to <a href="https://skipi.app" style="color:var(--accent);">Skipi</a>, the seafarer document vault.</div>'
-	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Version</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
-	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check for updates</div><div class="setting-desc">Ask the server now whether a newer version is available.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Check now</button></div></div>'
-	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Feedback</div><div class="setting-desc">Share a beta rating and comment with Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
-	      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Maintainer</div></div><div class="setting-control">Tymur Rudov</div></div>'
-      + '<div class="setting-row"><div class="setting-info"><div class="setting-label">License</div></div><div class="setting-control">Proprietary</div></div>'
+  } else if (settingsTab==='work') {
+    body = '<div class="settings-section">'
+      + mainHeader('Вакансии / Рассылки', 'Публикация вакансий, рассылки и работа с кандидатами.', 'Workflows')
+      + sectionTitle('Ответы кандидатам')
+      + grp(
+          settingRow('Email для ответов', 'Куда приходят ответы моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
+        )
+      + sectionTitle('Рабочие разделы')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Вакансии</div><div class="setting-desc">Публикация и управление вакансиями, заявки кандидатов.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'vacancies\');">Открыть</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Рассылки</div><div class="setting-desc">Постоянные запросы на получение CV от моряков.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'vacancies\');">Открыть</button></div></div>'
+        )
+      + '</div>';
+  } else if (settingsTab==='devices') {
+    var dver = escapeHtml(state.appVersion || '');
+    var dplat = escapeHtml(platformLabel());
+    var dconn = connected;
+    body = '<div class="settings-section">'
+      + mainHeader('Сопряжённые устройства', 'Устройства, подключённые к этому профилю Skipi Crewing.', 'accepted')
+      + sectionTitle('Устройства')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Это устройство</div><div class="setting-desc">'+dplat+(dver?' · Skipi Crewing '+dver:'')+(dconn?' · подключено':' · не подключено')+'</div></div><div class="setting-control"><span class="apps-badge installed">текущее</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Другие устройства</div><div class="setting-desc">Других сопряжённых устройств пока нет.</div></div><div class="setting-control"></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте диалог подключения по токену или QR-коду.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openConnectDialog({context:\'device\'})">Подключить…</button></div></div>'
+        )
+      + '<div class="settings-boundary"><strong>Граница pairing-flow</strong><p>Показ одноразового QR/токена на этом устройстве и серверный отзыв доступа появятся после backend pairing API + нативной камеры. Сейчас подключайте устройства токеном компании или команды. Этот рестайл не меняет pairing-controls.</p></div>'
+      + '</div>';
+  } else if (settingsTab==='access') {
+    body = '<div class="settings-section">'
+      + mainHeader('Доступ / токены', 'Подключение к серверу и токен организации.', connected ? 'Подключено' : 'Не подключено')
+      + sectionTitle('Подключение')
+      + grp(
+          settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
+        + settingRow('Токен компании', 'Выдаётся Skipi после аккредитации. Используется для вакансий, рассылок, заявок и регистрации E2E-ключа.',
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+          + inputCtrl('s-token', s.bearer_token, 'password', 'Вставьте токен компании', '220px')
+          + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button>'
+          + '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">30-дневный триал</button>'
+          + '</div>')
+        + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
+        )
+      + sectionTitle('Демонстрация')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовыми данными — вакансии, заявки, кандидаты — без токена.</div></div><div class="setting-control"><button type="button" class="ghost" style="padding:6px 14px;font-size:12px;" onclick="enterDemoMode()">Загрузить демо</button></div></div>'
+        )
+      + '</div>';
+  } else if (settingsTab==='app') {
+    body = '<div class="settings-section">'
+      + mainHeader('Приложение', 'Тема, язык, версия и обновления.', (iface.theme==='dark'?'Dark':'Light'))
+      + sectionTitle('Интерфейс')
+      + grp(
+          settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'light', [['light','Light'],['dark','Dark']]))
+        + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
+        )
+      + sectionTitle('О приложении')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Проверить обновления</div><div class="setting-desc">Спросить сервер, доступна ли новая версия.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Проверить</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Обратная связь</div><div class="setting-desc">Оценка и комментарий для Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сопровождение</div></div><div class="setting-control">Tymur Rudov</div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Лицензия</div></div><div class="setting-control">Proprietary</div></div>'
+        )
       + '</div>';
   }
 
@@ -6895,11 +7183,6 @@ function renderSettingsModal() {
 
   document.getElementById('modal-host').innerHTML = html;
 
-  // Fill version label after DOM mounts.
-  if (settingsTab==='about') {
-    var av = document.getElementById('about-version');
-    if (av) av.textContent = (state.settings && state.settings._app_version) || '0.1.x';
-  }
 }
 
 async function pickVaultFolder() {
@@ -7426,7 +7709,7 @@ var mobileState = {
   view: 'connection',
   draftText: '',
   lastVacancyError: '',
-  settingsTab: 'access',
+  settingsPage: 'list',
 };
 
 function shouldUseMobileShell() {
@@ -7568,7 +7851,7 @@ function mobileRenderChrome(view) {
     + '<div class="mobile-top-actions">'
     + (showBack ? '<button class="mobile-icon-btn" onclick="mobileBack()" title="'+escapeAttr(mobileTr('back'))+'">‹</button>' : '')
     + (canRefresh ? '<button class="mobile-icon-btn" onclick="mobileRefreshCurrent()" title="'+escapeAttr(mobileTr('refresh'))+'">↻</button>' : '')
-    + '<button class="mobile-icon-btn" onclick="mobileShow(\'settings\')" title="'+escapeAttr(mobileTr('nav.settings'))+'">⚙</button>'
+    + '<button class="mobile-icon-btn" onclick="mobileOpenSettingsHome()" title="'+escapeAttr(mobileTr('nav.settings'))+'">⚙</button>'
     + '</div>'
     + '</header>'
     + '<main class="mobile-main" id="mobile-main"></main>'
@@ -7741,6 +8024,10 @@ function mobileRenderWorkRoleChoice() {
     + '</button>'
     + '</div>'
     + '<div class="mobile-card" style="text-align:center;margin-top:10px;">'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">Уже есть профиль на другом устройстве?</div>'
+    + '<button class="mobile-secondary" onclick="openConnectDialog({context:\'profile\'})" style="width:100%;">Открыть существующий профиль</button>'
+    + '</div>'
+    + '<div class="mobile-card" style="text-align:center;margin-top:10px;">'
     + '<div class="mobile-muted" style="margin-bottom:8px;">'+escapeHtml(mobileTr('exploring'))+'</div>'
     + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">'+escapeHtml(mobileTr('open_demo'))+'</button>'
     + '</div>'
@@ -7828,48 +8115,130 @@ function mobileRenderConnection() {
   );
 }
 
-// ── Settings — Broker-style tabbed layout ───────────────────────────────
-// Mirrors Skipi Broker (openSettings/renderSettingsNav/renderSettingsBody +
-// state.settingsTab): settings are NOT one long page. A scrollable tab row
-// selects one section; only that section's body is shown. Tabs:
-//   access    — Access / Connection (token, server, Crewing ID, role, status)
-//   interface — Light/Dark theme
-//   language  — language selector
-//   about     — version / updates / about
-function mobileSettingsTabs() {
+// ── Mobile settings — iOS grouped (light), canonical IA drill-down ──────────
+// Settings are a grouped list ("Настройки") that drills into a detail page per
+// section (no pill tabs). Canonical Crewing IA: org · data · work · devices ·
+// access · app. Pairing-flow is NOT changed here — the devices page reuses the
+// accepted honest shell (token connect real; QR scan + paired list/revoke stay
+// shell-only) and the connection form keeps the real token-activation handlers.
+function mobileSettingsSections() {
+  var s = state.settings || {};
+  var connected = mobileHasConnection();
   return [
-    { id: 'access',    label: mobileTr('access') },
-    { id: 'interface', label: mobileTr('appearance') },
-    { id: 'language',  label: mobileTr('language') },
-    { id: 'about',     label: mobileTr('about') },
+    { group: 'ОСНОВНОЕ', items: [
+      { id:'org',  badge:'O', title:'Организация',         sub:'Профиль компании, контакты и рабочая роль.', value:'Org' },
+      { id:'data', badge:'D', title:'Данные организации',  sub:'Хранилище, подключение и диагностика.',       value:'Данные' },
+      { id:'work', badge:'V', title:'Вакансии / Рассылки', sub:'Публикация вакансий, рассылки, кандидаты.',   value:'Работа' },
+    ]},
+    { group: 'РАБОЧИЕ НАСТРОЙКИ', items: [
+      { id:'devices', badge:'U', title:'Сопряжённые устройства', sub:'Принятый shell; controls не переименовываются.', pill:'accepted' },
+      { id:'access',  badge:'K', title:'Доступ / токены',        sub:'Токен компании и подключение к серверу.',        value: connected?'Подключено':'Не подключено' },
+      { id:'app',     badge:'A', title:'Приложение',             sub:'Тема, язык, версия и диагностика.',              value: (((s.interface&&s.interface.theme)||'light')==='dark'?'Dark':'Light') },
+    ]},
   ];
 }
 
-function mobileSettingsTabId() {
-  var t = mobileState.settingsTab;
-  return ['access','interface','language','about'].indexOf(t) === -1 ? 'access' : t;
+function mobileSettingsValidPage(p){
+  return ['org','data','work','devices','access','app'].indexOf(p) !== -1 ? p : null;
+}
+function mobileOpenSettingsHome(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
+function mobileOpenSettings(id){ mobileState.settingsPage = id; mobileShow('settings'); }
+function mobileBackToSettingsList(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
+
+function mobileRenderSettingsList() {
+  var html = '';
+  mobileSettingsSections().forEach(function(sec){
+    html += '<div class="ios-sec">'+escapeHtml(sec.group)+'</div><div class="ios-group">';
+    sec.items.forEach(function(it){
+      var right = it.pill
+        ? '<span class="ios-pill">'+escapeHtml(it.pill)+'</span>'
+        : '<span class="ios-right">'+(it.value?escapeHtml(it.value):'')+'<span class="ios-chevron">›</span></span>';
+      html += '<button class="ios-row" onclick="mobileOpenSettings(\''+it.id+'\')">'
+        + '<span class="ios-badge">'+it.badge+'</span>'
+        + '<span style="min-width:0;"><strong>'+escapeHtml(it.title)+'</strong><span class="ios-sub">'+escapeHtml(it.sub)+'</span></span>'
+        + right + '</button>';
+    });
+    html += '</div>';
+  });
+  html += '<div class="ios-sec">Граница</div>'
+    + '<div class="ios-boundary"><strong>Pairing-flow отдельно</strong>'
+    + '<span class="ios-sub">Launch → Токен/QR → Сопряжённые устройства — уже принятый shell. Этот экран меняет только структуру и стиль настроек.</span></div>';
+  mobileMain(html);
 }
 
-// Returns the tab buttons only (the .mobile-settings-nav wrapper lives in
-// mobileRenderSettings so mobileOpenSettingsTab can swap innerHTML in place).
-function mobileRenderSettingsNav() {
-  var cur = mobileSettingsTabId();
-  return mobileSettingsTabs().map(function(t){
-    return '<button class="mobile-settings-tab'+(cur===t.id?' active':'')+'" onclick="mobileOpenSettingsTab(\''+t.id+'\')">'+escapeHtml(t.label)+'</button>';
-  }).join('');
+function mobileSettingsHead(title, desc){
+  return '<button class="ios-back" onclick="mobileBackToSettingsList()">‹ Настройки</button>'
+    + '<div class="ios-detail-title">'+escapeHtml(title)+'</div>'
+    + (desc ? '<div class="ios-detail-desc">'+escapeHtml(desc)+'</div>' : '');
+}
+
+function mobileSettingsOrgHtml() {
+  var s = state.settings || {};
+  var role = mobileWorkRole();
+  return mobileSettingsHead('Организация', 'Профиль организации, контакты и рабочая роль.')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Название организации</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name||'')+'" placeholder="например, Marlow Crewing Ltd"></div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
+    + '</div>';
+}
+
+function mobileSettingsDataHtml() {
+  var s = state.settings || {};
+  return mobileSettingsHead('Данные организации', 'Хранилище, подключение и диагностика.')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Хранилище данных</strong>Локальная база на этом устройстве. Синхронизируется при подключении к серверу.</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing ID</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '</div>';
+}
+
+function mobileSettingsWorkHtml() {
+  var s = state.settings || {};
+  return mobileSettingsHead('Вакансии / Рассылки', 'Публикация вакансий, рассылки и работа с кандидатами.')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Ответы кандидатам</div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
+    + '<div class="mobile-muted" style="margin-bottom:8px;">Куда приходят ответы моряков на вакансии. Если пусто — используется контактный email организации.</div>'
+    + '<div class="mobile-actions"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Рабочие разделы</div>'
+    + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;">'
+    + '<button class="mobile-secondary" onclick="mobileShow(\'vacancies\')">Открыть вакансии</button>'
+    + '<button class="mobile-secondary" onclick="mobileShow(\'mailings\')">Открыть рассылки</button>'
+    + '</div></div>';
+}
+
+function mobileSettingsDevicesHtml() {
+  var ver = state.appVersion || '';
+  var plat = platformLabel();
+  var connected = mobileHasConnection();
+  return mobileSettingsHead('Сопряжённые устройства', 'Устройства, подключённые к этому профилю Skipi Crewing.')
+    + '<div class="mobile-card">'
+    + '<div class="paired-device-row"><div class="pd-main"><div class="pd-name">Это устройство</div>'
+    + '<div class="pd-meta">'+escapeHtml(plat)+(ver?' · Skipi Crewing '+escapeHtml(ver):'')+(connected?' · подключено':' · не подключено')+'</div></div>'
+    + '<span class="pd-badge">текущее</span></div>'
+    + '<div class="paired-empty">Других сопряжённых устройств пока нет.</div>'
+    + '</div>'
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Подключить устройство</div>'
+    + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;">'
+    + '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
+    + '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
+    + '</div>'
+    + '<div class="paired-soon">Показ одноразового QR/токена на этом устройстве и отзыв доступа появятся после серверной поддержки сопряжения (pairing API) и нативной камеры. Сейчас подключайте устройства токеном компании или команды.</div>'
+    + '</div>';
 }
 
 function mobileSettingsAccessHtml() {
   var s = state.settings || {};
-  var role = mobileWorkRole();
-  // Status + role/API/Crewing summary, role-aware intro (manager token setup /
-  // member public-ID flow), then the existing connection form (save/validate).
-  return '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('access'))+'</div>'
+  return mobileSettingsHead('Доступ / токены', 'Подключение к серверу и токен организации.')
+    + '<div class="mobile-card">'
     + (mobileHasConnection()
-      ? '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span></div>'
-      : '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span></div>')
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+      ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
+      : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
     + '</div>'
@@ -7877,62 +8246,36 @@ function mobileSettingsAccessHtml() {
     + mobileConnectionHtml('settings');
 }
 
-function mobileSettingsInterfaceHtml() {
+function mobileSettingsAppHtml() {
   var s = state.settings || {};
   var theme = ((s.interface && s.interface.theme) || 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
-  return '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
-    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
-    + '</div>';
-}
-
-function mobileSettingsLanguageHtml() {
   var cur = getUiLang();
   var opts = UI_LANG_OPTIONS.map(function(o){
     return '<option value="'+escapeAttr(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+escapeHtml(o[1])+'</option>';
   }).join('');
-  // Stacked field (label over a full-width select), matching the connection
-  // form density — a row layout would squeeze the label, since the widest
-  // language option makes the select naturally wide.
-  return '<div class="mobile-card">'
+  return mobileSettingsHead('Приложение', 'Тема, язык, версия и обновления.')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
+    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
+    + '</div>'
+    + '<div class="mobile-card">'
     + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('language'))+'</div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('language'))+'</label>'
     + '<select onchange="mobileSetLanguage(this.value)">'+opts+'</select></div></div>'
-    + '</div>';
-}
-
-function mobileSettingsAboutHtml() {
-  return '<div class="mobile-card">'
+    + '</div>'
+    + '<div class="mobile-card">'
     + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('about'))+'</div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('updates'))+'</strong>'+escapeHtml(mobileTr('updates_desc'))+'</div></div>'
     + '</div>';
-}
-
-function mobileRenderSettingsBody() {
-  var tab = mobileSettingsTabId();
-  if (tab === 'interface') return mobileSettingsInterfaceHtml();
-  if (tab === 'language')  return mobileSettingsLanguageHtml();
-  if (tab === 'about')     return mobileSettingsAboutHtml();
-  return mobileSettingsAccessHtml();
-}
-
-// Switch the active settings tab in place (Broker renderSettingsNav/Body parity).
-function mobileOpenSettingsTab(tab) {
-  mobileState.settingsTab = tab;
-  var nav = document.getElementById('mobile-settings-nav');
-  var body = document.getElementById('mobile-settings-body');
-  if (nav) nav.innerHTML = mobileRenderSettingsNav();
-  if (body) body.innerHTML = mobileRenderSettingsBody();
 }
 
 // Language change on mobile. We intentionally do NOT call setUiLang(): that
 // helper also re-opens the DESKTOP settings modal (renderSettingsModal) which,
 // living in #modal-host (a top-level node not hidden by .mobile-shell), would
-// pop over the mobile UI. Instead we persist the language the same way mobile
-// theme does — localStorage (read first by getUiLang) + save_settings — then
-// re-render the settings shell on the Language tab.
+// pop over the mobile UI. Persist the language like mobile theme does, then
+// re-render the App settings page.
 async function mobileSetLanguage(lang) {
   if (!UI_STRINGS[lang]) lang = 'ru';
   try { localStorage.setItem(UI_LANG_KEY, lang); } catch (e) {}
@@ -7945,22 +8288,20 @@ async function mobileSetLanguage(lang) {
   try { await invoke('save_settings', { newSettings: next }); } catch (e) {}
   state.settings = next;
   document.documentElement.lang = lang;
-  mobileState.settingsTab = 'language';
+  mobileState.settingsPage = 'app';
   mobileShow('settings');
 }
 
 function mobileRenderSettings() {
-  mobileMain(
-    '<div class="mobile-card">'
-    + (mobileHasConnection()
-      ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
-      : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
-    + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('settings_title'))+'</h1>'
-    + '<div class="mobile-muted">'+escapeHtml(mobileTr('settings_desc'))+'</div>'
-    + '</div>'
-    + '<div class="mobile-settings-nav" id="mobile-settings-nav">'+mobileRenderSettingsNav()+'</div>'
-    + '<div id="mobile-settings-body">'+mobileRenderSettingsBody()+'</div>'
-  );
+  var page = mobileSettingsValidPage(mobileState.settingsPage);
+  if (!page) return mobileRenderSettingsList();
+  if (page === 'org')     return mobileMain(mobileSettingsOrgHtml());
+  if (page === 'data')    return mobileMain(mobileSettingsDataHtml());
+  if (page === 'work')    return mobileMain(mobileSettingsWorkHtml());
+  if (page === 'devices') return mobileMain(mobileSettingsDevicesHtml());
+  if (page === 'access')  return mobileMain(mobileSettingsAccessHtml());
+  if (page === 'app')     return mobileMain(mobileSettingsAppHtml());
+  return mobileRenderSettingsList();
 }
 
 function mobileReadConnection() {
