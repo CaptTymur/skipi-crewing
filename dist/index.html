@@ -50,6 +50,7 @@
 .cd-panel { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 100;
   background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
   max-height: 320px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.cd-mobile-summary { display: none; }
 .cd-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer;
   font-size: 13px; color: var(--text); user-select: none; }
 .cd-item:hover { background: var(--panel2); }
@@ -456,6 +457,28 @@ body.mobile-shell #mobile-root { display: block; width: 100vw; max-width: 100vw;
 .mobile-field input:focus,
 .mobile-field select:focus,
 .mobile-field textarea:focus { border-color: var(--accent); }
+body.mobile-shell .cd-wrap.cd-mobile-inline { display: block; width: 100%; }
+body.mobile-shell .cd-wrap.cd-mobile-inline .cd-button { display: none; }
+body.mobile-shell .cd-wrap.cd-mobile-inline .cd-mobile-summary {
+  display: block; min-height: 34px; padding: 8px 10px; margin-bottom: 7px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel2);
+  color: var(--text2); font-size: 12px; line-height: 1.3;
+}
+body.mobile-shell .cd-wrap.cd-mobile-inline.has-selection .cd-mobile-summary {
+  color: var(--text); border-color: rgba(var(--accent-rgb),0.35); background: var(--accent-bg);
+}
+body.mobile-shell .cd-wrap.cd-mobile-inline .cd-panel {
+  position: relative; left: auto; right: auto; top: auto; z-index: auto;
+  display: block; max-height: min(48dvh, 360px); overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
+  border-radius: 8px; box-shadow: none;
+}
+body.mobile-shell .cd-wrap.cd-mobile-inline .cd-item {
+  min-height: 42px; padding: 9px 10px; font-size: 14px;
+}
+body.mobile-shell .cd-wrap.cd-mobile-inline .cd-item input[type="checkbox"] {
+  width: 22px; height: 22px;
+}
 .mobile-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 .mobile-actions button,
 .mobile-primary,
@@ -1187,6 +1210,7 @@ function nationalityTopCount(list) {
 function nationalitySelectHtml(id) {
   var list = nationalityList();
   var topCount = nationalityTopCount(list);
+  var mobileInline = /^m-/.test(String(id || ''));
   var items = list.map(function(n, i){
     var label = n.label || n.id || '';
     // Divider after the popular block, before the alphabetical rest.
@@ -1197,6 +1221,12 @@ function nationalitySelectHtml(id) {
       +   '<span>'+escapeHtml(label)+'</span>'
       + '</label>';
   }).join('');
+  if (mobileInline) {
+    return '<div class="cd-wrap cd-mobile-inline" id="'+id+'-wrap">'
+      +   '<div class="cd-mobile-summary cd-placeholder" id="'+id+'-label">Select nationalities…</div>'
+      +   '<div class="cd-panel" id="'+id+'-panel">'+items+'</div>'
+      + '</div>';
+  }
   return '<div class="cd-wrap" id="'+id+'-wrap">'
     +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
     +     '<span id="'+id+'-label">Select nationalities…</span>'
@@ -1253,16 +1283,21 @@ function setCdValues(id, values) {
 function cdUpdateLabel(id) {
   var btn = document.getElementById(id+'-btn');
   var label = document.getElementById(id+'-label');
-  if (!btn || !label) return;
+  var wrap = document.getElementById(id+'-wrap');
+  if (!label) return;
   var vals = cdValues(id);
   if (!vals.length) {
     label.textContent = 'Select nationalities…';
-    btn.classList.add('cd-placeholder');
+    if (btn) btn.classList.add('cd-placeholder');
+    label.classList.add('cd-placeholder');
+    if (wrap) wrap.classList.remove('has-selection');
   } else {
     label.textContent = vals.length === 1
       ? vals[0]
       : (vals.length+' selected: '+vals.slice(0,3).join(', ')+(vals.length>3?'…':''));
-    btn.classList.remove('cd-placeholder');
+    if (btn) btn.classList.remove('cd-placeholder');
+    label.classList.remove('cd-placeholder');
+    if (wrap) wrap.classList.add('has-selection');
   }
 }
 
