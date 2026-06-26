@@ -52,7 +52,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.4.128
-        CFBundleVersion: "0.4.128"
+        CFBundleVersion: "0.4.128.1"
         ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: skipi-crewing_iOS/skipi-crewing_iOS.entitlements
