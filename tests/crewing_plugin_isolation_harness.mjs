@@ -19,7 +19,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
 const RUNTIME_VERSION = fs.readFileSync('/home/linux/Developer/skipi-plugins/_host-runtime/dist/RUNTIME_VERSION', 'utf8').trim();
-const EXPECTED_RUNTIME_SHA = '93c8eff840d6de252dc3c76f03e7a4a0823ed4907f67a28dc92b3e46214a98c7';
+const EXPECTED_RUNTIME_VERSION = '1.0.1';
+const EXPECTED_RUNTIME_SHA = 'edd0ba5f8b21f05fcf55485b13b1dafc963173b2d2aa79e261611297283c307a';
 
 try { if (!globalThis.crypto) globalThis.crypto = webcrypto; } catch (_) {}
 try { if (!globalThis.TextEncoder) globalThis.TextEncoder = TextEncoder; } catch (_) {}
@@ -103,8 +104,8 @@ fail += shared.fail;
 section('static Crewing host glue');
 ok(HTML.includes('id="mt-apps"') && /showView\('apps'\)/.test(HTML), 'desktop Apps tab remains reachable');
 ok(/mobileNavButton\('apps', navView, '[^']+', 'Apps'\)/.test(HTML), 'mobile bottom Apps rail item remains reachable');
-ok(HTML.includes('BEGIN skipi-host-runtime v1.0.0 sha256:' + EXPECTED_RUNTIME_SHA), 'embedded runtime records shared version/hash');
-ok(RUNTIME_VERSION === '1.0.0\nsha256:' + EXPECTED_RUNTIME_SHA, 'shared RUNTIME_VERSION matches embedded runtime hash');
+ok(HTML.includes('BEGIN skipi-host-runtime v' + EXPECTED_RUNTIME_VERSION + ' sha256:' + EXPECTED_RUNTIME_SHA), 'embedded runtime records shared version/hash');
+ok(RUNTIME_VERSION === EXPECTED_RUNTIME_VERSION + '\nsha256:' + EXPECTED_RUNTIME_SHA, 'shared RUNTIME_VERSION matches embedded runtime hash');
 ok(/SkipiPluginRuntime\.create/.test(appsBlock) && /rt\.open\(id, c\)/.test(appsBlock), 'Crewing mount path uses shared runtime open()');
 ok(!/function crewingHostApi/.test(appsBlock) && !/reg\.mount\(c/.test(appsBlock), 'old inline host API and direct reg.mount path are removed');
 ok(/enabled:true/.test(appsBlock.replace(/\s/g, '')), 'bundled runtime is enabled for the local Apps path');
@@ -122,7 +123,7 @@ const M = new Function('showToast', 'escapeHtml', 'isMobileShellActive',
   + 'crewingBundledLoader, crewingClonePack, crewingInstallBundledPack, crewingPluginRuntime'
   + '};')(() => {}, escapeHtml, () => false);
 
-ok(M.CREWING_PLUGIN_HOST_RUNTIME_VERSION === '1.0.0', 'Crewing records shared runtime version 1.0.0');
+ok(M.CREWING_PLUGIN_HOST_RUNTIME_VERSION === EXPECTED_RUNTIME_VERSION, 'Crewing records shared runtime version ' + EXPECTED_RUNTIME_VERSION);
 ok(M.CREWING_PLUGIN_HOST_RUNTIME_SHA256 === EXPECTED_RUNTIME_SHA, 'Crewing records shared runtime sha256');
 
 const installed = await M.crewingBundledLoader.install('crewing-host-demo');
@@ -185,8 +186,12 @@ ok(ctx.store.get('skipi_crewing_bearer_token') === TOKEN, 'demo storage did not 
 ctx.emit({ ch: 'skipi-plugin', v: 1, token, type: 'mounted', height: 240, selfcheck: { parentDomAccess: false, storageBlocked: true, fetchBlocked: true } });
 const mounted = await opened;
 ok(mounted && mounted.ok && mounted.selfcheck.fetchBlocked === true, 'demo open resolves after frame self-check reports network blocked');
-rt.close();
-ok(rt._active() === null, 'demo runtime close tears down the active frame');
+
+let navCloseError = null;
+try { ctx.emit({ ch: 'skipi-plugin', v: 1, token, type: 'nav.close' }); } catch (e) { navCloseError = e; }
+await tick();
+ok(!navCloseError, 'plugin nav.close does not throw after host-side close/unmount');
+ok(rt._active() === null, 'plugin nav.close tears down the active frame');
 
 console.log('\n' + (fail === 0 ? 'ALL GREEN' : 'FAILURES') + ': ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail === 0 ? 0 : 1);
