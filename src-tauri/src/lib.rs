@@ -188,6 +188,28 @@ pub struct AppState {
     pub settings: Mutex<Settings>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct BuildInfo {
+    pub version: String,
+    pub sha: String,
+    pub short_sha: String,
+}
+
+#[tauri::command]
+fn get_build_info() -> BuildInfo {
+    let sha = option_env!("SKIPI_BUILD_SHA").unwrap_or("unknown").to_string();
+    let short_sha = if sha == "unknown" {
+        "unknown".to_string()
+    } else {
+        sha.chars().take(7).collect()
+    };
+    BuildInfo {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        sha,
+        short_sha,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrewingTokenActivation {
     pub crewing_id: String,
@@ -1941,6 +1963,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
+            get_build_info,
             get_settings,
             save_settings,
             activate_crewing_token,

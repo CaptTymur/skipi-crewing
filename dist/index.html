@@ -1887,7 +1887,34 @@ var state = {
   selectedThread: null,
   threadMessages: [],
   appVersion: '0.4.128',
+  buildSha: 'unknown',
 };
+
+function buildShortSha(){
+  return state.buildSha && state.buildSha !== 'unknown' ? state.buildSha.slice(0, 7) : '';
+}
+function appVersionLabel(){
+  var sha = buildShortSha();
+  return state.appVersion + (sha ? ' · ' + sha : '');
+}
+function setBuildInfo(info){
+  if (info && info.version) state.appVersion = String(info.version);
+  if (info && info.sha) state.buildSha = String(info.sha);
+  else if (info && info.short_sha) state.buildSha = String(info.short_sha);
+  updateBuildLabels();
+}
+function updateBuildLabels(){
+  if (document.querySelector('.settings-overlay')) {
+    try { renderSettingsModal(); } catch(e) {}
+  }
+  if (shouldUseMobileShell() && typeof mobileState !== 'undefined' && mobileState && mobileState.view === 'settings') {
+    try { mobileRender(); } catch(e) {}
+  }
+}
+async function loadBuildInfo(){
+  try { setBuildInfo(await invoke('get_build_info')); }
+  catch(e) { updateBuildLabels(); }
+}
 
 // ------------- toasts -------------
 function showToast(msg, kind) {
@@ -7342,7 +7369,7 @@ function renderSettingsModal() {
       + sectionTitle('Диагностика')
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Crewing ID</div><div class="setting-desc">Серверный идентификатор аккредитованной записи организации.</div></div><div class="setting-control"><code>'+escapeHtml(s.crewing_id || '—')+'</code></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия приложения</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия приложения</div></div><div class="setting-control"><code data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</code></div></div>'
         )
       + '</div>';
   } else if (settingsTab==='work') {
@@ -7359,7 +7386,7 @@ function renderSettingsModal() {
         )
       + '</div>';
   } else if (settingsTab==='devices') {
-    var dver = escapeHtml(state.appVersion || '');
+    var dver = escapeHtml(appVersionLabel() || '');
     var dplat = escapeHtml(platformLabel());
     var dconn = connected;
     body = '<div class="settings-section">'
@@ -7401,7 +7428,7 @@ function renderSettingsModal() {
         )
       + sectionTitle('О приложении')
       + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия</div></div><div class="setting-control"><code>'+escapeHtml(state.appVersion)+'</code></div></div>'
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия</div></div><div class="setting-control"><code data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</code></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Проверить обновления</div><div class="setting-desc">Спросить сервер, доступна ли новая версия.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Проверить</button></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Обратная связь</div><div class="setting-desc">Оценка и комментарий для Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сопровождение</div></div><div class="setting-control">Tymur Rudov</div></div>'
@@ -8612,7 +8639,7 @@ function mobileSettingsDataHtml() {
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Хранилище данных</strong>Локальная база на этом устройстве. Синхронизируется при подключении к серверу.</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing ID</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong><span data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</span></div></div>'
     + '</div>';
 }
 
@@ -8634,7 +8661,7 @@ function mobileSettingsWorkHtml() {
 }
 
 function mobileSettingsDevicesHtml() {
-  var ver = state.appVersion || '';
+  var ver = appVersionLabel() || '';
   var plat = platformLabel();
   var connected = mobileHasConnection();
   return mobileSettingsHead('Сопряжённые устройства', 'Устройства, подключённые к этому профилю Skipi Crewing.')
@@ -8688,7 +8715,7 @@ function mobileSettingsAppHtml() {
     + '</div>'
     + '<div class="mobile-card">'
     + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('about'))+'</div>'
-    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong>'+escapeHtml(state.appVersion)+'</div></div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong><span data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</span></div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('updates'))+'</strong>'+escapeHtml(mobileTr('updates_desc'))+'</div></div>'
     + '</div>';
 }
@@ -9799,10 +9826,12 @@ async function bootDesktopMain(){
 }
 (async function(){
   if (shouldUseMobileShell()) {
+    await loadBuildInfo();
     await bootMobile();
     return;
   }
   try { state.settings = await invoke('get_settings'); } catch(e){}
+  await loadBuildInfo();
   applyTheme();
   applyI18nChrome();
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
