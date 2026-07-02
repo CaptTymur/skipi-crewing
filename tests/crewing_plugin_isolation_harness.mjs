@@ -5,6 +5,13 @@
 // bundled demo pack is integrity-checked, fail-closed cases stay closed, and the
 // demo plugin bytes are delivered only to a sandboxed iframe.
 //
+// The trailing sections cover the Apps compact launcher standard placement
+// (cross-home Compact Plugin Launcher v2, accepted 2026-07-02): canonical QA
+// hooks, installed-only search, gear -> manage -> detail -> back navigation,
+// install/open/disable/enable transitions, honest empty/offline/error states,
+// additive mobile rail hooks, and the unchanged candidate/team-token
+// default-deny posture.
+//
 //   node tests/crewing_plugin_isolation_harness.mjs
 
 import fs from 'node:fs';
@@ -192,6 +199,155 @@ try { ctx.emit({ ch: 'skipi-plugin', v: 1, token, type: 'nav.close' }); } catch 
 await tick();
 ok(!navCloseError, 'plugin nav.close does not throw after host-side close/unmount');
 ok(rt._active() === null, 'plugin nav.close tears down the active frame');
+
+// ===== Apps compact launcher standard placement (Compact Plugin Launcher v2) =====
+
+function escapeAttr(s) {
+  return String(s == null ? '' : s).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';');
+}
+const settle = async (n = 12) => { for (let i = 0; i < n; i++) await tick(); };
+
+section('launcher static: canonical QA hooks present, existing hooks intact');
+ok(/id="mt-apps" data-qa="crewing-module-apps"/.test(HTML), 'desktop Apps tab carries canonical crewing-module-apps hook additively (id="mt-apps" kept)');
+ok(HTML.includes('data-qa="apps-search-input"'), 'launcher search input hook apps-search-input present');
+ok(HTML.includes('data-qa="plugins-settings-open"'), 'launcher gear hook plugins-settings-open present');
+ok(HTML.includes("data-qa=\"plugin-tile-'+escapeHtml(p.id)+'\""), 'launcher tiles carry plugin-tile-<id> hook');
+ok(HTML.includes("data-qa=\"plugin-open-'+escapeHtml(p.id)+'\""), 'launcher tiles carry plugin-open-<id> hook');
+ok(HTML.includes("data-qa=\"plugin-settings-'+escapeHtml(p.id)+'\""), 'manage tiles carry plugin-settings-<id> hook');
+ok(HTML.includes('data-qa="plugin-empty-state"'), 'plugin-empty-state hook present');
+ok(HTML.includes('data-qa="plugin-offline-state"'), 'plugin-offline-state hook present');
+ok(HTML.includes('data-qa="plugin-error-state"'), 'plugin-error-state hook present');
+ok(/data-qa="bottom-nav-more" onclick="mobileOpenSettingsHome\(\)"/.test(HTML), 'mobile rail has additive bottom-nav-more entry (settings home)');
+ok(HTML.includes("'mobile.nav.more':'More'") && HTML.includes("'mobile.nav.more':'Ещё'"), 'mobile.nav.more label translated (EN + RU)');
+ok(/navigator\.onLine===false/.test(HTML), 'offline state is driven by real navigator.onLine only');
+
+section('launcher mobile rail hooks (rendered via mobileNavButton)');
+{
+  const start = HTML.indexOf('var MOBILE_RAIL_QA');
+  const end = HTML.indexOf('function mobileUpdateModuleRailHint', start);
+  ok(start > 0 && end > start, 'MOBILE_RAIL_QA + mobileNavButton block found');
+  const navBtn = new Function('escapeAttr', 'escapeHtml', HTML.slice(start, end) + '\nreturn mobileNavButton;')(escapeAttr, escapeHtml);
+  const home = navBtn('vacancies', 'vacancies', '&#8962;', 'Vacancies');
+  ok(home.includes('data-qa="bottom-nav-home"'), 'vacancies rail button carries bottom-nav-home');
+  ok(home.includes('data-mview="vacancies"') && home.includes('active'), 'vacancies rail button keeps data-mview hook and active state');
+  ok(navBtn('mailings', 'vacancies', '✉', 'Mailings').includes('data-qa="bottom-nav-workspace"'), 'mailings rail button carries bottom-nav-workspace');
+  ok(navBtn('apps', 'vacancies', '🧩', 'Apps').includes('data-qa="bottom-nav-apps"'), 'apps rail button carries bottom-nav-apps');
+  const docs = navBtn('documents', 'vacancies', '📄', 'Docs');
+  ok(!/bottom-nav-/.test(docs) && docs.includes('data-mview="documents"'), 'non-canonical rail buttons get no bottom-nav hook and keep data-mview');
+}
+
+section('launcher behavioral: launcher / manage / detail / lifecycle');
+Object.defineProperty(globalThis, 'navigator', { value: { onLine: true }, configurable: true, writable: true });
+const launcherToasts = [];
+const L = new Function('showToast', 'escapeHtml', 'isMobileShellActive',
+  appsBlock + '\nreturn {'
+  + 'getState: function(){ return appsState; },'
+  + 'CREWING_PLUGINS, CREWING_PLUGIN_BUNDLES, CREWING_PLUGIN_SCOPE_DENY, CREWING_PLUGIN_ALLOWED_PERMISSIONS,'
+  + 'crewingPermissionAllowed, crewingInstallBundledPack, crewingClonePack,'
+  + 'pluginMeta, pluginTileState, installedPluginIds, crewingRefreshLauncherIntegrity,'
+  + 'appsLauncherHtml, appsLauncherBodyHtml, appsFilter, appsManageHtml, appsDetailHtml, appsHostHtml,'
+  + 'appsOpenManage, appsBackToLauncher, appsOpenDetail, appsBackToManage,'
+  + 'appsInstall, appsDisable, appsEnable, appsOpen, pluginCloseHost, renderAppsView'
+  + '};')((m) => launcherToasts.push(m), escapeHtml, () => false);
+
+ok(L.getState().screen === 'launcher', 'initial Apps screen is the compact launcher');
+ok(L.installedPluginIds().length === 0, 'fresh vault has no installed plugins');
+
+let launcherHtml = L.appsLauncherHtml();
+ok(launcherHtml.includes('data-qa="apps-search-input"') && launcherHtml.includes('data-qa="plugins-settings-open"'), 'launcher renders search input and settings gear');
+ok(launcherHtml.includes('data-qa="plugin-empty-state"') && launcherHtml.includes('appsOpenManage()'), 'empty launcher shows honest empty state with CTA to plugin settings');
+ok(!launcherHtml.includes('plugin-tile-') && !launcherHtml.includes('interview-checklist'), 'empty launcher shows no tiles and no catalog/coming-soon entries');
+
+L.appsOpenManage();
+ok(L.getState().screen === 'manage', 'gear opens the manage screen');
+const manageHtml = L.appsManageHtml();
+ok(manageHtml.includes('data-qa="plugin-settings-crewing-host-demo"'), 'manage view exposes plugin-settings-<id> hook');
+ok(manageHtml.includes('appsBackToLauncher()'), 'manage view has back-to-launcher control');
+ok(manageHtml.includes('interview-checklist') && manageHtml.includes('candidate-redaction'), 'manage view lists the full catalog (incl. coming-soon)');
+L.appsBackToLauncher();
+ok(L.getState().screen === 'launcher', 'back from manage returns to the launcher');
+
+L.appsOpenDetail('crewing-host-demo');
+ok(L.getState().screen === 'detail', 'manage tile opens plugin detail');
+let detailHtml = L.appsDetailHtml('crewing-host-demo');
+ok(detailHtml.includes("appsInstall('crewing-host-demo')") && detailHtml.includes('appsBackToManage()'), 'detail offers Install and back-to-manage before install');
+ok(/local_storage/.test(detailHtml) && /theme/.test(detailHtml), 'detail shows granted permissions');
+ok(/cannot read or write candidate data|no candidate/i.test(detailHtml), 'detail keeps honest data-access copy');
+
+L.appsInstall('crewing-host-demo');
+ok(L.pluginTileState(L.pluginMeta('crewing-host-demo')) === 'installed', 'install persists installed+enabled state');
+detailHtml = L.appsDetailHtml('crewing-host-demo');
+ok(detailHtml.includes("appsOpen('crewing-host-demo')") && detailHtml.includes("appsDisable('crewing-host-demo')"), 'detail offers Open and Disable once installed');
+
+let launcherBody = L.appsLauncherBodyHtml();
+ok(launcherBody.includes('data-qa="plugin-tile-crewing-host-demo"') && launcherBody.includes('data-qa="plugin-open-crewing-host-demo"'), 'installed plugin appears as a launcher tile with open hook');
+ok(!launcherBody.includes('plugin-empty-state'), 'launcher empty state is gone after install');
+
+section('launcher behavioral: installed-only search');
+L.appsFilter('host');
+ok(L.appsLauncherBodyHtml().includes('plugin-tile-crewing-host-demo'), 'search matches installed plugin by name');
+L.appsFilter('interview');
+launcherBody = L.appsLauncherBodyHtml();
+ok(launcherBody.includes('data-qa="plugin-empty-state"') && !launcherBody.includes('interview-checklist'), 'search does NOT surface non-installed catalog plugins (installed-only)');
+L.appsFilter('zzz-no-match');
+ok(L.appsLauncherBodyHtml().includes('data-qa="plugin-empty-state"'), 'no-result search shows honest empty state');
+L.appsFilter('');
+ok(L.appsLauncherBodyHtml().includes('plugin-tile-crewing-host-demo'), 'clearing search restores installed tiles');
+
+section('launcher behavioral: open/close, disable/enable');
+L.renderAppsView();
+L.appsOpen('crewing-host-demo');
+ok(L.getState().screen === 'host', 'launcher tile open mounts the host screen');
+ok(L.appsHostHtml('crewing-host-demo').includes('apps-host-container'), 'host screen renders the isolated plugin container');
+L.pluginCloseHost();
+ok(L.getState().screen === 'launcher', 'closing a launcher-opened plugin returns to the launcher');
+L.appsOpenDetail('crewing-host-demo');
+L.appsOpen('crewing-host-demo');
+L.pluginCloseHost();
+ok(L.getState().screen === 'detail', 'closing a detail-opened plugin returns to detail');
+
+L.appsDisable('crewing-host-demo');
+ok(L.pluginTileState(L.pluginMeta('crewing-host-demo')) === 'disabled', 'disable persists disabled state');
+ok(L.installedPluginIds().length === 0, 'disabled plugin leaves the installed set');
+ok(L.appsLauncherBodyHtml().includes('data-qa="plugin-empty-state"'), 'disabled plugin disappears from the launcher (installed-only)');
+launcherToasts.length = 0;
+L.appsOpen('crewing-host-demo');
+ok(L.getState().screen !== 'host' && launcherToasts.length > 0, 'open is refused while the plugin is disabled');
+L.appsEnable('crewing-host-demo');
+ok(L.pluginTileState(L.pluginMeta('crewing-host-demo')) === 'installed', 're-enable restores installed state');
+ok(L.appsLauncherBodyHtml().includes('plugin-tile-crewing-host-demo'), 're-enabled plugin returns to the launcher');
+
+section('launcher behavioral: honest offline / error states');
+globalThis.navigator.onLine = false;
+launcherBody = L.appsLauncherBodyHtml();
+ok(launcherBody.includes('data-qa="plugin-offline-state"') && !launcherBody.includes('plugin-tile-'), 'navigator.onLine=false renders the offline state');
+globalThis.navigator.onLine = true;
+ok(!L.appsLauncherBodyHtml().includes('plugin-offline-state'), 'offline state clears when the connection is back');
+
+const launcherBundle = L.CREWING_PLUGIN_BUNDLES['crewing-host-demo'];
+const launcherOriginalJs = launcherBundle.files['index.js'];
+launcherBundle.files['index.js'] += '\n// tampered by harness';
+L.crewingRefreshLauncherIntegrity();
+await settle();
+ok(L.appsLauncherBodyHtml().includes('data-qa="plugin-error-state"'), 'real sha256 mismatch renders the integrity error state');
+launcherBundle.files['index.js'] = launcherOriginalJs;
+L.crewingRefreshLauncherIntegrity();
+await settle();
+ok(!L.appsLauncherBodyHtml().includes('plugin-error-state'), 'error state clears after integrity is restored (no simulated errors)');
+
+section('launcher: candidate/team-token default-deny unchanged');
+ok(L.CREWING_PLUGIN_ALLOWED_PERMISSIONS.join(',') === 'local_storage,theme', 'allowed permissions remain exactly local_storage,theme');
+['candidate.read', 'vacancy.read', 'contact.list', 'chat.read', 'team:write', 'token-read', 'crew.list', 'message.send'].forEach((p) => {
+  ok(L.crewingPermissionAllowed(p) === false, 'permission denied by default: ' + p);
+});
+{
+  const badGrantPack = L.crewingClonePack(L.CREWING_PLUGIN_BUNDLES['crewing-host-demo']);
+  badGrantPack.permissions = ['team:read'];
+  const res = await L.crewingInstallBundledPack('crewing-host-demo', badGrantPack, 'test:launcher-bad-grant');
+  ok(res && res.ok === false && res.stage === 'policy', 'team-token style grant still fails closed at install policy');
+}
+ok(globalThis.__SKIPI_CREWING_PLUGIN_TEST__ && typeof globalThis.__SKIPI_CREWING_PLUGIN_TEST__.launcher.installedPluginIds === 'function',
+  'QA test hook exposes launcher state for built-artifact QA');
 
 console.log('\n' + (fail === 0 ? 'ALL GREEN' : 'FAILURES') + ': ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail === 0 ? 0 : 1);
