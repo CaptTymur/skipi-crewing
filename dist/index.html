@@ -7823,8 +7823,10 @@ async function setupFileDragDrop() {
 }
 
 function applyTheme() {
+  // Fresh-install light invariant (Homes sweep 2026-07-03): empty/unknown/legacy
+  // values resolve to LIGHT; only an explicitly saved 'dark' yields dark.
   var t = ((state.settings && state.settings.interface && state.settings.interface.theme) || 'light').toLowerCase();
-  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
   if (typeof pluginNotifyTheme === 'function') pluginNotifyTheme();
 }
 
