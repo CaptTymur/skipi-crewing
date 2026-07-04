@@ -73,6 +73,14 @@ jobs:
             git diff --name-only --diff-filter=ACDMRTUXB "$BASE...$GITHUB_SHA" 2>/dev/null ||
             git diff --name-only --diff-filter=ACDMRTUXB "$BASE..$GITHUB_SHA"
           )
+          GUARD_TASK="$SKIPI_GUARD_TASK"
+          for changed_file in "${GUARD_CHANGED_FILES[@]}"; do
+            case "$changed_file" in
+              tests/build_provenance_harness.mjs|src-tauri/build.rs|src-tauri/src/lib.rs)
+                GUARD_TASK="provenance"
+                ;;
+            esac
+          done
           if [[ "${#GUARD_CHANGED_FILES[@]}" -eq 1 && "${GUARD_CHANGED_FILES[0]}" == ".github/workflows/skipi-guard.yml" ]]; then
             OVERRIDE_ARGS=(--override-protected skipi-guard-workflow-bootstrap)
           fi
@@ -102,7 +110,7 @@ jobs:
           fi
           .skipi-guard/bin/skipi-guard verify \
             --home "$SKIPI_GUARD_HOME" \
-            --task "$SKIPI_GUARD_TASK" \
+            --task "$GUARD_TASK" \
             "${OVERRIDE_ARGS[@]}" \
             --run-harness \
             --repo "$GITHUB_WORKSPACE" \

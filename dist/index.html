@@ -1017,6 +1017,7 @@ var __realInvoke = window.__TAURI__.core.invoke;
 // so the real (non-demo) flow is never touched.
 var __demoMode = (function(){ try { return localStorage.getItem('skipi_crewing_demo') === '1'; } catch(e){ return false; } })();
 var invoke = function(cmd, args){
+  if (cmd === 'get_build_info') return __realInvoke(cmd, args);
   if (__demoMode) return demoInvoke(cmd, args);
   return __realInvoke(cmd, args);
 };

@@ -26,6 +26,7 @@ ok(rust.includes('generate_handler!') && rust.includes('get_build_info,'), 'comm
 
 console.log('# visible UI provenance');
 ok(html.includes("invoke('get_build_info')"), 'UI loads build info through Tauri');
+ok(html.includes("cmd === 'get_build_info'") && html.includes("__realInvoke(cmd, args)"), 'demo mode passes get_build_info through to real Tauri invoke');
 ok(html.includes('appVersionLabel'), 'UI has version+SHA label helper');
 ok(html.includes('data-qa="app-build-sha"'), 'UI exposes a stable app-build-sha QA hook');
 
