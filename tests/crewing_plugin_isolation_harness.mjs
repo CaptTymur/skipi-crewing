@@ -247,7 +247,8 @@ const L = new Function('showToast', 'escapeHtml', 'isMobileShellActive',
   + 'pluginMeta, pluginTileState, installedPluginIds, crewingRefreshLauncherIntegrity,'
   + 'appsLauncherHtml, appsLauncherBodyHtml, appsFilter, appsManageHtml, appsDetailHtml, appsHostHtml,'
   + 'appsOpenManage, appsBackToLauncher, appsOpenDetail, appsBackToManage,'
-  + 'appsInstall, appsDisable, appsEnable, appsOpen, pluginCloseHost, renderAppsView'
+  + 'appsInstall, appsDisable, appsEnable, appsOpen, pluginCloseHost, renderAppsView,'
+  + 'crewingRuntimeHost, pluginNotifyTheme, crewingPluginRuntime'
   + '};')((m) => launcherToasts.push(m), escapeHtml, () => false);
 
 ok(L.getState().screen === 'launcher', 'initial Apps screen is the compact launcher');
@@ -348,6 +349,75 @@ ok(L.CREWING_PLUGIN_ALLOWED_PERMISSIONS.join(',') === 'local_storage,theme', 'al
 }
 ok(globalThis.__SKIPI_CREWING_PLUGIN_TEST__ && typeof globalThis.__SKIPI_CREWING_PLUGIN_TEST__.launcher.installedPluginIds === 'function',
   'QA test hook exposes launcher state for built-artifact QA');
+
+// ===== Fresh-install light theme invariant (Homes sweep 2026-07-03) =====
+// The app must first-launch LIGHT with empty settings/localStorage even under
+// OS dark mode; an explicitly saved dark preference stays dark; the plugin
+// theme bridge reports light on fresh launch (runtime dark fallbacks unreachable).
+
+section('light theme static invariants');
+ok(/^<html lang="ru" data-theme="light">/m.test(HTML), 'static <html> ships data-theme="light" — first paint is light');
+ok(!/prefers-color-scheme/.test(HTML), 'no prefers-color-scheme anywhere — OS dark mode cannot influence the app');
+ok(!/matchMedia/.test(HTML), 'no matchMedia — no OS theme sniffing');
+ok((HTML.match(/setAttribute\('data-theme'/g) || []).length === 1, 'applyTheme is the only writer of data-theme');
+ok(HTML.includes("selectCtrl('i-theme', iface.theme||'light'"), 'desktop settings theme picker defaults to light');
+ok(HTML.includes("(iface.theme==='dark'?'Dark':'Light')"), 'desktop settings header shows Light unless explicitly dark');
+ok(/\(\(s\.interface && s\.interface\.theme\) \|\| 'light'\)/.test(HTML), 'mobile settings theme derives with light default');
+ok(HTML.includes("(((s.interface&&s.interface.theme)||'light')==='dark'?'Dark':'Light')"), 'mobile settings list shows Light unless explicitly dark');
+
+const LIB_RS = fs.readFileSync(path.join(ROOT, 'src-tauri', 'src', 'lib.rs'), 'utf8');
+ok(/#\[derive\([^)]*Default[^)]*\)\]\s*#\[serde\(default\)\]\s*pub struct InterfacePrefs/.test(LIB_RS), 'Rust InterfacePrefs uses derived Default — fresh settings theme is empty string (-> light in JS)');
+ok(!/"dark"\.to_string|default\s*=\s*"dark"/.test(LIB_RS), 'no dark default anywhere in Rust settings');
+
+section('light theme behavioral: applyTheme');
+const themeFnStart = HTML.indexOf('function applyTheme()');
+const themeFnEnd = HTML.indexOf('// ===================== Apps / Plugin host', themeFnStart);
+ok(themeFnStart > 0 && themeFnEnd > themeFnStart, 'applyTheme source found');
+function runApplyTheme(settings) {
+  const attrs = { 'data-theme': 'light' };  // static <html> default
+  const doc = { documentElement: { getAttribute: (k) => (k in attrs ? attrs[k] : null), setAttribute: (k, v) => { attrs[k] = v; } } };
+  new Function('state', 'document', HTML.slice(themeFnStart, themeFnEnd) + '\napplyTheme();')({ settings }, doc);
+  return attrs['data-theme'];
+}
+ok(runApplyTheme(undefined) === 'light', 'fresh install (settings load failed) starts light');
+ok(runApplyTheme({}) === 'light', 'fresh install (empty settings) starts light');
+ok(runApplyTheme({ interface: { theme: '' } }) === 'light', 'empty theme string starts light');
+ok(runApplyTheme({ interface: { theme: 'dark' } }) === 'dark', 'explicitly saved dark preference still starts dark');
+ok(runApplyTheme({ interface: { theme: 'Dark' } }) === 'dark', 'saved dark is case-insensitive');
+ok(runApplyTheme({ interface: { theme: 'system' } }) === 'light', 'unknown/legacy values (e.g. system) fall to light, never dark');
+ok(runApplyTheme({ interface: { theme: 'light' } }) === 'light', 'saved light stays light');
+
+section('light theme behavioral: plugin host theme bridge');
+// Replace the fake-dom fixed-dark documentElement with a stateful stub seeded
+// like the real static <html data-theme="light"> so host wiring is exercised.
+const themeAttrs = { 'data-theme': 'light' };
+globalThis.document.documentElement = { getAttribute: (k) => (k in themeAttrs ? themeAttrs[k] : null), setAttribute: (k, v) => { themeAttrs[k] = v; } };
+ok(L.crewingRuntimeHost().theme.get() === 'light', 'host theme adapter reports light on fresh launch');
+
+const rtTheme = L.crewingPluginRuntime();
+const themeMountEl = ctx.makeMountEl();
+ctx.framePosts.length = 0;
+rtTheme.open('crewing-host-demo', themeMountEl);
+const themeIfr = themeMountEl._child;
+ok(themeIfr && themeIfr._tag === 'iframe', 'theme check mounts through the sandbox runtime');
+const themeToken = JSON.parse(themeIfr.srcdoc.match(/__SKIPI_TOKEN__=("[0-9a-f]+")/)[1]);
+await settle(8);
+ctx.emit({ ch: 'skipi-plugin', v: 1, token: themeToken, type: 'ready' });
+let themeInit = null;
+for (let i = 0; i < 8; i++) { await tick(); themeInit = ctx.framePosts.find((m) => m.type === 'init'); if (themeInit) break; }
+ok(!!themeInit, 'bridge init reached the frame');
+ok(themeInit && themeInit.theme === 'light', "bridge init carries theme:'light' on fresh launch — runtime dark fallbacks never fire");
+
+// explicit dark still propagates (user choice preserved end-to-end)
+themeAttrs['data-theme'] = 'dark';
+ctx.framePosts.length = 0;
+L.pluginNotifyTheme();
+await tick();
+const themePush = ctx.framePosts.find((m) => m.type === 'theme');
+ok(themePush && themePush.theme === 'dark', 'explicitly saved dark still propagates over the bridge');
+ok(L.crewingRuntimeHost().theme.get() === 'dark', 'host adapter respects saved dark');
+themeAttrs['data-theme'] = 'light';
+rtTheme.close();
 
 console.log('\n' + (fail === 0 ? 'ALL GREEN' : 'FAILURES') + ': ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail === 0 ? 0 : 1);
