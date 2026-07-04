@@ -1,0 +1,136 @@
+{
+  "schema_version": "skipi.presence-manifest.v1",
+  "home": "crewing",
+  "artifact": "dist/index.html",
+  "notes": [
+    "Crewing has desktop modules plus a compact mobile rail. Team is desktop-only and token-gated at runtime; the presence contract protects its desktop navigation from silent removal/hiding.",
+    "Desktop route driver is showView(route). Mobile route driver is mobileShow(route). Settings opens through openSettings/mobileOpenSettingsHome.",
+    "css_tokens are scanned against stylesheet rules for hiding declarations: display:none, visibility:hidden, opacity:0, zero width/height.",
+    "The contract deliberately protects current surfaces before light-theme and Family UI work, so future UI changes cannot silently remove modules."
+  ],
+  "required_modules": [
+    {
+      "id": "vacancies",
+      "name": "My vacancies",
+      "desktop_navigation": {
+        "route": "vacancies",
+        "nav_selector": "#mt-vacancies",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "vacancies",
+        "nav_selector": "[data-mview=\"vacancies\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["My vacancies", "Vacancies"],
+      "css_tokens": ["mt-vacancies", "data-mview=\"vacancies\""]
+    },
+    {
+      "id": "mailings",
+      "name": "Mailings",
+      "desktop_navigation": {
+        "route": "mailings",
+        "nav_selector": "#mt-mailings",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "mailings",
+        "nav_selector": "[data-mview=\"mailings\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["Mailings", "Рассылки"],
+      "css_tokens": ["mt-mailings", "data-mview=\"mailings\""]
+    },
+    {
+      "id": "compliance",
+      "name": "Compliance Profiles",
+      "desktop_navigation": {
+        "route": "compliance",
+        "nav_selector": "#mt-compliance",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "compliance",
+        "nav_selector": "[data-mview=\"compliance\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["Compliance Profiles", "Профили соответствия"],
+      "css_tokens": ["mt-compliance", "data-mview=\"compliance\""]
+    },
+    {
+      "id": "team",
+      "name": "Team",
+      "desktop_navigation": {
+        "route": "team",
+        "nav_selector": "#mt-team",
+        "route_driver": "showView"
+      },
+      "surface_markers": ["Team", "AI Assistant"],
+      "css_tokens": ["mt-team"]
+    },
+    {
+      "id": "seafarers",
+      "name": "Seafarers DB",
+      "desktop_navigation": {
+        "route": "seafarers",
+        "nav_selector": "#mt-seafarers",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "seafarers",
+        "nav_selector": "[data-mview=\"seafarers\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["Seafarers DB", "Seafarers"],
+      "css_tokens": ["mt-seafarers", "data-mview=\"seafarers\""]
+    },
+    {
+      "id": "documents",
+      "name": "Documents",
+      "desktop_navigation": {
+        "route": "documents",
+        "nav_selector": "#mt-documents",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "documents",
+        "nav_selector": "[data-mview=\"documents\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["Documents", "Документы"],
+      "css_tokens": ["mt-documents", "data-mview=\"documents\""]
+    },
+    {
+      "id": "apps",
+      "name": "Apps",
+      "desktop_navigation": {
+        "route": "apps",
+        "nav_selector": "#mt-apps",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "apps",
+        "nav_selector": "[data-mview=\"apps\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["data-qa=\"apps-search-input\"", "data-qa=\"plugins-settings-open\""],
+      "css_tokens": ["mt-apps", "crewing-module-apps", "data-mview=\"apps\""]
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "desktop_navigation": {
+        "route": "settings",
+        "nav_selector": ".mb-gear",
+        "route_driver": "openSettings"
+      },
+      "mobile_navigation": {
+        "route": "settings",
+        "nav_selector": "[data-mview=\"settings\"]",
+        "route_driver": "mobileOpenSettingsHome"
+      },
+      "surface_markers": ["Settings", "Настройки"],
+      "css_tokens": ["mb-gear", "data-mview=\"settings\"", "bottom-nav-more"]
+    }
+  ]
+}
