@@ -1077,7 +1077,7 @@ var DEMO = {
     'demo-v1': [
       { id:'demo-a1', vacancy_id:'demo-v1', received_at:'2026-06-19T14:20:00Z', contact_for_reply:'master.candidate@example.com',
         message:'Available from early July, last vessel handysize bulker. Documents ready on request.',
-        summary:{ name:'Oleksandr K.', rank:'Master', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
+        summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
         seafarer_user_id:'demo-sf1',
         compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
       { id:'demo-a2', vacancy_id:'demo-v1', received_at:'2026-06-18T10:05:00Z', contact_for_reply:'+63 900 0000000',
@@ -1168,6 +1168,29 @@ var DEMO_READS = {
   fetch_applications_for_vacancy: function(a){ return (DEMO.appsByVac[a && a.vacancyId] || []); },
   fetch_my_mailing_requests: function(){ return DEMO.mailings; },
   fetch_compliance_profiles: function(){ return DEMO.compliance; },
+  rank_compliance_candidate: function(){
+    return {
+      candidate_rank: 'Captain',
+      rank_source: 'summary',
+      rank_source_conflict: null,
+      items: [
+        { profile_id:'demo-cp1', profile_name:'Captain · Client Alpha (Dry Bulk)', profile_rank:'Captain',
+          score_percent:93, required_total:14, blockers:1,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm'], expired:[], uncertain:[], no_file:[], gaps:['brm'] },
+        { profile_id:'demo-cp3', profile_name:'Captain · Client Beta (Product Tanker)', profile_rank:'Captain',
+          score_percent:81, required_total:16, blockers:3,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm','tanker_familiarization','advanced_tanker'], expired:[], uncertain:[], no_file:[],
+          gaps:['brm','tanker_familiarization','advanced_tanker'] },
+        { profile_id:'demo-cp4', profile_name:'Captain · Client Gamma (LNG / IGF)', profile_rank:'Captain',
+          score_percent:72, required_total:18, blockers:5,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm','tanker_familiarization','advanced_tanker','igf_code','hazmat'], expired:[], uncertain:[], no_file:[],
+          gaps:['brm','tanker_familiarization','advanced_tanker','igf_code','hazmat'] }
+      ]
+    };
+  },
   loadComplianceProfilesForPicker: function(){ return DEMO.compliance; },
   list_saved_seafarers: function(){ return DEMO.seafarers; },
   list_saved_seafarer_documents: function(){ return []; },
@@ -1885,6 +1908,8 @@ var state = {
   // Per-application messages cache for last-message preview + instant chat open.
   messagesByApp: {},
   attachmentsByApp: {},
+  complianceRankingsByApp: {},
+  complianceRankIgnoredByApp: {},
   focusedApplicationId: null,
   seafarers: [],
   selectedSeafarer: null,
@@ -5795,6 +5820,7 @@ function renderApplicationSnapshot(a, sum, sUid) {
   // the cached requirements_matrix from /api/catalogs (Slice B). Lookup
   // is local; no per-card server round trip.
   snap += renderApplicationCompliance(a, sum);
+  snap += renderProfileRankingPanel(a);
   snap += '</div>';
   return snap;
 }
@@ -5875,6 +5901,117 @@ function renderApplicationCompliance(a, sum) {
            +   '<div style="margin-top:6px;">'+rowsHtml+'</div>'
            + '</details>';
   return html;
+}
+
+function rankBucketHtml(label, ids, emptyText) {
+  ids = Array.isArray(ids) ? ids : [];
+  var body = ids.length
+    ? ids.map(function(id){ return '<span class="tag" style="font-size:10px;margin:2px 3px 2px 0;">'+escapeHtml(certLabelById(id))+'</span>'; }).join('')
+    : '<span style="color:var(--text2);font-size:12px;">'+escapeHtml(emptyText || 'none')+'</span>';
+  return '<div style="display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:start;margin-top:5px;">'
+       +   '<div style="color:var(--text2);font-size:11px;text-transform:uppercase;">'+escapeHtml(label)+'</div>'
+       +   '<div>'+body+'</div>'
+       + '</div>';
+}
+
+function renderProfileRankingCards(result, applicationId) {
+  var items = (result && Array.isArray(result.items)) ? result.items : [];
+  if (!items.length) {
+    return '<div style="color:var(--text2);font-size:12px;">No matching profiles for this candidate rank.</div>';
+  }
+  var html = '';
+  items.forEach(function(item, idx){
+    var gaps = Array.isArray(item.gaps) ? item.gaps : [];
+    var gapText = gaps.length ? gaps.map(certLabelById).join(', ') : 'no gaps';
+    html += '<details '+(idx===0?'open':'')+' style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:9px 10px;margin-top:8px;">'
+          +   '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+          +     '<span style="font-weight:700;">'+escapeHtml(item.profile_name || item.profile_id || 'Profile')+'</span>'
+          +     '<span style="font-size:16px;font-weight:800;color:var(--accent);">'+escapeHtml(String(item.score_percent || 0))+'%</span>'
+          +   '</summary>'
+          +   '<div style="margin-top:8px;color:var(--text2);font-size:12px;">'
+          +     'Rank '+escapeHtml(item.profile_rank || 'Any')+' · '+escapeHtml(String(item.required_total || 0))+' required · '+escapeHtml(String(item.blockers || 0))+' blockers'
+          +   '</div>'
+          +   '<div style="margin-top:6px;font-size:12px;"><strong>Gap reasons:</strong> '+escapeHtml(gapText)+'</div>'
+          +   rankBucketHtml('covered', item.covered, 'none')
+          +   rankBucketHtml('missing', item.missing, 'none')
+          +   rankBucketHtml('expired', item.expired, 'none')
+          +   rankBucketHtml('uncertain', item.uncertain, 'none')
+          +   rankBucketHtml('no file', item.no_file, 'none')
+          + '</details>';
+  });
+  var ignored = state.complianceRankIgnoredByApp && state.complianceRankIgnoredByApp[applicationId];
+  html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">'
+       +    '<button onclick="event.stopPropagation();saveRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save to Seafarers DB</button>'
+       +    '<button class="ghost" onclick="event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;font-size:12px;">'+(ignored?'Ignored':'Ignore')+'</button>'
+       +  '</div>';
+  return html;
+}
+
+function renderProfileRankingPanel(a) {
+  var appId = a && a.id;
+  if (!appId) return '';
+  var row = state.complianceRankingsByApp && state.complianceRankingsByApp[appId];
+  var inner = '';
+  if (!row) {
+    inner = '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Rank this candidate against active profiles for the same rank.</div>'
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Check against profiles</button>';
+  } else if (row.status === 'loading') {
+    inner = '<div style="color:var(--text2);font-size:12px;">Checking profiles…</div>';
+  } else if (row.status === 'error') {
+    inner = '<div style="color:var(--err);font-size:12px;margin-bottom:8px;">'+escapeHtml(row.message || 'Check failed')+'</div>'
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" class="ghost" style="padding:5px 12px;font-size:12px;">Retry</button>';
+  } else {
+    inner = renderProfileRankingCards(row.result, appId);
+  }
+  return '<div id="profile-rank-'+escapeAttr(appId)+'" data-compliance-rank-panel="1" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">'
+       +   '<div style="font-weight:600;margin-bottom:6px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Profile ranking</div>'
+       +   inner
+       + '</div>';
+}
+
+function updateProfileRankingPanel(applicationId) {
+  var host = document.getElementById('profile-rank-'+applicationId);
+  if (!host) return;
+  var app = findApplicationById(applicationId) || {};
+  host.outerHTML = renderProfileRankingPanel(app);
+}
+
+async function checkApplicationAgainstProfiles(applicationId) {
+  var app = findApplicationById(applicationId);
+  if (!app) {
+    showToast('Candidate not loaded.', 'error');
+    return;
+  }
+  state.complianceRankingsByApp[applicationId] = { status: 'loading' };
+  updateProfileRankingPanel(applicationId);
+  try {
+    var result = await invoke('rank_compliance_candidate', {
+      args: {
+        applicationId: app.id,
+        vacancyId: app.vacancy_id || (state.selectedVacancy && state.selectedVacancy.id) || '',
+        candidateSummary: app.summary || {},
+      }
+    });
+    state.complianceRankingsByApp[applicationId] = { status: 'ready', result: result || { items: [] } };
+  } catch(e) {
+    state.complianceRankingsByApp[applicationId] = { status: 'error', message: ''+e };
+  }
+  updateProfileRankingPanel(applicationId);
+}
+
+async function saveRankedCandidate(applicationId) {
+  var data = window._bundleViewerData;
+  if (data && data.applicationId === applicationId && data.manifest) {
+    await saveCurrentBundleSeafarer();
+    return;
+  }
+  showToast('Open the candidate document bundle before saving to Seafarers DB.', 'warn');
+}
+
+function ignoreRankedCandidate(applicationId) {
+  state.complianceRankIgnoredByApp[applicationId] = true;
+  updateProfileRankingPanel(applicationId);
+  showToast('Candidate ignored for this check.', 'info');
 }
 
 // Compose required cert ids using the cached matrix (mirrors the Slice B
