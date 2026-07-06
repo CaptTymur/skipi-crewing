@@ -1006,6 +1006,8 @@ pub struct ComplianceProfileDraft {
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
     pub mandatory_certs: Option<Vec<String>>,
@@ -1020,6 +1022,8 @@ pub struct ServerComplianceProfile {
     pub id: String,
     pub crewing_id: String,
     pub name: String,
+    #[serde(default)]
+    pub rank: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -1092,6 +1096,7 @@ fn create_compliance_profile(
     let body = serde_json::json!({
         "crewing_id": settings.crewing_id,
         "name": name,
+        "rank": draft.rank.as_deref().map(str::trim).filter(|s| !s.is_empty()),
         "description": description,
         "mandatory_certs": draft.mandatory_certs.unwrap_or_default(),
         "extra_requirements": draft.extra_requirements.unwrap_or_default(),
@@ -1125,6 +1130,17 @@ fn update_compliance_profile(
         let trimmed = description.trim().to_string();
         body.insert(
             "description".into(),
+            if trimmed.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::Value::String(trimmed)
+            },
+        );
+    }
+    if let Some(rank) = draft.rank {
+        let trimmed = rank.trim().to_string();
+        body.insert(
+            "rank".into(),
             if trimmed.is_empty() {
                 serde_json::Value::Null
             } else {

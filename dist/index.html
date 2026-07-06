@@ -1107,14 +1107,22 @@ var DEMO = {
       status:'open', send_click_count:8, hide_count:0 }
   ],
   compliance: [
-    { id:'demo-cp1', crewing_id:'demo-crewing', name:'Bulk Carrier Master — standard', description:'Standard requirements for our bulker client.',
+    { id:'demo-cp1', crewing_id:'demo-crewing', name:'Captain — Bulk Carrier standard', rank:'Captain', description:'Standard requirements for our bulker client.',
       mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','sso'],
       extra_requirements:[ {id:'us_visa',label:'US C1/D valid ≥ 6mo',weight:5,category:'visa',description:null},
         {id:'ces_english_70',label:'CES English ≥ 70%',weight:3,category:'test',description:null} ],
       status:'active', created_at:'2026-05-10T10:00:00Z', updated_at:'2026-06-10T12:00:00Z' },
-    { id:'demo-cp2', crewing_id:'demo-crewing', name:'Chemical Tanker Officer', description:'IMO II/III chemical tanker officers.',
+    { id:'demo-cp2', crewing_id:'demo-crewing', name:'Chief Officer — Chemical Tanker', rank:'Chief Officer', description:'IMO II/III chemical tanker officers.',
       mandatory_certs:['passport','medical_cert','bst','tanker_basic','tanker_advanced','coc_chief_mate'],
       extra_requirements:[ {id:'ecdis_transas',label:'ECDIS Transas familiarisation',weight:3,category:'equipment',description:null} ],
+      status:'active', created_at:'2026-05-12T10:00:00Z', updated_at:'2026-06-08T12:00:00Z' },
+    { id:'demo-cp3', crewing_id:'demo-crewing', name:'Captain — Tanker client', rank:'Captain', description:'Tanker owner baseline for senior deck candidates.',
+      mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','tanker_basic'],
+      extra_requirements:[ {id:'oil_major_history',label:'Oil major inspection history',weight:4,category:'other',description:null} ],
+      status:'active', created_at:'2026-05-14T10:00:00Z', updated_at:'2026-06-09T12:00:00Z' },
+    { id:'demo-cp4', crewing_id:'demo-crewing', name:'Captain — Strict client', rank:'Captain', description:'Stricter customer checklist for urgent replacements.',
+      mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','sso','ecdis_generic'],
+      extra_requirements:[ {id:'client_interview_ready',label:'Ready for client interview',weight:2,category:'other',description:null} ],
       status:'active', created_at:'2026-05-12T10:00:00Z', updated_at:'2026-06-08T12:00:00Z' }
   ],
   seafarers: [
@@ -3786,7 +3794,7 @@ function renderComplianceProfilesTreeBody() {
     html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(p.id)+'\')">';
     html += '<span style="font-size:12px;color:var(--text2);">'+(archived?'□':'▣')+'</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(p.name||'Untitled')+'</div>';
-    html += '<div class="ti-meta">'+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
+    html += '<div class="ti-meta">'+(p.rank ? escapeHtml(p.rank)+' · ' : '')+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
     if (archived) html += '<div class="ti-meta" style="color:var(--warn);">archived</div>';
     html += '</div></div>';
   });
@@ -3852,8 +3860,10 @@ function renderComplianceProfileDetail() {
         : '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(p.id)+'\')">Archive</button>')
     + '</div></div>'
     + '<div class="card">'
-    + '<div class="row"><div><label>Mandatory certificates</label><div style="font-size:18px;font-weight:700;">'+profileMandatoryCount(p)+'</div></div>'
-    + '<div><label>Extra requirements</label><div style="font-size:18px;font-weight:700;">'+profileExtrasCount(p)+'</div></div></div>'
+    + '<div class="row"><div><label>Rank</label><div style="font-size:18px;font-weight:700;">'+escapeHtml(p.rank||'Any')+'</div></div>'
+    + '<div><label>Mandatory certificates</label><div style="font-size:18px;font-weight:700;">'+profileMandatoryCount(p)+'</div></div></div>'
+    + '<div class="row"><div><label>Extra requirements</label><div style="font-size:18px;font-weight:700;">'+profileExtrasCount(p)+'</div></div>'
+    + '<div><label>Scope</label><div style="font-size:18px;font-weight:700;">Demo rank filter</div></div></div>'
     + (p.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(p.description)+'</div></div></div>':'')
     + '<details open><summary style="cursor:pointer;font-weight:700;">Mandatory</summary>'+renderMandatoryCertList(p.mandatory_certs||[])+'</details>'
     + '<details open style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;">Extras</summary>'+renderExtrasList(p.extra_requirements||[])+'</details>'
@@ -3955,6 +3965,7 @@ function renderComplianceProfileForm(profile) {
     + '<div class="sub">Выберите обязательные документы и дополнительные требования. Уже опубликованные вакансии сохраняют старый snapshot.</div>'
     + '<div class="card">'
     + '<div class="row full"><div><label>Name*</label><input type="text" id="cp-name" maxlength="200" value="'+escapeAttr(profile&&profile.name||'')+'" '+(readonly?'disabled':'')+' placeholder="Greek BC-180k Master"></div></div>'
+    + '<div class="row full"><div><label>Rank</label><input type="text" id="cp-rank" maxlength="64" value="'+escapeAttr(profile&&profile.rank||'')+'" '+(readonly?'disabled':'')+' placeholder="Captain"></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="cp-desc" maxlength="2000" '+(readonly?'disabled':'')+' placeholder="Internal comment">'+escapeHtml(profile&&profile.description||'')+'</textarea></div></div>'
     + '<h3 style="margin:16px 0 8px;">Mandatory certs</h3>'
     + '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Missing any mandatory item will later make the seafarer match fail locally.</div>'
@@ -3984,6 +3995,7 @@ async function saveComplianceProfile(profileId) {
   }
   var draft = {
     name: name,
+    rank: val('cp-rank') || null,
     description: val('cp-desc') || '',
     mandatory_certs: mandatory,
     extra_requirements: extras,
