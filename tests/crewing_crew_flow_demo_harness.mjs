@@ -34,7 +34,7 @@ section('static boundaries');
 ok(crewBlock.includes('crewFlowSignalFixtures'), 'Crew Flow fixture feed exists');
 ok(crewBlock.includes("invoke('rank_compliance_candidate'"), 'Crew Flow reuses rank_compliance_candidate');
 ok(crewBlock.includes('saveRankedCandidate('), 'Crew Flow reuses existing save path');
-ok(HTML.includes('skipi_crewing_crew_flow_read_state_v1'), 'Crew Flow read-state key is present');
+ok(HTML.includes('skipi_crewing_crew_flow_read_state_v2'), 'Crew Flow read-state key is present');
 ok(!HTML.match(/presence-manifest\.json/), 'Crew Flow code does not reference presence manifest');
 for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
   ok(!crewBlock.toLowerCase().includes(term), 'Crew Flow block avoids banned wording: ' + term);
@@ -81,6 +81,7 @@ function elFor(id) {
 }
 
 const store = new Map();
+store.set('skipi_crewing_demo', '1');
 const toasts = [];
 const calls = [];
 
@@ -223,8 +224,9 @@ let M = null;
 try {
   M = new Function(
     scriptNoBoot
+      + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer };'
+      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, invoke };'
   )();
 } catch (e) {
   console.error('runtime load failed:', e);
@@ -268,26 +270,36 @@ if (M) {
   await M.refreshCrewFlowRankings();
   const mainHtml = elFor('main').innerHTML;
   const treeHtml = elFor('crew-flow-tree').innerHTML;
+  const initialSignals = M.crewFlowState();
+  const initialRead = initialSignals.filter((s) => M.crewFlowIsRead(s.id)).map((s) => s.id);
+  const initialUnread = initialSignals.filter((s) => !M.crewFlowIsRead(s.id)).map((s) => s.id);
 
   ok(mainHtml.includes('data-qa="crew-flow-view"'), 'Crew Flow view renders');
   ok(treeHtml.includes('Email CV') && treeHtml.includes('Vacancy reply'), 'feed renders mixed signal types');
   ok(treeHtml.includes('Mail') && treeHtml.includes('Application'), 'feed renders channels');
   ok(treeHtml.includes('Trust 74%') || mainHtml.includes('Trust 74%'), 'Trust Score stub is visible');
   ok(mainHtml.includes('Profile fit') && mainHtml.includes('93%') && mainHtml.includes('81%'), 'coverage rankings render in detail');
-  ok(calls.some(([cmd]) => cmd === 'rank_compliance_candidate'), 'runtime called rank_compliance_candidate');
+  ok(initialRead.length === 2 && initialUnread.length === 2, 'fixture start state is mixed: 2 read, 2 unread');
+  ok(initialUnread.includes('cf-demo-mail-cv-oleksandr') && initialUnread.includes('cf-demo-mail-followup-ivan'), 'golden and documents-needed signals start unread');
+  ok(M.crewFlowFindSignal('cf-demo-mail-cv-oleksandr').coverage_source === 'rank_compliance_candidate', 'coverage source is rank_compliance_candidate');
 
-  await M.crewFlowIgnoreSignal('cf-demo-mail-followup-ivan');
-  const persistedIgnore = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v1') || '{}');
-  ok(persistedIgnore['cf-demo-mail-followup-ivan'] && persistedIgnore['cf-demo-mail-followup-ivan'].action === 'ignored', 'Ignore persists read-state');
+  await M.crewFlowIgnoreSignal('cf-demo-vacancy-reply-marko');
+  const persistedIgnore = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedIgnore['cf-demo-vacancy-reply-marko'] && persistedIgnore['cf-demo-vacancy-reply-marko'].action === 'ignored', 'Ignore persists read-state');
 
   await M.crewFlowAddSignal('cf-demo-mail-cv-oleksandr');
-  const persistedAdd = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v1') || '{}');
-  ok(persistedAdd['cf-demo-mail-cv-oleksandr'] && persistedAdd['cf-demo-mail-cv-oleksandr'].action === 'added', 'Add marks signal read');
-  ok(
-    (globalThis._bundleViewerData && globalThis._bundleViewerData.applicationId === 'demo-a1')
-      || toasts.some((t) => /document bundle/i.test(t.msg)),
-    'Add enters the existing Save-to-DB path or its honest document-bundle guard'
-  );
+  const persistedAdd = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedAdd['cf-demo-mail-cv-oleksandr'] && persistedAdd['cf-demo-mail-cv-oleksandr'].action === 'added', 'golden Add marks signal read');
+  ok(persistedAdd['cf-demo-mail-cv-oleksandr'] && persistedAdd['cf-demo-mail-cv-oleksandr'].saved_to_db === true, 'golden Add persists saved_to_db state');
+  ok(M.state.seafarers.some((s) => s.id === 'demo-sf1' && s.display_name === 'Oleksandr K.'), 'golden Add completes into Seafarers DB');
+  const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
+  ok(Array.isArray(savedDocs) && savedDocs.length > 0, 'golden Add saved documents via existing bundle flow');
+  ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden Add reports Save-to-DB success');
+
+  await M.crewFlowAddSignal('cf-demo-mail-followup-ivan');
+  const persistedNeedsDocs = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedNeedsDocs['cf-demo-mail-followup-ivan'] && persistedNeedsDocs['cf-demo-mail-followup-ivan'].action === 'needs_documents', 'non-golden Add persists needs-documents state');
+  ok(toasts.some((t) => /document bundle/i.test(t.msg)), 'non-golden Add keeps honest document-bundle guard');
 
   const combined = (elFor('main').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML).toLowerCase();
   for (const term of ['compliant', 'approved', 'legal', 'verdict']) {

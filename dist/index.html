@@ -2118,7 +2118,7 @@ function saveComplianceReviewState() {
 
 state.complianceRankIgnoredByApp = loadComplianceReviewState();
 
-var CREW_FLOW_READ_STATE_KEY = 'skipi_crewing_crew_flow_read_state_v1';
+var CREW_FLOW_READ_STATE_KEY = 'skipi_crewing_crew_flow_read_state_v2';
 
 function loadCrewFlowReadState() {
   try {
@@ -4647,6 +4647,8 @@ function crewFlowSignalFixtures() {
       candidate: { name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' },
       trust: { label:'demo-seeded', score:0.74 },
       attention: 'needs documents review',
+      initial_read: false,
+      golden_bundle: true,
       received_at: '2026-07-06T07:40:00Z'
     },
     {
@@ -4660,6 +4662,7 @@ function crewFlowSignalFixtures() {
       candidate: { name:'Ramon S.', rank:'Master', nationality:'Philippines', available_from:'2026-07-20' },
       trust: { label:'demo-seeded', score:0.67 },
       attention: 'ready for review',
+      initial_read: true,
       received_at: '2026-07-06T06:10:00Z'
     },
     {
@@ -4673,6 +4676,7 @@ function crewFlowSignalFixtures() {
       candidate: { name:'Marko P.', rank:'Chief Officer', nationality:'Croatia', available_from:'2026-07-05' },
       trust: { label:'demo-seeded', score:0.71 },
       attention: 'attention',
+      initial_read: true,
       received_at: '2026-07-06T05:45:00Z'
     },
     {
@@ -4687,6 +4691,7 @@ function crewFlowSignalFixtures() {
       candidate: { name:'Ivan M.', rank:'Master', nationality:'Ukraine', available_from:'2026-08-01' },
       trust: { label:'demo-seeded', score:0.51 },
       attention: 'needs documents',
+      initial_read: false,
       received_at: '2026-07-06T05:20:00Z'
     }
   ];
@@ -4700,19 +4705,25 @@ function crewFlowState() {
 }
 
 function crewFlowReadInfo(id) {
-  return (state.crewFlowReadState && state.crewFlowReadState[id]) || null;
+  var persisted = (state.crewFlowReadState && state.crewFlowReadState[id]) || null;
+  if (persisted) return persisted;
+  var row = crewFlowFindSignal(id);
+  if (row && row.initial_read) {
+    return { action: 'seen', at: row.received_at || '', seeded: true };
+  }
+  return null;
 }
 
 function crewFlowIsRead(id) {
   return !!crewFlowReadInfo(id);
 }
 
-function crewFlowMarkRead(id, action) {
+function crewFlowMarkRead(id, action, extra) {
   if (!state.crewFlowReadState) state.crewFlowReadState = {};
-  state.crewFlowReadState[id] = {
+  state.crewFlowReadState[id] = Object.assign({
     action: action || 'read',
     at: new Date().toISOString()
-  };
+  }, extra || {});
   saveCrewFlowReadState();
 }
 
@@ -4922,7 +4933,7 @@ function renderCrewFlowDetail() {
     +       '<h2 style="margin:5px 0 4px;">'+escapeHtml(c.name || 'Candidate')+'</h2>'
     +       '<div class="muted">'+escapeHtml(c.rank || 'Rank pending')+' · '+escapeHtml(c.nationality || 'Nationality pending')+' · available '+escapeHtml(c.available_from || 'pending')+'</div>'
     +     '</div>'
-    +     '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+crewFlowTrustHtml(row)+(read ? '<span class="badge">read · '+escapeHtml(read.action || 'read')+'</span>' : '<span class="badge">unread</span>')+'</div>'
+    +     '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+crewFlowTrustHtml(row)+(read ? '<span class="badge">read · '+escapeHtml(read.action || 'read')+'</span>' : '<span class="badge">unread</span>')+(read && read.saved_to_db ? '<span class="badge">in Seafarers DB</span>' : '')+'</div>'
     +   '</div>'
     +   '<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">'
     +     '<div><label>Responded to</label><div>'+escapeHtml(row.responded_to || 'general intake')+'</div></div>'
@@ -4946,8 +4957,23 @@ async function crewFlowAddSignal(id) {
   if (!row) return;
   if (row.application_id) {
     crewFlowHydrateApplication(row);
+    if (row.golden_bundle && typeof DEMO !== 'undefined' && DEMO) {
+      if (DEMO.attachmentsByApp && DEMO.attachmentsByApp[row.application_id]) {
+        state.attachmentsByApp[row.application_id] = DEMO.attachmentsByApp[row.application_id];
+      }
+      if (DEMO.messagesByApp && DEMO.messagesByApp[row.application_id]) {
+        state.messagesByApp[row.application_id] = DEMO.messagesByApp[row.application_id];
+      }
+    }
     await saveRankedCandidate(row.application_id);
-    crewFlowMarkRead(id, 'added');
+    var savedToDb = false;
+    if (row.golden_bundle && window._bundleViewerData && window._bundleViewerData.applicationId === row.application_id && window._bundleViewerData.manifest) {
+      await saveCurrentBundleSeafarer();
+      savedToDb = true;
+    }
+    crewFlowMarkRead(id, 'added', savedToDb ? { saved_to_db: true } : null);
+    if (savedToDb) showToast('Crew Flow signal saved in Seafarers DB.', 'success');
+    if (state.view !== 'crew_flow') showView('crew_flow');
     renderCrewFlowTreeBody();
     renderCrewFlowDetail();
     return;
