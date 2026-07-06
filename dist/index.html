@@ -1172,17 +1172,42 @@ var DEMO_READS = {
     total: 2,
     messages: [
       { id:'demo-mail-1', from:'captain@example.com', from_name:'Oleksandr K.', to:'ops@crewing.example',
-        subject:'Documents for Captain vacancy', date_received:'2026-07-06T07:40:00Z', is_read:false },
+        subject:'CV for Captain vacancy', date_received:'2026-07-06T07:40:00Z', is_read:false,
+        body_preview:'Available from 2026-07-08. Certificates: CoC Master, GMDSS GOC, BST, ECDIS, SSO. Service record: 84 months in rank on bulk carriers.',
+        attachments:[{ filename:'oleksandr-k-cv.pdf', size:210000 }],
+        cv_enrichment:{
+          source:'demo-fixture', is_cv:true, rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08',
+          trust:{ label:'demo-seeded', score:0.74 },
+          extracted_profile:{
+            display_name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08',
+            certs_summary:['coc_master','gmdss_goc','bst','ecdis','sso'],
+            service_record_summary:'84 months in rank; bulk carrier background'
+          },
+          rankings:[
+            { profile_name:'Captain · Client Alpha (Dry Bulk)', score_percent:93, gaps:['brm'] },
+            { profile_name:'Captain · Client Beta (Product Tanker)', score_percent:81, gaps:['brm','tanker_familiarization','advanced_tanker'] },
+            { profile_name:'Captain · Client Gamma (LNG / IGF)', score_percent:72, gaps:['brm','igf_code','hazmat'] }
+          ]
+        } },
       { id:'demo-mail-2', from:'chief@example.com', from_name:'Ivan M.', to:'ops@crewing.example',
-        subject:'Availability update', date_received:'2026-07-06T06:55:00Z', is_read:true }
+        subject:'Availability update', date_received:'2026-07-06T06:55:00Z', is_read:true,
+        body_preview:'I can join next month if you have a suitable opening. Regards, Ivan.' }
     ]
   }; },
-  fetch_mail_message: function(a){ return {
-    id: a && a.messageId || 'demo-mail-1', folder:'INBOX', from:'captain@example.com', from_name:'Oleksandr K.',
-    to:'ops@crewing.example', cc:'', subject:'Documents for Captain vacancy',
-    body_text:'Good afternoon, attached are my updated documents for the Captain position.',
-    date_received:'2026-07-06T07:40:00Z', attachments:[{ filename:'cv.pdf', size: 210000 }]
-  }; },
+  fetch_mail_message: function(a){
+    if (a && a.messageId === 'demo-mail-2') return {
+      id:'demo-mail-2', folder:'INBOX', from:'chief@example.com', from_name:'Ivan M.',
+      to:'ops@crewing.example', cc:'', subject:'Availability update',
+      body_text:'Hello, I can join next month if you have a suitable opening. Regards, Ivan.',
+      date_received:'2026-07-06T06:55:00Z', attachments:[]
+    };
+    var row = (DEMO_READS.fetch_mail_messages({folder:'INBOX'}).messages || [])[0];
+    return Object.assign({}, row, {
+      folder:'INBOX', cc:'',
+      body_text:'Good afternoon, attached is my CV. Available from 2026-07-08. Certificates: CoC Master, GMDSS GOC, BST, ECDIS, SSO. Service record: 84 months in rank on bulk carriers.',
+      attachments:[{ filename:'oleksandr-k-cv.pdf', size: 210000 }]
+    });
+  },
   poll_mail: function(){ return { status:'ok', fetched:2, new_in_cache:1, folders:{ INBOX:{status:'ok'}, SENT:{status:'ok'} } }; },
   send_mail: function(){ return { sent:true, status:'ok' }; },
   test_mailbox: function(){ return { ok:true, imap:true, smtp:true }; },
@@ -4089,6 +4114,100 @@ function mailboxFolderLabel(folder) {
   return folder === 'SENT' ? 'SENT' : 'INBOX';
 }
 
+function mailCvCheckText(msg) {
+  msg = msg || {};
+  var parts = [msg.subject, msg.body_preview, msg.body_text];
+  (msg.attachments || []).forEach(function(a){ parts.push(a.filename || a.name || ''); });
+  return parts.join(' ').replace(/[A-Z]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) + 32); });
+}
+
+function classifyMailCvMessage(msg) {
+  var text = mailCvCheckText(msg);
+  var hasReady = /(available from|ready from|readiness|can join|joining from|available)/.test(text);
+  var hasCerts = /(certificate|certificates|certs|coc|gmdss|stcw|ecdis|sso|bst)/.test(text);
+  var hasRecord = /(service record|sea service|months in rank|bulk carrier|tanker|vessel)/.test(text);
+  return {
+    is_cv: !!(hasReady && hasCerts && hasRecord),
+    reasons: [
+      hasReady ? 'readiness' : null,
+      hasCerts ? 'certificates' : null,
+      hasRecord ? 'service record' : null
+    ].filter(Boolean)
+  };
+}
+
+function demoExtractCandidateProfile(msg) {
+  var e = msg && msg.cv_enrichment;
+  if (e && e.extracted_profile) return e.extracted_profile;
+  var cls = classifyMailCvMessage(msg);
+  if (!cls.is_cv) return null;
+  return {
+    display_name: (msg.from_name || 'Candidate'),
+    rank: 'Captain',
+    nationality: 'Ukraine',
+    available_from: '2026-07-08',
+    certs_summary: ['coc_master','gmdss_goc','bst','ecdis','sso'],
+    service_record_summary: '84 months in rank; bulk carrier background'
+  };
+}
+
+function demoRankCandidateProfile(profile) {
+  if (!profile || profile.rank !== 'Captain') return [];
+  return [
+    { profile_name:'Captain · Client Alpha (Dry Bulk)', score_percent:93, gaps:['brm'] },
+    { profile_name:'Captain · Client Beta (Product Tanker)', score_percent:81, gaps:['brm','tanker_familiarization','advanced_tanker'] },
+    { profile_name:'Captain · Client Gamma (LNG / IGF)', score_percent:72, gaps:['brm','igf_code','hazmat'] }
+  ];
+}
+
+function mailCandidateEnrichmentForMessage(msg) {
+  msg = msg || {};
+  if (msg.cv_enrichment && msg.cv_enrichment.is_cv) return msg.cv_enrichment;
+  var cls = classifyMailCvMessage(msg);
+  if (!cls.is_cv) return null;
+  var profile = demoExtractCandidateProfile(msg);
+  return {
+    source: 'local-demo',
+    is_cv: true,
+    rank: profile && profile.rank || 'Unknown',
+    nationality: profile && profile.nationality || '',
+    available_from: profile && profile.available_from || '',
+    trust: { label:'demo-seeded', score:0.74 },
+    extracted_profile: profile,
+    rankings: demoRankCandidateProfile(profile)
+  };
+}
+
+function mailEnrichmentBadgeHtml(msg) {
+  var e = mailCandidateEnrichmentForMessage(msg);
+  if (!e || !e.rank || !(e.rankings || []).length) return '';
+  var top = (e.rankings || []).slice(0, 2).map(function(r){
+    return (r.profile_name || 'Profile').replace(/^Captain · /, '') + ' ' + (r.score_percent || 0) + '%';
+  }).join(' · ');
+  return '<div class="ti-meta mail-cv-enrichment" data-qa="mail-cv-enrichment">'+escapeHtml(e.rank)+' · '+escapeHtml(top)+'</div>';
+}
+
+function mailEnrichmentDetailHtml(msg) {
+  var e = mailCandidateEnrichmentForMessage(msg);
+  if (!e || !e.is_cv) return '';
+  var p = e.extracted_profile || {};
+  var rows = (e.rankings || []).slice(0, 3).map(function(r){
+    var gaps = (r.gaps || []).length ? ' · gaps: ' + (r.gaps || []).join(', ') : '';
+    return '<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:8px 0;">'
+      + '<div><b>'+escapeHtml(r.profile_name || 'Profile')+'</b><div class="sub">'+escapeHtml(gaps.replace(/^ · /,''))+'</div></div>'
+      + '<div style="font-size:18px;font-weight:800;color:var(--accent);">'+escapeHtml(String(r.score_percent || 0))+'%</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="card" data-qa="mail-cv-enrichment-detail" style="border-left:3px solid var(--accent);">'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">'
+    + '<div><label>CV intake enrichment</label><h2 style="margin:3px 0 4px;font-size:18px;">'+escapeHtml(p.display_name || 'Candidate')+' · '+escapeHtml(p.rank || e.rank || '')+'</h2>'
+    + '<div class="sub">'+escapeHtml([p.nationality, p.available_from ? ('available '+p.available_from) : '', (e.trust && e.trust.label) || ''].filter(Boolean).join(' · '))+'</div></div>'
+    + '<span class="tag ok">demo-seeded</span></div>'
+    + '<div style="margin-top:10px;"><label>Extracted fields</label><div style="font-size:12px;">Certificates: '+escapeHtml((p.certs_summary || []).join(', ') || '—')+'<br>Record: '+escapeHtml(p.service_record_summary || '—')+'</div></div>'
+    + '<div style="margin-top:10px;"><label>Profile coverage</label>'+rows+'</div>'
+    + '</div>';
+}
+
 async function loadMailboxStatus(force) {
   var mail = mailboxState();
   if (mail.mailbox && !force) return mail.mailbox;
@@ -4142,6 +4261,7 @@ function renderMailboxTreeBody() {
       + '<span style="font-size:11px;color:var(--text2);">'+(m.is_read ? '✉' : '●')+'</span>'
       + '<div class="ti-title"><div>'+escapeHtml(m.subject || '(no subject)')+'</div>'
       + '<div class="ti-meta">'+escapeHtml(from)+' · '+escapeHtml((m.date_received || '').slice(0,16).replace('T',' '))+'</div>'
+      + mailEnrichmentBadgeHtml(m)
       + '</div></div>';
   });
   tree.innerHTML = html;
@@ -4213,6 +4333,7 @@ function renderMailboxMessageDetail(msg) {
     + '<div class="sub">'+escapeHtml(msg.from_name || msg.from || '')+' → '+escapeHtml(msg.to || '')+' · '+escapeHtml((msg.date_received || '').slice(0,16).replace('T',' '))+'</div></div>'
     + '<div style="display:flex;gap:6px;"><button onclick="openMailCompose(\''+escapeAttr(msg.id || '')+'\')">Reply</button><button class="ghost" onclick="deleteMailMessage(\''+escapeAttr(msg.id || '')+'\')">Delete</button></div>'
     + '</div>'
+    + mailEnrichmentDetailHtml(msg)
     + '<div class="card"><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5;margin:0;">'+escapeHtml(msg.body_text || '')+'</pre>'
     + (((msg.attachments || []).length) ? '<div style="margin-top:16px;"><label>Attachments</label><div>'+escapeHtml((msg.attachments || []).map(function(a){return a.filename || a.name || 'file';}).join(', '))+'</div></div>' : '')
     + '</div>';
