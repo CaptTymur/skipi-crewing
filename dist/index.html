@@ -744,6 +744,9 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
   <div class="mod-tab" id="mt-mail" onclick="showView('mail')" title="Personal mailbox">
     <span>Почта</span>
   </div>
+  <div class="mod-tab" id="mt-crew_flow" onclick="showView('crew_flow')" title="Incoming candidate signals">
+    <span>Crew Flow</span>
+  </div>
   <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable candidate requirement profiles">
     <span>Профили соответствия</span>
   </div>
@@ -2059,6 +2062,9 @@ var state = {
   attachmentsByApp: {},
   complianceRankingsByApp: {},
   complianceRankIgnoredByApp: {},
+  crewFlowSignals: [],
+  crewFlowReadState: {},
+  selectedCrewFlowSignal: null,
   focusedApplicationId: null,
   seafarers: [],
   selectedSeafarer: null,
@@ -2111,6 +2117,26 @@ function saveComplianceReviewState() {
 }
 
 state.complianceRankIgnoredByApp = loadComplianceReviewState();
+
+var CREW_FLOW_READ_STATE_KEY = 'skipi_crewing_crew_flow_read_state_v2';
+
+function loadCrewFlowReadState() {
+  try {
+    var raw = localStorage.getItem(CREW_FLOW_READ_STATE_KEY);
+    var parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function saveCrewFlowReadState() {
+  try {
+    localStorage.setItem(CREW_FLOW_READ_STATE_KEY, JSON.stringify(state.crewFlowReadState || {}));
+  } catch(e) {}
+}
+
+state.crewFlowReadState = loadCrewFlowReadState();
 
 function buildShortSha(){
   return state.buildSha && state.buildSha !== 'unknown' ? state.buildSha.slice(0, 7) : '';
@@ -2334,7 +2360,7 @@ function showView(v) {
   updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
-  ['vacancies','mailings','mail','compliance','team','seafarers','documents','apps'].forEach(function(k){
+  ['vacancies','mailings','mail','crew_flow','compliance','team','seafarers','documents','apps'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -2365,6 +2391,11 @@ function showView(v) {
     renderMailboxTree();
     if (state.mail && state.mail.selected) renderMailboxMessageDetail(state.mail.selected);
     else renderMailboxEmptyMain();
+    return;
+  }
+  if (v==='crew_flow') {
+    document.getElementById('left-panel').style.display = '';
+    renderCrewFlowView();
     return;
   }
   if (v==='new_mailing') {
@@ -4600,6 +4631,366 @@ async function deleteMailMessage(id) {
   }
 }
 // CREWING MAILBOX MODULE END
+
+// CREW FLOW MODULE START
+function crewFlowSignalFixtures() {
+  return [
+    {
+      id: 'cf-demo-mail-cv-oleksandr',
+      type: 'Email CV',
+      channel: 'Mail',
+      responded_to: 'DEMO-001 · Master — Bulk Carrier',
+      mail_message_id: 'demo-mail-1',
+      application_id: 'demo-a1',
+      vacancy_id: 'demo-v1',
+      seafarer_ref: 'demo-sf1',
+      candidate: { name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' },
+      trust: { label:'demo-seeded', score:0.74 },
+      attention: 'needs documents review',
+      initial_read: false,
+      golden_bundle: true,
+      received_at: '2026-07-06T07:40:00Z'
+    },
+    {
+      id: 'cf-demo-vacancy-reply-ramon',
+      type: 'Vacancy reply',
+      channel: 'Application',
+      responded_to: 'DEMO-001 · Master — Bulk Carrier',
+      application_id: 'demo-a2',
+      vacancy_id: 'demo-v1',
+      seafarer_ref: 'demo-sf2',
+      candidate: { name:'Ramon S.', rank:'Master', nationality:'Philippines', available_from:'2026-07-20' },
+      trust: { label:'demo-seeded', score:0.67 },
+      attention: 'ready for review',
+      initial_read: true,
+      received_at: '2026-07-06T06:10:00Z'
+    },
+    {
+      id: 'cf-demo-vacancy-reply-marko',
+      type: 'Vacancy reply',
+      channel: 'Application',
+      responded_to: 'DEMO-002 · Chief Officer — Container',
+      application_id: 'demo-a3',
+      vacancy_id: 'demo-v2',
+      seafarer_ref: 'demo-sf3',
+      candidate: { name:'Marko P.', rank:'Chief Officer', nationality:'Croatia', available_from:'2026-07-05' },
+      trust: { label:'demo-seeded', score:0.71 },
+      attention: 'attention',
+      initial_read: true,
+      received_at: '2026-07-06T05:45:00Z'
+    },
+    {
+      id: 'cf-demo-mail-followup-ivan',
+      type: 'Availability email',
+      channel: 'Mail',
+      responded_to: 'Standing search · Bulk Carrier Masters',
+      mail_message_id: 'demo-mail-2',
+      application_id: '',
+      vacancy_id: '',
+      seafarer_ref: '',
+      candidate: { name:'Ivan M.', rank:'Master', nationality:'Ukraine', available_from:'2026-08-01' },
+      trust: { label:'demo-seeded', score:0.51 },
+      attention: 'needs documents',
+      initial_read: false,
+      received_at: '2026-07-06T05:20:00Z'
+    }
+  ];
+}
+
+function crewFlowState() {
+  if (!Array.isArray(state.crewFlowSignals) || !state.crewFlowSignals.length) {
+    state.crewFlowSignals = crewFlowSignalFixtures();
+  }
+  return state.crewFlowSignals;
+}
+
+function crewFlowReadInfo(id) {
+  var persisted = (state.crewFlowReadState && state.crewFlowReadState[id]) || null;
+  if (persisted) return persisted;
+  var row = crewFlowFindSignal(id);
+  if (row && row.initial_read) {
+    return { action: 'seen', at: row.received_at || '', seeded: true };
+  }
+  return null;
+}
+
+function crewFlowIsRead(id) {
+  return !!crewFlowReadInfo(id);
+}
+
+function crewFlowMarkRead(id, action, extra) {
+  if (!state.crewFlowReadState) state.crewFlowReadState = {};
+  state.crewFlowReadState[id] = Object.assign({
+    action: action || 'read',
+    at: new Date().toISOString()
+  }, extra || {});
+  saveCrewFlowReadState();
+}
+
+function crewFlowFindSignal(id) {
+  var rows = crewFlowState();
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i] && rows[i].id === id) return rows[i];
+  }
+  return null;
+}
+
+function crewFlowFindVacancy(id) {
+  var rows = (typeof DEMO !== 'undefined' && DEMO && Array.isArray(DEMO.vacancies)) ? DEMO.vacancies : [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i] && rows[i].id === id) return rows[i];
+  }
+  if (state.selectedVacancy && state.selectedVacancy.id === id) return state.selectedVacancy;
+  return null;
+}
+
+function crewFlowFindApplication(id) {
+  if (!id) return null;
+  var found = findApplicationById(id);
+  if (found) return found;
+  if (typeof DEMO !== 'undefined' && DEMO && DEMO.appsByVac) {
+    Object.keys(DEMO.appsByVac).forEach(function(k){
+      if (found) return;
+      var rows = DEMO.appsByVac[k] || [];
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i] && rows[i].id === id) { found = rows[i]; return; }
+      }
+    });
+  }
+  return found;
+}
+
+function crewFlowHydrateApplication(row) {
+  if (!row || !row.application_id) return null;
+  var app = crewFlowFindApplication(row.application_id);
+  if (!app) return null;
+  var vacancyId = row.vacancy_id || app.vacancy_id || '';
+  if (vacancyId && state.applicationsByVacancy && !Array.isArray(state.applicationsByVacancy[vacancyId])) {
+    state.applicationsByVacancy[vacancyId] = [app];
+  } else if (vacancyId && state.applicationsByVacancy) {
+    var exists = state.applicationsByVacancy[vacancyId].some(function(x){ return x && x.id === app.id; });
+    if (!exists) state.applicationsByVacancy[vacancyId].push(app);
+  }
+  return app;
+}
+
+function crewFlowTopCoverage(row) {
+  var items = (row && Array.isArray(row.coverage_rankings)) ? row.coverage_rankings : [];
+  return items.length ? items[0] : null;
+}
+
+function crewFlowCoverageHtml(row, compact) {
+  if (row && row.coverage_loading) return '<span class="badge">checking...</span>';
+  var items = (row && Array.isArray(row.coverage_rankings)) ? row.coverage_rankings : [];
+  if (!items.length) return '<span class="badge">coverage pending</span>';
+  if (compact) {
+    return items.slice(0, 3).map(function(item){
+      return '<span class="badge">'+escapeHtml(item.profile_name || 'Profile')+' · '+escapeHtml(String(item.score_percent || 0))+'%</span>';
+    }).join('');
+  }
+  var html = '';
+  items.slice(0, 3).forEach(function(item){
+    var gaps = Array.isArray(item.gaps) ? item.gaps : [];
+    html += '<div style="padding:9px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel);margin-top:6px;">'
+         +    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">'
+         +      '<strong>'+escapeHtml(item.profile_name || 'Profile')+'</strong>'
+         +      '<span style="font-weight:800;color:var(--accent);">'+escapeHtml(String(item.score_percent || 0))+'%</span>'
+         +    '</div>'
+         +    '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'
+         +      'covered '+escapeHtml(String((item.covered || []).length))
+         +      ' · missing '+escapeHtml(String((item.missing || []).length))
+         +      ' · expired '+escapeHtml(String((item.expired || []).length))
+         +      ' · uncertain '+escapeHtml(String((item.uncertain || []).length))
+         +      ' · no_file '+escapeHtml(String((item.no_file || []).length))
+         +    '</div>'
+         +    '<div style="font-size:12px;margin-top:4px;">Needs documents: '+escapeHtml(gaps.length ? gaps.map(certLabelById).join(', ') : 'none')+'</div>'
+         +  '</div>';
+  });
+  return html;
+}
+
+function crewFlowTrustHtml(row) {
+  var t = (row && row.trust) || {};
+  var pct = Math.round((Number(t.score) || 0) * 100);
+  return '<span class="badge">Trust '+escapeHtml(String(pct))+'% · '+escapeHtml(t.label || 'demo-seeded')+'</span>';
+}
+
+async function ensureCrewFlowRankings(row) {
+  if (!row || row.coverage_loaded || row.coverage_loading || !row.application_id) return;
+  var app = crewFlowHydrateApplication(row);
+  if (!app) return;
+  row.coverage_loading = true;
+  try {
+    var res = await invoke('rank_compliance_candidate', {
+      args: {
+        applicationId: app.id,
+        vacancyId: row.vacancy_id || app.vacancy_id || '',
+        candidateSummary: app.summary || row.candidate || {}
+      }
+    });
+    row.coverage_rankings = (res && Array.isArray(res.items)) ? res.items : [];
+    row.coverage_source = 'rank_compliance_candidate';
+    row.coverage_loaded = true;
+  } catch(e) {
+    row.coverage_error = ''+e;
+  } finally {
+    row.coverage_loading = false;
+  }
+}
+
+async function refreshCrewFlowRankings() {
+  var rows = crewFlowState();
+  for (var i = 0; i < rows.length; i++) {
+    await ensureCrewFlowRankings(rows[i]);
+  }
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+}
+
+function renderCrewFlowTree() {
+  var lp = document.getElementById('left-panel');
+  lp.innerHTML =
+    '<div class="panel-header"><span class="title">Crew Flow</span>'
+    + '<span class="actions"><button onclick="refreshCrewFlowRankings()" style="padding:4px 10px;font-size:11px;">Refresh</button></span></div>'
+    + '<div class="panel-search"><input type="text" id="crew-flow-search" placeholder="Search signals" oninput="state.crewFlowSearch=this.value.toLowerCase();renderCrewFlowTreeBody();"></div>'
+    + '<div class="panel-tree" id="crew-flow-tree"></div>';
+  renderCrewFlowTreeBody();
+}
+
+function renderCrewFlowTreeBody() {
+  var tree = document.getElementById('crew-flow-tree');
+  if (!tree) return;
+  var q = (state.crewFlowSearch || '').toLowerCase();
+  var rows = crewFlowState().filter(function(row){
+    if (!q) return true;
+    return [row.type,row.channel,row.responded_to,row.attention,row.candidate && row.candidate.name,row.candidate && row.candidate.rank]
+      .join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+  if (!rows.length) {
+    tree.innerHTML = '<div class="tree-empty">No crew flow signals.</div>';
+    return;
+  }
+  rows.sort(function(a,b){
+    var ar = crewFlowIsRead(a.id) ? 1 : 0;
+    var br = crewFlowIsRead(b.id) ? 1 : 0;
+    if (ar !== br) return ar - br;
+    return (b.received_at || '').localeCompare(a.received_at || '');
+  });
+  var html = '';
+  rows.forEach(function(row){
+    var active = state.selectedCrewFlowSignal && state.selectedCrewFlowSignal.id === row.id;
+    var top = crewFlowTopCoverage(row);
+    html += '<div class="tree-item '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+         +    '<div><strong>'+escapeHtml(row.candidate && row.candidate.name || 'Candidate')+'</strong> '
+         +      (crewFlowIsRead(row.id) ? '<span class="pill">read</span>' : '<span class="pill new">new</span>')+'</div>'
+         +    '<div class="meta">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+' · '+escapeHtml(row.responded_to || 'general intake')+'</div>'
+         +    '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">'
+         +      crewFlowTrustHtml(row)
+         +      (top ? '<span class="badge">'+escapeHtml(top.profile_name || 'Profile')+' · '+escapeHtml(String(top.score_percent || 0))+'%</span>' : '<span class="badge">coverage pending</span>')
+         +    '</div>'
+         +  '</div>';
+  });
+  tree.innerHTML = html;
+}
+
+function openCrewFlowSignal(id) {
+  var row = crewFlowFindSignal(id);
+  if (!row) return;
+  state.selectedCrewFlowSignal = row;
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+  ensureCrewFlowRankings(row).then(function(){
+    renderCrewFlowTreeBody();
+    renderCrewFlowDetail();
+  });
+}
+
+function renderCrewFlowView() {
+  renderCrewFlowTree();
+  if (!state.selectedCrewFlowSignal) state.selectedCrewFlowSignal = crewFlowState()[0] || null;
+  renderCrewFlowDetail();
+  var rows = crewFlowState();
+  var pending = rows.some(function(row){ return row && row.application_id && !row.coverage_loaded && !row.coverage_loading; });
+  if (pending) refreshCrewFlowRankings();
+}
+
+function renderCrewFlowDetail() {
+  var main = document.getElementById('main');
+  var row = state.selectedCrewFlowSignal || crewFlowState()[0];
+  if (!row) {
+    main.innerHTML = '<h1>Crew Flow</h1><div class="empty-state">No signals.</div>';
+    return;
+  }
+  var c = row.candidate || {};
+  var read = crewFlowReadInfo(row.id);
+  main.innerHTML =
+    '<div data-qa="crew-flow-view">'
+    + '<h1>Crew Flow</h1>'
+    + '<div class="card" data-qa="crew-flow-detail">'
+    +   '<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;">'
+    +     '<div>'
+    +       '<div style="font-size:12px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+'</div>'
+    +       '<h2 style="margin:5px 0 4px;">'+escapeHtml(c.name || 'Candidate')+'</h2>'
+    +       '<div class="muted">'+escapeHtml(c.rank || 'Rank pending')+' · '+escapeHtml(c.nationality || 'Nationality pending')+' · available '+escapeHtml(c.available_from || 'pending')+'</div>'
+    +     '</div>'
+    +     '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+crewFlowTrustHtml(row)+(read ? '<span class="badge">read · '+escapeHtml(read.action || 'read')+'</span>' : '<span class="badge">unread</span>')+(read && read.saved_to_db ? '<span class="badge">in Seafarers DB</span>' : '')+'</div>'
+    +   '</div>'
+    +   '<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">'
+    +     '<div><label>Responded to</label><div>'+escapeHtml(row.responded_to || 'general intake')+'</div></div>'
+    +     '<div><label>Seafarer ref</label><div>'+escapeHtml(row.seafarer_ref || 'new contact')+'</div></div>'
+    +     '<div><label>Attention</label><div>'+escapeHtml(row.attention || 'ready for review')+'</div></div>'
+    +   '</div>'
+    +   '<div style="margin-top:14px;">'
+    +     '<div style="font-weight:700;margin-bottom:6px;">Profile fit</div>'
+    +     '<div data-qa="crew-flow-coverage">'+crewFlowCoverageHtml(row, false)+'</div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+    +     '<button onclick="crewFlowAddSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">Add to Seafarers DB</button>'
+    +     '<button class="ghost" onclick="crewFlowIgnoreSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;font-size:12px;">Ignore</button>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+async function crewFlowAddSignal(id) {
+  var row = crewFlowFindSignal(id);
+  if (!row) return;
+  if (row.application_id) {
+    crewFlowHydrateApplication(row);
+    if (row.golden_bundle && typeof DEMO !== 'undefined' && DEMO) {
+      if (DEMO.attachmentsByApp && DEMO.attachmentsByApp[row.application_id]) {
+        state.attachmentsByApp[row.application_id] = DEMO.attachmentsByApp[row.application_id];
+      }
+      if (DEMO.messagesByApp && DEMO.messagesByApp[row.application_id]) {
+        state.messagesByApp[row.application_id] = DEMO.messagesByApp[row.application_id];
+      }
+    }
+    await saveRankedCandidate(row.application_id);
+    var savedToDb = false;
+    if (row.golden_bundle && window._bundleViewerData && window._bundleViewerData.applicationId === row.application_id && window._bundleViewerData.manifest) {
+      await saveCurrentBundleSeafarer();
+      savedToDb = true;
+    }
+    crewFlowMarkRead(id, 'added', savedToDb ? { saved_to_db: true } : null);
+    if (savedToDb) showToast('Crew Flow signal saved in Seafarers DB.', 'success');
+    if (state.view !== 'crew_flow') showView('crew_flow');
+    renderCrewFlowTreeBody();
+    renderCrewFlowDetail();
+    return;
+  }
+  crewFlowMarkRead(id, 'needs_documents');
+  showToast('Open or request the candidate document bundle before adding to Seafarers DB.', 'warn');
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+}
+
+function crewFlowIgnoreSignal(id) {
+  crewFlowMarkRead(id, 'ignored');
+  showToast('Crew Flow signal ignored.', 'info');
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+}
+// CREW FLOW MODULE END
 
 // ------------- mailing requests -------------
 async function renderMailingRequestsTree(opts) {
