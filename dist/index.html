@@ -1158,7 +1158,46 @@ var DEMO = {
     { id:'demo-d5', name:'Joining Checklist (template)', doc_type:'checklist', stored_path:'', original_filename:'checklist.pdf', size_bytes:70000,
       notes:'', created_at:'2026-05-01T10:00:00Z', category:'Checklists', template_id:'joining_checklist',
       valid_to:null, has_expiry:false, issuer:null, issue_date:null, cert_number:null }
-  ]
+  ],
+  attachmentsByApp: {
+    'demo-a1': [
+      { id:'demo-a1-documents-bundle', application_id:'demo-a1', from_user_id:'demo-sf1', to_user_id:'demo-crewing-user',
+        original_filename:'oleksandr-k-documents-bundle.zip', mime_type:'application/zip', size_bytes:1843200,
+        sent_at:'2026-06-19T14:24:00Z' }
+    ]
+  },
+  messagesByApp: {
+    'demo-a1': [
+      { id:'demo-msg-a1-docs', application_id:'demo-a1', from_user_id:'demo-sf1', to_user_id:'demo-crewing-user',
+        sent_at:'2026-06-19T14:24:00Z',
+        plaintext:'[skipi:doc_bundle] {"id":"demo-a1-documents-bundle","filename":"oleksandr-k-documents-bundle.zip","size":1843200}' }
+    ]
+  },
+  goldenBundleManifest: {
+    exported_by: { name:'Oleksandr K.', rank:'Captain', messaging_user_id:'demo-sf1' },
+    skipi_identity: { messaging_user_id:'demo-sf1' },
+    documents: [
+      { title:'Passport', category:'Identity', template_id:'passport', file_name:'passport.pdf',
+        file_path:'Identity/passport.pdf', doc_number:'PP-DEMO-8271', issued_by:'Ukraine',
+        valid_from:'2024-04-02', valid_to:'2034-04-01', has_file:true },
+      { title:'Seaman Book', category:'Identity', template_id:'sid', file_name:'seaman-book.pdf',
+        file_path:'Identity/seaman-book.pdf', doc_number:'SB-DEMO-4430', issued_by:'Ukraine',
+        valid_from:'2023-09-10', valid_to:'2028-09-09', has_file:true },
+      { title:'Medical Certificate', category:'Medical', template_id:'medical_cert', file_name:'medical-certificate.pdf',
+        file_path:'Medical/medical-certificate.pdf', doc_number:'MED-DEMO-1190', issued_by:'Maritime Medical Centre',
+        valid_from:'2026-01-20', valid_to:'2028-01-19', has_file:true },
+      { title:'Basic Safety Training', category:'STCW Mandatory', template_id:'bst', file_name:'basic-safety-training.pdf',
+        file_path:'STCW/basic-safety-training.pdf', doc_number:'BST-DEMO-4102', issued_by:'Training Centre',
+        valid_from:'2025-05-14', valid_to:'2030-05-13', has_file:true },
+      { title:'Certificate of Competency — Master', category:'Certificate of Competency', template_id:'coc_master',
+        file_name:'coc-master.pdf', file_path:'CoC/coc-master.pdf', doc_number:'COC-M-DEMO-8820',
+        issued_by:'Maritime Administration', valid_from:'2024-12-01', valid_to:'2029-11-30', has_file:true },
+      { title:'GMDSS GOC', category:'Deck Training', template_id:'gmdss_goc', file_name:'gmdss-goc.pdf',
+        file_path:'Deck/gmdss-goc.pdf', doc_number:'GOC-DEMO-6722', issued_by:'Radio Authority',
+        valid_from:'2025-03-11', valid_to:'2030-03-10', has_file:true }
+    ]
+  },
+  savedDocsBySeafarer: {}
 };
 
 // Commands served from fixtures while in demo mode.
@@ -1193,10 +1232,56 @@ var DEMO_READS = {
   },
   loadComplianceProfilesForPicker: function(){ return DEMO.compliance; },
   list_saved_seafarers: function(){ return DEMO.seafarers; },
-  list_saved_seafarer_documents: function(){ return []; },
+  list_saved_seafarer_documents: function(a){ return DEMO.savedDocsBySeafarer[a && a.seafarerId] || []; },
   list_documents: function(){ return DEMO.documents; },
-  fetch_attachments_for_application: function(){ return []; },
-  fetch_messages: function(){ return []; },
+  fetch_attachments_for_application: function(a){ return DEMO.attachmentsByApp[a && a.applicationId] || []; },
+  fetch_messages: function(a){ return DEMO.messagesByApp[a && a.applicationId] || []; },
+  download_encrypted_attachment: function(a){
+    if (a && a.attachmentId === 'demo-a1-documents-bundle') return '/tmp/skipi-demo-a1-documents-bundle.zip';
+    throw new Error('demo_attachment_not_found');
+  },
+  extract_documents_bundle: function(a){
+    if (a && a.applicationId === 'demo-a1') {
+      return { extracted_to:'/tmp/skipi-demo-a1-documents', manifest: DEMO.goldenBundleManifest };
+    }
+    throw new Error('demo_bundle_not_found');
+  },
+  save_seafarer_from_bundle: function(a){
+    if (!a || a.applicationId !== 'demo-a1') throw new Error('demo_save_requires_documents_bundle');
+    var manifest = a.manifest || DEMO.goldenBundleManifest;
+    var docs = (manifest.documents || []).map(function(d, idx){
+      return {
+        id: 'demo-sf1-doc-'+(idx+1),
+        seafarer_id: 'demo-sf1',
+        title: d.title || d.file_name || 'Document',
+        category: d.category || 'Other',
+        template_id: d.template_id || null,
+        file_path: ((a.extractedTo || '/tmp/skipi-demo-a1-documents') + '/' + (d.file_path || d.file_name || 'document.pdf')),
+        file_name: d.file_name || '',
+        doc_number: d.doc_number || null,
+        issued_by: d.issued_by || null,
+        valid_from: d.valid_from || null,
+        valid_to: d.valid_to || null,
+        has_file: d.has_file !== false,
+        received_at: '2026-06-19T14:24:00Z'
+      };
+    });
+    DEMO.savedDocsBySeafarer['demo-sf1'] = docs;
+    var saved = {
+      id:'demo-sf1', display_name:'Oleksandr K.', rank:'Captain', position:null, nationality:'Ukraine',
+      available_from:'2026-07-08', source_application_id:'demo-a1',
+      first_seen_at:'2026-06-19T14:20:00Z', last_received_at:'2026-06-19T14:24:00Z',
+      ex_crew:false, status:'candidate', notes:'Saved from the demo document bundle.',
+      summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' },
+      manifest: manifest, docs_dir:a.extractedTo || '/tmp/skipi-demo-a1-documents', cv_path:null,
+      availability_status:'available', last_ping_at:null, last_reply_at:null, last_reply_text:null,
+      doc_count: docs.length
+    };
+    var idx = DEMO.seafarers.findIndex(function(s){ return s.id === saved.id; });
+    if (idx >= 0) DEMO.seafarers[idx] = saved;
+    else DEMO.seafarers.unshift(saved);
+    return saved;
+  },
   fetch_team_chat_messages: function(){ return []; },
   list_team_members: function(){ return []; },
   refresh_saved_seafarer_replies: function(){ return DEMO.seafarers; },
@@ -6028,6 +6113,13 @@ async function saveRankedCandidate(applicationId) {
   var app = findApplicationById(applicationId) || {};
   var sUid = sUidOf(app) || '';
   var att = latestAttachmentFromSender(applicationId, sUid);
+  if (!att) {
+    try {
+      var fresh = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() });
+      state.attachmentsByApp[applicationId] = fresh || [];
+      att = latestAttachmentFromSender(applicationId, sUid);
+    } catch(e) {}
+  }
   if (att) {
     showToast('Open the candidate document bundle, then save from the bundle viewer.', 'info');
     await openLatestAttachmentFromSender(applicationId, sUid);

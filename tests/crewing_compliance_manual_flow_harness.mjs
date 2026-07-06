@@ -56,7 +56,7 @@ function elFor(id) {
 
 const toasts = [];
 const store = new Map();
-let saveCalls = 0;
+store.set('skipi_crewing_demo', '1');
 globalThis.localStorage = {
   getItem(k) { return store.has(k) ? store.get(k) : null; },
   setItem(k, v) { store.set(k, String(v)); },
@@ -116,10 +116,6 @@ globalThis.__TAURI__ = {
       if (cmd === 'fetch_messages') return [];
       if (cmd === 'fetch_attachments_for_application') return [];
       if (cmd === 'register_my_pubkey') return null;
-      if (cmd === 'save_seafarer_from_bundle') {
-        saveCalls++;
-        return { id: 'saved-sf-1', display_name: 'Oleksandr K.', source_application_id: 'app-1' };
-      }
       if (cmd === 'list_saved_seafarers') return [];
       return null;
     },
@@ -149,8 +145,9 @@ let M = null;
 try {
   M = new Function(
     scriptNoBoot
+      + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__COMPLIANCE_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate };'
+      + '\nreturn { state, invoke, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate, saveCurrentBundleSeafarer };'
   )();
 } catch (e) {
   console.error('runtime load failed:', e);
@@ -202,14 +199,31 @@ if (M) {
   ok(storedReviewState['app-1'] === true, 'ignore persists review state locally');
   await M.saveRankedCandidate('app-1');
   ok(toasts.some((t) => /document bundle/i.test(t.msg)), 'save without bundle guides operator instead of faking save');
-  globalThis._bundleViewerData = {
-    applicationId: 'app-1',
-    counterpartId: 'sf',
-    manifest: { documents: [] },
-    extractedTo: '/tmp/skipi-demo-bundle',
+  const goldenApp = {
+    id: 'demo-a1',
+    vacancy_id: 'v1',
+    received_at: '2026-06-19T14:20:00Z',
+    contact_for_reply: 'master.candidate@example.com',
+    message: 'Documents ready.',
+    status: 'new',
+    seafarer_user_id: 'demo-sf1',
+    summary: {
+      name: 'Oleksandr K.',
+      rank: 'Captain',
+      nationality: 'Ukraine',
+      available_from: '2026-07-08',
+      certs_summary: [{ template_id: 'passport', has_file: true }],
+    },
   };
-  await M.saveRankedCandidate('app-1');
-  ok(saveCalls === 1, 'save with opened bundle reuses save_seafarer_from_bundle');
+  M.state.applications = [goldenApp, app];
+  await M.checkApplicationAgainstProfiles('demo-a1');
+  await M.saveRankedCandidate('demo-a1');
+  ok(globalThis._bundleViewerData && globalThis._bundleViewerData.applicationId === 'demo-a1', 'golden candidate Save opens demo document bundle');
+  await M.saveCurrentBundleSeafarer();
+  ok(M.state.seafarers.some((s) => s.id === 'demo-sf1' && s.display_name === 'Oleksandr K.'), 'golden candidate Save completes into Seafarers DB');
+  const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
+  ok(Array.isArray(savedDocs) && savedDocs.length === 6, 'golden candidate saved documents are visible in Seafarers DB');
+  ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden candidate Save reports success');
 }
 
 if (fail) {
