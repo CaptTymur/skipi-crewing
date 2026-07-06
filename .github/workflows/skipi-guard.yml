@@ -67,6 +67,7 @@ jobs:
           SKIPI_GUARD_TASK: plugin-host
           BASE: ${{ steps.refs.outputs.base }}
           PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels) }}
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
           OVERRIDE_ARGS=()
@@ -185,6 +186,19 @@ jobs:
           if [[ "$presence_modification_approved" -eq 1 ]]; then
             GUARD_TASK="release"
             OVERRIDE_ARGS=(--override-protected crewing-presence-modification-approved)
+          fi
+          presence_main_merge_replay=0
+          if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF:-}" == "refs/heads/main" ]]; then
+            for changed_file in "${GUARD_CHANGED_FILES[@]}"; do
+              if [[ "$changed_file" == "presence-manifest.json" && "$HEAD_COMMIT_MESSAGE" == Merge\ pull\ request\ \#* ]]; then
+                presence_main_merge_replay=1
+                break
+              fi
+            done
+          fi
+          if [[ "$presence_main_merge_replay" -eq 1 ]]; then
+            GUARD_TASK="release"
+            OVERRIDE_ARGS=(--override-protected crewing-presence-main-merge-replay)
           fi
           echo "resolved SKIPI_GUARD_TASK=$GUARD_TASK"
           .skipi-guard/bin/skipi-guard verify \
