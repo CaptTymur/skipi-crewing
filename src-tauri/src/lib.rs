@@ -197,7 +197,9 @@ pub struct BuildInfo {
 
 #[tauri::command]
 fn get_build_info() -> BuildInfo {
-    let sha = option_env!("SKIPI_BUILD_SHA").unwrap_or("unknown").to_string();
+    let sha = option_env!("SKIPI_BUILD_SHA")
+        .unwrap_or("unknown")
+        .to_string();
     let short_sha = if sha == "unknown" {
         "unknown".to_string()
     } else {
@@ -1006,6 +1008,8 @@ pub struct ComplianceProfileDraft {
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
     pub mandatory_certs: Option<Vec<String>>,
@@ -1020,6 +1024,8 @@ pub struct ServerComplianceProfile {
     pub id: String,
     pub crewing_id: String,
     pub name: String,
+    #[serde(default)]
+    pub rank: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -1092,6 +1098,7 @@ fn create_compliance_profile(
     let body = serde_json::json!({
         "crewing_id": settings.crewing_id,
         "name": name,
+        "rank": draft.rank.as_deref().map(str::trim).filter(|s| !s.is_empty()),
         "description": description,
         "mandatory_certs": draft.mandatory_certs.unwrap_or_default(),
         "extra_requirements": draft.extra_requirements.unwrap_or_default(),
@@ -1125,6 +1132,17 @@ fn update_compliance_profile(
         let trimmed = description.trim().to_string();
         body.insert(
             "description".into(),
+            if trimmed.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::Value::String(trimmed)
+            },
+        );
+    }
+    if let Some(rank) = draft.rank {
+        let trimmed = rank.trim().to_string();
+        body.insert(
+            "rank".into(),
             if trimmed.is_empty() {
                 serde_json::Value::Null
             } else {
@@ -1327,6 +1345,14 @@ pub struct ApplicationsFilter {
     pub sort: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ComplianceRankCandidateArgs {
+    pub application_id: Option<String>,
+    pub vacancy_id: Option<String>,
+    pub candidate_summary: Option<serde_json::Value>,
+}
+
 fn urlenc(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.as_bytes() {
@@ -1388,6 +1414,51 @@ fn fetch_applications_for_vacancy(
         Some(&settings.server_url),
         Some(&settings.bearer_token),
         &path,
+        20,
+    )
+}
+
+#[tauri::command]
+fn rank_compliance_candidate(
+    args: ComplianceRankCandidateArgs,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let mut candidate = serde_json::Map::new();
+    if let Some(application_id) = args
+        .application_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        candidate.insert(
+            "application_id".into(),
+            serde_json::Value::String(application_id.into()),
+        );
+    }
+    if let Some(vacancy_id) = args
+        .vacancy_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        candidate.insert(
+            "vacancy_id".into(),
+            serde_json::Value::String(vacancy_id.into()),
+        );
+    }
+    if let Some(summary) = args.candidate_summary {
+        if summary.is_object() {
+            candidate.insert("summary".into(), summary);
+        }
+    }
+    let body = serde_json::json!({ "candidate": candidate });
+    api::post_json(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/crewing/compliance/rank-candidates",
+        &body,
         20,
     )
 }
@@ -1994,6 +2065,7 @@ pub fn run() {
             reopen_mailing_request_remote,
             delete_mailing_request_remote,
             fetch_applications_for_vacancy,
+            rank_compliance_candidate,
             add_document,
             list_documents,
             open_document,

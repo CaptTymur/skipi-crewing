@@ -1077,7 +1077,7 @@ var DEMO = {
     'demo-v1': [
       { id:'demo-a1', vacancy_id:'demo-v1', received_at:'2026-06-19T14:20:00Z', contact_for_reply:'master.candidate@example.com',
         message:'Available from early July, last vessel handysize bulker. Documents ready on request.',
-        summary:{ name:'Oleksandr K.', rank:'Master', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
+        summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
         seafarer_user_id:'demo-sf1',
         compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
       { id:'demo-a2', vacancy_id:'demo-v1', received_at:'2026-06-18T10:05:00Z', contact_for_reply:'+63 900 0000000',
@@ -1107,14 +1107,22 @@ var DEMO = {
       status:'open', send_click_count:8, hide_count:0 }
   ],
   compliance: [
-    { id:'demo-cp1', crewing_id:'demo-crewing', name:'Bulk Carrier Master — standard', description:'Standard requirements for our bulker client.',
+    { id:'demo-cp1', crewing_id:'demo-crewing', name:'Captain — Bulk Carrier standard', rank:'Captain', description:'Standard requirements for our bulker client.',
       mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','sso'],
       extra_requirements:[ {id:'us_visa',label:'US C1/D valid ≥ 6mo',weight:5,category:'visa',description:null},
         {id:'ces_english_70',label:'CES English ≥ 70%',weight:3,category:'test',description:null} ],
       status:'active', created_at:'2026-05-10T10:00:00Z', updated_at:'2026-06-10T12:00:00Z' },
-    { id:'demo-cp2', crewing_id:'demo-crewing', name:'Chemical Tanker Officer', description:'IMO II/III chemical tanker officers.',
+    { id:'demo-cp2', crewing_id:'demo-crewing', name:'Chief Officer — Chemical Tanker', rank:'Chief Officer', description:'IMO II/III chemical tanker officers.',
       mandatory_certs:['passport','medical_cert','bst','tanker_basic','tanker_advanced','coc_chief_mate'],
       extra_requirements:[ {id:'ecdis_transas',label:'ECDIS Transas familiarisation',weight:3,category:'equipment',description:null} ],
+      status:'active', created_at:'2026-05-12T10:00:00Z', updated_at:'2026-06-08T12:00:00Z' },
+    { id:'demo-cp3', crewing_id:'demo-crewing', name:'Captain — Tanker client', rank:'Captain', description:'Tanker owner baseline for senior deck candidates.',
+      mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','tanker_basic'],
+      extra_requirements:[ {id:'oil_major_history',label:'Oil major inspection history',weight:4,category:'other',description:null} ],
+      status:'active', created_at:'2026-05-14T10:00:00Z', updated_at:'2026-06-09T12:00:00Z' },
+    { id:'demo-cp4', crewing_id:'demo-crewing', name:'Captain — Strict client', rank:'Captain', description:'Stricter customer checklist for urgent replacements.',
+      mandatory_certs:['passport','seamans_book','medical_cert','bst','advanced_ff','coc_master','gmdss','sso','ecdis_generic'],
+      extra_requirements:[ {id:'client_interview_ready',label:'Ready for client interview',weight:2,category:'other',description:null} ],
       status:'active', created_at:'2026-05-12T10:00:00Z', updated_at:'2026-06-08T12:00:00Z' }
   ],
   seafarers: [
@@ -1150,7 +1158,46 @@ var DEMO = {
     { id:'demo-d5', name:'Joining Checklist (template)', doc_type:'checklist', stored_path:'', original_filename:'checklist.pdf', size_bytes:70000,
       notes:'', created_at:'2026-05-01T10:00:00Z', category:'Checklists', template_id:'joining_checklist',
       valid_to:null, has_expiry:false, issuer:null, issue_date:null, cert_number:null }
-  ]
+  ],
+  attachmentsByApp: {
+    'demo-a1': [
+      { id:'demo-a1-documents-bundle', application_id:'demo-a1', from_user_id:'demo-sf1', to_user_id:'demo-crewing-user',
+        original_filename:'oleksandr-k-documents-bundle.zip', mime_type:'application/zip', size_bytes:1843200,
+        sent_at:'2026-06-19T14:24:00Z' }
+    ]
+  },
+  messagesByApp: {
+    'demo-a1': [
+      { id:'demo-msg-a1-docs', application_id:'demo-a1', from_user_id:'demo-sf1', to_user_id:'demo-crewing-user',
+        sent_at:'2026-06-19T14:24:00Z',
+        plaintext:'[skipi:doc_bundle] {"id":"demo-a1-documents-bundle","filename":"oleksandr-k-documents-bundle.zip","size":1843200}' }
+    ]
+  },
+  goldenBundleManifest: {
+    exported_by: { name:'Oleksandr K.', rank:'Captain', messaging_user_id:'demo-sf1' },
+    skipi_identity: { messaging_user_id:'demo-sf1' },
+    documents: [
+      { title:'Passport', category:'Identity', template_id:'passport', file_name:'passport.pdf',
+        file_path:'Identity/passport.pdf', doc_number:'PP-DEMO-8271', issued_by:'Ukraine',
+        valid_from:'2024-04-02', valid_to:'2034-04-01', has_file:true },
+      { title:'Seaman Book', category:'Identity', template_id:'sid', file_name:'seaman-book.pdf',
+        file_path:'Identity/seaman-book.pdf', doc_number:'SB-DEMO-4430', issued_by:'Ukraine',
+        valid_from:'2023-09-10', valid_to:'2028-09-09', has_file:true },
+      { title:'Medical Certificate', category:'Medical', template_id:'medical_cert', file_name:'medical-certificate.pdf',
+        file_path:'Medical/medical-certificate.pdf', doc_number:'MED-DEMO-1190', issued_by:'Maritime Medical Centre',
+        valid_from:'2026-01-20', valid_to:'2028-01-19', has_file:true },
+      { title:'Basic Safety Training', category:'STCW Mandatory', template_id:'bst', file_name:'basic-safety-training.pdf',
+        file_path:'STCW/basic-safety-training.pdf', doc_number:'BST-DEMO-4102', issued_by:'Training Centre',
+        valid_from:'2025-05-14', valid_to:'2030-05-13', has_file:true },
+      { title:'Certificate of Competency — Master', category:'Certificate of Competency', template_id:'coc_master',
+        file_name:'coc-master.pdf', file_path:'CoC/coc-master.pdf', doc_number:'COC-M-DEMO-8820',
+        issued_by:'Maritime Administration', valid_from:'2024-12-01', valid_to:'2029-11-30', has_file:true },
+      { title:'GMDSS GOC', category:'Deck Training', template_id:'gmdss_goc', file_name:'gmdss-goc.pdf',
+        file_path:'Deck/gmdss-goc.pdf', doc_number:'GOC-DEMO-6722', issued_by:'Radio Authority',
+        valid_from:'2025-03-11', valid_to:'2030-03-10', has_file:true }
+    ]
+  },
+  savedDocsBySeafarer: {}
 };
 
 // Commands served from fixtures while in demo mode.
@@ -1160,12 +1207,81 @@ var DEMO_READS = {
   fetch_applications_for_vacancy: function(a){ return (DEMO.appsByVac[a && a.vacancyId] || []); },
   fetch_my_mailing_requests: function(){ return DEMO.mailings; },
   fetch_compliance_profiles: function(){ return DEMO.compliance; },
+  rank_compliance_candidate: function(){
+    return {
+      candidate_rank: 'Captain',
+      rank_source: 'summary',
+      rank_source_conflict: null,
+      items: [
+        { profile_id:'demo-cp1', profile_name:'Captain · Client Alpha (Dry Bulk)', profile_rank:'Captain',
+          score_percent:93, required_total:14, blockers:1,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm'], expired:[], uncertain:[], no_file:[], gaps:['brm'] },
+        { profile_id:'demo-cp3', profile_name:'Captain · Client Beta (Product Tanker)', profile_rank:'Captain',
+          score_percent:81, required_total:16, blockers:3,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm','tanker_familiarization','advanced_tanker'], expired:[], uncertain:[], no_file:[],
+          gaps:['brm','tanker_familiarization','advanced_tanker'] },
+        { profile_id:'demo-cp4', profile_name:'Captain · Client Gamma (LNG / IGF)', profile_rank:'Captain',
+          score_percent:72, required_total:18, blockers:5,
+          covered:['passport','sid','medical_cert','bst','pscrb','sec_awareness','advanced_ff','medical_first_aid','dsd','coc_master','gmdss_goc','ecdis','sso'],
+          missing:['brm','tanker_familiarization','advanced_tanker','igf_code','hazmat'], expired:[], uncertain:[], no_file:[],
+          gaps:['brm','tanker_familiarization','advanced_tanker','igf_code','hazmat'] }
+      ]
+    };
+  },
   loadComplianceProfilesForPicker: function(){ return DEMO.compliance; },
   list_saved_seafarers: function(){ return DEMO.seafarers; },
-  list_saved_seafarer_documents: function(){ return []; },
+  list_saved_seafarer_documents: function(a){ return DEMO.savedDocsBySeafarer[a && a.seafarerId] || []; },
   list_documents: function(){ return DEMO.documents; },
-  fetch_attachments_for_application: function(){ return []; },
-  fetch_messages: function(){ return []; },
+  fetch_attachments_for_application: function(a){ return DEMO.attachmentsByApp[a && a.applicationId] || []; },
+  fetch_messages: function(a){ return DEMO.messagesByApp[a && a.applicationId] || []; },
+  download_encrypted_attachment: function(a){
+    if (a && a.attachmentId === 'demo-a1-documents-bundle') return '/tmp/skipi-demo-a1-documents-bundle.zip';
+    throw new Error('demo_attachment_not_found');
+  },
+  extract_documents_bundle: function(a){
+    if (a && a.applicationId === 'demo-a1') {
+      return { extracted_to:'/tmp/skipi-demo-a1-documents', manifest: DEMO.goldenBundleManifest };
+    }
+    throw new Error('demo_bundle_not_found');
+  },
+  save_seafarer_from_bundle: function(a){
+    if (!a || a.applicationId !== 'demo-a1') throw new Error('demo_save_requires_documents_bundle');
+    var manifest = a.manifest || DEMO.goldenBundleManifest;
+    var docs = (manifest.documents || []).map(function(d, idx){
+      return {
+        id: 'demo-sf1-doc-'+(idx+1),
+        seafarer_id: 'demo-sf1',
+        title: d.title || d.file_name || 'Document',
+        category: d.category || 'Other',
+        template_id: d.template_id || null,
+        file_path: ((a.extractedTo || '/tmp/skipi-demo-a1-documents') + '/' + (d.file_path || d.file_name || 'document.pdf')),
+        file_name: d.file_name || '',
+        doc_number: d.doc_number || null,
+        issued_by: d.issued_by || null,
+        valid_from: d.valid_from || null,
+        valid_to: d.valid_to || null,
+        has_file: d.has_file !== false,
+        received_at: '2026-06-19T14:24:00Z'
+      };
+    });
+    DEMO.savedDocsBySeafarer['demo-sf1'] = docs;
+    var saved = {
+      id:'demo-sf1', display_name:'Oleksandr K.', rank:'Captain', position:null, nationality:'Ukraine',
+      available_from:'2026-07-08', source_application_id:'demo-a1',
+      first_seen_at:'2026-06-19T14:20:00Z', last_received_at:'2026-06-19T14:24:00Z',
+      ex_crew:false, status:'candidate', notes:'Saved from the demo document bundle.',
+      summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' },
+      manifest: manifest, docs_dir:a.extractedTo || '/tmp/skipi-demo-a1-documents', cv_path:null,
+      availability_status:'available', last_ping_at:null, last_reply_at:null, last_reply_text:null,
+      doc_count: docs.length
+    };
+    var idx = DEMO.seafarers.findIndex(function(s){ return s.id === saved.id; });
+    if (idx >= 0) DEMO.seafarers[idx] = saved;
+    else DEMO.seafarers.unshift(saved);
+    return saved;
+  },
   fetch_team_chat_messages: function(){ return []; },
   list_team_members: function(){ return []; },
   refresh_saved_seafarer_replies: function(){ return DEMO.seafarers; },
@@ -1877,6 +1993,8 @@ var state = {
   // Per-application messages cache for last-message preview + instant chat open.
   messagesByApp: {},
   attachmentsByApp: {},
+  complianceRankingsByApp: {},
+  complianceRankIgnoredByApp: {},
   focusedApplicationId: null,
   seafarers: [],
   selectedSeafarer: null,
@@ -1909,6 +2027,26 @@ var state = {
   appVersion: '0.4.128',
   buildSha: 'unknown',
 };
+
+var COMPLIANCE_REVIEW_STATE_KEY = 'skipi_crewing_compliance_review_state_v1';
+
+function loadComplianceReviewState() {
+  try {
+    var raw = localStorage.getItem(COMPLIANCE_REVIEW_STATE_KEY);
+    var parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function saveComplianceReviewState() {
+  try {
+    localStorage.setItem(COMPLIANCE_REVIEW_STATE_KEY, JSON.stringify(state.complianceRankIgnoredByApp || {}));
+  } catch(e) {}
+}
+
+state.complianceRankIgnoredByApp = loadComplianceReviewState();
 
 function buildShortSha(){
   return state.buildSha && state.buildSha !== 'unknown' ? state.buildSha.slice(0, 7) : '';
@@ -3786,7 +3924,7 @@ function renderComplianceProfilesTreeBody() {
     html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(p.id)+'\')">';
     html += '<span style="font-size:12px;color:var(--text2);">'+(archived?'□':'▣')+'</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(p.name||'Untitled')+'</div>';
-    html += '<div class="ti-meta">'+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
+    html += '<div class="ti-meta">'+(p.rank ? escapeHtml(p.rank)+' · ' : '')+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
     if (archived) html += '<div class="ti-meta" style="color:var(--warn);">archived</div>';
     html += '</div></div>';
   });
@@ -3852,8 +3990,10 @@ function renderComplianceProfileDetail() {
         : '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(p.id)+'\')">Archive</button>')
     + '</div></div>'
     + '<div class="card">'
-    + '<div class="row"><div><label>Mandatory certificates</label><div style="font-size:18px;font-weight:700;">'+profileMandatoryCount(p)+'</div></div>'
-    + '<div><label>Extra requirements</label><div style="font-size:18px;font-weight:700;">'+profileExtrasCount(p)+'</div></div></div>'
+    + '<div class="row"><div><label>Rank</label><div style="font-size:18px;font-weight:700;">'+escapeHtml(p.rank||'Any')+'</div></div>'
+    + '<div><label>Mandatory certificates</label><div style="font-size:18px;font-weight:700;">'+profileMandatoryCount(p)+'</div></div></div>'
+    + '<div class="row"><div><label>Extra requirements</label><div style="font-size:18px;font-weight:700;">'+profileExtrasCount(p)+'</div></div>'
+    + '<div><label>Scope</label><div style="font-size:18px;font-weight:700;">Demo rank filter</div></div></div>'
     + (p.description?'<div class="row full"><div><label>Description</label><div style="white-space:pre-wrap;">'+escapeHtml(p.description)+'</div></div></div>':'')
     + '<details open><summary style="cursor:pointer;font-weight:700;">Mandatory</summary>'+renderMandatoryCertList(p.mandatory_certs||[])+'</details>'
     + '<details open style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;">Extras</summary>'+renderExtrasList(p.extra_requirements||[])+'</details>'
@@ -3955,6 +4095,7 @@ function renderComplianceProfileForm(profile) {
     + '<div class="sub">Выберите обязательные документы и дополнительные требования. Уже опубликованные вакансии сохраняют старый snapshot.</div>'
     + '<div class="card">'
     + '<div class="row full"><div><label>Name*</label><input type="text" id="cp-name" maxlength="200" value="'+escapeAttr(profile&&profile.name||'')+'" '+(readonly?'disabled':'')+' placeholder="Greek BC-180k Master"></div></div>'
+    + '<div class="row full"><div><label>Rank</label><input type="text" id="cp-rank" maxlength="64" value="'+escapeAttr(profile&&profile.rank||'')+'" '+(readonly?'disabled':'')+' placeholder="Captain"></div></div>'
     + '<div class="row full"><div><label>Description</label><textarea id="cp-desc" maxlength="2000" '+(readonly?'disabled':'')+' placeholder="Internal comment">'+escapeHtml(profile&&profile.description||'')+'</textarea></div></div>'
     + '<h3 style="margin:16px 0 8px;">Mandatory certs</h3>'
     + '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Missing any mandatory item will later make the seafarer match fail locally.</div>'
@@ -3984,6 +4125,7 @@ async function saveComplianceProfile(profileId) {
   }
   var draft = {
     name: name,
+    rank: val('cp-rank') || null,
     description: val('cp-desc') || '',
     mandatory_certs: mandatory,
     extra_requirements: extras,
@@ -5783,6 +5925,7 @@ function renderApplicationSnapshot(a, sum, sUid) {
   // the cached requirements_matrix from /api/catalogs (Slice B). Lookup
   // is local; no per-card server round trip.
   snap += renderApplicationCompliance(a, sum);
+  snap += renderProfileRankingPanel(a);
   snap += '</div>';
   return snap;
 }
@@ -5863,6 +6006,136 @@ function renderApplicationCompliance(a, sum) {
            +   '<div style="margin-top:6px;">'+rowsHtml+'</div>'
            + '</details>';
   return html;
+}
+
+function rankBucketHtml(label, ids, emptyText) {
+  ids = Array.isArray(ids) ? ids : [];
+  var body = ids.length
+    ? ids.map(function(id){ return '<span class="tag" style="font-size:10px;margin:2px 3px 2px 0;">'+escapeHtml(certLabelById(id))+'</span>'; }).join('')
+    : '<span style="color:var(--text2);font-size:12px;">'+escapeHtml(emptyText || 'none')+'</span>';
+  return '<div style="display:grid;grid-template-columns:92px 1fr;gap:8px;align-items:start;margin-top:5px;">'
+       +   '<div style="color:var(--text2);font-size:11px;text-transform:uppercase;">'+escapeHtml(label)+'</div>'
+       +   '<div>'+body+'</div>'
+       + '</div>';
+}
+
+function renderProfileRankingCards(result, applicationId) {
+  var items = (result && Array.isArray(result.items)) ? result.items : [];
+  if (!items.length) {
+    return '<div style="color:var(--text2);font-size:12px;">No matching profiles for this candidate rank.</div>';
+  }
+  var html = '';
+  items.forEach(function(item, idx){
+    var gaps = Array.isArray(item.gaps) ? item.gaps : [];
+    var gapText = gaps.length ? gaps.map(certLabelById).join(', ') : 'no gaps';
+    html += '<details '+(idx===0?'open':'')+' style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:9px 10px;margin-top:8px;">'
+          +   '<summary style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+          +     '<span style="font-weight:700;">'+escapeHtml(item.profile_name || item.profile_id || 'Profile')+'</span>'
+          +     '<span style="font-size:16px;font-weight:800;color:var(--accent);">'+escapeHtml(String(item.score_percent || 0))+'%</span>'
+          +   '</summary>'
+          +   '<div style="margin-top:8px;color:var(--text2);font-size:12px;">'
+          +     'Rank '+escapeHtml(item.profile_rank || 'Any')+' · '+escapeHtml(String(item.required_total || 0))+' required · '+escapeHtml(String(item.blockers || 0))+' blockers'
+          +   '</div>'
+          +   '<div style="margin-top:6px;font-size:12px;"><strong>Gap reasons:</strong> '+escapeHtml(gapText)+'</div>'
+          +   rankBucketHtml('covered', item.covered, 'none')
+          +   rankBucketHtml('missing', item.missing, 'none')
+          +   rankBucketHtml('expired', item.expired, 'none')
+          +   rankBucketHtml('uncertain', item.uncertain, 'none')
+          +   rankBucketHtml('no file', item.no_file, 'none')
+          + '</details>';
+  });
+  var ignored = state.complianceRankIgnoredByApp && state.complianceRankIgnoredByApp[applicationId];
+  html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">'
+       +    '<button onclick="event.stopPropagation();saveRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save to Seafarers DB</button>'
+       +    '<button class="ghost" onclick="event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;font-size:12px;">'+(ignored?'Ignored':'Ignore')+'</button>'
+       +  '</div>';
+  return html;
+}
+
+function renderProfileRankingPanel(a) {
+  var appId = a && a.id;
+  if (!appId) return '';
+  var row = state.complianceRankingsByApp && state.complianceRankingsByApp[appId];
+  var inner = '';
+  if (!row) {
+    inner = '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Rank this candidate against active profiles for the same rank.</div>'
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Check against profiles</button>';
+  } else if (row.status === 'loading') {
+    inner = '<div style="color:var(--text2);font-size:12px;">Checking profiles…</div>';
+  } else if (row.status === 'error') {
+    inner = '<div style="color:var(--err);font-size:12px;margin-bottom:8px;">'+escapeHtml(row.message || 'Check failed')+'</div>'
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" class="ghost" style="padding:5px 12px;font-size:12px;">Retry</button>';
+  } else {
+    inner = renderProfileRankingCards(row.result, appId);
+  }
+  return '<div id="profile-rank-'+escapeAttr(appId)+'" data-compliance-rank-panel="1" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">'
+       +   '<div style="font-weight:600;margin-bottom:6px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Profile ranking</div>'
+       +   inner
+       + '</div>';
+}
+
+function updateProfileRankingPanel(applicationId) {
+  var host = document.getElementById('profile-rank-'+applicationId);
+  if (!host) return;
+  var app = findApplicationById(applicationId) || {};
+  host.outerHTML = renderProfileRankingPanel(app);
+}
+
+async function checkApplicationAgainstProfiles(applicationId) {
+  var app = findApplicationById(applicationId);
+  if (!app) {
+    showToast('Candidate not loaded.', 'error');
+    return;
+  }
+  state.complianceRankingsByApp[applicationId] = { status: 'loading' };
+  updateProfileRankingPanel(applicationId);
+  try {
+    var result = await invoke('rank_compliance_candidate', {
+      args: {
+        applicationId: app.id,
+        vacancyId: app.vacancy_id || (state.selectedVacancy && state.selectedVacancy.id) || '',
+        candidateSummary: app.summary || {},
+      }
+    });
+    state.complianceRankingsByApp[applicationId] = { status: 'ready', result: result || { items: [] } };
+  } catch(e) {
+    state.complianceRankingsByApp[applicationId] = { status: 'error', message: ''+e };
+  }
+  updateProfileRankingPanel(applicationId);
+}
+
+async function saveRankedCandidate(applicationId) {
+  var data = window._bundleViewerData;
+  if (data && data.applicationId === applicationId && data.manifest) {
+    await saveCurrentBundleSeafarer();
+    return;
+  }
+  var app = findApplicationById(applicationId) || {};
+  var sUid = sUidOf(app) || '';
+  var att = latestAttachmentFromSender(applicationId, sUid);
+  if (!att) {
+    try {
+      var fresh = await invoke('fetch_attachments_for_application', { applicationId: applicationId, serverUrl: serverUrlArg() });
+      state.attachmentsByApp[applicationId] = fresh || [];
+      att = latestAttachmentFromSender(applicationId, sUid);
+    } catch(e) {}
+  }
+  if (att) {
+    showToast('Open the candidate document bundle, then save from the bundle viewer.', 'info');
+    await openLatestAttachmentFromSender(applicationId, sUid);
+    return;
+  }
+  showToast('Request or open the candidate document bundle before saving to Seafarers DB.', 'warn');
+  if (app.id && typeof toggleApplicationChat === 'function') {
+    try { await toggleApplicationChat(applicationId, sUid, true); } catch(e) {}
+  }
+}
+
+function ignoreRankedCandidate(applicationId) {
+  state.complianceRankIgnoredByApp[applicationId] = true;
+  saveComplianceReviewState();
+  updateProfileRankingPanel(applicationId);
+  showToast('Candidate ignored for this check.', 'info');
 }
 
 // Compose required cert ids using the cached matrix (mirrors the Slice B
