@@ -42,6 +42,17 @@
       "css_tokens": ["mt-mailings", "data-mview=\"mailings\""]
     },
     {
+      "id": "mail",
+      "name": "Mail",
+      "desktop_navigation": {
+        "route": "mail",
+        "nav_selector": "#mt-mail",
+        "route_driver": "showView"
+      },
+      "surface_markers": ["CREWING MAILBOX MODULE START", "Personal mailbox", "Connect mailbox"],
+      "css_tokens": ["mt-mail"]
+    },
+    {
       "id": "compliance",
       "name": "Compliance Profiles",
       "desktop_navigation": {
