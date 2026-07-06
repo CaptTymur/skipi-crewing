@@ -1,0 +1,233 @@
+// Manual Compliance Profile ranking flow smoke.
+//
+// Runs the real desktop inline script without boot, then drives:
+// candidate -> Check against profiles -> ranked cards -> details -> save/ignore controls.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, '..');
+const HTML = fs.readFileSync(path.join(ROOT, 'dist/index.html'), 'utf8');
+
+let pass = 0;
+let fail = 0;
+const ok = (cond, msg) => {
+  if (cond) {
+    pass++;
+    console.log('  ✓ ' + msg);
+  } else {
+    fail++;
+    console.error('  ✗ ' + msg);
+  }
+};
+
+function makeElement(id) {
+  let outer = '';
+  return {
+    id,
+    style: {},
+    dataset: {},
+    children: [],
+    classList: { toggle() {}, add() {}, remove() {}, contains() { return false; } },
+    appendChild(child) { this.children.push(child); return child; },
+    remove() {},
+    removeChild(child) { this.children = this.children.filter((x) => x !== child); },
+    querySelector() { return makeElement(id + '-query'); },
+    querySelectorAll() { return []; },
+    addEventListener() {},
+    setAttribute() {},
+    getAttribute() { return ''; },
+    textContent: '',
+    innerHTML: '',
+    value: '',
+    checked: false,
+    get outerHTML() { return outer || this.innerHTML; },
+    set outerHTML(v) { outer = String(v); this.innerHTML = String(v); },
+  };
+}
+
+const elements = new Map();
+function elFor(id) {
+  if (!elements.has(id)) elements.set(id, makeElement(id));
+  return elements.get(id);
+}
+
+const toasts = [];
+const store = new Map();
+store.set('skipi_crewing_demo', '1');
+globalThis.localStorage = {
+  getItem(k) { return store.has(k) ? store.get(k) : null; },
+  setItem(k, v) { store.set(k, String(v)); },
+  removeItem(k) { store.delete(k); },
+};
+globalThis.document = {
+  getElementById: (id) => elFor(id),
+  querySelector: () => makeElement('query'),
+  querySelectorAll: () => [],
+  createElement: (tag) => makeElement(tag),
+  addEventListener() {},
+  removeEventListener() {},
+  head: elFor('head'),
+  body: elFor('body'),
+  documentElement: { getAttribute: () => 'light', setAttribute() {} },
+};
+globalThis.window = globalThis;
+globalThis.__TAURI__ = {
+  core: {
+    invoke: async (cmd) => {
+      if (cmd === 'rank_compliance_candidate') {
+        return {
+          candidate_rank: 'Captain',
+          rank_source: 'summary',
+          items: [
+            {
+              profile_id: 'alpha',
+              profile_name: 'Captain · Client Alpha (Dry Bulk)',
+              profile_rank: 'Captain',
+              score_percent: 93,
+              required_total: 14,
+              blockers: 1,
+              covered: ['passport', 'sid'],
+              missing: ['brm'],
+              expired: [],
+              uncertain: [],
+              no_file: [],
+              gaps: ['brm'],
+            },
+            {
+              profile_id: 'beta',
+              profile_name: 'Captain · Client Beta (Product Tanker)',
+              profile_rank: 'Captain',
+              score_percent: 81,
+              required_total: 16,
+              blockers: 3,
+              covered: ['passport', 'sid'],
+              missing: ['brm', 'tanker_familiarization', 'advanced_tanker'],
+              expired: [],
+              uncertain: [],
+              no_file: [],
+              gaps: ['brm', 'tanker_familiarization', 'advanced_tanker'],
+            },
+          ],
+        };
+      }
+      if (cmd === 'fetch_messages') return [];
+      if (cmd === 'fetch_attachments_for_application') return [];
+      if (cmd === 'register_my_pubkey') return null;
+      if (cmd === 'list_saved_seafarers') return [];
+      return null;
+    },
+    convertFileSrc: (p) => `file://${p}`,
+  },
+};
+Object.defineProperty(globalThis, 'navigator', {
+  value: { userAgent: 'manual-flow-harness', onLine: true },
+  configurable: true,
+  writable: true,
+});
+globalThis.location = { hash: '#desktop', reload() {} };
+globalThis.setTimeout = (fn) => { if (typeof fn === 'function') fn(); return 1; };
+globalThis.setInterval = () => 1;
+globalThis.clearTimeout = () => {};
+globalThis.fetch = async () => ({ ok: false, status: 599, async json() { return {}; }, async text() { return ''; } });
+
+const script = [...HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+  .map((m) => m[1])
+  .reduce((a, b) => (a.length > b.length ? a : b), '');
+const bootIndex = script.indexOf('// ------------- boot -------------');
+const scriptNoBoot = bootIndex > 0 ? script.slice(0, bootIndex) : script;
+const banned = ['com' + 'pliant', 'approved', 'legal', 'verdict'];
+globalThis.__COMPLIANCE_FLOW_TOASTS = toasts;
+
+let M = null;
+try {
+  M = new Function(
+    scriptNoBoot
+      + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
+      + '\nshowToast = function(msg, kind){ globalThis.__COMPLIANCE_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
+      + '\nreturn { state, invoke, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate, saveCurrentBundleSeafarer };'
+  )();
+} catch (e) {
+  console.error('runtime load failed:', e);
+}
+
+ok(!!M, 'real desktop inline script loads without boot IIFE');
+
+if (M) {
+  M.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'presence-harness',
+  };
+  M.state.selectedVacancy = { id: 'v1', rank: 'Captain', vessel_type: 'Bulk Carrier' };
+  const app = {
+    id: 'app-1',
+    vacancy_id: 'v1',
+    received_at: '2026-07-06T08:00:00Z',
+    contact_for_reply: 'sf@example.com',
+    message: 'Ready',
+    status: 'new',
+    summary: {
+      redacted_initials: 'O.K.',
+      rank: 'Captain',
+      nationality: 'Ukraine',
+      certs_summary: [{ template_id: 'passport', has_file: true }],
+    },
+  };
+  M.state.applications = [app];
+  const initial = M.renderApplicationSnapshot(app, app.summary, 'sf');
+  ok(initial.includes('Check against profiles'), 'candidate snapshot exposes check button');
+  ok(initial.includes('profile-rank-app-1'), 'candidate snapshot includes ranking panel host');
+
+  const host = elFor('profile-rank-app-1');
+  host.innerHTML = initial;
+  await M.checkApplicationAgainstProfiles('app-1');
+  const rendered = host.outerHTML || host.innerHTML;
+  ok(rendered.includes('Captain · Client Alpha') && rendered.includes('93%'), 'ranked cards render top profile and score');
+  ok(rendered.includes('Gap reasons') && rendered.includes('brm'), 'ranked card renders gap reasons');
+  ok(rendered.includes('covered') && rendered.includes('missing') && rendered.includes('expired') && rendered.includes('uncertain') && rendered.includes('no file'), 'details render all required buckets');
+  ok(rendered.includes('Save to Seafarers DB') && rendered.includes('Ignore'), 'save and ignore controls render');
+  ok(!banned.some((word) => rendered.toLowerCase().includes(word)), 'manual ranking UI avoids banned wording');
+
+  const before = JSON.stringify(M.state.complianceRankingsByApp['app-1']);
+  M.ignoreRankedCandidate('app-1');
+  const after = JSON.stringify(M.state.complianceRankingsByApp['app-1']);
+  ok(before === after, 'ignore does not mutate ranking result');
+  const storedReviewState = JSON.parse(store.get('skipi_crewing_compliance_review_state_v1') || '{}');
+  ok(storedReviewState['app-1'] === true, 'ignore persists review state locally');
+  await M.saveRankedCandidate('app-1');
+  ok(toasts.some((t) => /document bundle/i.test(t.msg)), 'save without bundle guides operator instead of faking save');
+  const goldenApp = {
+    id: 'demo-a1',
+    vacancy_id: 'v1',
+    received_at: '2026-06-19T14:20:00Z',
+    contact_for_reply: 'master.candidate@example.com',
+    message: 'Documents ready.',
+    status: 'new',
+    seafarer_user_id: 'demo-sf1',
+    summary: {
+      name: 'Oleksandr K.',
+      rank: 'Captain',
+      nationality: 'Ukraine',
+      available_from: '2026-07-08',
+      certs_summary: [{ template_id: 'passport', has_file: true }],
+    },
+  };
+  M.state.applications = [goldenApp, app];
+  await M.checkApplicationAgainstProfiles('demo-a1');
+  await M.saveRankedCandidate('demo-a1');
+  ok(globalThis._bundleViewerData && globalThis._bundleViewerData.applicationId === 'demo-a1', 'golden candidate Save opens demo document bundle');
+  await M.saveCurrentBundleSeafarer();
+  ok(M.state.seafarers.some((s) => s.id === 'demo-sf1' && s.display_name === 'Oleksandr K.'), 'golden candidate Save completes into Seafarers DB');
+  const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
+  ok(Array.isArray(savedDocs) && savedDocs.length === 6, 'golden candidate saved documents are visible in Seafarers DB');
+  ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden candidate Save reports success');
+}
+
+if (fail) {
+  console.error(`\ncrewing_compliance_manual_flow_harness: RED (${pass} passed, ${fail} failed)`);
+  process.exit(1);
+}
+console.log(`\ncrewing_compliance_manual_flow_harness: GREEN (${pass} passed, ${fail} failed)`);
