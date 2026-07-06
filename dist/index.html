@@ -1943,6 +1943,26 @@ var state = {
   buildSha: 'unknown',
 };
 
+var COMPLIANCE_REVIEW_STATE_KEY = 'skipi_crewing_compliance_review_state_v1';
+
+function loadComplianceReviewState() {
+  try {
+    var raw = localStorage.getItem(COMPLIANCE_REVIEW_STATE_KEY);
+    var parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function saveComplianceReviewState() {
+  try {
+    localStorage.setItem(COMPLIANCE_REVIEW_STATE_KEY, JSON.stringify(state.complianceRankIgnoredByApp || {}));
+  } catch(e) {}
+}
+
+state.complianceRankIgnoredByApp = loadComplianceReviewState();
+
 function buildShortSha(){
   return state.buildSha && state.buildSha !== 'unknown' ? state.buildSha.slice(0, 7) : '';
 }
@@ -6005,11 +6025,23 @@ async function saveRankedCandidate(applicationId) {
     await saveCurrentBundleSeafarer();
     return;
   }
-  showToast('Open the candidate document bundle before saving to Seafarers DB.', 'warn');
+  var app = findApplicationById(applicationId) || {};
+  var sUid = sUidOf(app) || '';
+  var att = latestAttachmentFromSender(applicationId, sUid);
+  if (att) {
+    showToast('Open the candidate document bundle, then save from the bundle viewer.', 'info');
+    await openLatestAttachmentFromSender(applicationId, sUid);
+    return;
+  }
+  showToast('Request or open the candidate document bundle before saving to Seafarers DB.', 'warn');
+  if (app.id && typeof toggleApplicationChat === 'function') {
+    try { await toggleApplicationChat(applicationId, sUid, true); } catch(e) {}
+  }
 }
 
 function ignoreRankedCandidate(applicationId) {
   state.complianceRankIgnoredByApp[applicationId] = true;
+  saveComplianceReviewState();
   updateProfileRankingPanel(applicationId);
   showToast('Candidate ignored for this check.', 'info');
 }

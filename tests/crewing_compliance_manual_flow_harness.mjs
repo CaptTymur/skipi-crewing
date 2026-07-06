@@ -55,10 +55,12 @@ function elFor(id) {
 }
 
 const toasts = [];
+const store = new Map();
+let saveCalls = 0;
 globalThis.localStorage = {
-  getItem() { return null; },
-  setItem() {},
-  removeItem() {},
+  getItem(k) { return store.has(k) ? store.get(k) : null; },
+  setItem(k, v) { store.set(k, String(v)); },
+  removeItem(k) { store.delete(k); },
 };
 globalThis.document = {
   getElementById: (id) => elFor(id),
@@ -111,6 +113,14 @@ globalThis.__TAURI__ = {
           ],
         };
       }
+      if (cmd === 'fetch_messages') return [];
+      if (cmd === 'fetch_attachments_for_application') return [];
+      if (cmd === 'register_my_pubkey') return null;
+      if (cmd === 'save_seafarer_from_bundle') {
+        saveCalls++;
+        return { id: 'saved-sf-1', display_name: 'Oleksandr K.', source_application_id: 'app-1' };
+      }
+      if (cmd === 'list_saved_seafarers') return [];
       return null;
     },
     convertFileSrc: (p) => `file://${p}`,
@@ -133,11 +143,14 @@ const script = [...HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)]
 const bootIndex = script.indexOf('// ------------- boot -------------');
 const scriptNoBoot = bootIndex > 0 ? script.slice(0, bootIndex) : script;
 const banned = ['com' + 'pliant', 'approved', 'legal', 'verdict'];
+globalThis.__COMPLIANCE_FLOW_TOASTS = toasts;
 
 let M = null;
 try {
   M = new Function(
-    scriptNoBoot + '\nreturn { state, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate };'
+    scriptNoBoot
+      + '\nshowToast = function(msg, kind){ globalThis.__COMPLIANCE_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
+      + '\nreturn { state, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate };'
   )();
 } catch (e) {
   console.error('runtime load failed:', e);
@@ -185,8 +198,18 @@ if (M) {
   M.ignoreRankedCandidate('app-1');
   const after = JSON.stringify(M.state.complianceRankingsByApp['app-1']);
   ok(before === after, 'ignore does not mutate ranking result');
+  const storedReviewState = JSON.parse(store.get('skipi_crewing_compliance_review_state_v1') || '{}');
+  ok(storedReviewState['app-1'] === true, 'ignore persists review state locally');
   await M.saveRankedCandidate('app-1');
-  ok(true, 'save control is callable without scoring mutation');
+  ok(toasts.some((t) => /document bundle/i.test(t.msg)), 'save without bundle guides operator instead of faking save');
+  globalThis._bundleViewerData = {
+    applicationId: 'app-1',
+    counterpartId: 'sf',
+    manifest: { documents: [] },
+    extractedTo: '/tmp/skipi-demo-bundle',
+  };
+  await M.saveRankedCandidate('app-1');
+  ok(saveCalls === 1, 'save with opened bundle reuses save_seafarer_from_bundle');
 }
 
 if (fail) {
