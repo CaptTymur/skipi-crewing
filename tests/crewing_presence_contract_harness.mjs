@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
-const REQUIRED_FLOOR = ['vacancies', 'mailings', 'compliance', 'team', 'seafarers', 'documents', 'apps', 'settings'];
+const REQUIRED_FLOOR = ['vacancies', 'mailings', 'mail', 'compliance', 'team', 'seafarers', 'documents', 'apps', 'settings'];
 const GLOBAL_CSS_TOKENS = ['.mod-tab', '.modules-bar', '.mobile-nav-btn', '.mobile-bottom-nav', '.mobile-module-rail'];
 const ALLOWED_HIDING_SCOPES = ['body.launching', 'body.mobile-shell'];
 

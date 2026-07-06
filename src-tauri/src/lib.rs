@@ -1463,6 +1463,140 @@ fn rank_compliance_candidate(
     )
 }
 
+#[tauri::command]
+fn get_mailbox_status(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::get_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/mailbox",
+        15,
+    )
+}
+
+#[tauri::command]
+fn save_mailbox_config(
+    payload: serde_json::Value,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::put_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/mailbox",
+        &payload,
+        20,
+    )
+}
+
+#[tauri::command]
+fn test_mailbox(
+    payload: serde_json::Value,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::post_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/mailbox/test",
+        &payload,
+        30,
+    )
+}
+
+#[tauri::command]
+fn disconnect_mailbox(state: tauri::State<AppState>) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::delete_empty_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/mailbox",
+        15,
+    )
+}
+
+#[tauri::command]
+fn fetch_mail_messages(
+    folder: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let folder = folder
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("INBOX");
+    let path = format!("/api/mail/messages?folder={}&limit=100", urlenc(folder));
+    api::get_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        20,
+    )
+}
+
+#[tauri::command]
+fn fetch_mail_message(
+    message_id: String,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let path = format!("/api/mail/messages/{}", urlenc(&message_id));
+    api::get_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
+}
+
+#[tauri::command]
+fn poll_mail(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::post_empty_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/poll",
+        60,
+    )
+}
+
+#[tauri::command]
+fn send_mail(
+    payload: serde_json::Value,
+    state: tauri::State<AppState>,
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    api::post_json_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        "/api/mail/send",
+        &payload,
+        30,
+    )
+}
+
+#[tauri::command]
+fn delete_mail_message(message_id: String, state: tauri::State<AppState>) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap().clone();
+    require_api_settings(&settings)?;
+    let path = format!("/api/mail/messages/{}", urlenc(&message_id));
+    api::delete_empty_primary(
+        Some(&settings.server_url),
+        Some(&settings.bearer_token),
+        &path,
+        15,
+    )
+}
+
 // ---------- Documents module ----------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2066,6 +2200,15 @@ pub fn run() {
             delete_mailing_request_remote,
             fetch_applications_for_vacancy,
             rank_compliance_candidate,
+            get_mailbox_status,
+            save_mailbox_config,
+            test_mailbox,
+            disconnect_mailbox,
+            fetch_mail_messages,
+            fetch_mail_message,
+            poll_mail,
+            send_mail,
+            delete_mail_message,
             add_document,
             list_documents,
             open_document,
