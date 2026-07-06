@@ -143,7 +143,6 @@ jobs:
               esac
             done
           fi
-          echo "resolved SKIPI_GUARD_TASK=$GUARD_TASK"
           if [[ "${#GUARD_CHANGED_FILES[@]}" -eq 1 && "${GUARD_CHANGED_FILES[0]}" == ".github/workflows/skipi-guard.yml" ]]; then
             OVERRIDE_ARGS=(--override-protected skipi-guard-workflow-bootstrap)
           fi
@@ -184,8 +183,10 @@ jobs:
             done
           fi
           if [[ "$presence_modification_approved" -eq 1 ]]; then
+            GUARD_TASK="release"
             OVERRIDE_ARGS=(--override-protected crewing-presence-modification-approved)
           fi
+          echo "resolved SKIPI_GUARD_TASK=$GUARD_TASK"
           .skipi-guard/bin/skipi-guard verify \
             --home "$SKIPI_GUARD_HOME" \
             --task "$GUARD_TASK" \
