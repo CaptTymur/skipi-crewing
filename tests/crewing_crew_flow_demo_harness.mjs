@@ -48,6 +48,8 @@ ok(track1Block.includes('Local Compliance Profiles'), 'Track 1 match target is l
 ok(track1Block.includes('AI extraction is decision support only'), 'Track 1 states AI is decision support');
 ok(track1Block.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 states source-of-truth boundary');
 ok(track1Block.includes('rank_compliance_candidate'), 'Track 1 summary names existing rank_compliance_candidate source');
+ok(track1Block.includes('track1-recommended-action') && track1Block.includes('Recommended:'), 'Track 1 renders recommended action in match summary');
+ok(track1Block.includes('track1-action-state') && track1Block.includes('crewFlowReadInfo'), 'Track 1 action state reflects Crew Flow read-state');
 ok(track1Block.includes('track1CandidateAction') && track1Block.includes('crewFlowAddSignal'), 'Track 1 Add action reuses existing Crew Flow add path');
 ok(!track1Block.includes("invoke('save_seafarer_from_bundle'"), 'Track 1 action block does not call save command directly');
 ok(!track1Block.includes('fetch(') && !track1Block.includes('ANTHROPIC') && !track1Block.includes('CLAUDE_API_KEY') && !track1Block.includes('IMAP'), 'Track 1 slice has no network/Cloud/IMAP plumbing');
@@ -308,7 +310,9 @@ if (M) {
   ok(mainHtml.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 source-of-truth note renders');
   ok(mainHtml.includes('Local Compliance Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local profile match summary renders 93/81/72');
   ok(mainHtml.includes('covered') && mainHtml.includes('missing') && mainHtml.includes('expired') && mainHtml.includes('uncertain') && mainHtml.includes('no_file') && mainHtml.includes('gaps:'), 'Track 1 match summary renders coverage buckets');
+  ok(mainHtml.includes('data-qa="track1-recommended-action"') && mainHtml.includes('Recommended:') && mainHtml.includes('save to Seafarers DB') && mainHtml.includes('request missing documents'), 'Track 1 match summary renders recommended save + request-docs action');
   ok(mainHtml.includes('data-qa="track1-action-add"') && mainHtml.includes('data-qa="track1-action-request_docs"') && mainHtml.includes('data-qa="track1-action-match"') && mainHtml.includes('data-qa="track1-action-keep"'), 'Track 1 renders live manager action buttons');
+  ok(mainHtml.includes('data-qa="track1-action-state"') && mainHtml.includes('waiting for manager action'), 'Track 1 initial action state is visible');
   ok(!mainHtml.includes('Generic profile') && !mainHtml.includes('career-track'), 'Track 1 does not mix generic profile labels into local match');
   ok(initialRead.length === 2 && initialUnread.length === 2, 'fixture start state is mixed: 2 read, 2 unread');
   ok(initialUnread.includes('cf-demo-mail-cv-oleksandr') && initialUnread.includes('cf-demo-mail-followup-ivan'), 'golden and documents-needed signals start unread');
@@ -322,6 +326,7 @@ if (M) {
   let persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
   ok(persistedTrack1['cf-demo-mail-cv-oleksandr'] && persistedTrack1['cf-demo-mail-cv-oleksandr'].action === 'requested_missing_documents', 'Track 1 Request missing documents persists demo marker');
   ok(toasts.some((t) => /Missing document request queued/i.test(t.msg)), 'Track 1 Request missing documents reports queued action');
+  ok(elFor('main').innerHTML.includes('missing documents requested in demo state'), 'Track 1 Request missing documents updates visible action state');
 
   await M.track1CandidateAction('match', 'cf-demo-mail-cv-oleksandr');
   persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
@@ -343,6 +348,7 @@ if (M) {
   const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
   ok(Array.isArray(savedDocs) && savedDocs.length > 0, 'golden Add saved documents via existing bundle flow');
   ok(savedDocs.some((d) => d.seafarer_id === 'demo-sf1' && d.file_path), 'Track 1 Add reaches save_seafarer_from_bundle observable document output');
+  ok(elFor('main').innerHTML.includes('saved to Seafarers DB for demo-sf1'), 'Track 1 Add updates visible saved action state');
   ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden Add reports Save-to-DB success');
 
   await M.crewFlowAddSignal('cf-demo-mail-followup-ivan');
