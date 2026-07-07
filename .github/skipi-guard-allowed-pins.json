@@ -1,0 +1,26 @@
+{
+  "schema": "skipi.guard.allowed-pins.v1",
+  "home": "crewing",
+  "policy": {
+    "require_full_40_hex_sha": true,
+    "workflow_pin_must_be_listed": true,
+    "listed_pin_still_must_pass_config_superset": true
+  },
+  "pins": [
+    {
+      "sha": "46ebbdeada596d939fef01a042513fea0fec7a5c",
+      "label": "guard-hardening-A-B-C",
+      "approved_at": "2026-07-07",
+      "approved_by": "Tymur / curator-reviewed",
+      "guard_prs": ["CaptTymur/skipi-guard#17", "CaptTymur/skipi-guard#18", "CaptTymur/skipi-guard#19"],
+      "reason": "Activates additive plugin-host checks, full config anti-downgrade, and path normalization."
+    }
+  ],
+  "revoked": [
+    {
+      "sha": "f503e5f6c18810151ce3f259b2b8443ba8ab4033",
+      "reason": "Alpha guard without crew_flow harness in harness_commands.",
+      "recorded_at": "2026-07-07"
+    }
+  ]
+}
