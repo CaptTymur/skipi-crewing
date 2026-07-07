@@ -299,6 +299,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   border-radius: 12px; padding: 13px 15px; background: var(--accent-bg); }
 .settings-boundary strong { display: block; margin-bottom: 4px; font-size: 13px; }
 .settings-boundary p { margin: 0; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
+.settings-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin: 10px 0 14px; }
+.settings-preview-card { border: 1px solid var(--border); border-radius: 12px; padding: 13px 14px; background: var(--panel); min-width: 0; }
+.settings-preview-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
+.settings-preview-card span { display: block; color: var(--text2); font-size: 11.5px; line-height: 1.42; }
+.settings-static-toggle { width: 34px; height: 20px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); position: relative; display: inline-block; vertical-align: middle; }
+.settings-static-toggle:after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text2); }
+.settings-static-toggle.on { background: var(--accent-bg); border-color: var(--accent); }
+.settings-static-toggle.on:after { left: 17px; background: var(--accent); }
+@media (max-width: 760px) { .settings-preview-grid { grid-template-columns: 1fr; } }
 .settings-section .section-title { margin: 22px 0 8px; color: var(--text2); font-size: 12px; line-height: 1.2; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
 .settings-group { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel); margin-bottom: 14px; }
 .settings-group .setting-row { background: var(--panel); }
@@ -8791,11 +8800,25 @@ function renderSettingsFiveShell() {
   var grp = function(rows, qa){ return '<div class="settings-group"'+(qa?' data-qa="'+qa+'"':'')+'>'+rows+'</div>'; };
   var sectionTitle = function(t){ return '<div class="section-title">'+escapeHtml(t)+'</div>'; };
   var nestedTitle = function(t, qa){ return '<div class="section-title"'+(qa?' data-qa="'+qa+'"':'')+'>'+escapeHtml(t)+'</div>'; };
+  var staticSwitch = function(on){ return '<span class="settings-static-toggle'+(on?' on':'')+'" aria-hidden="true"></span>'; };
+  var previewCard = function(title, desc, qa){
+    return '<div class="settings-preview-card"'+(qa?' data-qa="'+qa+'"':'')+'><strong>'+escapeHtml(title)+'</strong><span>'+escapeHtml(desc)+'</span></div>';
+  };
+  var previewGrid = function(cards, qa){
+    return '<div class="settings-preview-grid"'+(qa?' data-qa="'+qa+'"':'')+'>'+cards.join('')+'</div>';
+  };
+  var previewNote = function(text){
+    return '<div class="settings-boundary" data-qa="settings.v11.preview-note"><strong>v1.1 preview inside shell</strong><p>'+escapeHtml(text)+'</p></div>';
+  };
   var body = '';
 
   if (section === 'modules') {
     body = '<div class="settings-section" data-qa="settings5-shell settings.modules.body">'
       + mainHeader('Modules / Apps', 'Built-in and community modules live here. Module internals stay inside the module.', 'Top-level', 'settings.modules.header')
+      + previewGrid([
+          previewCard('Built-in modules', 'Apps, Mail source, VSL DB source and AI Assistant entry are shown as configuration surfaces only.', 'settings.modules.builtin'),
+          previewCard('Community modules', 'Community source is visible as a disabled preview until catalog policy is accepted.', 'settings.modules.community')
+        ], 'settings.modules.v11-preview')
       + sectionTitle('Installed modules')
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Apps launcher</div><div class="setting-desc">Open installed first-party modules and plugin details. Runtime and sandbox are unchanged.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'apps\');">Open Apps</button></div></div>'
@@ -8805,13 +8828,20 @@ function renderSettingsFiveShell() {
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Mail source</div><div class="setting-desc">Mailbox connect/test/save/disconnect stays inside the Mail module.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openMailboxSettings()">Mailbox settings</button></div></div>'
         + settingRow('Email для ответов', 'Источник ответов моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">VSL DB source</div><div class="setting-desc">Source, permissions and local cache policy for the vessel database module. Demo-only until the module is accepted.</div></div><div class="setting-control"><span data-qa="settings.modules.sources.vsl">'+staticSwitch(false)+' source not linked</span></div></div>'
+        + settingRow('Module source', 'Built-in / Community source selection lives under Modules, not as a separate top-level page.', selectCtrl('settings-mod-source', 'built-in', [['built-in','Built-in'],['community','Community (preview)', true]]))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Built-in / Community sources</div><div class="setting-desc">Source labels are part of the module catalog model; no marketplace workflow is implemented here.</div></div><div class="setting-control"><span class="apps-badge installed">preview</span></div></div>'
         )
+      + previewNote('Modules preview is nested inside the five-section shell. No module runtime, pairing flow or plugin internals are changed.')
       + '<div class="settings-boundary"><strong>Work content stays out of Settings.</strong><p>Crew Flow, vacancies, mailings and candidates remain home modules, not settings pages.</p></div>'
       + '</div>';
   } else if (section === 'identity') {
     body = '<div class="settings-section" data-qa="settings5-shell settings.identity.body">'
       + mainHeader('Identity / Access', 'Current organization/access controls are preserved. Future login/RBAC/Trust Score are placeholders only.', connected ? 'Connected' : 'Not connected', 'settings.identity.header')
+      + previewGrid([
+          previewCard('Person → Company → Vessel', 'Human identity administers company identity; company identity can administer vessel identity.', 'settings.identity.graph'),
+          previewCard('Trust Score', 'Reputation graph over real identity interactions. It is not a profile-check result and no score is computed here.', 'settings.identity.trust')
+        ], 'settings.identity.v11-preview')
       + sectionTitle('Organization identity')
       + grp(
           settingRow('Название организации', 'Отображается в рабочем пространстве Crewing. На сервер не отправляется автоматически.', inputCtrl('s-company', s.company_name, 'text', 'например, Marlow Crewing Ltd', '240px'))
@@ -8842,7 +8872,9 @@ function renderSettingsFiveShell() {
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Login model</div><div class="setting-desc">Open decision: email/password/token/passkey. Not implemented in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">RBAC hierarchy</div><div class="setting-desc">Person → Company → Vessel relationship model. Read-only preview text only.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trust Score</div><div class="setting-desc">Future reputation graph. No scoring is computed here.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Identity privacy</div><div class="setting-desc">Public profile sharing is opt-in. Private keys stay on this device.</div></div><div class="setting-control"><span data-qa="settings.identity.privacy.v11">'+staticSwitch(true)+' zero-knowledge boundary</span></div></div>'
         )
+      + previewNote('Identity v1.1 content is read-only inside the accepted shell. Login, RBAC and Trust Score are not implemented here.')
       + '</div>';
   } else if (section === 'storage') {
     var current = s.vault_path || '(по умолчанию — ~/.local/share/skipi-crewing)';
@@ -8859,11 +8891,16 @@ function renderSettingsFiveShell() {
     }
     body = '<div class="settings-section" data-qa="settings5-shell settings.storage.body">'
       + mainHeader('Storage / Vault', 'Local vault, backups and device synchronization. Local-first by default.', 'Top-level', 'settings.storage.header')
+      + previewGrid([
+          previewCard('Local vault', 'The vault is local-first. Sync does not own local storage.', 'settings.storage.local-vault'),
+          previewCard('E2E sync', 'Encrypted sync between your own devices is shown as a preview state only.', 'settings.storage.e2e-preview')
+        ], 'settings.storage.v11-preview')
       + sectionTitle('Local vault')
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Текущая рабочая папка</div><div class="setting-desc" style="font-family:monospace;font-size:11px;word-break:break-all;">'+escapeHtml(current)+'</div></div><div class="setting-control"></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Создать именованную папку</div><div class="setting-desc">Выберите родительскую папку — Skipi Crewing создаст внутри <code>'+escapeHtml(suggested)+'</code>.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="createNamedCrewingVault()">Создать…</button></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Открыть существующую папку</div><div class="setting-desc">Выберите уже созданную папку данных. Изменение применится при следующем запуске.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openVaultPickerInline()">Открыть…</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Export backup</div><div class="setting-desc">Create a local backup file from this vault. Disabled until export flow is accepted.</div></div><div class="setting-control"><button type="button" class="ghost" disabled style="padding:5px 12px;font-size:12px;">Export preview</button></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сбросить к стандартной</div><div class="setting-desc">Использовать стандартную папку данных пользователя.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\'\')">Сбросить</button></div></div>'
         )
       + recentHtml
@@ -8874,7 +8911,8 @@ function renderSettingsFiveShell() {
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте принятый token/QR shell.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openConnectDialog({context:\'device\'})">Подключить…</button></div></div>'
         )
       + nestedTitle('Privacy / sharing', 'settings.storage.privacy')
-      + grp('<div class="setting-row"><div class="setting-info"><div class="setting-label">Opt-in sharing</div><div class="setting-desc">Data stays local unless a server workflow explicitly syncs or shares it. No new sharing behavior in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">local-first</span></div></div>')
+      + grp('<div class="setting-row"><div class="setting-info"><div class="setting-label">Opt-in sharing</div><div class="setting-desc">Data stays local unless a server workflow explicitly syncs or shares it. No new sharing behavior in this slice.</div></div><div class="setting-control"><span data-qa="settings.storage.privacy.detail">'+staticSwitch(true)+' local-first</span></div></div>')
+      + previewNote('Storage v1.1 content stays within Storage / Vault. It does not add sharing behavior or change pairing.')
       + '<div class="settings-boundary"><strong>Pairing-flow boundary</strong><p>QR/token display and revocation wait for backend pairing API + native camera. This shell only relocates existing controls.</p></div>'
       + '</div>';
   } else if (section === 'appearance') {
@@ -8884,7 +8922,9 @@ function renderSettingsFiveShell() {
       + grp(
           settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'light', [['light','Light'],['dark','Dark']]))
         + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Readability</div><div class="setting-desc">Reserved for font size and contrast controls after Tymur validation.</div></div><div class="setting-control"><span data-qa="settings.appearance.readability">'+staticSwitch(false)+' later</span></div></div>'
         )
+      + previewNote('Theme remains visible for validation. Diagnostics and About stay in the footer, not as a sixth section.')
       + '</div>';
   } else if (section === 'paid') {
     body = '<div class="settings-section" data-qa="settings5-shell settings.paid.body">'
@@ -8893,8 +8933,10 @@ function renderSettingsFiveShell() {
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">AI Assistant module</div><div class="setting-desc">Decision support module status. Team chat content stays outside Settings.</div></div><div class="setting-control"><span class="apps-badge installed">available</span></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trial / token</div><div class="setting-desc">Uses the existing trial-token command. Product semantics are open until Tymur separates access trial vs AI entitlement.</div></div><div class="setting-control"><button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 12px;font-size:12px;">Start trial</button></div></div>'
+        + settingRow('Preview token', 'Token or trial status will be connected after Tymur accepts the paid-service product model.', inputCtrl('settings-paid-token-preview', '', 'text', 'preview token', '220px'))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Entitlement</div><div class="setting-desc">Billing and paid module status are placeholders in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
         )
+      + previewNote('Paid Service remains top-level. Do not demote it into Modules without a separate Tymur decision.')
       + '</div>';
   }
 
@@ -10335,12 +10377,15 @@ function mobileSettingsFiveModulesHtml() {
   return mobileSettingsHead('Modules / Apps', 'Installed modules, sources and Mail live here. Work content stays in home modules.')
     + '<div class="mobile-card" data-qa="settings.modules.root">'
     + '<div class="mobile-section-title" style="margin-top:0;">Installed modules</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Built-in modules</strong>Apps, Mail source, VSL DB source and AI Assistant entry are shown as configuration surfaces only.</div><span class="mobile-status">preview</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Community modules</strong>Community source is disabled until catalog policy is accepted.</div><span class="mobile-status warn">later</span></div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Apps launcher</strong>Open Apps to manage installed modules and plugin details.</div><button class="mobile-secondary" onclick="mobileShow(\'apps\')">Open Apps</button></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Plugin internals</strong>Settings owned by plugins stay inside those plugins.</div><span class="mobile-status">module-owned</span></div>'
     + '</div>'
     + '<div class="mobile-card" data-qa="settings.modules.sources">'
     + '<div class="mobile-section-title" style="margin-top:0;">Sources / Connections</div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Mail source</strong>Mailbox IMAP settings stay inside Mail.</div><button class="mobile-secondary" onclick="openMailboxSettings()">Mailbox settings</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">VSL DB source</strong>Source, permissions and local cache policy are demo-only until the module is accepted.</div><span class="mobile-status warn">not linked</span></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
     + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
     + '</div>'
@@ -10367,6 +10412,7 @@ function mobileSettingsFiveIdentityHtml() {
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Login model</strong>Email/password/token/passkey is an open decision.</div><span class="mobile-status warn">placeholder</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">RBAC hierarchy</strong>Person → Company → Vessel structure is not implemented in this slice.</div><span class="mobile-status warn">placeholder</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Trust Score</strong>Future reputation graph. No score is computed here.</div><span class="mobile-status warn">placeholder</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Identity privacy</strong>Public profile sharing is opt-in. Private keys stay on this device.</div><span class="mobile-status">private</span></div>'
     + '</div>';
 }
 
@@ -10380,6 +10426,7 @@ function mobileSettingsFiveStorageHtml() {
     + '<div class="mobile-section-title" style="margin-top:0;">Local vault</div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Current folder</strong>'+escapeHtml(s.vault_path || '(default local vault)')+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Local-first</strong>Data stays local unless a server workflow explicitly syncs or shares it.</div><span class="mobile-status">local</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Export backup</strong>Create a local backup file from this vault. Disabled until export flow is accepted.</div><span class="mobile-status warn">preview</span></div>'
     + '</div>'
     + '<div class="mobile-card" data-qa="settings.storage.sync">'
     + '<div class="mobile-section-title" style="margin-top:0;">Synchronization</div>'
@@ -10408,7 +10455,9 @@ function mobileSettingsFiveAppearanceHtml() {
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
     + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('language'))+'</label><select onchange="mobileSetLanguage(this.value)">'+opts+'</select></div></div>'
-    + '</div>';
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Readability</strong>Reserved for font size and contrast controls after Tymur validation.</div><span class="mobile-status warn">later</span></div>'
+    + '</div>'
+    + '<div class="ios-boundary" data-qa="settings.about.mobile"><strong>Diagnostics / About</strong><span class="ios-sub">Version, support and diagnostics stay nested in the footer area, not as top-level Settings sections.</span></div>';
 }
 
 function mobileSettingsFivePaidHtml() {
@@ -10417,6 +10466,7 @@ function mobileSettingsFivePaidHtml() {
     + '<div class="mobile-section-title" style="margin-top:0;">AI Assistant</div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">AI Assistant module</strong>Decision-support module status only. Team chat content stays outside Settings.</div><span class="mobile-status">available</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Trial / token</strong>Uses existing trial-token command; product entitlement semantics remain open.</div><button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Preview token</strong>Token status will be connected after Tymur accepts the paid-service product model.</div><span class="mobile-status warn">preview</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Entitlement</strong>Placeholder for paid status.</div><span class="mobile-status warn">placeholder</span></div>'
     + '</div>';
 }
