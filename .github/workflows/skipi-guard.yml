@@ -22,6 +22,7 @@ jobs:
           repository: CaptTymur/skipi-guard
           ref: 46ebbdeada596d939fef01a042513fea0fec7a5c
           path: .skipi-guard
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
