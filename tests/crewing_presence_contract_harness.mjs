@@ -195,6 +195,22 @@ globalThis.__TAURI__ = {
   core: {
     invoke: async (cmd) => {
       if (cmd === 'get_settings') return {};
+      if (cmd === 'save_settings') return 'ok';
+      if (cmd === 'sync_crewing_profile') return 'synced';
+      if (cmd === 'activate_crewing_token') return {
+        crewing_id: 'presence-harness',
+        organization_id: 'org-presence',
+        display_name: 'Presence Harness Crewing',
+        scopes: ['applications:read'],
+        expires_at: '2026-12-31T00:00:00Z',
+      };
+      if (cmd === 'issue_crewing_trial_token') return {
+        token: 'TRIAL-TOKEN',
+        crewing_id: 'trial-crewing',
+        organization_id: 'trial-org',
+        scopes: ['applications:read'],
+        expires_at: '2026-08-07T00:00:00Z',
+      };
       if (cmd === 'fetch_my_vacancies') return [];
       if (cmd === 'fetch_my_mailing_requests') return [];
       if (cmd === 'fetch_compliance_profiles') return [];
@@ -225,8 +241,14 @@ const exportsNeeded = [
   'state',
   'showView',
   'openSettings',
+  'closeSettings',
+  'saveSettings',
   'mobileShow',
+  'mobileOpenSettings',
   'mobileOpenSettingsHome',
+  'mobileSaveConnection',
+  'mobileSetTheme',
+  'mobileSetLanguage',
 ];
 let M = null;
 try {
@@ -237,6 +259,22 @@ try {
   )(
     async (cmd) => {
       if (cmd === 'get_settings') return {};
+      if (cmd === 'save_settings') return 'ok';
+      if (cmd === 'sync_crewing_profile') return 'synced';
+      if (cmd === 'activate_crewing_token') return {
+        crewing_id: 'presence-harness',
+        organization_id: 'org-presence',
+        display_name: 'Presence Harness Crewing',
+        scopes: ['applications:read'],
+        expires_at: '2026-12-31T00:00:00Z',
+      };
+      if (cmd === 'issue_crewing_trial_token') return {
+        token: 'TRIAL-TOKEN',
+        crewing_id: 'trial-crewing',
+        organization_id: 'trial-org',
+        scopes: ['applications:read'],
+        expires_at: '2026-08-07T00:00:00Z',
+      };
       if (cmd === 'fetch_my_vacancies') return [];
       if (cmd === 'fetch_my_mailing_requests') return [];
       if (cmd === 'fetch_compliance_profiles') return [];
@@ -283,6 +321,139 @@ if (M) {
       }
       ok(!err, m.name + ': mobile route runs without throwing' + (err ? ' — ' + err : ''));
     }
+  }
+}
+
+section('settings 5-section shell anti-regression');
+if (M) {
+  M.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'presence-harness',
+    organization_id: 'org-presence',
+    company_name: 'Presence Harness Crewing',
+    reply_to: 'hr@example.test',
+    vault_path: '/tmp/skipi-crewing-vault',
+    recent_vaults: ['/tmp/skipi-crewing-old-vault'],
+    token_scopes: ['team:read', 'team:write'],
+    token_expires_at: '2026-12-31T00:00:00Z',
+    profile: {
+      legal_name: 'Presence Harness LLC',
+      jurisdiction: 'GE',
+      registration_number: 'REG-123',
+      mlc_cert_number: 'MLC-123',
+      mlc_cert_valid_to: '2027-01-01',
+      contact_email: 'contact@example.test',
+      contact_phone: '+995 555',
+      slug: 'presence-harness',
+      public_description: 'Harness profile',
+    },
+    interface: { theme: 'light', language: 'en' },
+  };
+
+  store.delete('skipi_crewing_settings5');
+  await M.openSettings();
+  const legacyDesktop = elFor('modal-host').innerHTML;
+  ok(!legacyDesktop.includes('settings5-shell'), 'flag-off desktop keeps legacy settings renderer');
+  ['Организация', 'Данные организации', 'Вакансии / Рассылки', 'Сопряжённые устройства', 'Доступ / токены', 'Приложение'].forEach((label) => {
+    ok(legacyDesktop.includes(label), 'flag-off legacy desktop settings still includes ' + label);
+  });
+  M.mobileOpenSettingsHome();
+  const legacyMobileList = elFor('mobile-main').innerHTML;
+  ok(legacyMobileList.includes('Вакансии / Рассылки'), 'flag-off mobile keeps legacy work settings page');
+
+  store.set('skipi_crewing_settings5', '1');
+  await M.openSettings('modules');
+  const fiveDesktop = elFor('modal-host').innerHTML;
+  ok(fiveDesktop.includes('data-qa="settings5-shell"'), 'flag-on desktop renders settings5 shell');
+  const topLevelRootMatches = fiveDesktop.match(/data-qa="settings\.(modules|identity|storage|appearance|paid)\.root"/g) || [];
+  ok(topLevelRootMatches.length === 5, 'flag-on desktop exposes exactly five top-level settings sections');
+  ['Modules / Apps', 'Identity / Access', 'Storage / Vault', 'Appearance / Language', 'Paid Service'].forEach((label) => {
+    ok(fiveDesktop.includes(label), 'flag-on desktop top-level label present: ' + label);
+  });
+  ok(fiveDesktop.includes('data-qa="settings.modules.sources"'), 'Sources is nested under Modules / Apps');
+  ok(fiveDesktop.includes('data-qa="settings.about.footer"'), 'Diagnostics/About is a footer, not top-level');
+  ok(!fiveDesktop.includes('settings.sources.root') && !fiveDesktop.includes('settings.privacy.root') && !fiveDesktop.includes('settings.diagnostics.root'), 'Sources/Privacy/Diagnostics are not top-level QA roots');
+  ok(!fiveDesktop.includes('Вакансии / Рассылки'), 'flag-on desktop shell does not carry legacy work-content tab');
+
+  const desktopSections = {
+    modules: {
+      ids: ['s-reply'],
+      tokens: ['openMailboxSettings', "showView('apps')", 'settings.modules.sources'],
+    },
+    identity: {
+      ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc', 's-url', 's-token', 's-crewing-id'],
+      tokens: ['activateCompanyToken', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+    },
+    storage: {
+      ids: [],
+      tokens: ['createNamedCrewingVault', 'openVaultPickerInline', "switchToVault('')", 'forgetVault', "openConnectDialog({context:'device'})", 'settings.storage.sync'],
+    },
+    appearance: {
+      ids: ['i-theme', 'i-lang'],
+      tokens: ['Appearance / Language'],
+    },
+    paid: {
+      ids: [],
+      tokens: ['startTrialAccess', 'Paid Service', 'AI Assistant'],
+    },
+  };
+  for (const [sectionId, spec] of Object.entries(desktopSections)) {
+    await M.openSettings(sectionId);
+    const html = elFor('modal-host').innerHTML;
+    for (const id of spec.ids) ok(html.includes('id="' + id + '"'), 'settings5 desktop ' + sectionId + ' mounts #' + id);
+    for (const token of spec.tokens) ok(html.includes(token), 'settings5 desktop ' + sectionId + ' contains ' + token);
+    ok(html.includes('data-qa="app-build-sha"'), 'settings5 desktop ' + sectionId + ' keeps app-build-sha in footer');
+    ok(html.includes('checkForUpdatesManual') && html.includes("openFeedbackDialog('about')"), 'settings5 desktop ' + sectionId + ' keeps About actions in footer');
+  }
+
+  let saveErr = null;
+  try {
+    await M.openSettings('identity');
+    await M.saveSettings();
+  } catch (e) {
+    saveErr = e;
+  }
+  ok(!saveErr, 'settings5 desktop saveSettings path does not throw' + (saveErr ? ' — ' + saveErr : ''));
+
+  M.mobileOpenSettingsHome();
+  const fiveMobileList = elFor('mobile-main').innerHTML;
+  ['Modules / Apps', 'Identity / Access', 'Storage / Vault', 'Appearance / Language', 'Paid Service'].forEach((label) => {
+    ok(fiveMobileList.includes(label), 'flag-on mobile top-level label present: ' + label);
+  });
+  ok(fiveMobileList.includes('data-qa="settings.about.footer"'), 'flag-on mobile nests Diagnostics/About footer');
+  ok(!fiveMobileList.includes('Вакансии / Рассылки'), 'flag-on mobile shell does not carry legacy work-content row');
+
+  const mobileSections = {
+    modules: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'],
+    identity: ['id="m-company"', 'id="m-server-url"', 'id="m-token"', 'id="m-crewing-id"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+    storage: ["openConnectDialog({context:'device'})", 'settings.storage.sync'],
+    appearance: ['mobileSetTheme', 'mobileSetLanguage'],
+    paid: ['mobileStartTrialAccess', 'Paid Service'],
+  };
+  for (const [sectionId, tokens] of Object.entries(mobileSections)) {
+    M.mobileOpenSettings(sectionId);
+    const html = elFor('mobile-main').innerHTML;
+    for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
+  }
+
+  elFor('m-server-url').value = 'https://api.skipi.app';
+  elFor('m-token').value = 'TOKEN-DO-NOT-LEAK';
+  elFor('m-crewing-id').value = 'presence-harness';
+  elFor('m-company').value = 'Presence Harness Crewing';
+  let mobileSaveErr = null;
+  try {
+    M.mobileOpenSettings('identity');
+    await M.mobileSaveConnection(false);
+    await M.mobileSetTheme('dark');
+    await M.mobileSetLanguage('en');
+  } catch (e) {
+    mobileSaveErr = e;
+  }
+  ok(!mobileSaveErr, 'settings5 mobile save/theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
+
+  for (const id of ['vacancies', 'mailings']) {
+    ok(modIds.includes(id), 'work module remains protected in presence manifest after settings extraction: ' + id);
   }
 }
 

@@ -634,7 +634,7 @@ body.mobile-shell .ios-detail-title { font-size: 22px; margin: 2px 0 4px; }
 body.mobile-shell .ios-detail-desc { color: var(--text2); font-size: 13px; line-height: 1.45; margin: 0 2px 8px; }
 body.mobile-shell .ios-boundary { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; background: var(--accent-bg); margin-top: 14px; }
 body.mobile-shell .ios-boundary strong { display:block; margin-bottom:4px; font-size:14px; }
-body.mobile-shell .ios-boundary .ios-sub { color: var(--text2); font-size: 12.5px; line-height: 1.45; }
+body.mobile-shell .ios-boundary .ios-sub { display:block; color: var(--text2); font-size: 12.5px; line-height: 1.45; }
 /* Apps / plugin host (bundled first-party). Works in desktop #main and mobile #mobile-main. */
 .apps-wrap { padding: 16px; max-width: 960px; }
 .apps-head h2 { margin: 0 0 4px; font-size: 20px; }
@@ -8527,8 +8527,25 @@ function parseFloatOrNull(id){ var v=val(id); return v===''?null:parseFloat(v); 
 //   org → Организация · data → Данные организации · work → Вакансии / Рассылки
 //   devices → Сопряжённые устройства · access → Доступ / токены · app → Приложение
 var settingsTab = 'org';
+var SETTINGS5_FLAG_KEY = 'skipi_crewing_settings5';
+function settingsFiveShellEnabled(){
+  try { return localStorage.getItem(SETTINGS5_FLAG_KEY) === '1'; } catch(e) { return false; }
+}
+function settingsFiveSection(t){
+  var m = {
+    org:'identity', profile:'identity', access:'identity', connection:'identity', work_role:'identity',
+    data:'storage', vaults:'storage', vault:'storage', devices:'storage',
+    app:'appearance', appearance:'appearance', interface:'appearance', language:'appearance',
+    work:'modules', sources:'modules', mail:'modules', apps:'modules',
+    trial:'paid', paid:'paid', ai:'paid',
+    about:'appearance', diagnostics:'appearance'
+  };
+  var v = m[t] || t || 'identity';
+  return ['modules','identity','storage','appearance','paid'].indexOf(v) !== -1 ? v : 'identity';
+}
 // Map legacy tab ids (used by other call sites) onto the canonical IA.
 function mapSettingsTab(t){
+  if (settingsFiveShellEnabled()) return settingsFiveSection(t);
   var m = { connection:'access', profile:'org', vaults:'data', vault:'data',
             appearance:'app', about:'app', interface:'app', language:'app' };
   return m[t] || t;
@@ -8582,6 +8599,7 @@ function selectCtrl(id, value, options) {
 }
 
 function renderSettingsModal() {
+  if (settingsFiveShellEnabled()) return renderSettingsFiveShell();
   var s = state.settings || {};
   var p = s.profile || {};
   var iface = s.interface || {};
@@ -8741,6 +8759,167 @@ function renderSettingsModal() {
 
   document.getElementById('modal-host').innerHTML = html;
 
+}
+
+function renderSettingsFiveShell() {
+  var s = state.settings || {};
+  var p = s.profile || {};
+  var iface = s.interface || {};
+  var section = settingsFiveSection(settingsTab);
+  settingsTab = section;
+  var connected = !!(s.bearer_token || s.crewing_id);
+  var active = function(id){ return section === id ? ' active' : ''; };
+  var navItem = function(id, badge, label, sub, qa) {
+    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+      + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span>'
+      + '</div>';
+  };
+  var nav =
+    '<div class="settings-nav-header"><h2>Настройки</h2>'
+    + '<p>5 разделов Skipi. Старые настройки доступны при снятии preview-флага.</p></div>'
+    + navItem('modules', 'M', 'Modules / Apps', 'Модули, источники, Apps', 'settings.modules.root')
+    + navItem('identity', 'I', 'Identity / Access', 'Организация, доступ, будущий ID', 'settings.identity.root')
+    + navItem('storage', 'S', 'Storage / Vault', 'Локальный vault и синхронизация', 'settings.storage.root')
+    + navItem('appearance', 'A', 'Appearance / Language', 'Язык и тема', 'settings.appearance.root')
+    + navItem('paid', 'P', 'Paid Service', 'AI Assistant, trial/token', 'settings.paid.root');
+
+  var mainHeader = function(title, desc, pill, qa){
+    return '<div class="settings-main-header" data-qa="'+qa+'"><div><h3>'+escapeHtml(title)+'</h3>'
+      + (desc ? '<div class="section-desc">'+desc+'</div>' : '')
+      + '</div>' + (pill ? '<span class="settings-status-pill">'+escapeHtml(pill)+'</span>' : '') + '</div>';
+  };
+  var grp = function(rows, qa){ return '<div class="settings-group"'+(qa?' data-qa="'+qa+'"':'')+'>'+rows+'</div>'; };
+  var sectionTitle = function(t){ return '<div class="section-title">'+escapeHtml(t)+'</div>'; };
+  var nestedTitle = function(t, qa){ return '<div class="section-title"'+(qa?' data-qa="'+qa+'"':'')+'>'+escapeHtml(t)+'</div>'; };
+  var body = '';
+
+  if (section === 'modules') {
+    body = '<div class="settings-section" data-qa="settings5-shell settings.modules.body">'
+      + mainHeader('Modules / Apps', 'Built-in and community modules live here. Module internals stay inside the module.', 'Top-level', 'settings.modules.header')
+      + sectionTitle('Installed modules')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Apps launcher</div><div class="setting-desc">Open installed first-party modules and plugin details. Runtime and sandbox are unchanged.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'apps\');">Open Apps</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Module permissions</div><div class="setting-desc">Permissions are shown in each plugin detail. Generic plugin settings stay with the plugin.</div></div><div class="setting-control"><span class="apps-badge installed">module-owned</span></div></div>'
+        )
+      + nestedTitle('Sources / Connections', 'settings.modules.sources')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Mail source</div><div class="setting-desc">Mailbox connect/test/save/disconnect stays inside the Mail module.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openMailboxSettings()">Mailbox settings</button></div></div>'
+        + settingRow('Email для ответов', 'Источник ответов моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Built-in / Community sources</div><div class="setting-desc">Source labels are part of the module catalog model; no marketplace workflow is implemented here.</div></div><div class="setting-control"><span class="apps-badge installed">preview</span></div></div>'
+        )
+      + '<div class="settings-boundary"><strong>Work content stays out of Settings.</strong><p>Crew Flow, vacancies, mailings and candidates remain home modules, not settings pages.</p></div>'
+      + '</div>';
+  } else if (section === 'identity') {
+    body = '<div class="settings-section" data-qa="settings5-shell settings.identity.body">'
+      + mainHeader('Identity / Access', 'Current organization/access controls are preserved. Future login/RBAC/Trust Score are placeholders only.', connected ? 'Connected' : 'Not connected', 'settings.identity.header')
+      + sectionTitle('Organization identity')
+      + grp(
+          settingRow('Название организации', 'Отображается в рабочем пространстве Crewing. На сервер не отправляется автоматически.', inputCtrl('s-company', s.company_name, 'text', 'например, Marlow Crewing Ltd', '240px'))
+        + settingRow('Контактный email', 'Для переписки по верификации и связи с организацией.', inputCtrl('p-email', p.contact_email, 'text', 'hr@company.com', '240px'))
+        + settingRow('Контактный телефон', 'Необязательно. Используется на профилях после company_verified.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+        )
+      + sectionTitle('Verification profile')
+      + grp(
+          settingRow('Юридическое название', 'Полное зарегистрированное название организации.', inputCtrl('p-legal', p.legal_name, 'text', 'Marlow Navigation Co. Ltd', '240px'))
+        + settingRow('Юрисдикция', 'Код страны ISO 3166 регистрации организации.', inputCtrl('p-jur', p.jurisdiction, 'text', 'CY / GR / GE...', '120px'))
+        + settingRow('Регистрационный номер', 'Номер компании в реестре.', inputCtrl('p-reg', p.registration_number, 'text', 'HE 12345', '240px'))
+        + settingRow('Номер MLC-сертификата', 'Идентификатор сертификата Maritime Labour Convention.', inputCtrl('p-mlc', p.mlc_cert_number, 'text', 'MLC-CY-2025-0042', '240px'))
+        + settingRow('MLC действует до', 'Дата окончания MLC-сертификата.', inputCtrl('p-mlc-to', p.mlc_cert_valid_to, 'date', '', '160px'))
+        + settingRow('Публичный slug', 'URL-безопасный идентификатор публичного профиля организации.', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
+        + settingRow('Публичное описание', 'Показывается морякам в вакансиях после company_verified.', textareaCtrl('p-public-desc', p.public_description, 'Короткий профиль: лицензия, типы судов, география, процесс найма', '320px', 5))
+        )
+      + sectionTitle('Connection')
+      + grp(
+          settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
+        + settingRow('Токен компании', 'Текущий access token Crewing. Это не финальная login-модель.', '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+          + inputCtrl('s-token', s.bearer_token, 'password', 'Вставьте токен компании', '220px')
+          + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button></div>')
+        + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Token scopes</div><div class="setting-desc">Read-only current token metadata.</div></div><div class="setting-control"><code>'+escapeHtml((s.token_scopes||[]).join(', ') || '—')+'</code></div></div>'
+        )
+      + nestedTitle('Privacy / Security', 'settings.identity.privacy')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Login model</div><div class="setting-desc">Open decision: email/password/token/passkey. Not implemented in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">RBAC hierarchy</div><div class="setting-desc">Person → Company → Vessel relationship model. Read-only preview text only.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trust Score</div><div class="setting-desc">Future reputation graph. No scoring is computed here.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
+        )
+      + '</div>';
+  } else if (section === 'storage') {
+    var current = s.vault_path || '(по умолчанию — ~/.local/share/skipi-crewing)';
+    var recent = (s.recent_vaults || []).filter(function(v){return v && v !== s.vault_path;});
+    var suggested = suggestedCrewingVaultName();
+    var recentHtml = '';
+    if (recent.length) {
+      recentHtml = sectionTitle('Recent vaults')
+        + grp(recent.map(function(pp){
+            return '<div class="setting-row"><div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(pp)+'</div></div>'
+              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Switch</button>'
+              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Remove from list">Forget</button></div></div>';
+          }).join(''));
+    }
+    body = '<div class="settings-section" data-qa="settings5-shell settings.storage.body">'
+      + mainHeader('Storage / Vault', 'Local vault, backups and device synchronization. Local-first by default.', 'Top-level', 'settings.storage.header')
+      + sectionTitle('Local vault')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Текущая рабочая папка</div><div class="setting-desc" style="font-family:monospace;font-size:11px;word-break:break-all;">'+escapeHtml(current)+'</div></div><div class="setting-control"></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Создать именованную папку</div><div class="setting-desc">Выберите родительскую папку — Skipi Crewing создаст внутри <code>'+escapeHtml(suggested)+'</code>.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="createNamedCrewingVault()">Создать…</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Открыть существующую папку</div><div class="setting-desc">Выберите уже созданную папку данных. Изменение применится при следующем запуске.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openVaultPickerInline()">Открыть…</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сбросить к стандартной</div><div class="setting-desc">Использовать стандартную папку данных пользователя.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\'\')">Сбросить</button></div></div>'
+        )
+      + recentHtml
+      + nestedTitle('Synchronization', 'settings.storage.sync')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Это устройство</div><div class="setting-desc">'+escapeHtml(platformLabel())+' · Skipi Crewing '+escapeHtml(appVersionLabel() || '')+(connected?' · подключено':' · не подключено')+'</div></div><div class="setting-control"><span class="apps-badge installed">current</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Другие устройства</div><div class="setting-desc">Других сопряжённых устройств пока нет.</div></div><div class="setting-control"></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте принятый token/QR shell.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openConnectDialog({context:\'device\'})">Подключить…</button></div></div>'
+        )
+      + nestedTitle('Privacy / sharing', 'settings.storage.privacy')
+      + grp('<div class="setting-row"><div class="setting-info"><div class="setting-label">Opt-in sharing</div><div class="setting-desc">Data stays local unless a server workflow explicitly syncs or shares it. No new sharing behavior in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">local-first</span></div></div>')
+      + '<div class="settings-boundary"><strong>Pairing-flow boundary</strong><p>QR/token display and revocation wait for backend pairing API + native camera. This shell only relocates existing controls.</p></div>'
+      + '</div>';
+  } else if (section === 'appearance') {
+    body = '<div class="settings-section" data-qa="settings5-shell settings.appearance.body">'
+      + mainHeader('Appearance / Language', 'Language and theme only. Diagnostics stay in the footer.', (iface.theme==='dark'?'Dark':'Light'), 'settings.appearance.header')
+      + sectionTitle('Interface')
+      + grp(
+          settingRow(tr('settings.theme'), tr('settings.theme_desc'), selectCtrl('i-theme', iface.theme||'light', [['light','Light'],['dark','Dark']]))
+        + settingRow(tr('settings.language'), tr('settings.language_desc'), languageSettingsSelectHtml())
+        )
+      + '</div>';
+  } else if (section === 'paid') {
+    body = '<div class="settings-section" data-qa="settings5-shell settings.paid.body">'
+      + mainHeader('Paid Service', 'AI Assistant and paid/trial entitlement live here. This slice does not implement billing.', 'Top-level', 'settings.paid.header')
+      + sectionTitle('AI Assistant')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">AI Assistant module</div><div class="setting-desc">Decision support module status. Team chat content stays outside Settings.</div></div><div class="setting-control"><span class="apps-badge installed">available</span></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trial / token</div><div class="setting-desc">Uses the existing trial-token command. Product semantics are open until Tymur separates access trial vs AI entitlement.</div></div><div class="setting-control"><button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 12px;font-size:12px;">Start trial</button></div></div>'
+        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Entitlement</div><div class="setting-desc">Billing and paid module status are placeholders in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
+        )
+      + '</div>';
+  }
+
+  var aboutFooter = '<div class="settings-group" data-qa="settings.about.footer">'
+    + '<div class="section-title" data-qa="settings.about.diagnostics">Diagnostics / About</div>'
+    + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Version</div></div><div class="setting-control"><code data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</code></div></div>'
+    + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check updates</div><div class="setting-desc">Manual update checks stay in About, not as a top-level section.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="checkForUpdatesManual()">Check</button></div></div>'
+    + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Feedback</div><div class="setting-desc">Send feedback to Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
+    + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Maintainer</div></div><div class="setting-control">Tymur Rudov</div></div>'
+    + '<div class="setting-row"><div class="setting-info"><div class="setting-label">License</div></div><div class="setting-control">Proprietary</div></div>'
+    + '</div>';
+
+  var html =
+    '<div class="settings-overlay" onclick="if(event.target===this)closeSettings()">'
+    + '<div class="settings-modal" data-qa="settings5-shell">'
+    + '<div class="settings-close" onclick="closeSettings()" title="Close">×</div>'
+    + '<div class="settings-nav">'+nav+'</div>'
+    + '<div class="settings-body" style="padding-bottom:64px;">'+body+aboutFooter+'</div>'
+    + '<div class="settings-actions-bar">'
+    + '<button class="ghost" onclick="closeSettings()">Cancel</button>'
+    + '<button onclick="saveSettings()">Save</button>'
+    + '</div>'
+    + '</div></div>';
+
+  document.getElementById('modal-host').innerHTML = html;
 }
 
 async function pickVaultFolder() {
@@ -9976,6 +10155,7 @@ function mobileRenderConnection() {
 // accepted honest shell (token connect real; QR scan + paired list/revoke stay
 // shell-only) and the connection form keeps the real token-activation handlers.
 function mobileSettingsSections() {
+  if (settingsFiveShellEnabled()) return mobileSettingsSectionsFive();
   var s = state.settings || {};
   var connected = mobileHasConnection();
   return [
@@ -9992,11 +10172,29 @@ function mobileSettingsSections() {
   ];
 }
 
+function mobileSettingsSectionsFive() {
+  var s = state.settings || {};
+  var connected = mobileHasConnection();
+  return [
+    { group: 'SETTINGS', items: [
+      { id:'modules',    badge:'M', title:'Modules / Apps',          sub:'Installed modules, sources and Mail.',       value:'Apps' },
+      { id:'identity',   badge:'I', title:'Identity / Access',       sub:'Organization, token and future identity.',   value: connected?'Connected':'Not connected' },
+      { id:'storage',    badge:'S', title:'Storage / Vault',         sub:'Local vault and device synchronization.',    value:'Local' },
+      { id:'appearance', badge:'A', title:'Appearance / Language',   sub:'Theme and language.',                       value: (((s.interface&&s.interface.theme)||'light')==='dark'?'Dark':'Light') },
+      { id:'paid',       badge:'P', title:'Paid Service',            sub:'AI Assistant, trial/token, entitlement.',    value:'AI' },
+    ]},
+  ];
+}
+
 function mobileSettingsValidPage(p){
+  if (settingsFiveShellEnabled()) {
+    if (!p || p === 'list') return null;
+    return settingsFiveSection(p);
+  }
   return ['org','data','work','devices','access','app'].indexOf(p) !== -1 ? p : null;
 }
 function mobileOpenSettingsHome(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
-function mobileOpenSettings(id){ mobileState.settingsPage = id; mobileShow('settings'); }
+function mobileOpenSettings(id){ mobileState.settingsPage = settingsFiveShellEnabled() ? settingsFiveSection(id) : id; mobileShow('settings'); }
 function mobileBackToSettingsList(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
 
 function mobileRenderSettingsList() {
@@ -10014,9 +10212,16 @@ function mobileRenderSettingsList() {
     });
     html += '</div>';
   });
-  html += '<div class="ios-sec">Граница</div>'
-    + '<div class="ios-boundary"><strong>Pairing-flow отдельно</strong>'
-    + '<span class="ios-sub">Launch → Токен/QR → Сопряжённые устройства — уже принятый shell. Этот экран меняет только структуру и стиль настроек.</span></div>';
+  if (settingsFiveShellEnabled()) {
+    html += '<div class="ios-sec">Footer</div>'
+      + '<div class="ios-boundary" data-qa="settings.about.footer"><strong data-qa="settings.about.diagnostics">Diagnostics / About</strong>'
+      + '<span class="ios-sub">Version, updates and feedback live here, not top-level.</span>'
+      + '<div style="margin-top:8px;"><span data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</span></div></div>';
+  } else {
+    html += '<div class="ios-sec">Граница</div>'
+      + '<div class="ios-boundary"><strong>Pairing-flow отдельно</strong>'
+      + '<span class="ios-sub">Launch → Токен/QR → Сопряжённые устройства — уже принятый shell. Этот экран меняет только структуру и стиль настроек.</span></div>';
+  }
   mobileMain(html);
 }
 
@@ -10125,6 +10330,97 @@ function mobileSettingsAppHtml() {
     + '</div>';
 }
 
+function mobileSettingsFiveModulesHtml() {
+  var s = state.settings || {};
+  return mobileSettingsHead('Modules / Apps', 'Installed modules, sources and Mail live here. Work content stays in home modules.')
+    + '<div class="mobile-card" data-qa="settings.modules.root">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Installed modules</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Apps launcher</strong>Open Apps to manage installed modules and plugin details.</div><button class="mobile-secondary" onclick="mobileShow(\'apps\')">Open Apps</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Plugin internals</strong>Settings owned by plugins stay inside those plugins.</div><span class="mobile-status">module-owned</span></div>'
+    + '</div>'
+    + '<div class="mobile-card" data-qa="settings.modules.sources">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Sources / Connections</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Mail source</strong>Mailbox IMAP settings stay inside Mail.</div><button class="mobile-secondary" onclick="openMailboxSettings()">Mailbox settings</button></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
+    + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
+    + '</div>'
+    + '<div class="ios-boundary"><strong>No work content</strong><span class="ios-sub">Candidate queues and mailing work are not settings pages.</span></div>';
+}
+
+function mobileSettingsFiveIdentityHtml() {
+  var s = state.settings || {};
+  var role = mobileWorkRole();
+  return mobileSettingsHead('Identity / Access', 'Current organization and token controls. Future login/RBAC/Trust are placeholders only.')
+    + '<div class="mobile-card" data-qa="settings.identity.root">'
+    + (mobileHasConnection()
+      ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
+      : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="'+escapeAttr(mobileTr('company_placeholder'))+'"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" value="'+escapeAttr(s.server_url || 'https://api-ru.skipi.app')+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr(s.bearer_token || '')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" value="'+escapeAttr(s.crewing_id || '')+'" placeholder="'+escapeAttr(mobileTr('crewing_id_placeholder'))+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button><button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button></div>'
+    + '</div>'
+    + '<div class="mobile-card" data-qa="settings.identity.privacy">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Privacy / Security</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Login model</strong>Email/password/token/passkey is an open decision.</div><span class="mobile-status warn">placeholder</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">RBAC hierarchy</strong>Person → Company → Vessel structure is not implemented in this slice.</div><span class="mobile-status warn">placeholder</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Trust Score</strong>Future reputation graph. No score is computed here.</div><span class="mobile-status warn">placeholder</span></div>'
+    + '</div>';
+}
+
+function mobileSettingsFiveStorageHtml() {
+  var s = state.settings || {};
+  var ver = appVersionLabel() || '';
+  var plat = platformLabel();
+  var connected = mobileHasConnection();
+  return mobileSettingsHead('Storage / Vault', 'Local-first vault and device synchronization.')
+    + '<div class="mobile-card" data-qa="settings.storage.root">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Local vault</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Current folder</strong>'+escapeHtml(s.vault_path || '(default local vault)')+'</div></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Local-first</strong>Data stays local unless a server workflow explicitly syncs or shares it.</div><span class="mobile-status">local</span></div>'
+    + '</div>'
+    + '<div class="mobile-card" data-qa="settings.storage.sync">'
+    + '<div class="mobile-section-title" style="margin-top:0;">Synchronization</div>'
+    + '<div class="paired-device-row"><div class="pd-main"><div class="pd-name">Это устройство</div>'
+    + '<div class="pd-meta">'+escapeHtml(plat)+(ver?' · Skipi Crewing '+escapeHtml(ver):'')+(connected?' · подключено':' · не подключено')+'</div></div>'
+    + '<span class="pd-badge">текущее</span></div>'
+    + '<div class="paired-empty">Других сопряжённых устройств пока нет.</div>'
+    + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:12px;">'
+    + '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
+    + '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
+    + '</div>'
+    + '<div class="paired-soon">QR/token display and access revocation wait for backend pairing API + native camera.</div>'
+    + '</div>';
+}
+
+function mobileSettingsFiveAppearanceHtml() {
+  var s = state.settings || {};
+  var theme = ((s.interface && s.interface.theme) || 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
+  var cur = getUiLang();
+  var opts = UI_LANG_OPTIONS.map(function(o){
+    return '<option value="'+escapeAttr(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+escapeHtml(o[1])+'</option>';
+  }).join('');
+  return mobileSettingsHead('Appearance / Language', 'Theme and language only.')
+    + '<div class="mobile-card" data-qa="settings.appearance.root">'
+    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('appearance'))+'</div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('theme'))+'</strong>'+escapeHtml(mobileTr('theme_desc'))+'</div>'
+    + '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+escapeHtml(mobileTr('light'))+'</button><button class="'+(theme==='dark'?'active':'')+'" onclick="mobileSetTheme(\'dark\')">'+escapeHtml(mobileTr('dark'))+'</button></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('language'))+'</label><select onchange="mobileSetLanguage(this.value)">'+opts+'</select></div></div>'
+    + '</div>';
+}
+
+function mobileSettingsFivePaidHtml() {
+  return mobileSettingsHead('Paid Service', 'AI Assistant and paid/trial entitlement. Billing is not implemented here.')
+    + '<div class="mobile-card" data-qa="settings.paid.root">'
+    + '<div class="mobile-section-title" style="margin-top:0;">AI Assistant</div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">AI Assistant module</strong>Decision-support module status only. Team chat content stays outside Settings.</div><span class="mobile-status">available</span></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Trial / token</strong>Uses existing trial-token command; product entitlement semantics remain open.</div><button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button></div>'
+    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Entitlement</strong>Placeholder for paid status.</div><span class="mobile-status warn">placeholder</span></div>'
+    + '</div>';
+}
+
 // Language change on mobile. We intentionally do NOT call setUiLang(): that
 // helper also re-opens the DESKTOP settings modal (renderSettingsModal) which,
 // living in #modal-host (a top-level node not hidden by .mobile-shell), would
@@ -10142,13 +10438,21 @@ async function mobileSetLanguage(lang) {
   try { await invoke('save_settings', { newSettings: next }); } catch (e) {}
   state.settings = next;
   document.documentElement.lang = lang;
-  mobileState.settingsPage = 'app';
+  mobileState.settingsPage = settingsFiveShellEnabled() ? 'appearance' : 'app';
   mobileShow('settings');
 }
 
 function mobileRenderSettings() {
   var page = mobileSettingsValidPage(mobileState.settingsPage);
   if (!page) return mobileRenderSettingsList();
+  if (settingsFiveShellEnabled()) {
+    if (page === 'modules')    return mobileMain(mobileSettingsFiveModulesHtml());
+    if (page === 'identity')   return mobileMain(mobileSettingsFiveIdentityHtml());
+    if (page === 'storage')    return mobileMain(mobileSettingsFiveStorageHtml());
+    if (page === 'appearance') return mobileMain(mobileSettingsFiveAppearanceHtml());
+    if (page === 'paid')       return mobileMain(mobileSettingsFivePaidHtml());
+    return mobileRenderSettingsList();
+  }
   if (page === 'org')     return mobileMain(mobileSettingsOrgHtml());
   if (page === 'data')    return mobileMain(mobileSettingsDataHtml());
   if (page === 'work')    return mobileMain(mobileSettingsWorkHtml());
