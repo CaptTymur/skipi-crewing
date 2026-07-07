@@ -4911,14 +4911,50 @@ function track1MatchSummaryHtml(row) {
 }
 
 function track1ActionPlacesHtml() {
-  var actions = ['Add to Seafarers DB', 'Request missing documents', 'Match to vacancy/client profile', 'Ignore', 'Keep for later'];
+  var actions = [
+    { id:'add', label:'Add to Seafarers DB', primary:true },
+    { id:'request_docs', label:'Request missing documents' },
+    { id:'match', label:'Match to vacancy/client profile' },
+    { id:'ignore', label:'Ignore' },
+    { id:'keep', label:'Keep for later' }
+  ];
   return '<div class="card" data-qa="track1-action-places" style="margin:0;padding:12px;">'
     + '<label>Manager actions</label>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
-    + actions.map(function(a){ return '<span class="badge">'+escapeHtml(a)+'</span>'; }).join('')
+    + actions.map(function(a){
+      return '<button data-qa="track1-action-'+escapeAttr(a.id)+'" onclick="event.stopPropagation();track1CandidateAction(\''+escapeAttr(a.id)+'\', \'cf-demo-mail-cv-oleksandr\')"'
+        + ' style="padding:5px 9px;border:1px solid var(--border);border-radius:999px;cursor:pointer;font-size:11px;'
+        + (a.primary ? 'background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;' : 'background:var(--panel2);color:var(--text);')
+        + '">'+escapeHtml(a.label)+'</button>';
+    }).join('')
     + '</div>'
-    + '<div class="sub" style="margin-top:7px;">Action wiring stays on the existing Crew Flow controls in this slice; expanded action handling is the next slice.</div>'
+    + '<div class="sub" style="margin-top:7px;">Demo actions write local review state; Add reuses the existing bundle save path for the golden candidate.</div>'
     + '</div>';
+}
+
+async function track1CandidateAction(action, signalId) {
+  var id = signalId || 'cf-demo-mail-cv-oleksandr';
+  var row = crewFlowFindSignal(id);
+  if (!track1CandidateIntakeEnabled(row)) return;
+  if (action === 'add') {
+    await crewFlowAddSignal(id);
+    return;
+  }
+  if (action === 'ignore') {
+    crewFlowIgnoreSignal(id);
+    return;
+  }
+  var markers = {
+    request_docs: { action:'requested_missing_documents', toast:'Missing document request queued in demo state.' },
+    match: { action:'matched_to_vacancy_profile', toast:'Candidate matched to the vacancy/client profile in demo state.' },
+    keep: { action:'kept_for_later', toast:'Candidate kept for later in demo state.' }
+  };
+  var m = markers[action];
+  if (!m) return;
+  crewFlowMarkRead(id, m.action, { demo_action: action });
+  showToast(m.toast, 'success');
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
 }
 
 function track1CandidateIntakePanelHtml(row) {
