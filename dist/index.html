@@ -4815,6 +4815,129 @@ function crewFlowTrustHtml(row) {
   return '<span class="badge">Trust '+escapeHtml(String(pct))+'% · '+escapeHtml(t.label || 'demo-seeded')+'</span>';
 }
 
+// TRACK 1 CANDIDATE INTAKE DEMO START
+function track1CandidateIntakeEnabled(row) {
+  return !!(__demoMode && row && row.id === 'cf-demo-mail-cv-oleksandr');
+}
+
+function track1MailMessageForSignal(row) {
+  if (!track1CandidateIntakeEnabled(row)) return null;
+  if (typeof DEMO_READS !== 'undefined' && DEMO_READS && typeof DEMO_READS.fetch_mail_message === 'function') {
+    try { return DEMO_READS.fetch_mail_message({ messageId: row.mail_message_id || 'demo-mail-1' }); }
+    catch(e) { return null; }
+  }
+  return null;
+}
+
+function track1DocumentFactsForSignal(row) {
+  var docs = (typeof DEMO !== 'undefined' && DEMO && DEMO.goldenBundleManifest && Array.isArray(DEMO.goldenBundleManifest.documents))
+    ? DEMO.goldenBundleManifest.documents : [];
+  return docs.map(function(d){
+    return {
+      title: d.title || d.file_name || d.template_id || 'Document',
+      template_id: d.template_id || '',
+      valid_to: d.valid_to || '',
+      has_file: d.has_file !== false
+    };
+  });
+}
+
+function track1SourceEvidenceHtml(row, msg) {
+  msg = msg || {};
+  var attachment = ((msg.attachments || [])[0] || {}).filename || ((msg.attachments || [])[0] || {}).name || 'oleksandr-k-cv.pdf';
+  var date = msg.date_received || row.received_at || '';
+  return '<div class="card" data-qa="track1-source-evidence" style="margin:0;padding:12px;border-left:3px solid var(--accent);">'
+    + '<label>Source evidence</label>'
+    + '<div style="font-weight:700;margin-top:3px;">Email CV · Mail</div>'
+    + '<div class="sub">'+escapeHtml(attachment)+' · '+escapeHtml(date || 'received date pending')+'</div>'
+    + '<div style="font-size:12px;color:var(--text2);margin-top:7px;">This signal keeps raw mail and attachment metadata as evidence while the operator reviews the extracted structure.</div>'
+    + '</div>';
+}
+
+function track1ExtractedProfileHtml(row, enrichment) {
+  enrichment = enrichment || {};
+  var p = enrichment.extracted_profile || row.candidate || {};
+  var certs = Array.isArray(p.certs_summary) ? p.certs_summary : [];
+  var docs = track1DocumentFactsForSignal(row);
+  var expiryRows = docs.slice(0, 6).map(function(d){
+    var label = d.template_id ? certLabelById(d.template_id) : d.title;
+    return '<span class="badge">'+escapeHtml(label)+' · '+escapeHtml(d.valid_to ? ('valid to '+d.valid_to) : 'expiry not set')+'</span>';
+  }).join('');
+  return '<div class="card" data-qa="track1-extracted-profile" style="margin:0;padding:12px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">'
+    +   '<div><label>Structured profile / vault draft</label>'
+    +   '<h2 style="font-size:17px;margin:4px 0 4px;">'+escapeHtml(p.display_name || row.candidate && row.candidate.name || 'Candidate')+' · '+escapeHtml(p.rank || row.candidate && row.candidate.rank || 'Rank pending')+'</h2>'
+    +   '<div class="sub">'+escapeHtml([p.nationality || row.candidate && row.candidate.nationality, p.available_from ? ('available '+p.available_from) : 'availability pending'].filter(Boolean).join(' · '))+'</div></div>'
+    +   '<span class="tag ok">extracted from demo fixture</span>'
+    + '</div>'
+    + '<div style="margin-top:10px;font-size:12px;"><strong>Certificates:</strong> '+escapeHtml(certs.length ? certs.map(certLabelById).join(', ') : 'needs review')+'</div>'
+    + '<div style="margin-top:5px;font-size:12px;"><strong>Sea service:</strong> '+escapeHtml(p.service_record_summary || 'needs review')+'</div>'
+    + '<div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;"><span class="badge">needs review</span>'+expiryRows+'</div>'
+    + '<div style="font-size:12px;color:var(--text2);margin-top:9px;">AI extraction is decision support only. Source of truth: documents, structured fields, audit trail, and human action.</div>'
+    + '</div>';
+}
+
+function track1MatchSummaryHtml(row) {
+  var items = (row && Array.isArray(row.coverage_rankings)) ? row.coverage_rankings : [];
+  if (!items.length) {
+    return '<div class="card" data-qa="track1-match-summary" style="margin:0;padding:12px;"><label>Match summary</label><div class="sub" style="margin-top:4px;">Coverage pending from rank_compliance_candidate.</div></div>';
+  }
+  var summary = items.slice(0, 3).map(function(item){
+    return (item.profile_name || 'Profile')+' '+String(item.score_percent || 0)+'%';
+  }).join(' · ');
+  var cards = items.slice(0, 3).map(function(item){
+    var gaps = Array.isArray(item.gaps) ? item.gaps : [];
+    return '<div style="border:1px solid var(--border);border-radius:6px;padding:9px;background:var(--panel);">'
+      + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">'
+      +   '<strong>'+escapeHtml(item.profile_name || 'Local profile')+'</strong>'
+      +   '<span style="font-weight:800;color:var(--accent);">'+escapeHtml(String(item.score_percent || 0))+'%</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'
+      +   'covered '+escapeHtml(String((item.covered || []).length))
+      +   ' · missing '+escapeHtml(String((item.missing || []).length))
+      +   ' · expired '+escapeHtml(String((item.expired || []).length))
+      +   ' · uncertain '+escapeHtml(String((item.uncertain || []).length))
+      +   ' · no_file '+escapeHtml(String((item.no_file || []).length))
+      + '</div>'
+      + '<div style="font-size:12px;margin-top:4px;">gaps: '+escapeHtml(gaps.length ? gaps.map(certLabelById).join(', ') : 'none')+'</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="card" data-qa="track1-match-summary" style="margin:0;padding:12px;">'
+    + '<label>Local Compliance Profiles</label>'
+    + '<div style="font-weight:800;margin-top:4px;">'+escapeHtml(summary)+'</div>'
+    + '<div class="sub" style="margin-top:4px;">Coverage and gaps come from existing rank_compliance_candidate.</div>'
+    + '<div style="display:grid;gap:7px;margin-top:9px;">'+cards+'</div>'
+    + '</div>';
+}
+
+function track1ActionPlacesHtml() {
+  var actions = ['Add to Seafarers DB', 'Request missing documents', 'Match to vacancy/client profile', 'Ignore', 'Keep for later'];
+  return '<div class="card" data-qa="track1-action-places" style="margin:0;padding:12px;">'
+    + '<label>Manager actions</label>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+    + actions.map(function(a){ return '<span class="badge">'+escapeHtml(a)+'</span>'; }).join('')
+    + '</div>'
+    + '<div class="sub" style="margin-top:7px;">Action wiring stays on the existing Crew Flow controls in this slice; expanded action handling is the next slice.</div>'
+    + '</div>';
+}
+
+function track1CandidateIntakePanelHtml(row) {
+  if (!track1CandidateIntakeEnabled(row)) return '';
+  var msg = track1MailMessageForSignal(row) || {};
+  var enrichment = mailCandidateEnrichmentForMessage(msg) || {};
+  return '<div data-qa="track1-candidate-intake-panel" style="margin-top:14px;display:grid;gap:10px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">'
+    +   '<div><div style="font-weight:800;">Candidate intake</div><div class="sub">Incoming candidate -> extracted profile -> local profile coverage -> manager action.</div></div>'
+    +   '<span class="badge">demo · network none</span>'
+    + '</div>'
+    + track1SourceEvidenceHtml(row, msg)
+    + track1ExtractedProfileHtml(row, enrichment)
+    + track1MatchSummaryHtml(row)
+    + track1ActionPlacesHtml()
+    + '</div>';
+}
+// TRACK 1 CANDIDATE INTAKE DEMO END
+
 async function ensureCrewFlowRankings(row) {
   if (!row || row.coverage_loaded || row.coverage_loading || !row.application_id) return;
   var app = crewFlowHydrateApplication(row);
@@ -4940,6 +5063,7 @@ function renderCrewFlowDetail() {
     +     '<div><label>Seafarer ref</label><div>'+escapeHtml(row.seafarer_ref || 'new contact')+'</div></div>'
     +     '<div><label>Attention</label><div>'+escapeHtml(row.attention || 'ready for review')+'</div></div>'
     +   '</div>'
+    +   track1CandidateIntakePanelHtml(row)
     +   '<div style="margin-top:14px;">'
     +     '<div style="font-weight:700;margin-bottom:6px;">Profile fit</div>'
     +     '<div data-qa="crew-flow-coverage">'+crewFlowCoverageHtml(row, false)+'</div>'
