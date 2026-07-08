@@ -29,6 +29,7 @@ const ok = (cond, msg) => {
 const section = (title) => console.log('\n# ' + title);
 
 const crewBlock = (HTML.match(/\/\/ CREW FLOW MODULE START([\s\S]*?)\/\/ CREW FLOW MODULE END/) || [])[1] || '';
+const track1Block = (HTML.match(/\/\/ TRACK 1 CANDIDATE INTAKE DEMO START([\s\S]*?)\/\/ TRACK 1 CANDIDATE INTAKE DEMO END/) || [])[1] || '';
 
 section('static boundaries');
 ok(crewBlock.includes('crewFlowSignalFixtures'), 'Crew Flow fixture feed exists');
@@ -40,6 +41,21 @@ for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
   ok(!crewBlock.toLowerCase().includes(term), 'Crew Flow block avoids banned wording: ' + term);
 }
 ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'Crew Flow slice contains no Cloud API key plumbing');
+ok(track1Block.includes('track1CandidateIntakeEnabled') && track1Block.includes('__demoMode'), 'Track 1 panel is gated by demo mode');
+ok(track1Block.includes('Source evidence') && track1Block.includes('Email CV') && track1Block.includes('Mail'), 'Track 1 panel renders source evidence');
+ok(track1Block.includes('Structured profile / vault draft'), 'Track 1 panel renders extracted profile/vault bridge');
+ok(track1Block.includes('Local Compliance Profiles'), 'Track 1 match target is local Compliance Profiles');
+ok(track1Block.includes('AI extraction is decision support only'), 'Track 1 states AI is decision support');
+ok(track1Block.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 states source-of-truth boundary');
+ok(track1Block.includes('rank_compliance_candidate'), 'Track 1 summary names existing rank_compliance_candidate source');
+ok(track1Block.includes('track1-recommended-action') && track1Block.includes('Recommended:'), 'Track 1 renders recommended action in match summary');
+ok(track1Block.includes('track1-action-state') && track1Block.includes('crewFlowReadInfo'), 'Track 1 action state reflects Crew Flow read-state');
+ok(track1Block.includes('track1CandidateAction') && track1Block.includes('crewFlowAddSignal'), 'Track 1 Add action reuses existing Crew Flow add path');
+ok(!track1Block.includes("invoke('save_seafarer_from_bundle'"), 'Track 1 action block does not call save command directly');
+ok(!track1Block.includes('fetch(') && !track1Block.includes('ANTHROPIC') && !track1Block.includes('CLAUDE_API_KEY') && !track1Block.includes('IMAP'), 'Track 1 slice has no network/Cloud/IMAP plumbing');
+for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
+  ok(!track1Block.toLowerCase().includes(term), 'Track 1 block avoids banned wording: ' + term);
+}
 
 section('runtime demo feed');
 function makeElement(id) {
@@ -84,6 +100,7 @@ const store = new Map();
 store.set('skipi_crewing_demo', '1');
 const toasts = [];
 const calls = [];
+const fetchCalls = [];
 
 globalThis.localStorage = {
   getItem(k) { return store.has(k) ? store.get(k) : null; },
@@ -105,7 +122,7 @@ globalThis.document = {
 globalThis.window = globalThis;
 globalThis.__TAURI__ = { core: { invoke: async () => null, convertFileSrc: (p) => `file://${p}` } };
 Object.defineProperty(globalThis, 'navigator', {
-  value: { userAgent: 'crew-flow-demo-harness', onLine: true },
+  value: { userAgent: 'crew-flow-demo-harness', onLine: false },
   configurable: true,
   writable: true,
 });
@@ -113,7 +130,10 @@ globalThis.location = { hash: '#desktop', reload() {} };
 globalThis.setTimeout = (fn) => { if (typeof fn === 'function') fn(); return 1; };
 globalThis.setInterval = () => 1;
 globalThis.clearTimeout = () => {};
-globalThis.fetch = async () => ({ ok: false, status: 599, async json() { return {}; }, async text() { return ''; } });
+globalThis.fetch = async (...args) => {
+  fetchCalls.push(args);
+  throw new Error('network disabled in crew-flow demo harness');
+};
 
 async function invoke(cmd, args = {}) {
   calls.push([cmd, args]);
@@ -221,13 +241,17 @@ const bootIndex = script.indexOf('// ------------- boot -------------');
 const scriptNoBoot = bootIndex > 0 ? script.slice(0, bootIndex) : script;
 
 let M = null;
-try {
-  M = new Function(
+function loadInlineModuleForCurrentStore() {
+  return new Function(
     scriptNoBoot
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, invoke };'
+      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke };'
   )();
+}
+
+try {
+  M = loadInlineModuleForCurrentStore();
 } catch (e) {
   console.error('runtime load failed:', e);
 }
@@ -279,6 +303,17 @@ if (M) {
   ok(treeHtml.includes('Mail') && treeHtml.includes('Application'), 'feed renders channels');
   ok(treeHtml.includes('Trust 74%') || mainHtml.includes('Trust 74%'), 'Trust Score stub is visible');
   ok(mainHtml.includes('Profile fit') && mainHtml.includes('93%') && mainHtml.includes('81%'), 'coverage rankings render in detail');
+  ok(mainHtml.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 candidate intake panel renders for golden signal');
+  ok(mainHtml.includes('Email CV') && mainHtml.includes('oleksandr-k-cv.pdf'), 'Track 1 source evidence shows mail attachment');
+  ok(mainHtml.includes('Structured profile / vault draft') && mainHtml.includes('Certificates:') && mainHtml.includes('Sea service:'), 'Track 1 extracted profile bridge renders');
+  ok(mainHtml.includes('AI extraction is decision support only'), 'Track 1 AI boundary renders');
+  ok(mainHtml.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 source-of-truth note renders');
+  ok(mainHtml.includes('Local Compliance Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local profile match summary renders 93/81/72');
+  ok(mainHtml.includes('covered') && mainHtml.includes('missing') && mainHtml.includes('expired') && mainHtml.includes('uncertain') && mainHtml.includes('no_file') && mainHtml.includes('gaps:'), 'Track 1 match summary renders coverage buckets');
+  ok(mainHtml.includes('data-qa="track1-recommended-action"') && mainHtml.includes('Recommended:') && mainHtml.includes('save to Seafarers DB') && mainHtml.includes('request missing documents'), 'Track 1 match summary renders recommended save + request-docs action');
+  ok(mainHtml.includes('data-qa="track1-action-add"') && mainHtml.includes('data-qa="track1-action-request_docs"') && mainHtml.includes('data-qa="track1-action-match"') && mainHtml.includes('data-qa="track1-action-keep"'), 'Track 1 renders live manager action buttons');
+  ok(mainHtml.includes('data-qa="track1-action-state"') && mainHtml.includes('waiting for manager action'), 'Track 1 initial action state is visible');
+  ok(!mainHtml.includes('Generic profile') && !mainHtml.includes('career-track'), 'Track 1 does not mix generic profile labels into local match');
   ok(initialRead.length === 2 && initialUnread.length === 2, 'fixture start state is mixed: 2 read, 2 unread');
   ok(initialUnread.includes('cf-demo-mail-cv-oleksandr') && initialUnread.includes('cf-demo-mail-followup-ivan'), 'golden and documents-needed signals start unread');
   ok(M.crewFlowFindSignal('cf-demo-mail-cv-oleksandr').coverage_source === 'rank_compliance_candidate', 'coverage source is rank_compliance_candidate');
@@ -287,13 +322,33 @@ if (M) {
   const persistedIgnore = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
   ok(persistedIgnore['cf-demo-vacancy-reply-marko'] && persistedIgnore['cf-demo-vacancy-reply-marko'].action === 'ignored', 'Ignore persists read-state');
 
-  await M.crewFlowAddSignal('cf-demo-mail-cv-oleksandr');
+  await M.track1CandidateAction('request_docs', 'cf-demo-mail-cv-oleksandr');
+  let persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedTrack1['cf-demo-mail-cv-oleksandr'] && persistedTrack1['cf-demo-mail-cv-oleksandr'].action === 'requested_missing_documents', 'Track 1 Request missing documents persists demo marker');
+  ok(toasts.some((t) => /Missing document request queued/i.test(t.msg)), 'Track 1 Request missing documents reports queued action');
+  ok(elFor('main').innerHTML.includes('missing documents requested in demo state'), 'Track 1 Request missing documents updates visible action state');
+
+  await M.track1CandidateAction('match', 'cf-demo-mail-cv-oleksandr');
+  persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedTrack1['cf-demo-mail-cv-oleksandr'] && persistedTrack1['cf-demo-mail-cv-oleksandr'].action === 'matched_to_vacancy_profile', 'Track 1 Match to vacancy/client persists demo marker');
+
+  await M.track1CandidateAction('keep', 'cf-demo-mail-cv-oleksandr');
+  persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedTrack1['cf-demo-mail-cv-oleksandr'] && persistedTrack1['cf-demo-mail-cv-oleksandr'].action === 'kept_for_later', 'Track 1 Keep for later persists demo marker');
+
+  await M.track1CandidateAction('ignore', 'cf-demo-mail-cv-oleksandr');
+  persistedTrack1 = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+  ok(persistedTrack1['cf-demo-mail-cv-oleksandr'] && persistedTrack1['cf-demo-mail-cv-oleksandr'].action === 'ignored', 'Track 1 Ignore reuses Crew Flow read-state path');
+
+  await M.track1CandidateAction('add', 'cf-demo-mail-cv-oleksandr');
   const persistedAdd = JSON.parse(store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
   ok(persistedAdd['cf-demo-mail-cv-oleksandr'] && persistedAdd['cf-demo-mail-cv-oleksandr'].action === 'added', 'golden Add marks signal read');
   ok(persistedAdd['cf-demo-mail-cv-oleksandr'] && persistedAdd['cf-demo-mail-cv-oleksandr'].saved_to_db === true, 'golden Add persists saved_to_db state');
   ok(M.state.seafarers.some((s) => s.id === 'demo-sf1' && s.display_name === 'Oleksandr K.'), 'golden Add completes into Seafarers DB');
   const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
   ok(Array.isArray(savedDocs) && savedDocs.length > 0, 'golden Add saved documents via existing bundle flow');
+  ok(savedDocs.some((d) => d.seafarer_id === 'demo-sf1' && d.file_path), 'Track 1 Add reaches save_seafarer_from_bundle observable document output');
+  ok(elFor('main').innerHTML.includes('saved to Seafarers DB for demo-sf1'), 'Track 1 Add updates visible saved action state');
   ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden Add reports Save-to-DB success');
 
   await M.crewFlowAddSignal('cf-demo-mail-followup-ivan');
@@ -306,6 +361,26 @@ if (M) {
     ok(!combined.includes(term), 'rendered Crew Flow avoids banned wording: ' + term);
   }
   ok(!calls.some(([cmd]) => String(cmd).toLowerCase().includes('mail') && cmd !== 'fetch_mail_messages'), 'Crew Flow does not start real mailbox operations');
+  ok(fetchCalls.length === 0, 'Crew Flow / Track 1 render performs no network fetches');
+
+  store.delete('skipi_crewing_demo');
+  elements.clear();
+  let MNoDemo = null;
+  try {
+    MNoDemo = loadInlineModuleForCurrentStore();
+  } catch (e) {
+    console.error('default-off runtime load failed:', e);
+  }
+  ok(!!MNoDemo, 'default-off inline script loads');
+  if (MNoDemo) {
+    MNoDemo.state.settings = M.state.settings;
+    MNoDemo.state.myIdentity = M.state.myIdentity;
+    MNoDemo.state.applicationsByVacancy = M.state.applicationsByVacancy;
+    MNoDemo.showView('crew_flow');
+    await MNoDemo.refreshCrewFlowRankings();
+    ok(!elFor('main').innerHTML.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 panel is default-off outside demo mode');
+  }
+  store.set('skipi_crewing_demo', '1');
 }
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
