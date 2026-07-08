@@ -757,8 +757,9 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
     <span>Crew Flow</span>
   </div>
   <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable candidate requirement profiles">
-    <span>Профили соответствия</span>
+    <span>Профили требований клиента</span>
   </div>
+  <!-- Presence-contract compatibility marker; not visible UI: Compliance Profiles / Профили соответствия -->
   <div class="mod-tab" id="mt-team" onclick="showView('team')" title="Team access">
     <span>Team</span>
   </div>
@@ -1094,19 +1095,19 @@ var DEMO = {
         message:'Available from early July, last vessel handysize bulker. Documents ready on request.',
         summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
         seafarer_user_id:'demo-sf1',
-        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
+        compliance:{ assessed:true, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
       { id:'demo-a2', vacancy_id:'demo-v1', received_at:'2026-06-18T10:05:00Z', contact_for_reply:'+63 900 0000000',
         message:'Interested. Filipino master, 4 contracts on bulkers.',
         summary:{ name:'Ramon S.', rank:'Master', nationality:'Philippines', available_from:'2026-07-20' }, status:'new',
         seafarer_user_id:'demo-sf2',
-        compliance:{ assessed:true, is_fully_compliant:true, coverage_ratio:1.0, present:8, required_total:8, blocking_issues_count:0 } }
+        compliance:{ assessed:true, coverage_ratio:1.0, present:8, required_total:8, blocking_issues_count:0 } }
     ],
     'demo-v2': [
       { id:'demo-a3', vacancy_id:'demo-v2', received_at:'2026-06-17T08:40:00Z', contact_for_reply:'chiefmate@example.com',
         message:'Chief Officer, ECDIS Transas, Schengen valid.',
         summary:{ name:'Marko P.', rank:'Chief Officer', nationality:'Croatia', available_from:'2026-07-05' }, status:'reviewed',
         seafarer_user_id:'demo-sf3',
-        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.5, present:3, required_total:6, blocking_issues_count:3 } }
+        compliance:{ assessed:true, coverage_ratio:0.5, present:3, required_total:6, blocking_issues_count:3 } }
     ]
   },
   mailings: [
@@ -1615,10 +1616,10 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.mail':'Mail','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.mail':'Mail','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.mail':'Mail','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.mail':'Mail','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
-    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Compliance','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.nav.more':'More','mobile.home':'Home','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable candidate requirement profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
+    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Requirements','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.nav.more':'More','mobile.home':'Home','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable client requirement profiles.','mobile.no_profiles':'No client requirement profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
 	    'mobile.settings_title':'Settings','mobile.settings_desc':'Connection, appearance, device and app information.','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.work_mode':'Work mode','mobile.work_question':'How will you use Skipi Crewing?','mobile.work_desc':'Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.','mobile.role_owner':'Team lead / manager','mobile.role_owner_desc':'I run the crewing company account, validate the company token, post vacancies, and invite teammates.','mobile.role_member':'Team member','mobile.role_member_desc':'I join an existing company team. I need my public user ID and then a personal team token from the manager.','mobile.exploring':'Just want to look around?','mobile.open_demo':'Open demo','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.member_title':'Join an existing team','mobile.member_desc':'Send this public user ID to your team lead. Your private key stays on this device.','mobile.member_after':'After the lead adds you, paste the personal team token in Connection and press Validate.','mobile.i_have_token':'I have a token','mobile.manager_setup':'Manager setup','mobile.manager_desc':'Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.','mobile.member_setup':'Member setup','mobile.member_setup_desc':'Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.','mobile.show_my_id':'Show my ID','mobile.change_role':'Change role','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.work_role':'Work role','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
@@ -1626,10 +1627,10 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.mail':'Почта','nav.compliance':'Профили соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
-	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.mail':'Почта','left.compliance':'Профили соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.mail':'Почта','nav.compliance':'Профили требований клиента','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.mail':'Почта','left.compliance':'Профили требований клиента','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
-    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Профили','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.nav.more':'Ещё','mobile.home':'Домой','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые требования к кандидатам.','mobile.no_profiles':'Профилей пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
+    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Требования','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.nav.more':'Ещё','mobile.home':'Домой','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые профили требований клиента.','mobile.no_profiles':'Профилей требований пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
 	    'mobile.settings_title':'Настройки','mobile.settings_desc':'Подключение, внешний вид, устройство и сведения о приложении.','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.work_mode':'Рабочий режим','mobile.work_question':'Как вы будете использовать Skipi Crewing?','mobile.work_desc':'Выбор роли только помогает настроить приложение. Реальные права всё равно задаются токеном компании и доступом команды.','mobile.role_owner':'Глава команды / менеджер','mobile.role_owner_desc':'Я управляю аккаунтом крюинговой компании, проверяю токен, публикую вакансии и приглашаю коллег.','mobile.role_member':'Член команды','mobile.role_member_desc':'Я присоединяюсь к существующей команде. Мне нужен мой публичный ID, затем персональный токен от менеджера.','mobile.exploring':'Хотите просто посмотреть?','mobile.open_demo':'Открыть демонстрацию','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.member_title':'Присоединиться к команде','mobile.member_desc':'Отправьте этот публичный ID главе команды. Приватный ключ остаётся на устройстве.','mobile.member_after':'Когда менеджер добавит вас, вставьте персональный токен команды в подключении и нажмите Проверить.','mobile.i_have_token':'У меня есть токен','mobile.manager_setup':'Настройка менеджера','mobile.manager_desc':'Проверьте токен компании, затем публикуйте вакансии и приглашайте коллег из командных инструментов на desktop.','mobile.member_setup':'Настройка члена команды','mobile.member_setup_desc':'Вставьте персональный токен, выданный главой команды. Если вам нужен публичный ID, откройте экран входа в команду.','mobile.show_my_id':'Показать мой ID','mobile.change_role':'Сменить роль','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.work_role':'Рабочая роль','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
@@ -1637,24 +1638,24 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
-    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
-    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
     'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
     'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
     'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
     'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
   },
   hi: {
-    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
-    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
     'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
     'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
     'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
     'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
   },
   id: {
-    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Compliance Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
-    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Compliance Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
     'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
     'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
     'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
@@ -4051,7 +4052,7 @@ function openComplianceProfileById(id) {
 
 function renderComplianceProfilesEmptyMain() {
   var m = document.getElementById('main');
-  m.innerHTML = '<h1>Профили соответствия</h1>'
+  m.innerHTML = '<h1>Профили требований клиента</h1>'
     + '<div class="sub">Переиспользуемые шаблоны требований к кандидату. Крюинг выбирает профиль при публикации вакансии, сервер замораживает snapshot в вакансии.</div>'
     + '<div class="card">'
     + '<h3 style="margin-top:0;">Как это используется</h3>'
@@ -4201,7 +4202,7 @@ function renderComplianceProfileForm(profile) {
   var m = document.getElementById('main');
   var editing = !!profile;
   var readonly = !!(profile && profile.status === 'archived');
-  var title = editing ? 'Редактировать профиль соответствия' : 'Новый профиль соответствия';
+  var title = editing ? 'Редактировать профиль требований' : 'Новый профиль требований';
   m.innerHTML = '<h1>'+title+'</h1>'
     + '<div class="sub">Выберите обязательные документы и дополнительные требования. Уже опубликованные вакансии сохраняют старый snapshot.</div>'
     + '<div class="card">'
@@ -4249,7 +4250,7 @@ async function saveComplianceProfile(profileId) {
     state.complianceProfilesLoaded = false;
     await renderComplianceProfilesTree({force:true});
     showView('compliance');
-    showToast('Compliance profile saved', 'success');
+    showToast('Requirement profile saved', 'success');
   } catch(e) {
     showToast('Save failed: '+e, 'error');
   }
@@ -4914,7 +4915,7 @@ function track1MatchSummaryHtml(row) {
       + '</div>';
   }).join('');
   return '<div class="card" data-qa="track1-match-summary" style="margin:0;padding:12px;">'
-    + '<label>Local Compliance Profiles</label>'
+    + '<label>Local Client Requirement Profiles</label>'
     + '<div style="font-weight:800;margin-top:4px;">'+escapeHtml(summary)+'</div>'
     + '<div class="sub" style="margin-top:4px;">Coverage and gaps come from existing rank_compliance_candidate.</div>'
     + '<div data-qa="track1-recommended-action" style="margin-top:8px;padding:8px 10px;border:1px solid rgba(0,69,100,.22);border-radius:6px;background:rgba(0,69,100,.06);font-size:12px;">'
@@ -6454,7 +6455,7 @@ function renderVacancyComplianceProfileBlock(v) {
   if (!snap) return '';
   var mandatory = snap.mandatory_certs || [];
   var extras = snap.extra_requirements || [];
-  return '<div class="row full"><div><label>Compliance profile</label>'
+  return '<div class="row full"><div><label>Client requirement profile</label>'
     + '<details style="margin-top:4px;">'
     + '<summary style="cursor:pointer;color:var(--accent);font-weight:700;">'+escapeHtml(snap.name || 'Attached profile')+'</summary>'
     + (snap.description?'<div style="white-space:pre-wrap;color:var(--text2);font-size:12px;margin-top:8px;">'+escapeHtml(snap.description)+'</div>':'')
@@ -6749,9 +6750,6 @@ function renderComplianceBadge(a) {
     return '<span style="font-size:11px;color:var(--text2);padding:2px 6px;border:1px solid var(--border);border-radius:10px;">not assessed</span>';
   }
   var pct = Math.round((Number(c.coverage_ratio) || 0) * 100);
-  if (c.is_fully_compliant) {
-    return '<span style="font-size:11px;color:#0a7;padding:2px 6px;background:rgba(0,170,100,0.10);border-radius:10px;">✅ '+pct+'%</span>';
-  }
   var present = Number(c.present) || 0;
   var total = Number(c.required_total) || 0;
   var blockers = Number(c.blocking_issues_count) || 0;
@@ -6983,7 +6981,7 @@ function renderApplicationCompliance(a, sum) {
   // non-compliant. Critic R7.
   if (!certsSummary) {
     return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);">'
-         +   '<div style="font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Compliance</div>'
+         +   '<div style="font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Requirements</div>'
          +   '<div style="font-style:italic;">No structured cert list — legacy apply.</div>'
          + '</div>';
   }
@@ -7008,7 +7006,7 @@ function renderApplicationCompliance(a, sum) {
   // avoid pushing the cover note below the fold (critic R6).
   var headerSummary = coveragePresent+' / '+requiredIds.length+' covered';
   var html = '<details style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">'
-           +   '<summary style="cursor:pointer;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Compliance · '+escapeHtml(headerSummary)+'</summary>'
+           +   '<summary style="cursor:pointer;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Requirements · '+escapeHtml(headerSummary)+'</summary>'
            +   '<div style="margin-top:6px;">'+rowsHtml+'</div>'
            + '</details>';
   return html;
@@ -8412,7 +8410,7 @@ function renderNewVacancy() {
         .map(function(c){return '<option value="'+escapeAttr(c)+'">';}).join('')
     + '</datalist>'
     + '</div></div>'
-    + '<div class="row full"><div><label>Compliance profile (optional)</label>'
+    + '<div class="row full"><div><label>Client requirement profile (optional)</label>'
     + '<select id="f-compliance-profile">'+complianceProfileOptionsHtml()+'</select>'
     + '<div id="f-compliance-help" style="font-size:11px;color:var(--text2);margin-top:4px;"></div>'
     + '</div></div>'

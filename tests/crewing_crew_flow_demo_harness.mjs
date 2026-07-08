@@ -30,6 +30,7 @@ const section = (title) => console.log('\n# ' + title);
 
 const crewBlock = (HTML.match(/\/\/ CREW FLOW MODULE START([\s\S]*?)\/\/ CREW FLOW MODULE END/) || [])[1] || '';
 const track1Block = (HTML.match(/\/\/ TRACK 1 CANDIDATE INTAKE DEMO START([\s\S]*?)\/\/ TRACK 1 CANDIDATE INTAKE DEMO END/) || [])[1] || '';
+const complianceBadgeBlock = (HTML.match(/function renderComplianceBadge\(a\) \{([\s\S]*?)\nfunction paintApplicationsList/) || [])[1] || '';
 
 section('static boundaries');
 ok(crewBlock.includes('crewFlowSignalFixtures'), 'Crew Flow fixture feed exists');
@@ -44,7 +45,7 @@ ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'C
 ok(track1Block.includes('track1CandidateIntakeEnabled') && track1Block.includes('__demoMode'), 'Track 1 panel is gated by demo mode');
 ok(track1Block.includes('Source evidence') && track1Block.includes('Email CV') && track1Block.includes('Mail'), 'Track 1 panel renders source evidence');
 ok(track1Block.includes('Structured profile / vault draft'), 'Track 1 panel renders extracted profile/vault bridge');
-ok(track1Block.includes('Local Compliance Profiles'), 'Track 1 match target is local Compliance Profiles');
+ok(track1Block.includes('Local Client Requirement Profiles'), 'Track 1 match target is local Client Requirement Profiles');
 ok(track1Block.includes('AI extraction is decision support only'), 'Track 1 states AI is decision support');
 ok(track1Block.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 states source-of-truth boundary');
 ok(track1Block.includes('rank_compliance_candidate'), 'Track 1 summary names existing rank_compliance_candidate source');
@@ -53,6 +54,8 @@ ok(track1Block.includes('track1-action-state') && track1Block.includes('crewFlow
 ok(track1Block.includes('track1CandidateAction') && track1Block.includes('crewFlowAddSignal'), 'Track 1 Add action reuses existing Crew Flow add path');
 ok(!track1Block.includes("invoke('save_seafarer_from_bundle'"), 'Track 1 action block does not call save command directly');
 ok(!track1Block.includes('fetch(') && !track1Block.includes('ANTHROPIC') && !track1Block.includes('CLAUDE_API_KEY') && !track1Block.includes('IMAP'), 'Track 1 slice has no network/Cloud/IMAP plumbing');
+ok(!HTML.includes('is_fully_compliant') && !HTML.includes('fully_compliant'), 'demo data has no fully-compliant verdict field');
+ok(!complianceBadgeBlock.includes('✅') && !complianceBadgeBlock.includes('is_fully_compliant'), 'coverage badge is neutral: no verdict checkmark or fully-compliant gate');
 for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
   ok(!track1Block.toLowerCase().includes(term), 'Track 1 block avoids banned wording: ' + term);
 }
@@ -303,12 +306,13 @@ if (M) {
   ok(treeHtml.includes('Mail') && treeHtml.includes('Application'), 'feed renders channels');
   ok(treeHtml.includes('Trust 74%') || mainHtml.includes('Trust 74%'), 'Trust Score stub is visible');
   ok(mainHtml.includes('Profile fit') && mainHtml.includes('93%') && mainHtml.includes('81%'), 'coverage rankings render in detail');
+  ok(!mainHtml.includes('✅') && !treeHtml.includes('✅'), 'rendered Crew Flow has no checkmark verdict badge');
   ok(mainHtml.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 candidate intake panel renders for golden signal');
   ok(mainHtml.includes('Email CV') && mainHtml.includes('oleksandr-k-cv.pdf'), 'Track 1 source evidence shows mail attachment');
   ok(mainHtml.includes('Structured profile / vault draft') && mainHtml.includes('Certificates:') && mainHtml.includes('Sea service:'), 'Track 1 extracted profile bridge renders');
   ok(mainHtml.includes('AI extraction is decision support only'), 'Track 1 AI boundary renders');
   ok(mainHtml.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 source-of-truth note renders');
-  ok(mainHtml.includes('Local Compliance Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local profile match summary renders 93/81/72');
+  ok(mainHtml.includes('Local Client Requirement Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local requirement profile match summary renders 93/81/72');
   ok(mainHtml.includes('covered') && mainHtml.includes('missing') && mainHtml.includes('expired') && mainHtml.includes('uncertain') && mainHtml.includes('no_file') && mainHtml.includes('gaps:'), 'Track 1 match summary renders coverage buckets');
   ok(mainHtml.includes('data-qa="track1-recommended-action"') && mainHtml.includes('Recommended:') && mainHtml.includes('save to Seafarers DB') && mainHtml.includes('request missing documents'), 'Track 1 match summary renders recommended save + request-docs action');
   ok(mainHtml.includes('data-qa="track1-action-add"') && mainHtml.includes('data-qa="track1-action-request_docs"') && mainHtml.includes('data-qa="track1-action-match"') && mainHtml.includes('data-qa="track1-action-keep"'), 'Track 1 renders live manager action buttons');
@@ -357,6 +361,7 @@ if (M) {
   ok(toasts.some((t) => /document bundle/i.test(t.msg)), 'non-golden Add keeps honest document-bundle guard');
 
   const combined = (elFor('main').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML).toLowerCase();
+  ok(!combined.includes('is_fully_compliant') && !combined.includes('fully_compliant'), 'rendered Crew Flow has no fully-compliant verdict field');
   for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
     ok(!combined.includes(term), 'rendered Crew Flow avoids banned wording: ' + term);
   }
