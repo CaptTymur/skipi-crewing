@@ -1094,19 +1094,19 @@ var DEMO = {
         message:'Available from early July, last vessel handysize bulker. Documents ready on request.',
         summary:{ name:'Oleksandr K.', rank:'Captain', nationality:'Ukraine', available_from:'2026-07-08' }, status:'new',
         seafarer_user_id:'demo-sf1',
-        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
+        compliance:{ assessed:true, coverage_ratio:0.75, present:6, required_total:8, blocking_issues_count:2 } },
       { id:'demo-a2', vacancy_id:'demo-v1', received_at:'2026-06-18T10:05:00Z', contact_for_reply:'+63 900 0000000',
         message:'Interested. Filipino master, 4 contracts on bulkers.',
         summary:{ name:'Ramon S.', rank:'Master', nationality:'Philippines', available_from:'2026-07-20' }, status:'new',
         seafarer_user_id:'demo-sf2',
-        compliance:{ assessed:true, is_fully_compliant:true, coverage_ratio:1.0, present:8, required_total:8, blocking_issues_count:0 } }
+        compliance:{ assessed:true, coverage_ratio:1.0, present:8, required_total:8, blocking_issues_count:0 } }
     ],
     'demo-v2': [
       { id:'demo-a3', vacancy_id:'demo-v2', received_at:'2026-06-17T08:40:00Z', contact_for_reply:'chiefmate@example.com',
         message:'Chief Officer, ECDIS Transas, Schengen valid.',
         summary:{ name:'Marko P.', rank:'Chief Officer', nationality:'Croatia', available_from:'2026-07-05' }, status:'reviewed',
         seafarer_user_id:'demo-sf3',
-        compliance:{ assessed:true, is_fully_compliant:false, coverage_ratio:0.5, present:3, required_total:6, blocking_issues_count:3 } }
+        compliance:{ assessed:true, coverage_ratio:0.5, present:3, required_total:6, blocking_issues_count:3 } }
     ]
   },
   mailings: [
@@ -6749,9 +6749,6 @@ function renderComplianceBadge(a) {
     return '<span style="font-size:11px;color:var(--text2);padding:2px 6px;border:1px solid var(--border);border-radius:10px;">not assessed</span>';
   }
   var pct = Math.round((Number(c.coverage_ratio) || 0) * 100);
-  if (c.is_fully_compliant) {
-    return '<span style="font-size:11px;color:#0a7;padding:2px 6px;background:rgba(0,170,100,0.10);border-radius:10px;">✅ '+pct+'%</span>';
-  }
   var present = Number(c.present) || 0;
   var total = Number(c.required_total) || 0;
   var blockers = Number(c.blocking_issues_count) || 0;
