@@ -9095,7 +9095,7 @@ async function startTrialAccess() {
   var serverUrl = urlEl ? urlEl.value.trim() : ((state.settings||{}).server_url || 'https://api-ru.skipi.app');
   var companyName = companyEl ? companyEl.value.trim() : ((state.settings||{}).company_name || '');
   var replyTo = replyEl ? replyEl.value.trim() : ((state.settings||{}).reply_to || '');
-  showToast('Creating trial access...', 'info');
+  showToast('Creating access...', 'info');
   try {
     var issued = await invoke('issue_crewing_trial_token', {
       serverUrl: serverUrl,
@@ -9117,10 +9117,10 @@ async function startTrialAccess() {
     await invoke('save_settings', { newSettings: next });
     state.settings = next;
     updateTeamNavVisibility();
-    showToast('Trial access is active for 30 days', 'success');
+    showToast('Access is active for 14 days', 'success');
     try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
   } catch (e) {
-    showToast('Trial access failed: '+e, 'error');
+    showToast('Access failed: '+e, 'error');
   }
 }
 
@@ -9993,6 +9993,7 @@ async function bootMobile() {
   if (!state.teamChat) state.teamChat = {};
   if (!state.teamChat.sendTarget) state.teamChat.sendTarget = 'ai';
   renderDemoBanner();
+  if (await trialGateApply() === 'blocked') return;
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('work_role'); }); return; }
   if (shouldShowMobileWorkRoleChoice()) { mobileShow('work_role'); return; }
@@ -10586,7 +10587,7 @@ async function mobileValidateConnection() {
 async function mobileStartTrialAccess() {
   var c = mobileReadConnection();
   var serverUrl = c.server_url || 'https://api-ru.skipi.app';
-  showToast('Creating trial access...', 'info');
+  showToast('Creating access...', 'info');
   try {
     var issued = await invoke('issue_crewing_trial_token', {
       serverUrl: serverUrl,
@@ -10610,11 +10611,11 @@ async function mobileStartTrialAccess() {
     await invoke('save_settings', { newSettings: next });
     state.settings = next;
     try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
-    showToast('Trial access is active for 30 days', 'success');
+    showToast('Access is active for 14 days', 'success');
     state.vacancies = [];
     mobileShow('vacancies');
   } catch (e) {
-    showToast('Trial access failed: '+e, 'error');
+    showToast('Access failed: '+e, 'error');
   }
 }
 
@@ -11565,8 +11566,145 @@ function mobileDraftFromTeamText() {
   mobileShow('draft');
 }
 
+// ---------- Two-week local trial gate ----------
+// The server holds authoritative entitlement state. This local clock only
+// controls staged desktop/mobile UX and cannot unlock server-side APIs.
+var TRIAL_STARTED_KEY = 'skipi_trial_started_at';
+var TRIAL_LICENSE_KEY = 'skipi_license_token';
+var TRIAL_DAYS = 14;
+var TRIAL_WARNING_FROM_DAY = 9;
+var TRIAL_CONTACT_EMAIL = 'info@tymur.org';
+var TRIAL_CONTACT_WA = '35797617412';
+var TRIAL_CONTACT_WA_URL = 'https://wa.me/35797617412';
+var TRIAL_CONTACT_PHONE = '+357 97 617 412';
+
+function trialStartedAt(){
+  var v = '';
+  try { v = localStorage.getItem(TRIAL_STARTED_KEY) || ''; } catch(e) {}
+  var parsed = v ? Date.parse(v) : NaN;
+  if (!Number.isFinite(parsed)) {
+    v = new Date().toISOString();
+    try { localStorage.setItem(TRIAL_STARTED_KEY, v); } catch(e) {}
+    parsed = Date.parse(v);
+  }
+  return parsed;
+}
+function trialDaysSince(){
+  return Math.max(0, Math.floor((Date.now() - trialStartedAt()) / 86400000));
+}
+function trialPhase(){
+  var days = trialDaysSince();
+  if (days < TRIAL_WARNING_FROM_DAY) return 'free';
+  if (days < TRIAL_DAYS) return 'warn';
+  return 'blocked';
+}
+function trialDaysLeft(){
+  return Math.max(0, TRIAL_DAYS - trialDaysSince());
+}
+function trialContactHtml(){
+  return '<a href="mailto:'+TRIAL_CONTACT_EMAIL+'" style="color:inherit;font-weight:700;">'+TRIAL_CONTACT_EMAIL+'</a>'
+    + ' или <a href="'+TRIAL_CONTACT_WA_URL+'" target="_blank" rel="noreferrer" style="color:inherit;font-weight:700;">'
+    + TRIAL_CONTACT_PHONE + ' (WhatsApp)</a>';
+}
+function trialRemoveBanner(){
+  var old = document.getElementById('trial-warning-banner');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+}
+function trialShowWarningBanner(){
+  trialRemoveBanner();
+  var div = document.createElement('div');
+  div.id = 'trial-warning-banner';
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99980;padding:10px 14px;'
+    + 'background:#fff3cd;color:#493800;border-bottom:1px solid #e2b93d;font-size:13px;text-align:center;'
+    + 'box-shadow:0 2px 10px rgba(0,0,0,.12);';
+  div.innerHTML = 'Бесплатный доступ заканчивается через ' + trialDaysLeft()
+    + ' дн. Продолжить — свяжитесь: ' + trialContactHtml();
+  document.body.appendChild(div);
+}
+function trialHideOverlay(){
+  var el = document.getElementById('trial-block-overlay');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+function trialShowBlockedOverlay(message){
+  trialRemoveBanner();
+  var el = document.getElementById('trial-block-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'trial-block-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:2147483200;display:flex;align-items:center;justify-content:center;'
+      + 'background:rgba(245,248,251,.96);backdrop-filter:blur(8px);padding:20px;';
+    el.innerHTML =
+      '<div style="width:min(520px,100%);background:var(--panel,#fff);color:var(--text,#1a1f26);border:1px solid var(--border,#d8dde5);'
+      + 'border-radius:14px;padding:28px;box-shadow:0 24px 80px rgba(15,23,42,.24);">'
+      + '<div style="font-size:19px;font-weight:800;margin-bottom:8px;">Бесплатный период закончился.</div>'
+      + '<div style="font-size:13px;line-height:1.55;color:var(--text2,#5a6573);margin-bottom:18px;">'
+      + 'Свяжитесь с Captain Tymur Rudov: ' + trialContactHtml() + '</div>'
+      + '<label for="trial-license" style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;">License-токен</label>'
+      + '<input id="trial-license" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"'
+      + ' style="width:100%;padding:12px;border:1px solid var(--border,#d8dde5);border-radius:8px;font-family:monospace;'
+      + ' background:var(--panel2,#eef0f4);color:var(--text,#1a1f26);box-sizing:border-box;" />'
+      + '<button id="trial-license-btn" onclick="trialActivateLicense()"'
+      + ' style="width:100%;margin-top:12px;padding:12px 14px;border:0;border-radius:8px;background:#004564;color:#fff;'
+      + 'font-weight:800;cursor:pointer;">Активировать</button>'
+      + '<div id="trial-license-error" style="min-height:18px;margin-top:10px;color:#ef4444;font-size:12px;">'
+      + (message ? escapeHtml(message) : '') + '</div>'
+      + '</div>';
+    document.body.appendChild(el);
+    setTimeout(function(){ var input = document.getElementById('trial-license'); if (input) input.focus(); }, 40);
+  } else {
+    el.style.display = 'flex';
+    var err = document.getElementById('trial-license-error');
+    if (err) err.textContent = message || '';
+  }
+}
+async function trialActivateLicense(){
+  var input = document.getElementById('trial-license');
+  var err = document.getElementById('trial-license-error');
+  var btn = document.getElementById('trial-license-btn');
+  var token = (input && input.value || '').trim();
+  if (!token) { if (err) err.textContent = 'Введите license-токен.'; return; }
+  if (btn) btn.disabled = true;
+  if (err) err.textContent = '';
+  try {
+    var s = state.settings || {};
+    var base = s.server_url || 'https://api.skipi.app';
+    var res = await fetch(base.replace(/\/+$/,'') + '/api/trial/activate', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+      body: JSON.stringify({ account_type:'crewing', account_id:s.crewing_id || '' })
+    });
+    if (!res.ok) throw new Error('invalid');
+    try { localStorage.setItem(TRIAL_LICENSE_KEY, token); } catch(e) {}
+    trialHideOverlay();
+    trialRemoveBanner();
+    showToast('Доступ активирован.', 'success');
+    if (shouldUseMobileShell()) mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+    else await bootDesktopMain();
+  } catch (e) {
+    if (err) err.textContent = 'неверный токен';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+async function trialGateApply(){
+  var phase = trialPhase();
+  if (phase === 'free') {
+    trialRemoveBanner();
+    trialHideOverlay();
+    return phase;
+  }
+  if (phase === 'warn') {
+    trialShowWarningBanner();
+    trialHideOverlay();
+    return phase;
+  }
+  trialShowBlockedOverlay('');
+  return phase;
+}
+
 // ------------- boot -------------
 async function bootDesktopMain(){
+  if (await trialGateApply() === 'blocked') return;
   startAppDiagnostics();
   await loadTaxonomy();
   updateVaultLabel();
@@ -11591,6 +11729,7 @@ async function bootDesktopMain(){
   await loadBuildInfo();
   applyTheme();
   applyI18nChrome();
+  if (await trialGateApply() === 'blocked') return;
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(bootDesktopMain); return; }
   await bootDesktopMain();
