@@ -30,6 +30,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
+        "https://github.com/CaptTymur/skipi-crewing/releases/latest/download/latest.json",
         "https://api-ru.skipi.app/crewing/latest.json",
         "https://api.skipi.app/crewing/latest.json"
       ],
