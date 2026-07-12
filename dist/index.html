@@ -11592,11 +11592,60 @@ function trialStartedAt(){
 function trialDaysSince(){
   return Math.max(0, Math.floor((Date.now() - trialStartedAt()) / 86400000));
 }
-function trialPhase(){
+function trialLocalPhase(){
   var days = trialDaysSince();
   if (days < TRIAL_WARNING_FROM_DAY) return 'free';
   if (days < TRIAL_DAYS) return 'warn';
   return 'blocked';
+}
+var trialServerStatus = { checked_at:0, phase:null, reason:'' };
+var trialActivationConfirmedAt = 0;
+function trialTokenExpiryPhase(){
+  var s = state.settings || {};
+  if (!s.bearer_token || !s.crewing_id) return null;
+  if (!s.token_expires_at) return 'free';
+  var t = Date.parse(s.token_expires_at);
+  if (!Number.isFinite(t)) return null;
+  return t > Date.now() ? 'free' : 'blocked';
+}
+function trialIsAuthFailure(e){
+  var raw = String((e && e.message) || e || '');
+  return /invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw);
+}
+async function trialServerPhase(force){
+  if (typeof __demoMode !== 'undefined' && __demoMode) return { phase:'free', reason:'demo' };
+  var s = state.settings || {};
+  if (!s.server_url || !s.bearer_token || !s.crewing_id) return { phase:null, reason:'no_crewing_token' };
+  if (!force && trialServerStatus.phase && Date.now() - trialServerStatus.checked_at < 30000) return trialServerStatus;
+  try {
+    var activation = await invoke('activate_crewing_token', { serverUrl:s.server_url, bearerToken:s.bearer_token });
+    var next = Object.assign({}, s, {
+      crewing_id: activation.crewing_id || s.crewing_id || '',
+      organization_id: activation.organization_id || s.organization_id || '',
+      token_scopes: activation.scopes || s.token_scopes || [],
+      token_expires_at: activation.expires_at || null,
+      company_name: s.company_name || activation.display_name || ''
+    });
+    try { await invoke('save_settings', { newSettings: next }); } catch(e) {}
+    state.settings = next;
+    var phase = trialTokenExpiryPhase() || 'free';
+    trialServerStatus = { checked_at:Date.now(), phase:phase, reason:'server_active' };
+    return trialServerStatus;
+  } catch(e) {
+    var phase = trialIsAuthFailure(e) ? 'blocked' : null;
+    trialServerStatus = { checked_at:Date.now(), phase:phase, reason:phase ? 'server_rejected' : 'server_unreachable' };
+    return trialServerStatus;
+  }
+}
+async function trialPhase(opts){
+  opts = opts || {};
+  var server = await trialServerPhase(!!opts.forceServer);
+  if (server.phase) return server.phase;
+  var known = trialTokenExpiryPhase();
+  if (known) return known;
+  if (trialActivationConfirmedAt && Date.now() - trialActivationConfirmedAt < 60000) return 'free';
+  var local = trialLocalPhase();
+  return local === 'blocked' ? 'blocked' : local;
 }
 function trialDaysLeft(){
   return Math.max(0, TRIAL_DAYS - trialDaysSince());
@@ -11675,6 +11724,10 @@ async function trialActivateLicense(){
     });
     if (!res.ok) throw new Error('invalid');
     try { localStorage.setItem(TRIAL_LICENSE_KEY, token); } catch(e) {}
+    trialActivationConfirmedAt = Date.now();
+    trialServerStatus = { checked_at:0, phase:null, reason:'activation_accepted' };
+    var server = await trialServerPhase(true);
+    if (server.phase && server.phase !== 'free') throw new Error('not active');
     trialHideOverlay();
     trialRemoveBanner();
     showToast('Доступ активирован.', 'success');
@@ -11687,7 +11740,7 @@ async function trialActivateLicense(){
   }
 }
 async function trialGateApply(){
-  var phase = trialPhase();
+  var phase = await trialPhase();
   if (phase === 'free') {
     trialRemoveBanner();
     trialHideOverlay();
