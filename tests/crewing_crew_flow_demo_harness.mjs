@@ -34,6 +34,8 @@ const complianceBadgeBlock = (HTML.match(/function renderComplianceBadge\(a\) \{
 
 section('static boundaries');
 ok(crewBlock.includes('crewFlowSignalFixtures'), 'Crew Flow fixture feed exists');
+ok(crewBlock.includes('crewFlowDemoFixturesEnabled'), 'Crew Flow fixture helper is explicit');
+ok(/!state\.crewFlowSignals\.length\s*&&\s*crewFlowDemoFixturesEnabled\(\)/.test(crewBlock), 'Crew Flow fixtures seed only when demo mode is enabled');
 ok(crewBlock.includes("invoke('rank_compliance_candidate'"), 'Crew Flow reuses rank_compliance_candidate');
 ok(crewBlock.includes('saveRankedCandidate('), 'Crew Flow reuses existing save path');
 ok(HTML.includes('skipi_crewing_crew_flow_read_state_v2'), 'Crew Flow read-state key is present');
@@ -383,6 +385,11 @@ if (M) {
     MNoDemo.state.applicationsByVacancy = M.state.applicationsByVacancy;
     MNoDemo.showView('crew_flow');
     await MNoDemo.refreshCrewFlowRankings();
+    const noDemoSignals = MNoDemo.crewFlowState();
+    const noDemoHtml = elFor('main').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML;
+    ok(Array.isArray(noDemoSignals) && noDemoSignals.length === 0, 'non-demo Crew Flow does not auto-seed fixture signals');
+    ok(!/cf-demo-|Oleksandr K\.|Ramon S\.|Marko P\.|Ivan M\./.test(noDemoHtml), 'non-demo Crew Flow renders no fixture candidates');
+    ok(noDemoHtml.includes('No candidates yet') && noDemoHtml.includes('Vacancies -> Applications'), 'non-demo Crew Flow shows honest empty state with Applications direction');
     ok(!elFor('main').innerHTML.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 panel is default-off outside demo mode');
   }
   store.set('skipi_crewing_demo', '1');

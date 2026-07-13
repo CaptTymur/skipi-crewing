@@ -4707,8 +4707,13 @@ function crewFlowSignalFixtures() {
   ];
 }
 
+function crewFlowDemoFixturesEnabled() {
+  return !!(typeof __demoMode !== 'undefined' && __demoMode);
+}
+
 function crewFlowState() {
-  if (!Array.isArray(state.crewFlowSignals) || !state.crewFlowSignals.length) {
+  if (!Array.isArray(state.crewFlowSignals)) state.crewFlowSignals = [];
+  if (!state.crewFlowSignals.length && crewFlowDemoFixturesEnabled()) {
     state.crewFlowSignals = crewFlowSignalFixtures();
   }
   return state.crewFlowSignals;
@@ -5054,7 +5059,7 @@ function renderCrewFlowTreeBody() {
       .join(' ').toLowerCase().indexOf(q) !== -1;
   });
   if (!rows.length) {
-    tree.innerHTML = '<div class="tree-empty">No crew flow signals.</div>';
+    tree.innerHTML = '<div class="tree-empty">'+(crewFlowDemoFixturesEnabled() ? 'No crew flow signals.' : 'No candidates yet. Review real applicants in Vacancies -> Applications.')+'</div>';
     return;
   }
   rows.sort(function(a,b){
@@ -5094,9 +5099,10 @@ function openCrewFlowSignal(id) {
 
 function renderCrewFlowView() {
   renderCrewFlowTree();
-  if (!state.selectedCrewFlowSignal) state.selectedCrewFlowSignal = crewFlowState()[0] || null;
-  renderCrewFlowDetail();
   var rows = crewFlowState();
+  if (state.selectedCrewFlowSignal && rows.indexOf(state.selectedCrewFlowSignal) === -1) state.selectedCrewFlowSignal = null;
+  if (!state.selectedCrewFlowSignal) state.selectedCrewFlowSignal = rows[0] || null;
+  renderCrewFlowDetail();
   var pending = rows.some(function(row){ return row && row.application_id && !row.coverage_loaded && !row.coverage_loading; });
   if (pending) refreshCrewFlowRankings();
 }
@@ -5105,7 +5111,7 @@ function renderCrewFlowDetail() {
   var main = document.getElementById('main');
   var row = state.selectedCrewFlowSignal || crewFlowState()[0];
   if (!row) {
-    main.innerHTML = '<h1>Crew Flow</h1><div class="empty-state">No signals.</div>';
+    main.innerHTML = '<h1>Crew Flow</h1><div class="empty-state"><strong>No candidates yet.</strong><div style="margin-top:6px;color:var(--text2);">Real applicants appear in Vacancies -> Applications. Crew Flow will stay empty until there are real candidate signals.</div></div>';
     return;
   }
   var c = row.candidate || {};
@@ -5145,7 +5151,7 @@ async function crewFlowAddSignal(id) {
   if (!row) return;
   if (row.application_id) {
     crewFlowHydrateApplication(row);
-    if (row.golden_bundle && typeof DEMO !== 'undefined' && DEMO) {
+    if (crewFlowDemoFixturesEnabled() && row.golden_bundle && typeof DEMO !== 'undefined' && DEMO) {
       if (DEMO.attachmentsByApp && DEMO.attachmentsByApp[row.application_id]) {
         state.attachmentsByApp[row.application_id] = DEMO.attachmentsByApp[row.application_id];
       }
@@ -5155,7 +5161,7 @@ async function crewFlowAddSignal(id) {
     }
     await saveRankedCandidate(row.application_id);
     var savedToDb = false;
-    if (row.golden_bundle && window._bundleViewerData && window._bundleViewerData.applicationId === row.application_id && window._bundleViewerData.manifest) {
+    if (crewFlowDemoFixturesEnabled() && row.golden_bundle && window._bundleViewerData && window._bundleViewerData.applicationId === row.application_id && window._bundleViewerData.manifest) {
       await saveCurrentBundleSeafarer();
       savedToDb = true;
     }
