@@ -12,6 +12,8 @@ settingGroups:
     base:
       PRODUCT_NAME: Skipi Crewing
       PRODUCT_BUNDLE_IDENTIFIER: app.skipi.crewing
+      DEVELOPMENT_TEAM: LTPV7XZ5M3
+      CODE_SIGN_STYLE: Automatic
 targetTemplates:
   app:
     type: application
@@ -51,8 +53,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.4.122
-        CFBundleVersion: "0.4.122"
+        CFBundleShortVersionString: 0.4.132
+        CFBundleVersion: "0.4.132"
         ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: skipi-crewing_iOS/skipi-crewing_iOS.entitlements
