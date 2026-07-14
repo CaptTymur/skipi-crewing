@@ -1440,8 +1440,9 @@ function renderDemoBanner(){
   document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
 }
 
-// Convert a raw API/publish error into a short localized message. The raw text
-// (may include HTTP status / JSON) is logged for devs but never shown in a toast.
+// Convert a raw API/publish error into a short message. Auth/network errors get a friendly
+// hint; server-side field validation (e.g. contract_months) is surfaced so the user knows
+// which field to fix. Raw HTTP/network internals are logged for devs but not shown verbatim.
 function friendlyPublishError(e){
   var raw = (e && e.message) ? e.message : ('' + e);
   try { console.warn('[crewing] publish error:', raw); } catch(_){}
@@ -1451,7 +1452,41 @@ function friendlyPublishError(e){
   if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) {
     return 'Не удалось связаться с сервером. Проверьте интернет и повторите попытку.';
   }
+  var detail = extractPublishDetail(raw);
+  if (detail) return localizePublishDetail(detail);
   return 'Не удалось опубликовать. Проверьте поля и повторите попытку.';
+}
+// Pull the server's validation message out of a raw error like
+// `server returned 400 ...: {"detail":"contract_months must be <= 24"}` or a Pydantic 422
+// body `{"detail":[{"loc":["body","contract_months"],"msg":"..."}]}`.
+function extractPublishDetail(raw){
+  try {
+    var m = String(raw).match(/\{[\s\S]*\}\s*$/);
+    if (!m) return '';
+    var body = JSON.parse(m[0]);
+    var d = body && body.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d) && d.length) {
+      var first = d[0] || {};
+      var field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : '';
+      return (field ? (field + ': ') : '') + (first.msg || 'invalid value');
+    }
+  } catch (_) {}
+  return '';
+}
+// Localize known field constraints to a clear, field-pointing message; otherwise surface the
+// specific server text so the user still knows what to fix (instead of a generic «Проверьте поля»).
+function localizePublishDetail(detail){
+  var rules = [
+    [/contract_months.*(<=?\s*24|must be)/i, 'Срок контракта должен быть не больше 24 месяцев.'],
+    [/(min_age.*max_age|max_age.*min_age)/i, 'Минимальный возраст не может быть больше максимального.'],
+    [/\bimo\b/i, 'IMO должен быть ровно 7 цифр (например 9554488).'],
+    [/salary|wage/i, 'Проверьте зарплату: укажите корректное число и валюту.']
+  ];
+  for (var i = 0; i < rules.length; i++) {
+    if (rules[i][0].test(detail)) return rules[i][1];
+  }
+  return 'Не удалось опубликовать: ' + detail;
 }
 
 // Note: the live first-run entry gate is renderEntryChoice() / shouldShowEntryChoice()
