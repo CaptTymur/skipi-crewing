@@ -814,7 +814,7 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 (function () {
   'use strict';
   var TOKEN = window.__SKIPI_TOKEN__ || '';   // per-mount capability token (set by host)
-  var slug = null, theme = 'dark', nonce = '', themeSubs = [], pending = {}, seq = 0;
+  var slug = null, theme = 'light', nonce = '', themeSubs = [], pending = {}, seq = 0;
   function send(m) { try { parent.postMessage(Object.assign({ ch: 'skipi-plugin', v: 1, token: TOKEN }, m), '*'); } catch (e) {} }
 
   function selfCheck() {
@@ -855,7 +855,7 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
   window.addEventListener('message', function (ev) {
     var m = ev.data; if (!m || m.ch !== 'skipi-plugin' || m.token !== TOKEN) return;
     if (m.type === 'init') {
-      slug = m.slug; theme = m.theme || 'dark'; nonce = m.nonce || '';
+      slug = m.slug; theme = m.theme || 'light'; nonce = m.nonce || '';
       var sc = selfCheck();
       var fetchProbe;
       try {
@@ -917,7 +917,7 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
     var enabled = !!cfg.enabled;
     var loader = cfg.loader;
     var store = (cfg.host && cfg.host.storage) || defaultStore();
-    var themeApi = (cfg.host && cfg.host.theme) || { get: function () { return 'dark'; } };
+    var themeApi = (cfg.host && cfg.host.theme) || { get: function () { return 'light'; } };
     var nav = (cfg.host && cfg.host.navigation) || { setTitle: function () {}, closePlugin: function () {} };
     var hostId = (cfg.host && cfg.host.id) || null;   // non-secret host app id (e.g. 'seafarer')
     var active = null;   // single active plugin frame
