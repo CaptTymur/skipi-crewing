@@ -9029,6 +9029,7 @@ async function openSettings(tab) {
   }
   if (_skipiSettingsInstance) { try { _skipiSettingsInstance.unmount(); } catch(_){} _skipiSettingsInstance = null; }
   overlay.classList.add('open');
+  pushOverlayHistory();
   var mode = (typeof shouldUseMobileShell === 'function' && shouldUseMobileShell()) ? 'mobile' : 'desktop';
   var section = _crewingSettingsSectionFor(tab);
   // Fresh instance per open: unmount() is irreversible by module contract.
@@ -9052,7 +9053,45 @@ function closeSettings() {
   // Clear any legacy modal that might still be mounted, then restore the view.
   try { document.getElementById('modal-host').innerHTML = ''; } catch(_){}
   try { showView(state.view); } catch(_){}
+  consumeOverlayHistory();
 }
+
+// ---- System Back (Android) closes the unified overlay ----
+// The generated WryActivity maps hardware Back to WebView history: with no
+// history entry canGoBack()=false -> onBackPressed() backgrounds the whole
+// app. Opening the overlay therefore pushes ONE marker entry; popping it
+// (system Back -> popstate) closes the overlay through the same
+// closeSettings path as Escape/backdrop/module close. Every other close
+// path consumes the marker via one history.back() so phantom entries never
+// accumulate. On popstate the flag is cleared BEFORE closing, making the
+// close path's consume step a no-op (no double back(), no re-entrancy).
+var _histMark = false;
+function pushOverlayHistory(){
+  if(_histMark) return;
+  try{
+    if(window.history && typeof window.history.pushState === 'function'){
+      window.history.pushState({ skipiUnifiedSettings: true }, '');
+      _histMark = true;
+    }
+  }catch(e){}
+}
+function consumeOverlayHistory(){
+  if(!_histMark) return;
+  _histMark = false;
+  try{
+    if(window.history && typeof window.history.back === 'function'){
+      window.history.back();
+    }
+  }catch(e){}
+}
+try{
+  window.addEventListener('popstate', function(){
+    if(!_histMark) return; // not our marker — leave app navigation alone
+    _histMark = false;     // our marker entry is the one being popped
+    var ov = document.getElementById('skipi-settings-overlay');
+    if(ov && ov.classList.contains('open')){ closeSettings(); }
+  });
+}catch(e){}
 
 // ── @skipi/settings host adapter (CONTRACT.md v0.3.0) over Crewing stores ─────
 // REAL backing only — no mock names/numbers:
