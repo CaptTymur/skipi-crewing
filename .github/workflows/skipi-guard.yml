@@ -146,6 +146,29 @@ jobs:
               esac
             done
           fi
+          # settings-adopt routing — exact mirror of the pinned guard config
+          # rule (configs/homes/crewing.json "settings-adopt routing", pin
+          # 4adc222a): ALL changed files inside the settings-adopt surface AND
+          # at least one canonical module file changed (require_any_of negative
+          # control: an index.html-only diff never routes here). Purely
+          # additive: applies only while GUARD_TASK is still the default; the
+          # settings-adopt allowlist itself is enforced by the pinned guard
+          # binary, not by this workflow.
+          settings_adopt_candidate=1
+          settings_adopt_module_file=0
+          for changed_file in "${GUARD_CHANGED_FILES[@]}"; do
+            case "$changed_file" in
+              dist/SETTINGS_VERSION|dist/skipi-settings.css|dist/skipi-settings.js)
+                settings_adopt_module_file=1
+                ;;
+              dist/index.html|tests/crewing_theme_default_harness.mjs) ;;
+              *) settings_adopt_candidate=0 ;;
+            esac
+          done
+          if [[ "$GUARD_TASK" == "plugin-host" && "${#GUARD_CHANGED_FILES[@]}" -gt 0 \
+                && "$settings_adopt_candidate" -eq 1 && "$settings_adopt_module_file" -eq 1 ]]; then
+            GUARD_TASK="settings-adopt"
+          fi
           if [[ "${#GUARD_CHANGED_FILES[@]}" -eq 1 && "${GUARD_CHANGED_FILES[0]}" == ".github/workflows/skipi-guard.yml" ]]; then
             GUARD_WORKFLOW_BASE="$(mktemp)"
             GUARD_WORKFLOW_HEAD="$(mktemp)"
