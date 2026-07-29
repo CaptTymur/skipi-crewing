@@ -1901,6 +1901,8 @@ var UI_STRINGS = {
     "settings.crewing.company.description": "Legal name, jurisdiction and MLC certificate.",
     "settings.crewing.mlc": "MLC certificate",
     "settings.crewing.mlc.description": "Certificate number and validity.",
+    "settings.crewing.contact_email": "Contact email",
+    "settings.crewing.contact_email.description": "For verification correspondence and contacting the organisation.",
     "settings.crewing.vault": "Vault",
     "settings.crewing.vault.description": "Local shared storage folder for this device.",
     "settings.crewing.open_profile": "Open profile",
@@ -2074,6 +2076,8 @@ var UI_STRINGS = {
     "settings.crewing.company.description": "Юридическое название, юрисдикция и сертификат MLC.",
     "settings.crewing.mlc": "Сертификат MLC",
     "settings.crewing.mlc.description": "Номер сертификата и срок действия.",
+    "settings.crewing.contact_email": "Контактный email",
+    "settings.crewing.contact_email.description": "Для переписки по верификации и связи с организацией.",
     "settings.crewing.vault": "Профиль (vault)",
     "settings.crewing.vault.description": "Локальная общая папка хранилища на этом устройстве.",
     "settings.crewing.open_profile": "Открыть профиль",
@@ -9108,7 +9112,10 @@ try{
 //   host.devices is intentionally NOT wired (Crewing has no device_list/revoke
 //     command) → the module renders the Devices controls disabled honestly.
 //     host.devices MUST be an object, never an Array — so it is simply absent.
-//   appSpecificSections → Crewing «Рабочие данные» (all dynamic values escaped).
+//   appSpecificSections → Crewing «Рабочие данные» (all dynamic values
+//     escaped) + editable «Контактный email» persisting the SAME key the
+//     legacy form uses (profile.contact_email) via ctx.saveSettings — so the
+//     unified Profile row and the legacy form always see one value.
 
 // Small trusted-HTML helpers for the app-specific section (module classes).
 function _crewSetHtmlRow(ctx, labelKey, description, control){
@@ -9129,8 +9136,14 @@ function _crewSetCode(ctx, value){
   return '<code class="skipi-settings__code">'+ctx.escapeHtml(value)+'</code>';
 }
 
-// Crewing-owned menu 4 section: «Рабочие данные». Read-only company data pulled
-// from state.settings; every dynamic value is escaped via ctx.escapeHtml.
+// Crewing-owned menu 4 section: «Рабочие данные». Company data pulled from
+// state.settings; every dynamic value is escaped via ctx.escapeHtml/escapeAttr.
+// «Контактный email» is the one EDITABLE row: the unified shell's Profile
+// section is display-only, so this is the unified-module input path for
+// profile.contact_email (same persisted key as the legacy form's p-email —
+// legacy and unified always read/write one value). Empty stays empty: no
+// fake default is ever synthesized (getProfile then omits user.email, the
+// Profile row keeps showing «Недоступно» exactly as before).
 function _crewingSettingsSections(){
   return [
     { id:'home-crewing-work-data', order:450, icon:'W',
@@ -9145,11 +9158,19 @@ function _crewingSettingsSections(){
         var mlcTo = (p.mlc_cert_valid_to || '').trim();
         var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' · ' + mlcTo) : ''));
         var vault = (s.vault_path || '').trim() || na;
+        var email = (p.contact_email || '').trim();
+        var emailCtrl = '<div class="skipi-settings__actions">'
+          + '<input class="skipi-settings__input" type="email" id="crewing-set-contact-email"'
+          + ' value="'+ctx.escapeAttr(email)+'" placeholder="hr@company.com" autocomplete="email">'
+          + _crewSetHtmlButton(ctx, 'crewing-save-contact-email', 'settings.action.save')
+          + '</div>';
         return _crewSetHtmlGroup(ctx, 'settings.crewing.work_data',
             _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
                 _crewSetCode(ctx, legal + ' · ' + juris))
           + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
                 _crewSetCode(ctx, mlcVal))
+          + _crewSetHtmlRow(ctx, 'settings.crewing.contact_email', ctx.t('settings.crewing.contact_email.description'),
+                emailCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
                 _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile')));
       },
@@ -9158,6 +9179,19 @@ function _crewingSettingsSections(){
           // Take the operator to the real desktop connection/profile view.
           closeSettings();
           try { openSettings('connection'); } catch(_){}
+        },
+        'crewing-save-contact-email': function(ctx){
+          // Persist through ctx.saveSettings (module round-trip: notice,
+          // supplemental reload, redraw) into the SAME key the legacy form
+          // writes (profile.contact_email) — after save getProfile() serves
+          // the new value and the Profile row stops showing «Недоступно».
+          var el = document.getElementById('crewing-set-contact-email');
+          var value = (el && el.value != null) ? String(el.value).replace(/^\s+|\s+$/g,'') : '';
+          var next;
+          try { next = JSON.parse(JSON.stringify(state.settings || {})); } catch(_){ next = {}; }
+          if (!next.profile || typeof next.profile !== 'object' || Array.isArray(next.profile)) next.profile = {};
+          next.profile.contact_email = value; // '' = как раньше, без фейкового дефолта
+          return ctx.saveSettings(next);
         }
       }
     }
