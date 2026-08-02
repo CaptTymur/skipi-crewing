@@ -2,7 +2,7 @@
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
-<title>Skipi Crewing - United Seafarers</title>
+<title>Skipi Crewing · Stack SKIPI-2026.08-R1</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root {
@@ -740,6 +740,13 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
   .mobile-secondary,
   .mobile-danger { flex: 1 1 auto; }
 }
+
+.desktop-stack-label {
+  display: flex; align-items: center; padding: 0 12px; margin-right: 8px;
+  font-size: 12px; font-weight: 700; color: var(--text, #e6e8ec);
+  white-space: nowrap; flex: 0 0 auto;
+}
+
 </style>
 <!-- @skipi/settings v0.3.0 — vendored CSS (byte-exact from skipi-settings 9caeff6;
      sha pinned in dist/skipi-settings.SETTINGS_VERSION). Scoped under .skipi-settings. -->
@@ -760,6 +767,7 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
 </head>
 <body>
 <div class="modules-bar">
+  <div class="desktop-stack-label" id="desktop-stack-label" data-qa="desktop-stack-label">Skipi Crewing · Stack SKIPI-2026.08-R1</div>
   <div class="mod-tab active" id="mt-vacancies" onclick="showView('vacancies')" title="My posted vacancies">
     <span>My vacancies</span><span id="nav-vacancies-badge" class="nav-badge" style="display:none;">0</span>
   </div>
@@ -2535,7 +2543,7 @@ var state = {
   inboxThreads: [],
   selectedThread: null,
   threadMessages: [],
-  appVersion: '0.4.135',
+  appVersion: '0.4.136',
   buildSha: 'unknown',
 };
 
@@ -2579,20 +2587,60 @@ function saveCrewFlowReadState() {
 
 state.crewFlowReadState = loadCrewFlowReadState();
 
+var APP_BUILD_METADATA={
+  component: 'Crewing',
+  component_version: '0.4.136',
+  stack_id: 'SKIPI-2026.08-R1',
+  source_identifier: 'unknown',
+  manifest_url: 'https://api.skipi.app/.well-known/skipi-stack/SKIPI-2026.08-R1.json',
+  verification_status: 'unavailable'
+};
+function stackVerificationState(info){
+  if(info&&info.verification_status==='mismatch')return 'mismatch';
+  return 'unavailable';
+}
+function stackHeaderLabel(){
+  return 'Skipi '+APP_BUILD_METADATA.component+' · Stack '+APP_BUILD_METADATA.stack_id;
+}
+function stackVerificationLabel(){
+  return APP_BUILD_METADATA.verification_status==='mismatch'?'Stack mismatch':'Stack verification unavailable';
+}
+function buildSourceLabel(){
+  return APP_BUILD_METADATA.source_identifier&&APP_BUILD_METADATA.source_identifier!=='unknown'
+    ? APP_BUILD_METADATA.source_identifier : 'unknown';
+}
+function stackAboutSummary(){
+  return 'Component '+APP_BUILD_METADATA.component+' '+APP_BUILD_METADATA.component_version
+    +' · Stack '+APP_BUILD_METADATA.stack_id
+    +' · Source '+buildSourceLabel()
+    +' · '+stackVerificationLabel();
+}
 function buildShortSha(){
-  return state.buildSha && state.buildSha !== 'unknown' ? state.buildSha.slice(0, 7) : '';
+  return buildSourceLabel() !== 'unknown' ? buildSourceLabel().slice(0, 7) : '';
 }
 function appVersionLabel(){
   var sha = buildShortSha();
-  return state.appVersion + (sha ? ' · ' + sha : '');
+  return APP_BUILD_METADATA.component_version + (sha ? ' · ' + sha : '');
 }
-function setBuildInfo(info){
-  if (info && info.version) state.appVersion = String(info.version);
-  if (info && info.sha) state.buildSha = String(info.sha);
-  else if (info && info.short_sha) state.buildSha = String(info.short_sha);
+function setBuildMetadata(info){
+  info=info||{};
+  APP_BUILD_METADATA={
+    component:String(info.component||APP_BUILD_METADATA.component),
+    component_version:String(info.component_version||info.version||APP_BUILD_METADATA.component_version),
+    stack_id:String(info.stack_id||APP_BUILD_METADATA.stack_id),
+    source_identifier:String(info.source_identifier||info.sha||info.short_sha||'unknown'),
+    manifest_url:String(info.manifest_url||APP_BUILD_METADATA.manifest_url),
+    verification_status:stackVerificationState(info)
+  };
+  state.appVersion = APP_BUILD_METADATA.component_version;
+  state.buildSha = APP_BUILD_METADATA.source_identifier;
   updateBuildLabels();
 }
+function setBuildInfo(info){ setBuildMetadata(info); }
 function updateBuildLabels(){
+  var dh=document.getElementById('desktop-stack-label');
+  if(dh) dh.textContent=stackHeaderLabel();
+  try { document.title = stackHeaderLabel(); } catch(e) {}
   if (document.querySelector('.settings-overlay')) {
     try { renderSettingsModal(); } catch(e) {}
   }
@@ -2601,7 +2649,7 @@ function updateBuildLabels(){
   }
 }
 async function loadBuildInfo(){
-  try { setBuildInfo(await invoke('get_build_info')); }
+  try { if (typeof invoke==='function') setBuildMetadata(await invoke('get_build_info')); }
   catch(e) { updateBuildLabels(); }
 }
 
@@ -9282,7 +9330,10 @@ function crewingSettingsHost(){
     ],
     appName: 'Skipi Crewing',
     get appVersion(){ try { return appVersionLabel(); } catch(_){ return ''; } },
-    about: { support: 'info@tymur.org' },
+    about: {
+      support: 'info@tymur.org',
+      get description(){ try { return (typeof stackAboutSummary==='function') ? stackAboutSummary() : ''; } catch(_){ return ''; } }
+    },
     getProfile: function(){
       // Company entity — Crewing represents a crewing agency (a company).
       var s = state.settings || {};
