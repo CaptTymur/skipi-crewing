@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: CaptTymur/skipi-guard
-          ref: 676967be89e567aa3746e8e700d933c4c95a35e8
+          ref: fdbf3d8cc29435e5da64afd105e5850c571245fa
           path: .skipi-guard
           fetch-depth: 0
 
