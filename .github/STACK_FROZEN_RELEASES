@@ -1,0 +1,3 @@
+# Stack Stage 5 primary cell tags — CI Release must not rewrite assets.
+# One tag per line. New version tags are unaffected.
+v0.4.136

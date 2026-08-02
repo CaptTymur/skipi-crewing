@@ -19,8 +19,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  refuse-frozen-stack-release:
+    name: Refuse frozen Stack release rewrite
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Fail if tag is Stack-frozen
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          FILE=".github/STACK_FROZEN_RELEASES"
+          if [ ! -f "$FILE" ]; then
+            echo "No STACK_FROZEN_RELEASES; allow"
+            exit 0
+          fi
+          if grep -E "^${TAG}$" "$FILE" >/dev/null; then
+            echo "REFUSING_OVERWRITE: tag $TAG is Stack-frozen (Stage 5 cell). Do not re-run Release CI on this tag."
+            exit 1
+          fi
+          echo "Tag $TAG not frozen; allow release"
+
   syntax-check:
     name: JS syntax check
+    needs: refuse-frozen-stack-release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
