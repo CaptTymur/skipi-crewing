@@ -260,10 +260,10 @@ jobs:
             GUARD_TASK="release"
             OVERRIDE_ARGS=(--override-protected crewing-presence-main-merge-replay)
           fi
-          echo "resolved SKIPI_GUARD_TASK=$GUARD_TASK"
+          echo "resolved SKIPI_GUARD_TASK=$GUARD_TASK (CI uses --auto-task; manual path retained for logs/bootstrap only)"
           .skipi-guard/bin/skipi-guard verify \
             --home "$SKIPI_GUARD_HOME" \
-            --task "$GUARD_TASK" \
+            --auto-task \
             "${OVERRIDE_ARGS[@]}" \
             --run-harness \
             --repo "$GITHUB_WORKSPACE" \
