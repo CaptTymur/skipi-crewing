@@ -112,9 +112,13 @@ for (const m of manifest.required_modules || []) {
   const navs = [m.desktop_navigation, m.mobile_navigation].filter(Boolean);
   for (const nav of navs) {
     if (nav.route_driver === 'mobileShow' || nav.route_driver === 'mobileOpenSettingsHome') {
+      // Canonical 4-slot rail (CANON-mobile-unified-standard-v1): modules off
+      // the rail (compliance/documents) stay reachable via the mobile Apps-grid
+      // module tiles; Settings enters only via the header gear. The manifest is
+      // untouched — this assert accepts any of those navigation sources.
       const routePattern = nav.route === 'settings'
-        ? /data-mview="settings"[\s\S]*mobileOpenSettingsHome\(\)/
-        : new RegExp("mobileNavButton\\('" + escapeRe(nav.route) + "'");
+        ? /onclick="mobileOpenSettingsHome\(\)"/
+        : new RegExp("mobileNavButton\\('" + escapeRe(nav.route) + "'|data-qa=\"apps-module-tile-" + escapeRe(nav.route) + '"');
       ok(routePattern.test(HTML), m.name + ': mobile navigation source exists for ' + nav.route);
     } else {
       const tag = openingTagForSelector(nav.nav_selector);
@@ -455,6 +459,73 @@ if (M) {
   for (const id of ['vacancies', 'mailings']) {
     ok(modIds.includes(id), 'work module remains protected in presence manifest after settings extraction: ' + id);
   }
+}
+
+// ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
+// OWNER 23.07 + 07.08 "слот ждёт — рейл из 4"): exactly 4 fixed slots
+// Vacancies · Mailings · Seafarers · Apps, canonical bottom-nav-<view> QA,
+// no "More" slot, no rail scroll mechanics; Requirements/Documents reachable
+// from the mobile Apps grid whose module tiles precede plugin tiles.
+section('mobile rail canon — 4 fixed slots, canonical QA, no scroll');
+if (M) {
+  M.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'presence-harness',
+    interface: { theme: 'light', language: 'en' },
+  };
+  M.mobileShow('vacancies');
+  const chrome = elFor('mobile-root').innerHTML;
+  const railHtml = (chrome.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
+  ok(!!railHtml, 'mobile chrome renders the bottom rail');
+  const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
+  const railViews = railBtns.map((b) => b[1]);
+  ok(railViews.join(',') === 'vacancies,mailings,seafarers,apps',
+    'rail renders exactly 4 buttons in canonical order vacancies,mailings,seafarers,apps — got [' + railViews.join(',') + ']');
+  const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
+  ok(railQa.join(',') === 'bottom-nav-vacancies,bottom-nav-mailings,bottom-nav-seafarers,bottom-nav-apps',
+    'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
+  ok(railViews[railViews.length - 1] === 'apps' && railQa[railQa.length - 1] === 'bottom-nav-apps',
+    'last rail slot is Apps');
+  ok(!railHtml.includes('bottom-nav-more') && !railHtml.includes('data-mview="settings"') && !railHtml.includes('mobileOpenSettingsHome'),
+    'rail has no "More"/Settings slot (settings enters only via header gear)');
+  ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
+    'no legacy bottom-nav-home / bottom-nav-workspace slugs on the rail');
+  const headerHtml = (chrome.match(/<header[\s\S]*?<\/header>/) || [''])[0];
+  ok(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\('vacancies'\)"/.test(headerHtml),
+    'header keeps home button (mobile-top-home → vacancies)');
+  ok(headerHtml.includes('mobileOpenSettingsHome()'), 'header keeps settings gear (mobileOpenSettingsHome)');
+
+  // Rail scroll mechanics removed: no horizontal overflow, no scroll-snap, no hint arrows.
+  const railRules = RULES.filter((r) => r.selector.includes('.mobile-module-rail'));
+  ok(railRules.length > 0, 'rail CSS rules exist');
+  const scrollRules = railRules.filter((r) => /overflow-x\s*:\s*(auto|scroll)/i.test(r.body));
+  ok(scrollRules.length === 0, 'rail CSS has no overflow-x auto/scroll' + (scrollRules.length ? ' — ' + scrollRules[0].selector : ''));
+  const snapRules = RULES.filter((r) => (r.selector.includes('.mobile-module-rail') || r.selector.includes('.mobile-nav-btn')) && /scroll-snap/i.test(r.body));
+  ok(snapRules.length === 0, 'rail CSS has no scroll-snap' + (snapRules.length ? ' — ' + snapRules[0].selector : ''));
+  ok(!HTML.includes('.mobile-module-rail-wrap::before') && !HTML.includes('.mobile-module-rail-wrap::after'),
+    'rail scroll hint arrows (::before/::after) removed');
+
+  // Mobile Apps grid: module tiles (incl. Requirements/Documents off the rail) precede plugins.
+  const bodyEl = elFor('body');
+  const origContains = bodyEl.classList.contains;
+  bodyEl.classList.contains = (c) => c === 'mobile-shell';
+  M.mobileShow('apps');
+  bodyEl.classList.contains = origContains;
+  const appsHtml = elFor('mobile-main').innerHTML;
+  const tileOrder = [...appsHtml.matchAll(/data-qa="apps-module-tile-([a-z_]+)"/g)].map((m) => m[1]);
+  ok(tileOrder.join(',') === 'vacancies,mailings,seafarers,compliance,documents',
+    'mobile Apps grid shows module tiles vacancies,mailings,seafarers,compliance,documents — got [' + tileOrder.join(',') + ']');
+  const firstModuleTile = appsHtml.indexOf('data-qa="apps-module-tile-');
+  const pluginRegion = appsHtml.indexOf('id="apps-launch-body"');
+  ok(firstModuleTile !== -1 && pluginRegion !== -1 && firstModuleTile < pluginRegion,
+    'module tiles precede the plugin region in the mobile Apps grid');
+  const complianceTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-compliance"[^>]*>/) || [''])[0];
+  const documentsTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-documents"[^>]*>/) || [''])[0];
+  ok(complianceTile.includes("mobileShow('compliance')"), 'Requirements tile routes via mobileShow(compliance)');
+  ok(documentsTile.includes("mobileShow('documents')"), 'Documents tile routes via mobileShow(documents)');
+} else {
+  ok(false, 'mobile rail canon checks require runtime module (script failed to load)');
 }
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');

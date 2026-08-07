@@ -217,23 +217,29 @@ ok(HTML.includes("data-qa=\"plugin-settings-'+escapeHtml(p.id)+'\""), 'manage ti
 ok(HTML.includes('data-qa="plugin-empty-state"'), 'plugin-empty-state hook present');
 ok(HTML.includes('data-qa="plugin-offline-state"'), 'plugin-offline-state hook present');
 ok(HTML.includes('data-qa="plugin-error-state"'), 'plugin-error-state hook present');
-ok(/data-qa="bottom-nav-more" onclick="mobileOpenSettingsHome\(\)"/.test(HTML), 'mobile rail has additive bottom-nav-more entry (settings home)');
-ok(HTML.includes("'mobile.nav.more':'More'") && HTML.includes("'mobile.nav.more':'Ещё'"), 'mobile.nav.more label translated (EN + RU)');
+// Canonical 4-slot rail: the "⋯ More" slot is abolished — settings enters only
+// via the header gear (mobileOpenSettingsHome stays wired in the mobile header).
+ok(!HTML.includes('bottom-nav-more'), 'mobile rail has no bottom-nav-more entry (More slot abolished)');
+ok(/onclick="mobileOpenSettingsHome\(\)"/.test(HTML), 'settings home stays reachable via header gear (mobileOpenSettingsHome)');
 ok(/navigator\.onLine===false/.test(HTML), 'offline state is driven by real navigator.onLine only');
 
 section('launcher mobile rail hooks (rendered via mobileNavButton)');
 {
+  // Canonical 4-slot rail: every slot carries bottom-nav-<view> with the
+  // module's own slug (legacy bottom-nav-home/workspace mapping retired).
   const start = HTML.indexOf('var MOBILE_RAIL_QA');
-  const end = HTML.indexOf('function mobileUpdateModuleRailHint', start);
+  const end = HTML.indexOf('async function bootMobile', start);
   ok(start > 0 && end > start, 'MOBILE_RAIL_QA + mobileNavButton block found');
   const navBtn = new Function('escapeAttr', 'escapeHtml', HTML.slice(start, end) + '\nreturn mobileNavButton;')(escapeAttr, escapeHtml);
   const home = navBtn('vacancies', 'vacancies', '&#8962;', 'Vacancies');
-  ok(home.includes('data-qa="bottom-nav-home"'), 'vacancies rail button carries bottom-nav-home');
+  ok(home.includes('data-qa="bottom-nav-vacancies"'), 'vacancies rail button carries bottom-nav-vacancies');
   ok(home.includes('data-mview="vacancies"') && home.includes('active'), 'vacancies rail button keeps data-mview hook and active state');
-  ok(navBtn('mailings', 'vacancies', '✉', 'Mailings').includes('data-qa="bottom-nav-workspace"'), 'mailings rail button carries bottom-nav-workspace');
+  ok(navBtn('mailings', 'vacancies', '✉', 'Mailings').includes('data-qa="bottom-nav-mailings"'), 'mailings rail button carries bottom-nav-mailings');
+  ok(navBtn('seafarers', 'vacancies', '👤', 'Seafarers').includes('data-qa="bottom-nav-seafarers"'), 'seafarers rail button carries bottom-nav-seafarers');
   ok(navBtn('apps', 'vacancies', '🧩', 'Apps').includes('data-qa="bottom-nav-apps"'), 'apps rail button carries bottom-nav-apps');
+  ok(!HTML.includes('bottom-nav-home') && !HTML.includes('bottom-nav-workspace'), 'legacy bottom-nav-home/workspace slugs are gone');
   const docs = navBtn('documents', 'vacancies', '📄', 'Docs');
-  ok(!/bottom-nav-/.test(docs) && docs.includes('data-mview="documents"'), 'non-canonical rail buttons get no bottom-nav hook and keep data-mview');
+  ok(!/bottom-nav-/.test(docs) && docs.includes('data-mview="documents"'), 'off-rail views get no bottom-nav hook and keep data-mview');
 }
 
 section('launcher behavioral: launcher / manage / detail / lifecycle');
