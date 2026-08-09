@@ -12541,32 +12541,56 @@ function trialHideOverlay(){
   var el = document.getElementById('trial-block-overlay');
   if (el && el.parentNode) el.parentNode.removeChild(el);
 }
+// Navigate to the company-token connection screen (mobile + desktop), from the
+// trial blocked-overlay. On an UNCONNECTED device (empty crewing_id) the License
+// activation POST can never succeed (server requires account_id min_length=1), so
+// we route the user to connect a company token first via the EXISTING connection
+// path — no new screen. (BACKLOG №105)
+function trialGoConnect(){
+  trialHideOverlay();
+  if (shouldUseMobileShell()) { mobileShow('connection'); }
+  else { openSettings('connection'); }
+}
 function trialShowBlockedOverlay(message){
   trialRemoveBanner();
+  var s = state.settings || {};
+  // Unconnected device: crewing_id is empty → license activation cannot work
+  // (account_id would be empty → server 422). Show a connect-CTA instead of a
+  // dead license field.
+  var connected = !!s.crewing_id;
   var el = document.getElementById('trial-block-overlay');
   if (!el) {
     el = document.createElement('div');
     el.id = 'trial-block-overlay';
     el.style.cssText = 'position:fixed;inset:0;z-index:2147483200;display:flex;align-items:center;justify-content:center;'
       + 'background:rgba(245,248,251,.96);backdrop-filter:blur(8px);padding:20px;';
-    el.innerHTML =
+    var head =
       '<div style="width:min(520px,100%);background:var(--panel,#fff);color:var(--text,#1a1f26);border:1px solid var(--border,#d8dde5);'
       + 'border-radius:14px;padding:28px;box-shadow:0 24px 80px rgba(15,23,42,.24);">'
       + '<div style="font-size:19px;font-weight:800;margin-bottom:8px;">Бесплатный период закончился.</div>'
       + '<div style="font-size:13px;line-height:1.55;color:var(--text2,#5a6573);margin-bottom:18px;">'
-      + 'Свяжитесь с Captain Tymur Rudov: ' + trialContactHtml() + '</div>'
-      + '<label for="trial-license" style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;">License-токен</label>'
+      + 'Свяжитесь с Captain Tymur Rudov: ' + trialContactHtml() + '</div>';
+    var connectBranch =
+      '<div style="font-size:13px;line-height:1.55;color:var(--text2,#5a6573);margin-bottom:14px;">'
+      + 'Это устройство не подключено к аккредитованному крюингу. Чтобы продолжить, подключите токен компании.</div>'
+      + '<button id="trial-connect-btn" onclick="trialGoConnect()"'
+      + ' style="width:100%;padding:12px 14px;border:0;border-radius:8px;background:#004564;color:#fff;'
+      + 'font-weight:800;cursor:pointer;">Подключить токен компании</button>';
+    var licenseBranch =
+      '<label for="trial-license" style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;">License-токен</label>'
       + '<input id="trial-license" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"'
       + ' style="width:100%;padding:12px;border:1px solid var(--border,#d8dde5);border-radius:8px;font-family:monospace;'
       + ' background:var(--panel2,#eef0f4);color:var(--text,#1a1f26);box-sizing:border-box;" />'
       + '<button id="trial-license-btn" onclick="trialActivateLicense()"'
       + ' style="width:100%;margin-top:12px;padding:12px 14px;border:0;border-radius:8px;background:#004564;color:#fff;'
-      + 'font-weight:800;cursor:pointer;">Активировать</button>'
+      + 'font-weight:800;cursor:pointer;">Активировать</button>';
+    el.innerHTML = head
+      + (connected ? licenseBranch : connectBranch)
       + '<div id="trial-license-error" style="min-height:18px;margin-top:10px;color:#ef4444;font-size:12px;">'
       + (message ? escapeHtml(message) : '') + '</div>'
       + '</div>';
     document.body.appendChild(el);
-    setTimeout(function(){ var input = document.getElementById('trial-license'); if (input) input.focus(); }, 40);
+    if (connected) setTimeout(function(){ var input = document.getElementById('trial-license'); if (input) input.focus(); }, 40);
   } else {
     el.style.display = 'flex';
     var err = document.getElementById('trial-license-error');
@@ -12579,10 +12603,14 @@ async function trialActivateLicense(){
   var btn = document.getElementById('trial-license-btn');
   var token = (input && input.value || '').trim();
   if (!token) { if (err) err.textContent = 'Введите license-токен.'; return; }
+  var s = state.settings || {};
+  // Defense-in-depth (BACKLOG №105): never POST /api/trial/activate with an empty
+  // account_id. On an unconnected device (empty crewing_id) the server rejects any
+  // token with 422; route the user to connect a company token first instead.
+  if (!s.crewing_id) { if (err) err.textContent = 'Сначала подключите токен компании.'; return; }
   if (btn) btn.disabled = true;
   if (err) err.textContent = '';
   try {
-    var s = state.settings || {};
     var base = s.server_url || 'https://api.skipi.app';
     var res = await fetch(base.replace(/\/+$/,'') + '/api/trial/activate', {
       method: 'POST',
