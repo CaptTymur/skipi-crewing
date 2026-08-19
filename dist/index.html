@@ -10499,7 +10499,7 @@ function appsLauncherBodyHtml(){
   return h;
 }
 // Mobile Apps grid: module tiles first (rail modules + Requirements/Documents
-// which moved off the canonical 4-slot rail), then plugins. Desktop launcher
+// which moved off the canonical 5-slot rail), then plugins. Desktop launcher
 // is unchanged (isMobileShellActive() gate).
 function appsMobileModuleTilesHtml(){
   if (!isMobileShellActive()) return '';
@@ -10507,6 +10507,7 @@ function appsMobileModuleTilesHtml(){
     { view:'vacancies', icon:'&#8962;', qa:'data-qa="apps-module-tile-vacancies"' },
     { view:'mailings', icon:'✉', qa:'data-qa="apps-module-tile-mailings"' },
     { view:'seafarers', icon:'👤', qa:'data-qa="apps-module-tile-seafarers"' },
+    { view:'crew_flow', icon:'📥', qa:'data-qa="apps-module-tile-crew_flow"' },
     { view:'compliance', icon:'▣', qa:'data-qa="apps-module-tile-compliance"' },
     { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' }
   ];
@@ -10732,6 +10733,7 @@ function mobileTr(key) {
 }
 
 function mobileModuleLabel(view) {
+  if (view === 'crew_flow') return 'Crew Flow';
   var map = {
     vacancies: 'nav.vacancies',
     mailings: 'nav.mailings',
@@ -10761,6 +10763,12 @@ function mobileViewChromeTitle(view) {
     return [sf.display_name || mobileModuleLabel('seafarers'), [sf.rank || sf.position, sf.nationality].filter(Boolean).join(' · ')];
   }
   if (view === 'documents') return [mobileModuleLabel('documents'), mobileTr('documents_desc')];
+  if (view === 'crew_flow') return [mobileModuleLabel('crew_flow'), 'Incoming candidate signals'];
+  if (view === 'crew_flow_signal') {
+    var cfs = state.selectedCrewFlowSignal || {};
+    var cfc = cfs.candidate || {};
+    return [cfc.name || mobileModuleLabel('crew_flow'), [cfc.rank, cfc.nationality].filter(Boolean).join(' · ')];
+  }
   if (view === 'apps') return ['Apps', 'Plugins for your team'];
   if (view === 'document') {
     var doc = state.selectedDocument || {};
@@ -10788,7 +10796,7 @@ function mobileRenderChrome(view) {
   var title = mobileViewChromeTitle(view);
   var navView = mobileParentView(view);
   var showBack = view !== navView || view === 'draft';
-  var canRefresh = ['vacancies','mailings','compliance','seafarers','documents'].indexOf(view) !== -1;
+  var canRefresh = ['vacancies','mailings','compliance','seafarers','documents','crew_flow'].indexOf(view) !== -1;
   var showBottomNav = mobileHasConnection() || __demoMode;
   root.innerHTML =
     '<div class="mobile-app">'
@@ -10810,6 +10818,7 @@ function mobileRenderChrome(view) {
     + mobileNavButton('vacancies', navView, '&#8962;', mobileModuleLabel('vacancies'))
     + mobileNavButton('mailings', navView, '✉', mobileModuleLabel('mailings'))
     + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
+    + mobileNavButton('crew_flow', navView, '📥', mobileModuleLabel('crew_flow'))
     + mobileNavButton('apps', navView, '🧩', 'Apps')
     + '</div>'
     + '</nav>' : '')
@@ -10825,6 +10834,7 @@ function mobileParentView(view) {
     compliance_form: 'compliance',
     seafarer: 'seafarers',
     document: 'documents',
+    crew_flow_signal: 'crew_flow',
     draft: 'vacancies',
     member_join: 'work_role',
     work_role: 'connection',
@@ -10834,10 +10844,10 @@ function mobileParentView(view) {
 
 // Canonical cross-home rail hooks (CANON-mobile-unified-standard-v1; existing
 // data-mview hooks stay): every rail slot carries bottom-nav-<view> with the
-// module's own slug. The rail is 4 fixed slots (the 5th is reserved for Crew
-// Flow once it becomes a mobile screen); Settings enters only via the header
+// module's own slug. The rail is 5 fixed slots (Crew Flow took the reserved
+// slot, №101 19.08; Apps stays last); Settings enters only via the header
 // gear, Requirements/Documents via the mobile Apps grid module tiles.
-var MOBILE_RAIL_QA = { vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', apps: 'bottom-nav-apps' };
+var MOBILE_RAIL_QA = { vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', crew_flow: 'bottom-nav-crew_flow', apps: 'bottom-nav-apps' };
 function mobileNavButton(view, active, icon, label) {
   var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
   return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
@@ -10887,6 +10897,8 @@ function mobileShow(view) {
   if (view === 'seafarers') return mobileRenderSeafarers();
   if (view === 'seafarer') return mobileRenderSeafarerDetail();
   if (view === 'documents') return mobileRenderDocuments();
+  if (view === 'crew_flow') return mobileRenderCrewFlow();
+  if (view === 'crew_flow_signal') return mobileRenderCrewFlowSignal();
   if (view === 'apps') return mobileRenderApps();
   if (view === 'document') return mobileRenderDocumentDetail();
   if (view === 'draft') return mobileRenderDraft();
@@ -10908,6 +10920,7 @@ function mobileBack() {
   if (mobileState.view === 'compliance_form') return mobileShow('compliance');
   if (mobileState.view === 'seafarer') return mobileShow('seafarers');
   if (mobileState.view === 'document') return mobileShow('documents');
+  if (mobileState.view === 'crew_flow_signal') return mobileShow('crew_flow');
   if (mobileState.view === 'vacancy') return mobileShow('vacancies');
   mobileShow(mobileParentView(mobileState.view || 'vacancies'));
 }
@@ -10924,6 +10937,7 @@ function mobileRefreshCurrent() {
   if (view === 'compliance') return mobileLoadCompliance(true);
   if (view === 'seafarers') return mobileLoadSeafarers(true);
   if (view === 'documents') return mobileLoadDocuments(true);
+  if (view === 'crew_flow') return refreshCrewFlowRankings().then(function(){ if (mobileState.view === 'crew_flow') mobileRenderCrewFlow(); });
 }
 
 function mobileChooseWorkRole(role) {
@@ -12109,6 +12123,92 @@ async function mobileRestoreComplianceProfile() {
 }
 
 // ------------- mobile seafarers database -------------
+// ------------- mobile crew flow (mobile surface over the existing desktop
+// Crew Flow signal state; signal content/logic is reused, not changed) -------------
+function mobileRenderCrewFlow() {
+  var rows = crewFlowState().slice();
+  if (!rows.length) {
+    mobileMain('<div class="mobile-empty" data-qa="mobile-crew-flow-empty">'+escapeHtml(crewFlowDemoFixturesEnabled() ? 'No crew flow signals.' : 'No candidates yet. Review real applicants in Vacancies -> Applications.')+'</div>');
+    return;
+  }
+  rows.sort(function(a,b){
+    var ar = crewFlowIsRead(a.id) ? 1 : 0;
+    var br = crewFlowIsRead(b.id) ? 1 : 0;
+    if (ar !== br) return ar - br;
+    return (b.received_at || '').localeCompare(a.received_at || '');
+  });
+  var html = '<div data-qa="mobile-crew-flow-list">';
+  rows.forEach(function(row){
+    var c = row.candidate || {};
+    var top = crewFlowTopCoverage(row);
+    html += '<button class="mobile-list-item" data-qa="mobile-crew-flow-row" onclick="mobileOpenCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+      +   '<div class="mobile-list-title"><span>'+escapeHtml(c.name || 'Candidate')+'</span>'
+      +     (crewFlowIsRead(row.id) ? '<span class="mobile-chip">read</span>' : '<span class="mobile-chip ok">new</span>')
+      +   '</div>'
+      +   '<div class="mobile-list-meta">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+' · '+escapeHtml(row.responded_to || 'general intake')+'</div>'
+      +   '<div class="mobile-chip-row">'
+      +     crewFlowTrustHtml(row)
+      +     (top ? '<span class="mobile-chip">'+escapeHtml(top.profile_name || 'Profile')+' · '+escapeHtml(String(top.score_percent || 0))+'%</span>' : '<span class="mobile-chip">coverage pending</span>')
+      +   '</div>'
+      + '</button>';
+  });
+  html += '</div>';
+  mobileMain(html);
+  var pending = rows.some(function(row){ return row && row.application_id && !row.coverage_loaded && !row.coverage_loading; });
+  if (pending) refreshCrewFlowRankings().then(function(){ if (mobileState.view === 'crew_flow') mobileRenderCrewFlow(); });
+}
+
+function mobileOpenCrewFlowSignal(id) {
+  var row = crewFlowFindSignal(id);
+  if (!row) return;
+  state.selectedCrewFlowSignal = row;
+  mobileShow('crew_flow_signal');
+  ensureCrewFlowRankings(row).then(function(){
+    if (mobileState.view === 'crew_flow_signal') mobileRenderCrewFlowSignal();
+  });
+}
+
+function mobileRenderCrewFlowSignal() {
+  var row = state.selectedCrewFlowSignal;
+  if (!row) return mobileShow('crew_flow');
+  var c = row.candidate || {};
+  var read = crewFlowReadInfo(row.id);
+  mobileMain(
+    '<div class="mobile-card" data-qa="mobile-crew-flow-detail">'
+    + '<div class="mobile-muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.4px;">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+'</div>'
+    + '<div class="mobile-detail-head"><h1>'+escapeHtml(c.name || 'Candidate')+'</h1></div>'
+    + '<div class="mobile-muted">'+escapeHtml(c.rank || 'Rank pending')+' · '+escapeHtml(c.nationality || 'Nationality pending')+' · available '+escapeHtml(c.available_from || 'pending')+'</div>'
+    + '<div class="mobile-chip-row">'
+    +   crewFlowTrustHtml(row)
+    +   (read ? '<span class="mobile-chip">read · '+escapeHtml(read.action || 'read')+'</span>' : '<span class="mobile-chip ok">unread</span>')
+    +   (read && read.saved_to_db ? '<span class="mobile-chip ok">in Seafarers DB</span>' : '')
+    + '</div>'
+    + '<div class="mobile-detail-grid" style="margin-top:10px;">'
+    +   '<div class="mobile-kv"><div class="mobile-muted">Responded to</div><div>'+escapeHtml(row.responded_to || 'general intake')+'</div></div>'
+    +   '<div class="mobile-kv"><div class="mobile-muted">Seafarer ref</div><div>'+escapeHtml(row.seafarer_ref || 'new contact')+'</div></div>'
+    +   '<div class="mobile-kv"><div class="mobile-muted">Attention</div><div>'+escapeHtml(row.attention || 'ready for review')+'</div></div>'
+    + '</div>'
+    + '<div style="margin-top:12px;"><div style="font-weight:700;margin-bottom:6px;">Profile fit</div>'
+    + '<div data-qa="mobile-crew-flow-coverage">'+crewFlowCoverageHtml(row, false)+'</div></div>'
+    + '<div class="mobile-actions" style="margin-top:12px;">'
+    +   '<button class="mobile-secondary" onclick="mobileCrewFlowIgnore(\''+escapeAttr(row.id)+'\')">Ignore</button>'
+    +   '<button class="mobile-primary" onclick="mobileCrewFlowAdd(\''+escapeAttr(row.id)+'\')">Add to Seafarers DB</button>'
+    + '</div>'
+    + '</div>'
+  );
+}
+
+function mobileCrewFlowAdd(id) {
+  Promise.resolve(crewFlowAddSignal(id)).then(function(){
+    if (isMobileShellActive()) mobileShow(mobileState.view === 'crew_flow' ? 'crew_flow' : 'crew_flow_signal');
+  });
+}
+
+function mobileCrewFlowIgnore(id) {
+  crewFlowIgnoreSignal(id);
+  if (isMobileShellActive()) mobileShow(mobileState.view === 'crew_flow' ? 'crew_flow' : 'crew_flow_signal');
+}
+
 function mobileRenderSeafarers() {
   mobileMain(
     '<div class="mobile-card">'

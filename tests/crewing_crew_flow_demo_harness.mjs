@@ -251,7 +251,7 @@ function loadInlineModuleForCurrentStore() {
     scriptNoBoot
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke };'
+      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal };'
   )();
 }
 
@@ -369,6 +369,29 @@ if (M) {
   }
   ok(!calls.some(([cmd]) => String(cmd).toLowerCase().includes('mail') && cmd !== 'fetch_mail_messages'), 'Crew Flow does not start real mailbox operations');
   ok(fetchCalls.length === 0, 'Crew Flow / Track 1 render performs no network fetches');
+
+  section('mobile crew flow surface — rail slot + screen (canon 5 fixed slots, no scroll)');
+  M.mobileShow('crew_flow');
+  ok(M.mobileState.view === 'crew_flow', 'mobileShow(crew_flow) opens the crew_flow mobile view');
+  const railHtml = (elFor('mobile-root').innerHTML.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
+  const railViews = [...railHtml.matchAll(/data-mview="([^"]+)"/g)].map((m) => m[1]);
+  ok(railViews.join(',') === 'vacancies,mailings,seafarers,crew_flow,apps',
+    'rail renders canon 5 fixed slots with Crew Flow 4th and Apps last — got [' + railViews.join(',') + ']');
+  ok(railHtml.includes('data-qa="bottom-nav-crew_flow"'), 'crew_flow rail slot carries the canonical bottom-nav-crew_flow QA hook');
+  const railCssBody = (HTML.match(/\.mobile-module-rail\s*\{([^}]*)\}/) || ['', ''])[1];
+  ok(railCssBody !== '' && !/overflow-x\s*:\s*(auto|scroll)/i.test(railCssBody), 'rail CSS keeps fixed slots without scroll mechanics');
+  const mobileListHtml = elFor('mobile-main').innerHTML;
+  ok(mobileListHtml.includes('data-qa="mobile-crew-flow-list"'), 'mobile crew flow list renders');
+  ok(mobileListHtml.includes('Oleksandr K.'), 'mobile list shows fixture signals in demo mode');
+  ok(HTML.includes('data-qa="apps-module-tile-crew_flow"'), 'mobile Apps grid carries a Crew Flow module tile');
+
+  M.mobileOpenCrewFlowSignal('cf-demo-mail-cv-oleksandr');
+  ok(M.mobileState.view === 'crew_flow_signal', 'tapping a signal opens the mobile signal view');
+  const mobileDetailHtml = elFor('mobile-main').innerHTML;
+  ok(mobileDetailHtml.includes('data-qa="mobile-crew-flow-detail"'), 'mobile signal detail renders');
+  ok(mobileDetailHtml.includes('Profile fit') && mobileDetailHtml.includes('data-qa="mobile-crew-flow-coverage"'), 'mobile detail reuses coverage rendering (Profile fit)');
+  M.mobileBack();
+  ok(M.mobileState.view === 'crew_flow', 'Back returns from signal detail to the crew_flow screen');
 
   store.delete('skipi_crewing_demo');
   elements.clear();

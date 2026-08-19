@@ -112,7 +112,7 @@ for (const m of manifest.required_modules || []) {
   const navs = [m.desktop_navigation, m.mobile_navigation].filter(Boolean);
   for (const nav of navs) {
     if (nav.route_driver === 'mobileShow' || nav.route_driver === 'mobileOpenSettingsHome') {
-      // Canonical 4-slot rail (CANON-mobile-unified-standard-v1): modules off
+      // Canonical 5-slot rail (CANON-mobile-unified-standard-v1): modules off
       // the rail (compliance/documents) stay reachable via the mobile Apps-grid
       // module tiles; Settings enters only via the header gear. The manifest is
       // untouched — this assert accepts any of those navigation sources.
@@ -462,11 +462,12 @@ if (M) {
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
-// OWNER 23.07 + 07.08 "слот ждёт — рейл из 4"): exactly 4 fixed slots
-// Vacancies · Mailings · Seafarers · Apps, canonical bottom-nav-<view> QA,
-// no "More" slot, no rail scroll mechanics; Requirements/Documents reachable
-// from the mobile Apps grid whose module tiles precede plugin tiles.
-section('mobile rail canon — 4 fixed slots, canonical QA, no scroll');
+// OWNER 23.07 + 07.08 + №101 19.08 "Крю флоу занимает зарезервированный слот"):
+// exactly 5 fixed slots Vacancies · Mailings · Seafarers · Crew Flow · Apps
+// (Apps last), canonical bottom-nav-<view> QA, no "More" slot, no rail scroll
+// mechanics; Requirements/Documents reachable from the mobile Apps grid whose
+// module tiles precede plugin tiles.
+section('mobile rail canon — 5 fixed slots, canonical QA, no scroll');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
@@ -480,10 +481,10 @@ if (M) {
   ok(!!railHtml, 'mobile chrome renders the bottom rail');
   const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
   const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'vacancies,mailings,seafarers,apps',
-    'rail renders exactly 4 buttons in canonical order vacancies,mailings,seafarers,apps — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'vacancies,mailings,seafarers,crew_flow,apps',
+    'rail renders exactly 5 buttons in canonical order vacancies,mailings,seafarers,crew_flow,apps — got [' + railViews.join(',') + ']');
   const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
-  ok(railQa.join(',') === 'bottom-nav-vacancies,bottom-nav-mailings,bottom-nav-seafarers,bottom-nav-apps',
+  ok(railQa.join(',') === 'bottom-nav-vacancies,bottom-nav-mailings,bottom-nav-seafarers,bottom-nav-crew_flow,bottom-nav-apps',
     'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
   ok(railViews[railViews.length - 1] === 'apps' && railQa[railQa.length - 1] === 'bottom-nav-apps',
     'last rail slot is Apps');
@@ -514,8 +515,8 @@ if (M) {
   bodyEl.classList.contains = origContains;
   const appsHtml = elFor('mobile-main').innerHTML;
   const tileOrder = [...appsHtml.matchAll(/data-qa="apps-module-tile-([a-z_]+)"/g)].map((m) => m[1]);
-  ok(tileOrder.join(',') === 'vacancies,mailings,seafarers,compliance,documents',
-    'mobile Apps grid shows module tiles vacancies,mailings,seafarers,compliance,documents — got [' + tileOrder.join(',') + ']');
+  ok(tileOrder.join(',') === 'vacancies,mailings,seafarers,crew_flow,compliance,documents',
+    'mobile Apps grid shows module tiles vacancies,mailings,seafarers,crew_flow,compliance,documents — got [' + tileOrder.join(',') + ']');
   const firstModuleTile = appsHtml.indexOf('data-qa="apps-module-tile-');
   const pluginRegion = appsHtml.indexOf('id="apps-launch-body"');
   ok(firstModuleTile !== -1 && pluginRegion !== -1 && firstModuleTile < pluginRegion,
