@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 mod api;
+mod crewing_intake;
 mod db;
 mod feedback;
 mod messaging;
@@ -2211,6 +2212,14 @@ pub fn run() {
             close_mailing_request_remote,
             reopen_mailing_request_remote,
             delete_mailing_request_remote,
+            crewing_intake::crewing_intake_alias_list,
+            crewing_intake::crewing_intake_alias_create,
+            crewing_intake::crewing_intake_alias_rotate,
+            crewing_intake::crewing_intake_alias_pause,
+            crewing_intake::crewing_intake_alias_resume,
+            crewing_intake::crewing_intake_alias_revoke,
+            crewing_intake::crewing_intake_candidate_submit,
+            crewing_intake::crewing_intake_candidate_list,
             fetch_applications_for_vacancy,
             rank_compliance_candidate,
             get_mailbox_status,
