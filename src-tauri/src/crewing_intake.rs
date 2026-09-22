@@ -531,13 +531,21 @@ mod tests {
 
     #[test]
     fn missing_settings_refuse_before_client_creation() {
-        let mut current = settings("http://127.0.0.1:9");
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let mut current = settings(&base);
         current.bearer_token.clear();
         assert_eq!(
-            snapshot_context(&current, &expected("http://127.0.0.1:9"))
+            snapshot_context(&current, &expected(&base))
                 .unwrap_err()
                 .detail,
             Some("pilot_not_configured".to_string())
+        );
+        thread::sleep(Duration::from_millis(50));
+        assert!(
+            listener.accept().is_err(),
+            "missing config must refuse with zero network dispatches"
         );
     }
 
@@ -592,5 +600,36 @@ mod tests {
             target.accept().is_err(),
             "redirect target must not be contacted"
         );
+    }
+
+    #[test]
+    fn malformed_success_for_write_is_ambiguous() {
+        let source = TcpListener::bind("127.0.0.1:0").unwrap();
+        let source_addr = source.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = source.accept().unwrap();
+            let mut request = [0_u8; 2048];
+            let _ = stream.read(&mut request);
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 9\r\n\r\n{{not-json"
+            )
+            .unwrap();
+        });
+
+        let base = format!("http://{source_addr}");
+        let context = snapshot_context(&settings(&base), &expected(&base)).unwrap();
+        let result: Result<(StatusCode, Value), PilotBridgeError> = send(
+            &context,
+            Method::POST,
+            alias_url(&context, &[]).unwrap(),
+            Some(json!({"label":"synthetic"})),
+            true,
+        );
+        server.join().unwrap();
+        let err = result.unwrap_err();
+        assert_eq!(err.kind, "malformed_response");
+        assert_eq!(err.status, Some(200));
+        assert!(err.ambiguous, "a malformed 2xx write outcome is ambiguous");
     }
 }
