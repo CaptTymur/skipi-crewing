@@ -77,8 +77,18 @@
 
 ## Current step
 
-Commit the exact pin and final WORKLOG, run the ordinary unchanged pre-push hook once, and report the remote durability result. PR/CI remains pending a separately authorized exact candidate window.
+## 2026-09-22T16:38Z — durability and executor sanitation
+
+- The pin/acceptance commit `d6298ce9a4d5358e92884c54e73868058881871c` passed the ordinary unchanged pre-push hook as task `crewing/crewing-c3b1`: six configured guard harness commands passed, six paths were accepted, protected touches were zero and release changes were absent. Normal SSH push created `refs/heads/feature/crewing-c3b1-20260922`; live SSH read-back matched `d6298ce9a4d5358e92884c54e73868058881871c`.
+- Mini-sanitation removed only 21 manifest-listed reconstructible or sensitive scratch entries (37,479,705 bytes): the exact server/archive copies, derived mutant/archive copies, isolated databases, settings/profiles, token fixtures and disposable synthetic upload. Product source and build target were not touched. Unique runners, launch recipe, reverse-patched regression harnesses, safe raw logs and screenshots remain; manager confirmed their hashed ops copies before deletion.
+- Post-sanitation source/binary hashes are identical to functional `4ee78c0`. All 15 JavaScript harness files passed again. A disk gate immediately before Cargo showed 102 GB free; all five targeted native bridge tests passed again with only the two existing `db.rs` dead-code warnings.
+- Final scratch inventory is `scratchpad/crewing-c3b1-20260922/logs/final-file-inventory-sha256.txt` (189 files); `SANITARY-MANIFEST.md` records exclusions and retained evidence. No executor candidate, bwrap, Xvfb, WebDriver or server process remains. Scratch is intentionally untracked evidence and is being mapped to the manager's off-worktree ops artifacts rather than added to the product branch.
+- This final WORKLOG-only commit changes no functional, workflow or binary byte. The accepted binary remains the build of functional `4ee78c0`; the final product branch head is reported after its normal push. PR/CI remains pending the separately authorized exact candidate window.
+
+## Current step
+
+Stop product writes after the final documentation push and hand the exact remote head to the manager for review/PR gating.
 
 ## ПЕРЕДАЧА
 
-LOCAL ACCEPTANCE PASS for functional `4ee78c03bf40456e85e6c4e5f2cfba8a54c56655`; publication durability and PR/CI are reported after the authorized normal push. No production, release, provider, scanner, real-CV, device, merge or deploy action was performed.
+LOCAL ACCEPTANCE PASS for functional `4ee78c03bf40456e85e6c4e5f2cfba8a54c56655`; feature-branch durability PASS. PR/CI remains PENDING the manager's separately authorized exact candidate window. No production, release, provider, scanner, real-CV, device, merge or deploy action was performed.
