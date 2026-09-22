@@ -98,7 +98,7 @@ function makeContext({ demo = false, invokeImpl, clipboardImpl, fileReaderImpl }
     setTimeout, clearTimeout, queueMicrotask,
   };
   vm.createContext(context);
-  vm.runInContext(`${pilotSource}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadAliases, pilotLoadQueue, pilotCreateAlias, pilotAliasAction, pilotCopyAlias, pilotSelectFile, pilotSubmitUpload, pilotQueueHtml, pilotSummaryHtml, pilotReason, pilotSettingsChanged, PILOT_REASON_TEXT };`, context);
+  vm.runInContext(`${pilotSource}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadAliases, pilotLoadQueue, pilotCreateAlias, pilotAliasAction, pilotCopyAlias, pilotSelectFile, pilotSubmitUpload, pilotQueueHtml, pilotSummaryHtml, pilotReason, pilotFormatTime, pilotSettingsChanged, PILOT_REASON_TEXT };`, context);
   return context;
 }
 
@@ -122,6 +122,9 @@ console.log('# runtime isolation and RU/EN');
   await flush();
   ok(ctx.calls.map((c) => c.command).join(',') === 'crewing_intake_alias_list,crewing_intake_candidate_list', 'entry loads aliases and page zero through two fixed commands');
   ok(/Candidate intake pilot/.test(ctx.nodes.get('main').innerHTML), 'English screen renders');
+  const naiveUtc = ctx.__pilot.pilotFormatTime('2026-09-22T16:03:34');
+  const explicitUtc = ctx.__pilot.pilotFormatTime('2026-09-22T16:03:34Z');
+  ok(naiveUtc === explicitUtc && /16:03:34/.test(naiveUtc) && /UTC$/.test(naiveUtc), 'pilot timestamps use one explicit UTC scale for naive server and ISO values');
   ctx.setLang('ru'); ctx.__pilot.renderIntakePilot();
   ok(/Приём кандидатов/.test(ctx.nodes.get('main').innerHTML), 'Russian screen renders after language switch');
 }
@@ -235,6 +238,8 @@ console.log('# upload replay identity and late guards');
   await ctx.__pilot.pilotSubmitUpload(); await flush();
   ok(requests.length === 2 && requests[0].event_id === eventId && JSON.stringify(requests[0]) === JSON.stringify(requests[1]), 'retry reuses the exact event ID and payload');
   ok(ctx.state.intakePilot.uploadReceipt.receipt.intake_id === 'intake-real' && ctx.state.intakePilot.uploadReceipt.receipt.receipt_id === 'receipt-real', 'typed receipt fields stay distinct in UI state');
+  const receiptMarkup = ctx.nodes.get('main').innerHTML;
+  ok(/Intake: intake-real · Receipt: receipt-real/.test(receiptMarkup), 'rendered intake and receipt labels preserve the typed response projection');
 }
 {
   const delayed = deferred();

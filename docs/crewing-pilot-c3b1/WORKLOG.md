@@ -49,7 +49,18 @@
 
 ## Current step
 
-Commit the reviewed fixes, build the exact local candidate without bundling, then run the native desktop against the exact server routers in a private loopback-only environment. Keep external push stopped until the guard route is authorized and available.
+## 2026-09-22T16:08Z — isolated native chain and review correction
+
+- `cargo tauri build --no-bundle` passed for `a2ab17e`; disk gate immediately before the build showed 103 GB free. Binary SHA-256 was `2b031d283dd5ecbf1c921f500ca5746302d988041675b27715c4cbce6dbe59e7`.
+- The successful pre-fix native run used one `bwrap --unshare-all` environment with only loopback (`lo` UP, `127.0.0.1/8`, no default/gateway/non-loopback route), isolated HOME/XDG/runtime/vault, offscreen Xvfb `:93`, exact compiled desktop, exact server archive `92dc6c0`, full accepted routers with lifespan off, and an isolated SQLite database. Candidate PID/executable, safe HTTP trace, DOM events and database receipt linkage are preserved under assigned scratch.
+- That run exercised alias list/create/rotate/pause/resume/revoke plus candidate submit/list. It seeded 51 synthetic rows, uploaded one user-selected synthetic file, paged 0→50 through the real rendered control (52 total), switched RU→EN through Settings, and matched distinct intake/receipt IDs and content SHA across UI state, rendered receipt, HTTP and read-only SQLite query. Six screenshots contain no raw alias; capture fails closed while the one-time value is visible.
+- The first complete screenshots confirmed a review defect: server SQLite timestamps are serialized without an offset and were interpreted as local time, while the queue refresh ISO timestamp was converted from UTC. The same screen appeared four hours apart. The C3b-1-only formatter now treats a naive server timestamp as UTC and renders every pilot timestamp with an explicit `UTC` suffix. A regression verifies naive and `Z` forms have identical output.
+- The bounded mutation suite caught all six authorized benign UI mutants; clean UI SHA was restored. Clipboard/file/network effects use recording/in-memory fixtures only. A post-hoc isolated reconstruction of `b1506d8` is red on the missing legacy settings-save purge assertion; this is regression evidence, not a failing-first claim.
+- Native runner setup failures and their exact rc/logs remain in scratch. They were harness defects (redundant post-capability loopback mutation, HTML readiness parsing, Xvfb GLX/socket setup, screenshot logger argument, WebDriver pagination click semantics), not product failures; the complete run exited 0 after bounded runner-only corrections.
+
+## Current step
+
+Commit the timestamp/projection regressions, rebuild the exact final local SHA, rerun the full isolated native/visual chain and six mutations against it, then complete preservation checks. External product push remains stopped until the separate authorized guard route is merged and available; this executor does not change guard.
 
 ## ПЕРЕДАЧА
 

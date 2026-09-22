@@ -5843,7 +5843,12 @@ function pilotEventId() {
 }
 function pilotFormatTime(value) {
   if (!value) return '—';
-  try { return new Date(value).toLocaleString(getUiLang() === 'ru' ? 'ru-RU' : 'en-GB'); } catch(_) { return String(value); }
+  try {
+    var raw=String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(raw)) raw+='Z';
+    var parsed=new Date(raw); if(!Number.isFinite(parsed.getTime()))return String(value);
+    return parsed.toLocaleString(getUiLang()==='ru'?'ru-RU':'en-GB',{timeZone:'UTC'})+' UTC';
+  } catch(_) { return String(value); }
 }
 
 function pilotSecretHtml() {
