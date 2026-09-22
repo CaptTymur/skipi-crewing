@@ -6,7 +6,7 @@
 - Status: `EXEC_AUTHORIZED`; one product writer in this worktree.
 - Base: `12a7ce4c46e7b694cafc4b782b5a2b9e23e89861` on `feature/crewing-c3b1-20260922`.
 - Server reference is read-only at `92dc6c02c912fa841af5f52695655a5cd5228810`.
-- No contracts, guard, verify, release/version, production, provider, device, PR, merge, deploy, or tag actions.
+- No contracts, guard implementation/config, verify, release/version, production, provider, device, PR, merge, deploy, or tag actions. After the separately authorized guard route merged, the workflow guard pin alone was authorized for refresh.
 - Scratch belongs under `scratchpad/crewing-c3b1-20260922/`; runtime evidence uses isolated HOME/XDG/app data and loopback synthetic data only.
 
 ## 2026-09-22T15:08:40Z — preflight and baseline
@@ -58,10 +58,27 @@
 - The bounded mutation suite caught all six authorized benign UI mutants; clean UI SHA was restored. Clipboard/file/network effects use recording/in-memory fixtures only. A post-hoc isolated reconstruction of `b1506d8` is red on the missing legacy settings-save purge assertion; this is regression evidence, not a failing-first claim.
 - Native runner setup failures and their exact rc/logs remain in scratch. They were harness defects (redundant post-capability loopback mutation, HTML readiness parsing, Xvfb GLX/socket setup, screenshot logger argument, WebDriver pagination click semantics), not product failures; the complete run exited 0 after bounded runner-only corrections.
 
+## 2026-09-22T16:31Z — exact functional candidate acceptance
+
+- Functional source candidate is `4ee78c03bf40456e85e6c4e5f2cfba8a54c56655`. `cargo tauri build --no-bundle` passed after a 102 GB disk gate. The exact binary SHA-256 is `2f0082224b326787f998c84789e2a7f2158bf3e1889cb9d7a327403ab1aa7ef0` and embeds the 12-character build label `4ee78c03bf40`.
+- Final source hashes: `dist/index.html` `bd3dea3528b7a7f4e638a578d4b08046166b7e77d964b4cd62d2216538b21267`; `src-tauri/src/crewing_intake.rs` `52558dcf5521ea7af8733869b9b9cca1859a265d41acd483ce73d1848c195272`; pilot harness `5ee3e1217753fb53828dd18975f8bff1923e192e25b4528c391081a40c980155`.
+- Five native bridge tests pass. All 15 JavaScript harness files pass; the new pilot harness is 59/59. Relevant preserve counts include provenance 12, compliance 15, Crew Flow 90, mail demo 28, mailbox 25, plugin isolation 152, presence 212, theme 38, stack metadata 20, stack negative 5, with the remaining harnesses also green. Six authorized benign UI mutants were each caught and the clean HTML hash was restored.
+- The exact binary completed an isolated fresh-profile native run with rc 0. One private `bwrap --unshare-all` namespace contained the actual desktop, offscreen Xvfb, WebDriver and the actual `92dc6c0` server routers over loopback; the network proof contains only `lo`, `127.0.0.1/8`, `::1` and no default/gateway/non-loopback interface. The actual desktop exercised all eight bridge operations: alias list/create/rotate/pause/resume/revoke and candidate submit/list. The rendered Next control produced offset 50 / 2 rows of 52. Distinct receipt/intake IDs and content SHA matched DOM, safe HTTP trace and read-only SQLite linkage.
+- Frozen positive screenshots are `scratchpad/crewing-c3b1-20260922/screenshots/final-positive-4ee78c0/01-ru-queue-page1.png` through `06-en-queue-page1-revoked.png`. They show actual RU and EN, explicit UTC timestamps, full left-edge framing and no raw one-time alias. Capture refuses while a raw alias is visible.
+- A supplemental fresh-profile native slice used the same exact binary and exited 0. Before any language switch it activated the actual rendered Next then Previous controls: offset `0→50→0`, rows `50→2→50`, with matching native HTTP requests. A member-token alias create produced native bridge HTTP 403, visible `Нет прав.` / `Access denied.`, and alias row count stayed `1→1`. The same app process/session survived server restart with the feature flag off; actual native refresh produced alias and queue GET 404 with visible `Раздел недоступен.` / `Section unavailable.` and zero queue rows. Frozen screenshots are under `screenshots/final-negative-4ee78c0/07...10`; safe event/HTTP/network traces and rc are under `logs/native-negative-*`.
+- Provenance control is calibrated against the final positive evidence: the real native receipt passes only with one HTTP POST 201 within 0.160139 seconds and matching isolated DB row. A fixture-only copy of the receipt event with no native-dispatch trace is refused with rc 1 (`REFUSED: native HTTP dispatch evidence count=0`). This is evidence control only; no product mutation or protection change.
+- Clipboard success/failure is covered in the VM harness with a recording/rejecting stub. No claim of an actual OS clipboard write is made. File and network negative effects are likewise isolated fixtures/stubs; positive file upload and HTTP are the native run above.
+- The earlier rc 143 run remains classified as a preliminary runner cleanup failure. The later positive and supplemental-negative packages both exit 0. The first supplemental attempt failed before app launch because the bwrap mount layout omitted dynamic-linker symlinks; its rc/log is preserved separately, and the corrected contained run did not weaken network or capability boundaries.
+
+## 2026-09-22T16:34Z — guard pin readiness
+
+- Owner-authorized guard PR 63 is merged at `071eea0c3679c8b35bad2bd62adb2df4c3b17746`; manager reported canonical guard clean and synchronized. The ordinary guard `assert-config-superset` passed from old `fdbf3d8cc29435e5da64afd105e5850c571245fa` to new `071eea0c3679c8b35bad2bd62adb2df4c3b17746`, with no missing harness/task/path/protected-path coverage (`scratchpad/crewing-c3b1-20260922/pin-superset.json`).
+- The only workflow change is the exact guard checkout ref. Runtime dependency pin and guard implementation are untouched. This pin and the final WORKLOG are documentation/CI metadata after functional `4ee78c0`; no UI rebuild is needed. Product code bytes and the accepted binary remain those of `4ee78c0`.
+
 ## Current step
 
-Commit the timestamp/projection regressions, rebuild the exact final local SHA, rerun the full isolated native/visual chain and six mutations against it, then complete preservation checks. External product push remains stopped until the separate authorized guard route is merged and available; this executor does not change guard.
+Commit the exact pin and final WORKLOG, run the ordinary unchanged pre-push hook once, and report the remote durability result. PR/CI remains pending a separately authorized exact candidate window.
 
 ## ПЕРЕДАЧА
 
-PENDING.
+LOCAL ACCEPTANCE PASS for functional `4ee78c03bf40456e85e6c4e5f2cfba8a54c56655`; publication durability and PR/CI are reported after the authorized normal push. No production, release, provider, scanner, real-CV, device, merge or deploy action was performed.
