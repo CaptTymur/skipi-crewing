@@ -34,6 +34,8 @@ for (const command of commands) {
 }
 ok(!pilotSource.includes('localStorage'), 'pilot block never persists raw alias or upload payload');
 ok((pilotSource.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1, 'one versioned queue reason catalogue exists');
+const legacySave = html.slice(html.indexOf('async function saveSettings()'), html.indexOf('function escapeHtml', html.indexOf('async function saveSettings()')));
+ok(legacySave.includes('pilotSettingsChanged(previousSettings, newSettings)'), 'legacy settings save immediately purges changed pilot context');
 
 function freshPilotState() {
   return {
@@ -175,10 +177,40 @@ console.log('# pagination, honest states and nullable summary');
   ok(/Summary unknown/.test(rendered) && !/facts: 0/.test(rendered), 'null summary is unknown rather than measured zero');
   ok(/Stored; awaiting checks/.test(rendered), 'quarantined has the honest lifecycle label');
   ok(/Unknown reason: future_code/.test(ctx.__pilot.pilotReason('future_code')), 'unknown reason remains visible as its code');
-  ok(Object.keys(ctx.__pilot.PILOT_REASON_TEXT).length === 41, 'RU/EN queue reason catalogue has all 41 contract codes');
+  const exactReasonCodes = [
+    'attachment_count','mime_defective','mime_depth','mime_parts','mime_unreadable','no_attachments','not_quarantined','object_absent',
+    'attachment_size','decode_budget','part_encoding','type_absent','type_not_allowed','container_opaque','empty_part','executable',
+    'filename_unsafe','polyglot','type_mismatch','type_unrecognised','archive_budget','archive_directory','archive_encrypted',
+    'archive_member_name','archive_member_path','archive_members','archive_nested','archive_unreadable','archive_unsupported','stream_container',
+    'clean','infected','scanner_error','scanner_unavailable','scanner_unknown','received','quarantined','scanned','needs_review','rejected','ranked',
+  ].sort();
+  ok(JSON.stringify(Object.keys(ctx.__pilot.PILOT_REASON_TEXT).sort()) === JSON.stringify(exactReasonCodes), 'queue catalogue keys equal the exact 41-code server contract');
+  ok(Object.values(ctx.__pilot.PILOT_REASON_TEXT).every((row) => Array.isArray(row) && row.length === 2 && row[0] && row[1]), 'every queue reason has nonempty RU and EN text');
   ctx.state.intakePilot.queue = {items:[],limit:50,offset:100,total:20};
   const shrunk = ctx.__pilot.pilotQueueHtml();
   ok(/Rows 0–0 of 20/.test(shrunk) && !/0–100/.test(shrunk), 'shrinking total cannot render an impossible row range');
+}
+{
+  const offsets = [];
+  const ctx = makeContext({ invokeImpl(command, args) {
+    if (command === 'crewing_intake_candidate_list') {
+      offsets.push(args.offset);
+      return Promise.resolve({items:Array.from({length:Math.min(50,101-args.offset)},(_,i)=>({intake_id:`i-${args.offset+i}`,receipt_id:`r-${i}`,state:'received',content_type:'application/pdf',content_bytes:1,created_at:'2026-01-01',summary:null})),limit:50,offset:args.offset,total:101});
+    }
+    if (command === 'crewing_intake_alias_list') return Promise.resolve({items:[]});
+    throw new Error(command);
+  }});
+  ctx.__pilot.pilotEnter(); await flush();
+  let markup = ctx.__pilot.pilotQueueHtml();
+  const next0 = /onclick="(pilotLoadQueue\(50\))"[^>]*>Next/.exec(markup);
+  ok(next0, 'page zero renders a wired Next control for offset 50');
+  vm.runInContext(next0[1], ctx); await flush();
+  markup = ctx.__pilot.pilotQueueHtml();
+  const next50 = /onclick="(pilotLoadQueue\(100\))"[^>]*>Next/.exec(markup);
+  const prev50 = /onclick="(pilotLoadQueue\(0\))"[^>]*>Previous/.exec(markup);
+  ok(next50 && prev50, 'page 50 wires both Previous 0 and Next 100 controls');
+  vm.runInContext(next50[1], ctx); await flush();
+  ok(offsets.join(',') === '0,50,100', 'executing rendered Next controls requests offsets 0/50/100');
 }
 
 console.log('# upload replay identity and late guards');

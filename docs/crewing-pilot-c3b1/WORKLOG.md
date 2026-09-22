@@ -32,7 +32,24 @@
 
 ## Current step
 
-Run formatted native tests, inspect the exact first candidate diff, then commit and push the first functional checkpoint before native-router and visual acceptance.
+## 2026-09-22T15:35Z — durable checkpoint and guard blocker
+
+- First functional commit: `b1506d85c01a6a7845d381ddf391a4a4a92bdd72`.
+- Native tests after formatting: 4 passed, 0 failed; disk gate immediately before the run: 104 GB free. The initial async conversion compile attempt failed on eight explicit `tauri::State` lifetimes; the source was corrected to `State<'_, AppState>` and the retry passed. Both raw logs are preserved in assigned scratch.
+- Configured HTTPS push failed authentication before any remote write. The authorized SSH push then reached the mandatory pre-push guard. All four guard harnesses passed, but auto-task resolved `crewing / plugin-host` and rejected the five-file C3b-1 diff as outside that task's allowlist. The hook forbids env overrides and the current guard config has no C3b-1 route.
+- Automatic refusal rule applied: stopped the push action; no bypass, `--no-verify`, force, hook edit, guard edit, or alternate publishing path attempted. Remote feature ref remains absent. PR/CI remains blocked on a human guard-route decision.
+
+## Current step
+
+## 2026-09-22T15:40Z — post-checkpoint review fixes
+
+- Added the missing legacy `saveSettings()` context purge. Existing module-host settings save and legacy settings save now both clear one-time alias/upload state immediately when server/token/tenant changes.
+- Strengthened the bounded harness to 57 passing assertions: exact 41 server reason keys with nonempty RU/EN text, execution of rendered Next controls at offsets 0/50/100, legacy settings purge, queue shrink range, alias generation/ABA races and draft preservation.
+- Source ID and event ID are internal upload mechanics and no longer appear as ordinary user inputs. The visible flow is choose synthetic file → upload → receipt. Wording now says facts/ranking are a later screen and does not imply that ranked queue rows cannot exist.
+
+## Current step
+
+Commit the reviewed fixes, build the exact local candidate without bundling, then run the native desktop against the exact server routers in a private loopback-only environment. Keep external push stopped until the guard route is authorized and available.
 
 ## ПЕРЕДАЧА
 

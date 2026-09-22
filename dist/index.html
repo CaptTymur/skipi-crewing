@@ -10382,7 +10382,9 @@ async function saveSettings() {
   };
   try {
     await invoke('save_settings', { newSettings: newSettings });
+    var previousSettings = state.settings;
     state.settings = newSettings;
+    pilotSettingsChanged(previousSettings, newSettings);
     applyTheme();
     try {
       var syncResult = await invoke('sync_crewing_profile');
