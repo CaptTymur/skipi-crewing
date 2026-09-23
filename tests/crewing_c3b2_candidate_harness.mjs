@@ -156,7 +156,7 @@ function makeServer(options = {}) {
   return server;
 }
 
-function makeContext({ source = c3b2Source, server = makeServer(), invokeImpl, confirmImpl, language = 'en' } = {}) {
+function makeContext({ source = c3b2Source, c3b1 = c3b1Source, server = makeServer(), invokeImpl, confirmImpl, language = 'en' } = {}) {
   const nodes = new Map();
   nodes.set('main', { id: 'main', innerHTML: '', style: {} });
   const calls = [];
@@ -189,7 +189,7 @@ function makeContext({ source = c3b2Source, server = makeServer(), invokeImpl, c
     setTimeout, clearTimeout, queueMicrotask,
   };
   vm.createContext(context);
-  vm.runInContext(`${c3b1Source}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT };`, context);
+  vm.runInContext(`${c3b1}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT };`, context);
   return context;
 }
 async function flush(rounds = 6) {
@@ -221,6 +221,25 @@ async function positiveChainUntilRank(ctx) {
   detail(ctx).form = { mode: 'record', field: 'certificate:coc_master', value: 'held', source_object: 'obj-2', page: '', span: '' };
   await ctx.__pilot.pilotFactSubmit(); await flush();
   await ctx.__pilot.pilotRankNow(); await flush();
+}
+// C3c-1: the mobile shell sets state.view = 'mobile-<view>' and renders into #mobile-main
+// (#main is display:none under body.mobile-shell). Same renderers, mobile container.
+function mobilize(ctx) {
+  ctx.nodes.set('mobile-main', { id: 'mobile-main', innerHTML: '', style: {} });
+  ctx.state.view = 'mobile-intake_pilot';
+  return ctx;
+}
+const mobileContext = (opts = {}) => mobilize(makeContext(opts));
+const mobileMain = (ctx) => ctx.nodes.get('mobile-main').innerHTML;
+async function mobileCardChain(ctx) {
+  ctx.__pilot.pilotEnter(); await flush();
+  assert.ok(/data-qa="crewing-intake-pilot-view"/.test(mobileMain(ctx)), 'pilot queue view rendered into #mobile-main under the mobile shell');
+  assert.equal(main(ctx), '', 'nothing rendered into the hidden desktop #main');
+  assert.ok(!ctx.state.intakePilot.queueLoading && ctx.state.intakePilot.queueLastUpdated !== null && /data-qa="pilot-open-card"/.test(mobileMain(ctx)), 'queue load completed under the mobile view (context still current)');
+  await openCard(ctx);
+  assert.ok(/data-qa="crewing-intake-card-view" data-intake="intake-A"/.test(mobileMain(ctx)) && detail(ctx).card !== null && /data-qa="pilot-section-facts"/.test(mobileMain(ctx)) && /data-qa="pilot-section-ranks"/.test(mobileMain(ctx)) && /data-qa="pilot-section-history"/.test(mobileMain(ctx)), 'card with its three sections rendered into #mobile-main');
+  ctx.__pilot.pilotCardKeydown({ key: 'Escape' }); await flush();
+  assert.ok(detail(ctx) === null && /data-qa="crewing-intake-pilot-view"/.test(mobileMain(ctx)), 'Escape closes the mobile card back to the queue');
 }
 
 console.log('# positive chain on isolated copies: card → facts → correction → rank → confirm → withdraw → re-add');
@@ -389,7 +408,36 @@ console.log('# fences: pending, context change, A→B, A→B→A, request identi
 }
 
 // ---------------------------------------------------------------------------
-// M01–M12, M15, M16: isolated mutation controls. Each row: known-good GREEN,
+// C3c-1: pilot screens inside the mobile shell (Android). One entry: a tile in
+// the mobile Apps grid with a NON-canonical hook; the 5-slot rail is untouched.
+// ---------------------------------------------------------------------------
+console.log('# C3c-1 mobile shell: view intake_pilot reachable and renders the card');
+{
+  const ctx = mobileContext();
+  await mobileCardChain(ctx);
+  ok(true, 'mobile shell: queue → card → Escape chain runs on the same renderers inside #mobile-main');
+  const desktop = makeContext(); desktop.__pilot.pilotEnter(); await flush(); await openCard(desktop);
+  ok(/data-qa="crewing-intake-card-view"/.test(main(desktop)) && desktop.nodes.get('mobile-main') === undefined, 'desktop view still renders into #main');
+  const slice = (from, to) => { const a = html.indexOf(from); assert.ok(a > 0, `anchor missing: ${from}`); const b = html.indexOf(to, a); assert.ok(b > a, `end anchor missing: ${to}`); return html.slice(a, b); };
+  const mobileShowSource = slice('function mobileShow(view) {', '\nfunction mobileBack()');
+  ok(/if \(view === 'intake_pilot'\) return mobileRenderIntakePilot\(\);/.test(mobileShowSource), 'mobileShow routes intake_pilot to the mobile pilot renderer');
+  ok(/if \(mobileState\.view === 'intake_pilot' && view !== 'intake_pilot'\) pilotLeave\(\);/.test(mobileShowSource), 'leaving the mobile pilot view resets pilot state (pilotLeave)');
+  ok(/function mobileRenderIntakePilot\(\)\{ pilotEnter\(\); \}/.test(html), 'mobile pilot renderer is pilotEnter on the same C3b-1/C3b-2 renderers (no second renderer)');
+  const tiles = slice('function appsMobileModuleTilesHtml()', '\nfunction appsLauncherHtml()');
+  const tile = /\{ view:'intake_pilot', icon:'[^']+', qa:'data-qa="([^"]+)"' \}/.exec(tiles);
+  ok(!!tile && !/^apps-module-tile-/.test(tile[1]) && !/^bottom-nav-/.test(tile[1]), `mobile Apps grid carries an intake_pilot tile with a non-canonical hook (${tile ? tile[1] : 'absent'})`);
+  ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
+  ok(/var MOBILE_RAIL_QA = \{ vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', crew_flow: 'bottom-nav-crew_flow', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays the canonical 5 slots');
+  const chrome = slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
+  ok((chrome.match(/mobileNavButton\('/g) || []).length === 5 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail still renders exactly 5 slots, none for intake_pilot');
+  ok(/intake_pilot: 'apps',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to the Apps grid');
+  ok(/intake_pilot: 'nav\.intake_pilot',/.test(slice('function mobileModuleLabel(view) {', '\n}')), 'tile label uses the localized nav.intake_pilot string (RU/EN)');
+  ok(html.includes("if (view === 'intake_pilot') return [tr('nav.intake_pilot'), mobileApiHostLabel()];"), 'mobile header title is nav.intake_pilot with the API host as subtitle');
+  ok(/@media \(max-width: 980px\) \{ \.pilot-grid \{ grid-template-columns:1fr; \} \}/.test(html), 'narrow layout: pilot grid collapses to one column');
+}
+
+// ---------------------------------------------------------------------------
+// M01–M12, M15, M16, M17–M19: isolated mutation controls. Each row: known-good GREEN,
 // mutant RED, clean restore GREEN. Every anchor must be unique in the block.
 // M13/M14 and the native half of M15 live in `cargo test` (send_no_content).
 // ---------------------------------------------------------------------------
@@ -575,6 +623,24 @@ const controls = [
       assert.equal(mutationCalls(ctx).length, 1, 'exactly one mutation dispatch; refresh adds none');
     },
   },
+  {
+    id: 'M17', block: 'c3b1', defect: 'mobile view treated as a stale context (pilotContextStillCurrent desktop-only)',
+    edits: [["  return pilotViewActive() && pilotContextKey(context) === pilotContextKey(pilotContextSnapshot());",
+      "  return state.view === 'intake_pilot' && pilotContextKey(context) === pilotContextKey(pilotContextSnapshot());"]],
+    async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
+  },
+  {
+    id: 'M18', block: 'c3b1', defect: 'pilot renders into the hidden desktop #main under the mobile shell',
+    edits: [["function pilotContainer() { return document.getElementById(state.view === 'mobile-intake_pilot' ? 'mobile-main' : 'main'); }",
+      "function pilotContainer() { return document.getElementById('main'); }"]],
+    async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
+  },
+  {
+    id: 'M19', defect: 'Escape ignores the mobile card view',
+    edits: [["  if (!ev || ev.key !== 'Escape' || !pilotViewActive() || !pilotDetail()) return;",
+      "  if (!ev || ev.key !== 'Escape' || state.view !== 'intake_pilot' || !pilotDetail()) return;"]],
+    async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
+  },
 ];
 
 // Runner: known-good → mutant → restore. The mutation itself is applied OUTSIDE the
@@ -586,9 +652,10 @@ async function runControl(control) {
   let anchorMissing = false;
   if (cleanBefore) {
     let mutantSource = null;
-    try { mutantSource = mutate(c3b2Source, control.edits); } catch (error) { anchorMissing = true; mutantMessage = `ANCHOR_MISSING: ${error.message}`; }
+    const block = control.block === 'c3b1' ? c3b1Source : c3b2Source;
+    try { mutantSource = mutate(block, control.edits); } catch (error) { anchorMissing = true; mutantMessage = `ANCHOR_MISSING: ${error.message}`; }
     if (mutantSource !== null) {
-      try { await control.sensor(makeContext({ source: mutantSource })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; }
+      try { await control.sensor(makeContext(control.block === 'c3b1' ? { c3b1: mutantSource } : { source: mutantSource })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; }
     }
     try { await control.sensor(makeContext()); cleanAfter = true; } catch (error) { mutantMessage += ` / restore failed: ${error.message}`; }
   }
@@ -603,7 +670,7 @@ console.log('# runner self-check: a mutant whose anchor does not exist must neve
   ok(result.verdict === 'ANCHOR_MISSING' && result.mutantRed === false, `phantom-anchor control reports ANCHOR_MISSING (got ${result.verdict}: ${result.detail.slice(0, 80)})`);
 }
 
-console.log('# isolated mutation controls M01–M12, M15, M16 (known-good → mutant RED → clean GREEN)');
+console.log('# isolated mutation controls M01–M12, M15, M16, M17–M19 (known-good → mutant RED → clean GREEN)');
 const controlResults = [];
 for (const control of controls) {
   const result = await runControl(control);

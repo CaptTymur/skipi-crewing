@@ -5789,8 +5789,10 @@ function pilotContextKey(context) {
 function pilotContextReady(context) {
   return !!(context.server_url && context.bearer_token && context.crewing_id);
 }
+function pilotViewActive() { return state.view === 'intake_pilot' || state.view === 'mobile-intake_pilot'; }
+function pilotContainer() { return document.getElementById(state.view === 'mobile-intake_pilot' ? 'mobile-main' : 'main'); }
 function pilotContextStillCurrent(context) {
-  return state.view === 'intake_pilot' && pilotContextKey(context) === pilotContextKey(pilotContextSnapshot());
+  return pilotViewActive() && pilotContextKey(context) === pilotContextKey(pilotContextSnapshot());
 }
 function pilotFreshStateForContext(context) {
   var p = state.intakePilot;
@@ -5820,7 +5822,7 @@ function pilotSettingsChanged(previous, next) {
   var newContext = {server_url:String(next&&next.server_url||'').trim(),bearer_token:String(next&&next.bearer_token||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim()};
   if (oldKey === pilotContextKey(newContext)) return;
   pilotFreshStateForContext(newContext);
-  if (state.view === 'intake_pilot') {
+  if (pilotViewActive()) {
     renderIntakePilot();
     if (!__demoMode && pilotContextReady(newContext)) { pilotLoadAliases(); pilotLoadQueue(0); }
   }
@@ -5924,7 +5926,7 @@ function pilotQueueHtml() {
 function renderIntakePilot() {
   var p = state.intakePilot, context = pilotContextSnapshot();
   if (p.contextKey !== pilotContextKey(context)) pilotFreshStateForContext(context);
-  var main = document.getElementById('main'); if (!main) return;
+  var main = pilotContainer(); if (!main) return;
   if (__demoMode) {
     main.innerHTML = '<div class="pilot-shell" data-qa="pilot-demo-refusal"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+escapeHtml(pilotT('subtitle'))+'</p></div></div><div class="pilot-card"><div class="pilot-status">'+escapeHtml(pilotT('live_only'))+'</div></div></div>';
     return;
@@ -6416,7 +6418,7 @@ function pilotRenderCard(main) {
     + '<section class="pilot-card" data-qa="pilot-section-history"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_history'))+'</h2></div>'+pilotCardHistoryHtml()+'</section></div>';
 }
 function pilotCardKeydown(ev) {
-  if (!ev || ev.key !== 'Escape' || state.view !== 'intake_pilot' || !pilotDetail()) return;
+  if (!ev || ev.key !== 'Escape' || !pilotViewActive() || !pilotDetail()) return;
   var overlay = document.getElementById('skipi-settings-overlay');
   if (overlay && overlay.classList && overlay.classList.contains('open')) return;
   if (document.getElementById('confirm-yes')) return;
@@ -11287,7 +11289,8 @@ function appsMobileModuleTilesHtml(){
     { view:'seafarers', icon:'👤', qa:'data-qa="apps-module-tile-seafarers"' },
     { view:'crew_flow', icon:'📥', qa:'data-qa="apps-module-tile-crew_flow"' },
     { view:'compliance', icon:'▣', qa:'data-qa="apps-module-tile-compliance"' },
-    { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' }
+    { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' },
+    { view:'intake_pilot', icon:'📨', qa:'data-qa="apps-pilot-tile-intake_pilot"' }
   ];
   var h = '<div class="apps-sec-title">Modules</div>'
     + '<div class="apps-launch-grid" data-qa="apps-modules-grid">';
@@ -11415,6 +11418,7 @@ function pluginCloseHost(){
 // ---- entry points ----
 function renderAppsView(){ appsState = { screen:'launcher', pluginId:null, q:'', from:'launcher' }; appsRender(); }       // desktop (#main)
 function mobileRenderApps(){ appsState = { screen:'launcher', pluginId:null, q:'', from:'launcher' }; appsRender(); }      // mobile (#mobile-main)
+function mobileRenderIntakePilot(){ pilotEnter(); }      // C3c-1: pilot screens (C3b-1/C3b-2 renderers) into #mobile-main
 
 window.__SKIPI_CREWING_PLUGIN_TEST__ = {
   runtimeVersion: CREWING_PLUGIN_HOST_RUNTIME_VERSION,
@@ -11518,6 +11522,7 @@ function mobileModuleLabel(view) {
     compliance: 'nav.compliance',
     seafarers: 'nav.seafarers',
     documents: 'nav.documents',
+    intake_pilot: 'nav.intake_pilot',
   };
   return tr(map[view] || 'nav.vacancies');
 }
@@ -11547,6 +11552,7 @@ function mobileViewChromeTitle(view) {
     var cfc = cfs.candidate || {};
     return [cfc.name || mobileModuleLabel('crew_flow'), [cfc.rank, cfc.nationality].filter(Boolean).join(' · ')];
   }
+  if (view === 'intake_pilot') return [tr('nav.intake_pilot'), mobileApiHostLabel()];
   if (view === 'apps') return ['Apps', 'Plugins for your team'];
   if (view === 'document') {
     var doc = state.selectedDocument || {};
@@ -11614,6 +11620,7 @@ function mobileParentView(view) {
     document: 'documents',
     crew_flow_signal: 'crew_flow',
     draft: 'vacancies',
+    intake_pilot: 'apps',
     member_join: 'work_role',
     work_role: 'connection',
   };
@@ -11658,6 +11665,7 @@ function mobileShow(view) {
   }
   if (state.view === 'team') stopTeamChatPoll();
   if (mobileState.view === 'apps' && view !== 'apps') pluginUnmountCurrent();
+  if (mobileState.view === 'intake_pilot' && view !== 'intake_pilot') pilotLeave();
   mobileState.view = view;
   state.view = 'mobile-' + view;
   document.body.classList.add('mobile-shell');
@@ -11678,6 +11686,7 @@ function mobileShow(view) {
   if (view === 'crew_flow') return mobileRenderCrewFlow();
   if (view === 'crew_flow_signal') return mobileRenderCrewFlowSignal();
   if (view === 'apps') return mobileRenderApps();
+  if (view === 'intake_pilot') return mobileRenderIntakePilot();
   if (view === 'document') return mobileRenderDocumentDetail();
   if (view === 'draft') return mobileRenderDraft();
   if (view === 'vacancy') return mobileRenderVacancyDetail();
