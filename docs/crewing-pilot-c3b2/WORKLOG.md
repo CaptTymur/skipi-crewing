@@ -38,4 +38,73 @@
 - `tests/crewing_c3b2_candidate_harness.mjs`: 123 assertions GREEN (`js/c3b2-run-4.log`): static bridge/registration/pins, positive chain on an in-memory fake of the C3a API behind the recorded `invoke` stub, RU/EN, nullable/unknown codes, refusal precedence (rank_not_found, profile_version_stale, profile_not_active, already_confirmed, withdraw_not_permitted, named-seat 403, flag-off 404, fact_no_source_object 422, list detail), profile lookup 403 fallback, unsafe integer version refusal, pending/double-click, settings purge, close/reopen late write; **M01–M12, M15 (UI half), M16 as isolated source mutants of the C3b-2 block, each known-good GREEN → mutant RED → clean GREEN (14 KILLED)**; **R01–R07** each with its own assertion set. M13/M14 and the native half of M15 are Rust-level and are run as source mutants against `cargo test` at functional freeze (recorded below when done).
 - PRESERVE: all 15 existing harnesses rc=0 after the UI change (`js/checkpoint1-*.log`), C3b-1 pilot harness 59/59.
 
+## 2026-09-23T02:38:07Z — exact candidate build
+
+- Checkpoint commit `c1bc691580ce39e3031d9101ad282171e5e35900` (product paths only; `git add` by explicit paths, WORKLOG with `-f`). No functional file changed after it: `git diff --stat c1bc691 -- dist src-tauri tests` is empty at freeze.
+- `cargo tauri build --no-bundle` rc=0 (`native/build/tauri-build.log`, disk gate 97 GB): `src-tauri/target/release/skipi-crewing` SHA256 `0b53533920beab6d1f51bec5ed61e9d2469481b0105ea56b1a4266f76bd8c98e` (embedded dist = the checkpoint dist). Not the C3b-1 binary (`2f00…`).
+
+## 2026-09-23T02:45:41Z — M13/M14/M15 native adapter controls (source mutants against cargo test)
+
+Method: `src-tauri/src/crewing_intake.rs` clean copy hashed (`rust/mutants/clean.sha256` = `c640b42d…7b0`, equal to the HEAD blob), one mutant at a time copied over the working file, `cargo test --lib crewing_intake::tests` run with loopback TcpListener stubs (the only "network"), file restored from the clean copy and re-hashed (`rust/mutants/restore.log`, all `match=yes`), then the full `cargo test` on the restored tree (`rust/cargo-test-restore-clean.log`, 16/0). Raw logs `rust/mutants/cargo-test-M1{3,4,5}.log`, disk gate files next to them.
+
+| ID | Mutant (source) | Sensor | Clean before | Mutant | Restore |
+|---|---|---|---|---|---|
+| M13 | expected empty 204 routed through the JSON decoder (`send::<Value>`) | `withdraw_expected_empty_204_is_ack` (+ two neighbours) | GREEN 16/0 | RED 12/3 | GREEN 16/0 |
+| M14 | any 2xx accepted as withdraw ACK | `withdraw_unexpected_empty_200_stays_ambiguous`, `withdraw_200_with_json_body_stays_ambiguous` | GREEN | RED 13/2 | GREEN |
+| M15 (native half) | documented 403 treated as success in `perform` | `withdraw_documented_403_keeps_refusal_code` | GREEN | RED 14/1 | GREEN |
+
+Boundary named: the mutation is applied to the working file for the duration of one test process (sole writer, bit-identical restore proven by hash), not to a separate crate copy — a separate crate cannot compile this module without the Tauri host. UI half of M15 (refusal shown as refusal, history untouched) is in the JS harness (KILLED).
+
+## 2026-09-23T02:44:41Z — guard: config-superset proof and local route on the checkpoint
+
+- `skipi-guard assert-config-superset --home crewing --old-ref 93b1a51e… --new-ref 7bd93006…` → PASS (`guard/config-superset-93b1a51-to-7bd9300.json`): old 9 tasks ⊂ new 10 tasks (adds `crewing-c3b2`), missing harnesses/additive checks/allowed patterns/release-sensitive/protected = none.
+- `skipi-guard verify --home crewing --auto-task --run-harness --base 0ace… --head HEAD` on the checkpoint → task `crewing-c3b2` (declarative route), protected touches 0, release no, 7/7 harness commands pass (`guard/verify-checkpoint1.log/.json`); repeated after the pin edit with the same result (`guard/verify-after-pin.log`).
+
+## 2026-09-23T02:55:53Z — NEW native chain on the exact candidate (isolated sandbox)
+
+Recipe `native/LAUNCH-RECIPE-C3B2.md` + `native/scripts/*` (adapted from C3b-1; every run recorded, adaptation is not a run). `bwrap --unshare-all`, loopback only (`native/logs/private-network.json`: `lo` UP 127.0.0.1/8, no default/gateway route), `--clearenv`, isolated HOME/XDG/TMPDIR under `native/profile/`, Xvfb `:95` 1400x1000 (owner display `:1` never used), exact server archive of `92dc6c02…` with three empty `releases/*` dirs pre-created (file set diffed equal to `git archive`), deps read-only, `python3 -I -S`, `PYTHONDONTWRITEBYTECODE=1` (pyc count in deps and server-runtime = 0 after all runs), `uvicorn 127.0.0.1:18082` lifespan off, `tauri-driver 14446/14447` + `/usr/bin/WebKitWebDriver`, one candidate process (PID 31 in the sandbox pid namespace, exe `/candidate/skipi-crewing` = the built binary) kept across all phases. Synthetic secrets are generated from `/dev/urandom` per launch into the launcher environment only.
+
+Runner corrections before the clean run were runner defects, not product defects, each attempt kept (`native/logs-attempt*`): 1) server import needs `releases/` dirs (read-only bind); 2) my scenario assumed the upload lands on page 2 — the queue is newest-first (the upload is row 1 of page 1), page preservation is now proven on page 2 with a read-only open of a seeded card; 3+4+5) WebKitWebDriver clicks/Enter on controls below the fold of the scrolled `#main` landed nowhere (same class as the C3b-1 "pagination click semantics" note) → `Session.activate` scrolls the control to the centre, clicks, verifies the effect through the attempt ledger and records the method (`activate` events: 13 × `click`, 0 × Enter fallback); 6) patch not applied (my assertion), rerun; 7) all phases ok but rc=1 from the runner tail (`cat` of the wrong session-file path) → fixed; 8) the isolated profile survived between runs and kept the EN language chosen at the end of the previous run → the profile is wiped per run.
+
+Clean run `native/logs/launch-positive.log` rc=0, 02:55:14Z–02:55:53Z, phases `wd-positive/arranged/unknown/unknown-check/noactive/flagoff/close` all `ok`; events `native/logs/positive-ui-events.jsonl` (0 `assertion_failed`), safe HTTP trace `native/logs/native-http-trace.jsonl`, DB `native/positive-server.db`, join `native/logs/verify-native.json` **PASS 44/44**:
+
+| # | Operation | HTTP (trace) | UI result (events) | DB read-back |
+|---|---|---|---|---|
+| 1 | candidate_get | GET card 200 | card_opened: objects id/content_type, source_trust unverified, empty facts/ranks, 3 unranked | intake row quarantined/unverified linked to receipt |
+| 2 | fact_list | GET facts 200 | versions newest-first | — |
+| 3 | fact_record | POST facts 201 ×2 | rank v1 "Mastre" (page 1), certificate:coc_master v1 "held", ACK + read-back ok | rows by member1, operator_entered, confidence NULL, cite this intake's object |
+| 4 | fact_correct | POST facts/rank/correct 201 | v2 "Master" newest-first, v1 "Mastre" preserved | version 2 row |
+| 5 | candidate_rank | POST rank 200 ×4 | 3/3 ranked; A met, B missing(rank), C unconfirmed(certificate:radio_operator); "Запрос пересчёта выполнен"; later 3/2 after arrangements; 0/0 no_active_profiles | ranks A v1, A v2, B v1, C v1, D v1; intake state ranked, source_trust still unverified |
+| 6 | rank_list | GET ranks 200 | three separate lists, freshness caveat on every row, v1/v2 side by side, unranked D | — |
+| 7 | shortlist_confirm | POST shortlist 201 ×2 (+409 ×3, 404 ×1) | B v1 **decided=false** confirmed; re-add after withdraw → second id | two B rows, distinct ids, second active |
+| 8 | shortlist_withdraw | DELETE …/shortlist/B/1 204 (+403 ×1 on C) | ACK on empty 204 (`result: null`), history shows withdrawn_by/at | first B row withdrawn_by member1 |
+| 9 | matching_profile_list | GET matching-profiles?include_archived=true 200 | names, current version/state next to ids | — |
+
+Negatives on unchanged 92dc through the compiled desktop: already_confirmed 409 (RU/EN text), profile_version_stale 409 (A → v2 by admin PATCH), profile_not_active 409 (C paused), withdraw_not_permitted 403 (member2's decision; DB row untouched), rank_not_found 404 (handler driven for unranked D — the screen offers no control for a pair without a stored comparison; recorded as arrangement), fact_no_source_object 422 (handler driven with a foreign object id injected into renderer state — the form only offers this card's objects; arrangement), no_active_profiles 200 = success without computation, flag-off 404 on card/facts/ranks after a server restart with `CREWING_C1_INTAKE_ENABLED=0` (same candidate PID), lost write answer (server stopped) → UNKNOWN with "Проверить текущее состояние" (reads only, attempt stays UNKNOWN, no dispatch) → new explicit rank shows the dialog "Предыдущая запись могла выполниться…" → new attempt ACKED, old stays UNKNOWN. Named-seat 403: separate sandbox run `native/logs/launch-negative.log` rc=0 (display `:96`, port 18083, company-wide token): card/facts/ranks/profiles readable, fact record → 403 `not authorised for this crewing` → "Нет прав." / "Access denied.", DB unchanged (`native/logs/negative-ui-events.jsonl`, `native/logs/native-negative-http-trace.jsonl`).
+
+Queue page preserved on Back (offset 50 → 50, arrangement with a read-only open) and on return from the working card (offset 0); Escape closes the card (dialog/settings open → ignored). Language switched through the real Settings control.
+
+## Visual acceptance (RU/EN, isolated display, exact candidate)
+
+`native/screenshots/01…26` (27 files): 01/01b queue page 2 + Back; 02 empty card; 03 facts with v2/v1 history; 04 three lists (met/missing/unconfirmed); 05 attempts ledger with 409 already_confirmed; 06 back to page 1; 07 withdrawn; 08 two decision ids; 09–12 EN card/facts/comparisons/history; 13 two stale reasons + unranked D; 14 409 stale; 15 403 withdraw; 16 EN 403/409; 17 422/404; 18 v1/v2 after rerank; 19/20 RU/EN UNKNOWN write outcome; 21 dialog; 22 no_active_profiles; 23/24 RU/EN flag-off 404; 25/26 RU/EN named-seat 403. Reviewed by me on the images: all §8 strings present, three lists never flattened, decided text carries no suitability claim, history labels by `Сотрудник <user_id>` with UTC. Known pre-existing: top navigation tabs overflow at 1100 px (C3b-1 header overflow) — not claimed fixed.
+
+## PRESERVE
+
+- All 15 existing harnesses rc=0 on the final functional tree (`final/*.log`), C3b-1 pilot harness 59/59 (its six controls untouched), `cargo test` 16/0 (`final/cargo-test-final.log`). Alias/Copy/upload/queue paths exercised natively in the positive run (upload receipt + pagination + language switch). Native clipboard stays UNKNOWN (not exercised). Demo/plugins/mobile: static assertions in the C3b-1 harness still pass; no change to those paths.
+
+## Controls matrix (final functional tree; every number from this SHA)
+
+M01–M12, M15(UI), M16: JS harness `js/c3b2-run-4.log` / `final/crewing_c3b2_candidate_harness.log` — 14/14 KILLED (clean GREEN → mutant RED → clean GREEN). M13, M14, M15(native): cargo mutants above — 3/3 KILLED. R01–R07: 7/7 PASS with separate assertions (R07 two assertions incl. declined dialog). No row substituted; no methodical blocker.
+
+## Guard pin (this commit)
+
+`.github/workflows/skipi-guard.yml` line 23 `ref: 93b1a51e…` → `ref: 7bd9300601e5445a9a60f1136d2fd57a9e9b32c5`; line 36 runtime pin `d6238191…` unchanged; diff = 1 line (`git diff` shows exactly one `-`/`+` pair). Config-superset proof above.
+
+## 2026-09-23T02:58:50Z — freeze and handover
+
+- Functional freeze: the four functional files are byte-identical to checkpoint `c1bc691`; this commit adds only the pin line and this journal. Final HEAD/upstream/live-remote are reported to the manager after the push through the canonical pre-push hook (no `--no-verify`, no force). No PR/merge/deploy/release/tag.
+- Own processes: 0 left (checked by `/proc/<pid>/cwd`/`exe`, ports 18082/18083/14446–14449 free, only the owner's `X1` socket exists). The owner's own bwrap processes (qbittorrent/obsidian) were never touched.
+- Scratch `scratchpad/crewing-c3b2-20260922/` 29 MB, untracked. Cleanup manifest (synthetic runtime secrets/DBs to delete after acceptance, nothing real inside): `native/positive-fixture.json`, `native/negative-fixture.json` (mode 600, synthetic tokens), `native/profile/config/skipi-crewing/settings.json`, `native/negative-profile/config/skipi-crewing/settings.json`, `native/positive-server.db`, `native/negative-server.db`, `native/*-session.json`, the `native/profile/` and `native/negative-profile/` trees, `native/server-runtime/` (archive copy of 92dc). Unique evidence to keep: `native/logs*`, `native/screenshots*`, `native/scripts`, `native/LAUNCH-RECIPE-C3B2.md`, `baseline/`, `rust/`, `js/`, `guard/`, `final/`, `ui/`.
+- Known limitations: (a) rank_not_found and fact_no_source_object were driven through the real handlers from the WebDriver script (the screen itself does not offer those pairs/objects) — recorded as arrangements; (b) M13/M14/M15-native mutants ran on the working file with hash-proven restore, not on a separate crate; (c) "204 with bytes" is unobservable through reqwest (body discarded) — the neighbour "200 with body" is tested; (d) no CI run: feature push alone does not run the PR workflow; PR/CI/two reviews remain the manager's window; (e) header overflow pre-existing.
+
 ## Current step
