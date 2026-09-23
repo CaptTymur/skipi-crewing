@@ -1439,7 +1439,7 @@ function demoInvoke(cmd, args){
   if (DEMO_READS[cmd]) { try { return Promise.resolve(DEMO_READS[cmd](args)); } catch(e){ return Promise.reject(e); } }
   if (DEMO_NOOPS[cmd]) return Promise.resolve(null);
   // Anything else is a mutation/server action — not available in the demo.
-  demoToast('Это демонстрация — изменения недоступны. Подключите токен компании для реальной работы.');
+  demoToast(tr('demo.toast'));
   return Promise.reject(new Error('demo_read_only'));
 }
 
@@ -1507,8 +1507,8 @@ function renderDemoBanner(){
   var b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:calc(env(safe-area-inset-top,0px) + 5px) 10px 5px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-  b.innerHTML = 'DEMO — демонстрационные данные '
-    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">Выйти из демо</button>';
+  b.innerHTML = escapeHtml(tr('demo.banner')) + ' '
+    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">'+escapeHtml(tr('demo.exit'))+'</button>';
   document.body.appendChild(b);
   // Nudge content below the fixed bar so nothing is hidden under it (desktop).
   document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
@@ -1739,6 +1739,7 @@ var UI_STRINGS = {
 	    'common.cancel':'Cancel','common.ok':'OK',
     'confirm.team_remove':'Remove this team member?','confirm.profile_archive':'Archive this profile?','confirm.profile_archive_note':'It will not be available for new vacancies. Existing vacancy snapshots stay valid.','confirm.mailbox_disconnect':'Disconnect this mailbox and purge cached messages?','confirm.message_delete':'Delete this cached message?','confirm.mailing_close':'Close this mailing request?','confirm.mailing_close_note':'It will stop appearing in seafarer mailing lists.','confirm.mailing_delete':'Delete this mailing request permanently?','confirm.document_delete':'Delete this document?','confirm.document_delete_note':'The file will be removed from the vault.','confirm.vacancy_close':'Close this vacancy?','confirm.vacancy_close_note':'It will stop appearing on the public board. Existing applications and chats stay accessible.','confirm.vacancy_delete':'Hard-delete this vacancy?','confirm.vacancy_delete_note':'This removes the posting AND all applications + chat messages tied to it. Cannot be undone.','confirm.vacancy_delete_hint':'Use Close instead if you just want to stop accepting candidates.','confirm.vault_folder':'Skipi Crewing will use this vault folder after restart:','confirm.vault_folder_note':'The clear folder name makes it easier to find in your file manager.',
     'confirm.remove':'Remove','confirm.archive':'Archive','confirm.disconnect':'Disconnect','confirm.delete':'Delete','confirm.delete_forever':'Delete forever','confirm.close':'Close','confirm.close_request':'Close request','confirm.close_vacancy':'Close vacancy','confirm.use_folder':'Use this folder',
+	    'about.verification_unavailable':'Stack verification unavailable','about.verification_mismatch':'Stack mismatch','mobile.apps_title':'Apps','mobile.apps_sub':'Plugins for your team','demo.toast':'This is a demonstration - changes are not available. Connect a company token for real work.','demo.banner':'DEMO - demonstration data','demo.exit':'Exit demo',
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
@@ -1756,6 +1757,7 @@ var UI_STRINGS = {
 	    'common.cancel':'Отмена','common.ok':'Подтвердить',
     'confirm.team_remove':'Удалить этого участника команды?','confirm.profile_archive':'Архивировать этот профиль?','confirm.profile_archive_note':'Он перестанет быть доступен для новых вакансий. Уже сделанные снимки по вакансиям останутся в силе.','confirm.mailbox_disconnect':'Отключить этот почтовый ящик и удалить кэшированные письма?','confirm.message_delete':'Удалить это кэшированное письмо?','confirm.mailing_close':'Закрыть этот запрос на рассылку?','confirm.mailing_close_note':'Он перестанет появляться в рассылках морякам.','confirm.mailing_delete':'Удалить этот запрос на рассылку навсегда?','confirm.document_delete':'Удалить этот документ?','confirm.document_delete_note':'Файл будет удалён из хранилища.','confirm.vacancy_close':'Закрыть эту вакансию?','confirm.vacancy_close_note':'Она перестанет показываться на публичной доске. Уже поданные заявки и чаты останутся доступны.','confirm.vacancy_delete':'Удалить эту вакансию безвозвратно?','confirm.vacancy_delete_note':'Будут удалены и сама вакансия, и все связанные с ней заявки и сообщения чата. Отменить это нельзя.','confirm.vacancy_delete_hint':'Если нужно просто перестать принимать кандидатов, используйте «Закрыть».','confirm.vault_folder':'После перезапуска Skipi Crewing будет использовать эту папку хранилища:','confirm.vault_folder_note':'Понятное имя папки облегчает её поиск в файловом менеджере.',
     'confirm.remove':'Удалить','confirm.archive':'Архивировать','confirm.disconnect':'Отключить','confirm.delete':'Удалить','confirm.delete_forever':'Удалить навсегда','confirm.close':'Закрыть','confirm.close_request':'Закрыть запрос','confirm.close_vacancy':'Закрыть вакансию','confirm.use_folder':'Использовать эту папку',
+	    'about.verification_unavailable':'Проверка стека недоступна','about.verification_mismatch':'Несовпадение стека','mobile.apps_title':'Приложения','mobile.apps_sub':'Плагины для вашей команды','demo.toast':'Это демонстрация — изменения недоступны. Подключите токен компании для реальной работы.','demo.banner':'DEMO — демонстрационные данные','demo.exit':'Выйти из демо',
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
@@ -2680,7 +2682,7 @@ function stackHeaderLabel(){
   return 'Skipi '+APP_BUILD_METADATA.component+' · Stack '+APP_BUILD_METADATA.stack_id;
 }
 function stackVerificationLabel(){
-  return APP_BUILD_METADATA.verification_status==='mismatch'?'Stack mismatch':'Stack verification unavailable';
+  return APP_BUILD_METADATA.verification_status==='mismatch'?tr('about.verification_mismatch'):tr('about.verification_unavailable');
 }
 function buildSourceLabel(){
   return APP_BUILD_METADATA.source_identifier&&APP_BUILD_METADATA.source_identifier!=='unknown'
@@ -5771,7 +5773,7 @@ var PILOT_TEXT = {
     no_aliases:'Идентификаторов входящих пока нет.', loading:'Загрузка…', shown_once:'Показывается один раз. Скопируйте или запишите сейчас: список не восстановит значение.', copy:'Копировать', copied:'Скопировано', copy_failed:'Буфер обмена недоступен. Выделите видимое значение и скопируйте вручную.', dismiss:'Закрыть',
     rotate:'Сменить', pause:'Приостановить', resume:'Возобновить', revoke:'Отозвать', revoke_confirm:'Окончательно отозвать этот идентификатор?', generation:'поколение',
     upload:'Синтетическая загрузка', upload_note:'Выберите только тестовый документ. Квитанция означает запись, но не проверку, извлечение, одобрение или прочтение.', source_id:'ID синтетического источника', choose:'Выбрать тестовый документ', selected_local:'Локальный файл', new_event:'Новый выбор создаёт новое событие. Повтор сохраняет то же событие и байты.', submit:'Загрузить', retry:'Повторить то же событие',
-    receipt_new:'Записано как новое событие', receipt_replay:'Подтверждено ранее записанное событие', intake:'Intake', receipt:'Квитанция', no_attempt:'Выберите синтетический документ для загрузки.', too_large:'Этот экран ограничивает тестовые файлы размером 16 МиБ.', read_failed:'Не удалось прочитать файл.', invalid_source:'Не задан внутренний синтетический источник.',
+    receipt_new:'Записано как новое событие', receipt_replay:'Подтверждено ранее записанное событие', intake:'Приём', receipt:'Квитанция', no_attempt:'Выберите синтетический документ для загрузки.', too_large:'Этот экран ограничивает тестовые файлы размером 16 МиБ.', read_failed:'Не удалось прочитать файл.', invalid_source:'Не задан внутренний синтетический источник.',
     queue:'Серверная очередь', queue_note:'Постраничный ответ сервера. Квитанция не означает проверку или одобрение.', previous:'Назад', next:'Далее', empty:'Серверная очередь пуста.', empty_page:'Эта страница пуста; вернитесь назад.', unavailable:'Раздел недоступен.', denied:'Нет прав.', offline:'Не удалось обновить. Проверьте настроенное подключение.', not_configured:'Подключение пилота не настроено.', settings_changed:'Настройки подключения изменились. Старый ответ проигнорирован.', malformed:'Ответ сервера не удалось безопасно прочитать.', ambiguous:'Не удалось подтвердить запись. Повтор загрузки сохранит событие; действия с идентификатором автоматически не повторяются.', refused:'Сервер отклонил запрос', unknown_state:'Неизвестное состояние', unknown_reason:'Неизвестная причина', summary_unknown:'Сводка неизвестна',
     facts:'факты', ranks:'оценки', stale:'устарели', confirmations:'подтверждения', updated:'Обновлено', range:'Строки', of:'из', open:'Открыть',
     state_active:'Активен', state_paused:'Приостановлен', state_revoked:'Отозван', state_received:'Записано', state_quarantined:'Записано; ожидает проверки', state_scanned:'Проверка выполнена', state_needs_review:'Нужна ручная проверка', state_rejected:'Файл не прошёл проверку', state_ranked:'Оценка есть'
@@ -11565,7 +11567,7 @@ function mobileViewChromeTitle(view) {
     return [cfc.name || mobileModuleLabel('crew_flow'), [cfc.rank, cfc.nationality].filter(Boolean).join(' · ')];
   }
   if (view === 'intake_pilot') return [tr('nav.intake_pilot'), mobileApiHostLabel()];
-  if (view === 'apps') return ['Apps', 'Plugins for your team'];
+  if (view === 'apps') return [mobileTr('apps_title'), mobileTr('apps_sub')];
   if (view === 'document') {
     var doc = state.selectedDocument || {};
     return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
@@ -11596,7 +11598,7 @@ function mobileRenderChrome(view) {
   var showBottomNav = mobileHasConnection() || __demoMode;
   root.innerHTML =
     '<div class="mobile-app">'
-    + (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">DEMO — демонстрационные данные</span><button class="mdb-exit" onclick="exitDemoMode()">Выйти из демо</button></div>' : '')
+    + (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">'+escapeHtml(tr('demo.banner'))+'</span><button class="mdb-exit" onclick="exitDemoMode()">'+escapeHtml(tr('demo.exit'))+'</button></div>' : '')
     + '<header class="mobile-top'+(__demoMode ? ' mt-with-banner' : '')+'">'
     + '<div class="mobile-brand-wrap">'
     + '<button class="mobile-top-home'+(navView === 'vacancies' ? ' active' : '')+'" onclick="mobileShow(\'vacancies\')" title="'+escapeAttr(mobileTr('home'))+'" aria-label="'+escapeAttr(mobileTr('home'))+'">&#8962;</button>'
