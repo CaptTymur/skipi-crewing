@@ -836,8 +836,12 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
     ok(subtitles.every((s) => !s.toLowerCase().includes(word)), `3 (A3): no subtitle contains "${word}"`);
   }
 
-  // 4. The confirm dialog has no hardcoded default button labels.
-  ok((html.match(/opts\.(?:cancelLabel|confirmLabel)\s*\|\|\s*['"]/g) || []).length === 0, '4 (A5): inAppConfirm defaults are not string literals');
+  // 4. The live confirm dialog has no hardcoded default button labels. The
+  //    legacy customConfirm() below is dead code (definition only, zero call
+  //    sites) and stays out of this route by PREP F8 — asserted, not assumed.
+  const confirmBody = cut('function inAppConfirm(msg, opts) {', '\nasync function closeVacancy(id){');
+  ok((confirmBody.match(/opts\.(?:cancelLabel|confirmLabel)\s*\|\|\s*['"]/g) || []).length === 0, '4 (A5): inAppConfirm defaults are not string literals');
+  ok((html.match(/customConfirm\(/g) || []).length === 1, '4 (A5): legacy customConfirm stays dead code — definition only, no call site');
 
   // 5. No confirm call site opens with a literal message.
   ok((html.match(/inAppConfirm\(\s*['"]/g) || []).length === 0, '5 (A6): no inAppConfirm call site passes a literal message');
