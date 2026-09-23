@@ -761,6 +761,150 @@ console.log('# reconciliation R01–R07');
   ok(mutationCalls(declined).length === 1 && attempts(declined).length === 1, 'R07: declining the dialog dispatches nothing');
 }
 
+// ---------------------------------------------------------------------------
+// # labels №440/№433 — RU/EN interface strings live in the dictionaries.
+// Card A (2026-09-23): every string named by PREP §2 in the §0 revision must be
+// served by tr()/mobileTr()/pilotT() from UI_STRINGS / PILOT_TEXT, with both an
+// `en` and a `ru` value, and the two values must differ byte for byte.
+// ---------------------------------------------------------------------------
+console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
+{
+  const cut = (from, to) => {
+    const a = html.indexOf(from); assert.ok(a > 0, `labels anchor missing: ${from}`);
+    const b = html.indexOf(to, a); assert.ok(b > a, `labels end anchor missing: ${to}`);
+    return html.slice(a, b);
+  };
+  const dictStart = html.indexOf('var UI_STRINGS = {');
+  const dictEnd = html.indexOf('// ── @skipi/settings v0.3.0 dictionary', dictStart);
+  assert.ok(dictStart > 0 && dictEnd > dictStart, 'labels: the UI_STRINGS block is bounded');
+  const dict = html.slice(dictStart, dictEnd);
+  const anchor = (re) => { const m = re.exec(dict); assert.ok(m, `labels: dictionary anchor missing ${re}`); return m.index; };
+  const iEn = anchor(/\n[ \t]*en: \{/), iRu = anchor(/\n[ \t]*ru: \{/), iTl = anchor(/\n[ \t]*tl: \{/);
+  assert.ok(iEn < iRu && iRu < iTl, 'labels: en/ru/tl dictionaries keep their order');
+  const enBlock = dict.slice(iEn, iRu);
+  const ruBlock = dict.slice(iRu, iTl);
+  const outsideDict = (literal) => {
+    const hits = [];
+    for (let i = html.indexOf(literal); i !== -1; i = html.indexOf(literal, i + 1)) {
+      if (i < dictStart || i >= dictEnd) hits.push(i);
+    }
+    return hits;
+  };
+  const NEW_KEYS = [
+    'vacancies.empty_select','vacancies.sort.open_first','vacancies.sort.with_replies','vacancies.sort.stale','vacancies.sort.newest','vacancies.sort.oldest',
+    'entry.tagline','entry.open_profile','entry.open_profile_desc','entry.create_profile','entry.create_profile_desc','entry.show_demo','entry.show_demo_desc','entry.demo_note',
+    'connect.title','connect.lead_device','connect.lead_profile','connect.close','connect.tab_token','connect.tab_qr','connect.token_label','connect.token_placeholder','connect.help','connect.clear','connect.submit','connect.qr_text','connect.qr_note','connect.enter_manually','connect.err_already','connect.err_token','connect.err_server','connect.err_generic',
+    'common.cancel','common.ok',
+    'confirm.team_remove','confirm.profile_archive','confirm.profile_archive_note','confirm.mailbox_disconnect','confirm.message_delete','confirm.mailing_close','confirm.mailing_close_note','confirm.mailing_delete','confirm.document_delete','confirm.document_delete_note','confirm.vacancy_close','confirm.vacancy_close_note','confirm.vacancy_delete','confirm.vacancy_delete_note','confirm.vacancy_delete_hint','confirm.vault_folder','confirm.vault_folder_note',
+    'confirm.remove','confirm.archive','confirm.disconnect','confirm.delete','confirm.delete_forever','confirm.close','confirm.close_request','confirm.close_vacancy','confirm.use_folder',
+    'about.verification_unavailable','about.verification_mismatch',
+    'mobile.apps_title','mobile.apps_sub',
+    'demo.toast','demo.banner','demo.exit',
+  ];
+  // Values carry no apostrophes by construction, so a non-greedy single-quoted read is exact.
+  const valueOf = (block, key) => {
+    const m = new RegExp("'" + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "':'([^']*)'").exec(block);
+    return m ? m[1] : null;
+  };
+
+  // 1. Strings moved into the dictionary occur nowhere else in the product.
+  const MOVED = [
+    ['A1 vacancies.empty_select', 'Select a vacancy on the left to view details and applications.'],
+    ['A2 vacancies.sort.open_first', 'Открытые сначала'],
+    ['A4 entry.tagline', 'Вакансии, заявки и база моряков для крюинговых компаний.'],
+    ['A4b connect.err_token', 'Токен недействителен или истёк.'],
+    ['A8 mobile.apps_sub', 'Plugins for your team'],
+    ['A10 demo.banner', 'DEMO — демонстрационные данные'],
+    ['A10 demo.toast', 'Это демонстрация — изменения недоступны.'],
+  ];
+  for (const [name, literal] of MOVED) {
+    ok(outsideDict(literal).length === 0, `1 (${name}): the literal lives only inside UI_STRINGS`);
+  }
+
+  // 2. The RU sort label is a ru-dictionary value, not markup.
+  ok(ruBlock.includes("'vacancies.sort.open_first':'Открытые сначала'"), '2 (A2): "Открытые сначала" is a UI_STRINGS.ru value');
+  ok(!enBlock.includes('Открытые сначала'), '2 (A2): the RU sort label does not sit in the en dictionary');
+  ok(/sortOptions\.map|\[\s*'open_first'/.test(html) && /\['open_first',\s*tr\('vacancies\.sort\.open_first'\)\]/.test(html), '2 (A2): the sort table reads all labels through tr()');
+  for (const key of ['with_replies','stale','newest','oldest']) {
+    ok(new RegExp("\\['" + key + "',\\s*tr\\('vacancies\\.sort\\." + key + "'\\)\\]").test(html), `2 (A2): sort option ${key} reads its label through tr()`);
+  }
+
+  // 3. The pilot subtitle describes the screen, with no internal roadmap words.
+  const subtitles = [...html.matchAll(/\n\s*title:'[^']*', subtitle:'([^']*)',/g)].map((m) => m[1]);
+  ok(subtitles.length === 2, '3 (A3): PILOT_TEXT still carries exactly one en and one ru subtitle');
+  for (const word of ['slice', 'этап', 'следующ', 'next', 'parsed', 'разбир', 'экстрактор']) {
+    ok(subtitles.every((s) => !s.toLowerCase().includes(word)), `3 (A3): no subtitle contains "${word}"`);
+  }
+
+  // 4. The confirm dialog has no hardcoded default button labels.
+  ok((html.match(/opts\.(?:cancelLabel|confirmLabel)\s*\|\|\s*['"]/g) || []).length === 0, '4 (A5): inAppConfirm defaults are not string literals');
+
+  // 5. No confirm call site opens with a literal message.
+  ok((html.match(/inAppConfirm\(\s*['"]/g) || []).length === 0, '5 (A6): no inAppConfirm call site passes a literal message');
+
+  // 6. The mobile Apps subtitle is a dictionary value; the rail label and the
+  //    settings "Modules / Apps" literals stay as they are (pinned by the
+  //    isolation and presence harnesses — №433 stays open on them).
+  ok(enBlock.includes("'mobile.apps_sub':'Plugins for your team'"), '6 (A8): mobile.apps_sub is an en dictionary value');
+  ok(/if \(view === 'apps'\) return \[mobileTr\('apps_title'\), mobileTr\('apps_sub'\)\];/.test(html), '6 (A8): the mobile Apps header reads both strings through mobileTr()');
+  ok(/mobileNavButton\('apps', navView, '[^']+', 'Apps'\)/.test(html), '6 (A8): the mobile rail label stays the pinned literal (out of this route)');
+
+  // 7. Key parity: every new key exists in both en and ru.
+  for (const key of NEW_KEYS) {
+    const en = valueOf(enBlock, key);
+    const ru = valueOf(ruBlock, key);
+    ok(en !== null && en !== '' && ru !== null && ru !== '', `7: key ${key} has a value in both en and ru`);
+  }
+
+  // 8. Stack verification status is localized; the provenance identifier is not.
+  ok(/return APP_BUILD_METADATA\.verification_status==='mismatch'\?tr\('about\.verification_mismatch'\):tr\('about\.verification_unavailable'\);/.test(html), "8 (A7′): stackVerificationLabel returns tr() for both statuses");
+  ok(/\+' · Source '\+buildSourceLabel\(\)/.test(html) && /'Component '\+APP_BUILD_METADATA\.component/.test(html), "8 (A7′): the stackAboutSummary identifier stays unlocalized");
+
+  // 9 (S2). The confirm defaults come from the dictionary and are escaped.
+  ok(/escapeHtml\(opts\.cancelLabel\|\|tr\('common\.cancel'\)\)/.test(html), "9 (S2): the cancel button renders escapeHtml(opts.cancelLabel||tr('common.cancel'))");
+  ok(/escapeHtml\(opts\.confirmLabel\|\|tr\('common\.ok'\)\)/.test(html), "9 (S2): the confirm button renders escapeHtml(opts.confirmLabel||tr('common.ok'))");
+
+  // 10. Every new key really differs between ru and en (no copied English).
+  const ALLOWED_EQUAL = [];
+  for (const key of NEW_KEYS) {
+    const en = valueOf(enBlock, key);
+    const ru = valueOf(ruBlock, key);
+    if (ALLOWED_EQUAL.includes(key)) continue;
+    ok(en !== null && ru !== null && Buffer.from(ru, 'utf8').compare(Buffer.from(en, 'utf8')) !== 0, `10: ru differs from en for ${key}`);
+  }
+  // A11: the pilot tab label is translated in ru.
+  ok(/intake:'Приём'/.test(html) && !/intake:'Intake', receipt:'Квитанция'/.test(html), '10 (A11): PILOT_TEXT.ru.intake is translated');
+  ok(/intake:'Intake', receipt:'Receipt'/.test(html), '10 (A11): PILOT_TEXT.en.intake stays English');
+
+  // S1. The entry screen and the connect dialog hold no Cyrillic literals.
+  const entryBody = cut('function renderEntryChoice(next){', '\nfunction demoToast(msg){');
+  const connectBody = cut('function openConnectDialog(opts){', '\nfunction closeConnectDialog(){');
+  const CYR_LITERAL = /'[^']*[А-Яа-яЁё][^']*'/g;
+  ok((entryBody.match(CYR_LITERAL) || []).length === 0, 'S1 (A4): renderEntryChoice carries no Cyrillic string literal');
+  ok((connectBody.match(CYR_LITERAL) || []).length === 0, 'S1 (A4b): openConnectDialog carries no Cyrillic string literal');
+  ok((entryBody.match(/tr\('entry\./g) || []).length >= 8, 'S1 (A4): the entry screen renders eight entry.* dictionary strings');
+  ok((connectBody.match(/tr\('connect\./g) || []).length >= 13, 'S1 (A4b): the connect dialog renders the connect.* dictionary strings');
+  ok((connectBody.match(/escapeAttr\(tr\('connect\./g) || []).length >= 2, 'S1 (A4b): dictionary values interpolated into attributes go through escapeAttr()');
+  const friendly = cut('function connectFriendlyError(e){', '\nasync function connectSubmitToken(){');
+  ok((friendly.match(CYR_LITERAL) || []).length === 0 && (friendly.match(/tr\('connect\.err_/g) || []).length === 4, 'S1 (A4b): all four connect errors come from connect.err_* keys');
+
+  // R3. Runtime: the mobile Apps header differs between RU and EN.
+  const langBlock = cut("var UI_LANG_KEY = 'skipi-crewing-ui-language';", '// ── @skipi/settings v0.3.0 dictionary');
+  const trBlock = cut('function getUiLang() {', 'function setUiLang(lang) {');
+  const mobileTrBlock = cut('function mobileTr(key) {', 'function mobileModuleLabel(view) {');
+  const titleBlock = cut('function mobileViewChromeTitle(view) {', 'function mobileApiHostLabel() {');
+  const titleFor = (lang) => {
+    const context = vm.createContext({ localStorage: { getItem: () => lang }, state: { settings: {} } });
+    vm.runInContext(`${langBlock}\n${trBlock}\n${mobileTrBlock}\n${titleBlock}\nthis.__t = mobileViewChromeTitle('apps');`, context);
+    return context.__t;
+  };
+  const titleEn = titleFor('en');
+  const titleRu = titleFor('ru');
+  ok(titleEn[0] === 'Apps' && titleEn[1] === 'Plugins for your team', 'R3: the mobile Apps header renders the en values at runtime');
+  ok(titleRu[0] === 'Приложения' && titleRu[1] === 'Плагины для вашей команды', 'R3: the mobile Apps header renders the ru values at runtime');
+  ok(titleRu[0] !== titleEn[0] && titleRu[1] !== titleEn[1], 'R3: the mobile Apps header actually changes with the interface language');
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);
