@@ -577,18 +577,38 @@ const controls = [
   },
 ];
 
+// Runner: known-good → mutant → restore. The mutation itself is applied OUTSIDE the
+// sensor try: an anchor that does not occur exactly once is a runner failure
+// (ANCHOR_MISSING), never a "mutant RED".
+async function runControl(control) {
+  let cleanBefore = false, mutantRed = false, cleanAfter = false, mutantMessage = '';
+  try { await control.sensor(makeContext()); cleanBefore = true; } catch (error) { mutantMessage = `known-good failed: ${error.message}`; }
+  let anchorMissing = false;
+  if (cleanBefore) {
+    let mutantSource = null;
+    try { mutantSource = mutate(c3b2Source, control.edits); } catch (error) { anchorMissing = true; mutantMessage = `ANCHOR_MISSING: ${error.message}`; }
+    if (mutantSource !== null) {
+      try { await control.sensor(makeContext({ source: mutantSource })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; }
+    }
+    try { await control.sensor(makeContext()); cleanAfter = true; } catch (error) { mutantMessage += ` / restore failed: ${error.message}`; }
+  }
+  const verdict = anchorMissing ? 'ANCHOR_MISSING' : (cleanBefore && mutantRed && cleanAfter ? 'KILLED' : 'FAIL');
+  return { id: control.id, defect: control.defect, cleanBefore, mutantRed, cleanAfter, anchorMissing, verdict, detail: mutantMessage };
+}
+
+console.log('# runner self-check: a mutant whose anchor does not exist must never count as KILLED');
+{
+  const phantom = { id: 'SELF', defect: 'runner self-check (phantom anchor)', edits: [['/* this anchor does not exist in the C3b-2 block */', '']], sensor: controls[0].sensor };
+  const result = await runControl(phantom);
+  ok(result.verdict === 'ANCHOR_MISSING' && result.mutantRed === false, `phantom-anchor control reports ANCHOR_MISSING (got ${result.verdict}: ${result.detail.slice(0, 80)})`);
+}
+
 console.log('# isolated mutation controls M01–M12, M15, M16 (known-good → mutant RED → clean GREEN)');
 const controlResults = [];
 for (const control of controls) {
-  let cleanBefore = false, mutantRed = false, cleanAfter = false, mutantMessage = '';
-  try { await control.sensor(makeContext()); cleanBefore = true; } catch (error) { mutantMessage = `known-good failed: ${error.message}`; }
-  if (cleanBefore) {
-    try { await control.sensor(makeContext({ source: mutate(c3b2Source, control.edits) })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; }
-    try { await control.sensor(makeContext()); cleanAfter = true; } catch (error) { mutantMessage += ` / restore failed: ${error.message}`; }
-  }
-  const verdict = cleanBefore && mutantRed && cleanAfter ? 'KILLED' : 'FAIL';
-  controlResults.push({ id: control.id, defect: control.defect, cleanBefore, mutantRed, cleanAfter, verdict, detail: mutantMessage });
-  softOk(verdict === 'KILLED', `${control.id} ${control.defect}: clean=${cleanBefore ? 'GREEN' : 'RED'} mutant=${mutantRed ? 'RED' : 'GREEN'} restore=${cleanAfter ? 'GREEN' : 'RED'} (${mutantMessage.slice(0, 90)})`);
+  const result = await runControl(control);
+  controlResults.push(result);
+  softOk(result.verdict === 'KILLED', `${result.id} ${result.defect}: clean=${result.cleanBefore ? 'GREEN' : 'RED'} mutant=${result.mutantRed ? 'RED' : 'GREEN'} restore=${result.cleanAfter ? 'GREEN' : 'RED'} (${result.detail.slice(0, 90)})`);
 }
 
 // ---------------------------------------------------------------------------
