@@ -771,6 +771,18 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 .pilot-pagination span { color:var(--text2); font-size:11px; }
 .pilot-summary { display:flex; flex-wrap:wrap; gap:8px; color:var(--text2); font-size:11px; }
 .pilot-summary span { background:var(--panel2); border-radius:5px; padding:3px 6px; }
+.pilot-card-freshness { display:inline-block; margin:6px 0; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:650; color:var(--warn); border:1px solid rgba(245,158,11,.45); }
+.pilot-fact-field,.pilot-rank-row,.pilot-history-row { border-top:1px solid var(--border); padding:10px 0; min-width:0; }
+.pilot-fact-field:first-child,.pilot-rank-row:first-child,.pilot-history-row:first-child { border-top:0; }
+.pilot-fact-head { display:flex; align-items:center; justify-content:space-between; gap:8px; overflow-wrap:anywhere; }
+.pilot-fact-version { padding:6px 0 4px 10px; border-left:3px solid var(--border); margin:6px 0; }
+.pilot-fact-version.current { border-left-color:var(--accent); }
+.pilot-fact-value { white-space:pre-wrap; overflow-wrap:anywhere; font-size:13px; }
+.pilot-fact-form textarea { width:100%; margin-top:4px; resize:vertical; }
+.pilot-fact-form select { width:100%; margin-top:4px; }
+.pilot-rank-list { margin:6px 0; font-size:12px; }
+.pilot-rank-reason { padding:2px 0 2px 10px; overflow-wrap:anywhere; color:var(--text2); }
+.pilot-attempts .pilot-status { margin:6px 0; }
 @media (max-width: 980px) { .pilot-grid { grid-template-columns:1fr; } }
 
 </style>
@@ -2564,6 +2576,8 @@ var state = {
     uploadReceipt: null,
     uploadError: null,
     uploadPending: false,
+    detail: null,
+    detailGeneration: 0,
   },
   focusedApplicationId: null,
   seafarers: [],
@@ -5735,7 +5749,7 @@ var PILOT_TEXT = {
     upload:'Synthetic upload', upload_note:'Choose a test document only. A successful receipt means stored; it does not mean scanned, extracted, approved or read.', source_id:'Synthetic source ID', choose:'Choose test document', selected_local:'Local file', new_event:'New selection creates a new event. Retry keeps the same event and bytes.', submit:'Upload', retry:'Retry same event',
     receipt_new:'Stored as a new event', receipt_replay:'Existing event confirmed', intake:'Intake', receipt:'Receipt', no_attempt:'Choose a synthetic document to prepare an upload.', too_large:'This screen limits test files to 16 MiB.', read_failed:'The file could not be read.', invalid_source:'Synthetic source identity is unavailable.',
     queue:'Server queue', queue_note:'Paged server results. Receipt is not a scan or approval.', previous:'Previous', next:'Next', empty:'The server queue is empty.', empty_page:'This page is empty; use Previous.', unavailable:'Section unavailable.', denied:'Access denied.', offline:'Could not refresh. Check the configured connection.', not_configured:'Pilot connection is not configured.', settings_changed:'Connection settings changed. The old result was ignored.', malformed:'The server reply could not be read safely.', ambiguous:'Could not confirm the write. Retry uses the same event; alias actions are not repeated automatically.', refused:'Server refused the request', unknown_state:'Unknown state', unknown_reason:'Unknown reason', summary_unknown:'Summary unknown',
-    facts:'facts', ranks:'ranks', stale:'stale', confirmations:'confirmations', updated:'Updated', range:'Rows', of:'of',
+    facts:'facts', ranks:'ranks', stale:'stale', confirmations:'confirmations', updated:'Updated', range:'Rows', of:'of', open:'Open',
     state_active:'Active', state_paused:'Paused', state_revoked:'Revoked', state_received:'Stored', state_quarantined:'Stored; awaiting checks', state_scanned:'Scan completed', state_needs_review:'Human review needed', state_rejected:'File failed checks', state_ranked:'Ranking exists'
   },
   ru: {
@@ -5747,7 +5761,7 @@ var PILOT_TEXT = {
     upload:'Синтетическая загрузка', upload_note:'Выберите только тестовый документ. Квитанция означает запись, но не проверку, извлечение, одобрение или прочтение.', source_id:'ID синтетического источника', choose:'Выбрать тестовый документ', selected_local:'Локальный файл', new_event:'Новый выбор создаёт новое событие. Повтор сохраняет то же событие и байты.', submit:'Загрузить', retry:'Повторить то же событие',
     receipt_new:'Записано как новое событие', receipt_replay:'Подтверждено ранее записанное событие', intake:'Intake', receipt:'Квитанция', no_attempt:'Выберите синтетический документ для загрузки.', too_large:'Этот экран ограничивает тестовые файлы размером 16 МиБ.', read_failed:'Не удалось прочитать файл.', invalid_source:'Не задан внутренний синтетический источник.',
     queue:'Серверная очередь', queue_note:'Постраничный ответ сервера. Квитанция не означает проверку или одобрение.', previous:'Назад', next:'Далее', empty:'Серверная очередь пуста.', empty_page:'Эта страница пуста; вернитесь назад.', unavailable:'Раздел недоступен.', denied:'Нет прав.', offline:'Не удалось обновить. Проверьте настроенное подключение.', not_configured:'Подключение пилота не настроено.', settings_changed:'Настройки подключения изменились. Старый ответ проигнорирован.', malformed:'Ответ сервера не удалось безопасно прочитать.', ambiguous:'Не удалось подтвердить запись. Повтор загрузки сохранит событие; действия с идентификатором автоматически не повторяются.', refused:'Сервер отклонил запрос', unknown_state:'Неизвестное состояние', unknown_reason:'Неизвестная причина', summary_unknown:'Сводка неизвестна',
-    facts:'факты', ranks:'оценки', stale:'устарели', confirmations:'подтверждения', updated:'Обновлено', range:'Строки', of:'из',
+    facts:'факты', ranks:'оценки', stale:'устарели', confirmations:'подтверждения', updated:'Обновлено', range:'Строки', of:'из', open:'Открыть',
     state_active:'Активен', state_paused:'Приостановлен', state_revoked:'Отозван', state_received:'Записано', state_quarantined:'Записано; ожидает проверки', state_scanned:'Проверка выполнена', state_needs_review:'Нужна ручная проверка', state_rejected:'Файл не прошёл проверку', state_ranked:'Оценка есть'
   }
 };
@@ -5785,6 +5799,7 @@ function pilotFreshStateForContext(context) {
   p.aliasDraft = ''; p.aliases = []; p.aliasError = null; p.aliasLoading = false; p.aliasRequest += 1; p.aliasActionRequest += 1; p.aliasPending = false; p.oneTimeAlias = null;
   p.queue = { items:[], limit:50, offset:0, total:0 }; p.queueError = null; p.queueLoading = false; p.queueRequest += 1; p.queueLastUpdated = null;
   p.uploadAttempt = null; p.uploadReceipt = null; p.uploadError = null; p.uploadPending = false;
+  p.detail = null; p.detailGeneration = (p.detailGeneration || 0) + 1;
 }
 function pilotLeave() {
   pilotFreshStateForContext({server_url:'',bearer_token:'',crewing_id:''});
@@ -5898,7 +5913,8 @@ function pilotQueueHtml() {
     var summary = item.summary;
     var reason = summary && summary.needs_review_reason ? '<div class="pilot-note">'+escapeHtml(pilotReason(summary.needs_review_reason))+' <code>'+escapeHtml(summary.needs_review_reason)+'</code></div>' : '';
     return '<div class="pilot-queue-row" data-qa="pilot-queue-row"><div class="pilot-queue-meta"><span class="pilot-state '+escapeAttr(item.state)+'">'+escapeHtml(pilotStateLabel(item.state))+'</span><span>'+escapeHtml(item.content_type)+'</span><span>'+escapeHtml(humanSize(item.content_bytes))+'</span></div>'
-      + '<div class="pilot-queue-title">'+escapeHtml(item.intake_id)+'</div><div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(item.receipt_id)+' · '+escapeHtml(pilotFormatTime(item.created_at))+'</div>'+reason+pilotSummaryHtml(summary)+'</div>';
+      + '<div class="pilot-queue-title">'+escapeHtml(item.intake_id)+'</div><div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(item.receipt_id)+' · '+escapeHtml(pilotFormatTime(item.created_at))+'</div>'+reason+pilotSummaryHtml(summary)
+      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeJsString(item.intake_id)+'\')">'+escapeHtml(pilotT('open'))+'</button></div></div>';
   }).join('');
   if (!rows) rows = '<div class="pilot-status">'+escapeHtml(q.offset > 0 ? pilotT('empty_page') : pilotT('empty'))+'</div>';
   var start = q.total && q.items.length ? q.offset + 1 : 0;
@@ -5917,6 +5933,7 @@ function renderIntakePilot() {
     main.innerHTML = '<div class="pilot-shell" data-qa="pilot-unconfigured"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+escapeHtml(pilotT('subtitle'))+'</p></div></div><div class="pilot-card"><div class="pilot-status error">'+escapeHtml(pilotT('configure'))+'</div><button onclick="openSettings(\'connection\')">'+escapeHtml(tr('settings.connection'))+'</button></div></div>';
     return;
   }
+  if (p.detail) { pilotRenderCard(main); return; }
   main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-pilot-view"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+escapeHtml(pilotT('subtitle'))+'</p></div><button class="ghost" onclick="pilotRefreshAll()">'+escapeHtml(pilotT('refresh'))+'</button></div>'
     + '<div class="pilot-grid"><div><section class="pilot-card"><div class="pilot-card-head"><h2>'+escapeHtml(pilotT('aliases'))+'</h2></div><div class="pilot-note">'+escapeHtml(pilotT('alias_note'))+'</div>'
     + '<div class="pilot-form-row"><label>'+escapeHtml(pilotT('label'))+'<input id="pilot-alias-label" maxlength="120" value="'+escapeAttr(p.aliasDraft)+'" oninput="state.intakePilot.aliasDraft=this.value"></label><button onclick="pilotCreateAlias()" '+(p.aliasPending?'disabled':'')+'>'+escapeHtml(pilotT('create'))+'</button></div>'+pilotSecretHtml()+'<div id="pilot-aliases">'+pilotAliasesHtml()+'</div></section>'
@@ -6011,6 +6028,402 @@ async function pilotSubmitUpload() {
   } catch(error) { if(!pilotContextStillCurrent(context)||p.uploadAttempt!==attempt)return;p.uploadPending=false;p.uploadError=error;renderIntakePilot(); }
 }
 // ================== C3b-1 SYNTHETIC INTAKE PILOT END ==================
+
+// ================= C3b-2 CANDIDATE CARD START =================
+var PILOT_CARD_TEXT = {
+  en: {
+    card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh',
+    section_facts:'Facts and sources', section_ranks:'Stored comparisons', section_history:'Decision history · original comparison was not preserved',
+    source_unverified:'Document unverified · synthetic data only', source_trust:'Source trust', objects:'Sources (objects of this card)', no_objects:'This card has no objects; facts cannot be recorded.',
+    facts_empty:'No facts have been recorded yet.', facts_failed:'Facts could not be loaded.', ranks_empty:'No stored comparisons.', ranks_failed:'Comparisons could not be loaded.', card_failed:'Card could not be loaded.', history_empty:'No decisions yet.', profiles_failed:'Vacancy names are unavailable; ids are shown.',
+    stored_comparison:'Stored comparison', freshness_unverified:'Fact freshness for this comparison is unverified', vacancy_version:'Vacancy version used', name_unavailable:'name unavailable', profile:'Profile', profile_current:'current version', profile_state:'state', primary:'primary vacancy',
+    decided_yes:'Every stated requirement is compared; this is not a suitability or verification badge.', decided_no:'Comparison is incomplete: some requirements are not met or not confirmed.',
+    entered_by_member:'Entered by a team member', member:'Team member', confidence:'confidence', confidence_unknown:'confidence unknown', version:'version', page:'page', span:'span', source_object:'source object', recorded:'recorded',
+    add_fact:'Add fact', correct_fact:'Correct', correcting:'Correcting field', cancel_correction:'Cancel correction', field:'Field', value:'Value', page_optional:'Page (optional)', span_optional:'Span (optional)',
+    rank_now:'Rank against active vacancies', rank_note:'Explicit action. Every active vacancy is compared; the request completing does not make facts current.', rank_done:'Ranking request completed', rank_ranked:'Ranking completed', rank_no_active:'No active vacancies',
+    shortlist_add:'Add to shortlist for further consideration', shortlist_withdraw:'Withdraw decision', shortlist_note:'Adds the candidate for further consideration. Fact freshness is not verified.',
+    unranked:'Active vacancies without a stored comparison', active_decision:'Active decision', withdrawn:'Withdrawn', decision:'Decision',
+    writes:'Write attempts', outcome_pending:'Pending', outcome_acked:'Confirmed by server', outcome_refused:'Refused', outcome_unknown:'Unknown', unknown_outcome:'Write outcome is unknown. You can check the current state', check_state:'Check current state', acked_refresh_failed:'Write confirmed; refresh failed',
+    previous_may_have_completed:'The previous write may have completed. Perform a new action?', perform:'Perform', invalid_form:'The form is not valid', unknown_outcome_code:'Unknown result',
+    op_fact_record:'Add fact', op_fact_correct:'Correct fact', op_rank:'Rank', op_confirm:'Add to shortlist', op_withdraw:'Withdraw decision',
+    requirement:'Requirement', wanted:'wanted', found:'entered', list_met:'Met', list_missing:'Not met', list_unconfirmed:'Unconfirmed', list_unknown:'Unknown outcome', history_id:'Decision id', by:'by', at:'at', summary:'Summary'
+  },
+  ru: {
+    card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить',
+    section_facts:'Сведения и источники', section_ranks:'Сохранённые оценки', section_history:'История решений · исходная оценка не сохранена',
+    source_unverified:'Документ не проверен · только синтетические данные', source_trust:'Доверие к источнику', objects:'Источники (объекты этой карточки)', no_objects:'У карточки нет объектов; записать сведения нельзя.',
+    facts_empty:'Сведений пока нет.', facts_failed:'Сведения не загружены.', ranks_empty:'Сохранённых оценок нет.', ranks_failed:'Оценки не загружены.', card_failed:'Карточка не загружена.', history_empty:'Решений пока нет.', profiles_failed:'Названия вакансий недоступны; показаны идентификаторы.',
+    stored_comparison:'Сохранённая оценка', freshness_unverified:'Актуальность фактов для этой оценки не подтверждена', vacancy_version:'Версия вакансии в оценке', name_unavailable:'название недоступно', profile:'Профиль', profile_current:'текущая версия', profile_state:'состояние', primary:'основная вакансия',
+    decided_yes:'Все заявленные требования сопоставлены; это не признак пригодности или проверки.', decided_no:'Сопоставление не завершено: есть невыполненные или неподтверждённые требования.',
+    entered_by_member:'Введено сотрудником', member:'Сотрудник', confidence:'уверенность', confidence_unknown:'уверенность неизвестна', version:'версия', page:'страница', span:'фрагмент', source_object:'объект-источник', recorded:'записано',
+    add_fact:'Добавить сведения', correct_fact:'Исправить', correcting:'Исправление поля', cancel_correction:'Отменить исправление', field:'Поле', value:'Значение', page_optional:'Страница (необязательно)', span_optional:'Фрагмент (необязательно)',
+    rank_now:'Пересчитать сравнения с активными вакансиями', rank_note:'Явное действие. Сравниваются все активные вакансии; выполнение запроса не делает сведения актуальными.', rank_done:'Запрос пересчёта выполнен', rank_ranked:'Оценка выполнена', rank_no_active:'Нет активных вакансий',
+    shortlist_add:'Добавить в шортлист для дальнейшего рассмотрения', shortlist_withdraw:'Снять решение', shortlist_note:'Добавляет кандидата для дальнейшего рассмотрения. Актуальность фактов не проверена.',
+    unranked:'Активные вакансии без сохранённой оценки', active_decision:'Активное решение', withdrawn:'Снято', decision:'Решение',
+    writes:'Попытки записи', outcome_pending:'Выполняется', outcome_acked:'Подтверждено сервером', outcome_refused:'Отклонено', outcome_unknown:'Неизвестно', unknown_outcome:'Результат записи неизвестен. Можно проверить текущее состояние', check_state:'Проверить текущее состояние', acked_refresh_failed:'Запись подтверждена, обновление не удалось',
+    previous_may_have_completed:'Предыдущая запись могла выполниться. Выполнить новое действие?', perform:'Выполнить', invalid_form:'Форма заполнена неверно', unknown_outcome_code:'Неизвестный результат',
+    op_fact_record:'Добавить сведения', op_fact_correct:'Исправить сведения', op_rank:'Пересчёт', op_confirm:'Добавить в шортлист', op_withdraw:'Снять решение',
+    requirement:'Требование', wanted:'требуется', found:'внесено', list_met:'Выполнено', list_missing:'Не выполнено', list_unconfirmed:'Не подтверждено', list_unknown:'Неизвестный результат', history_id:'Решение', by:'кем', at:'когда', summary:'Сводка'
+  }
+};
+var PILOT_CARD_OUTCOME_TEXT = {
+  met:['Требование выполнено','Requirement met'],
+  missing:['Требование не выполнено','Requirement not met'],
+  unconfirmed_requirement:['Требование не указано в вакансии','Requirement not stated in vacancy'],
+  unconfirmed_fact:['Сведения не внесены','Fact not entered']
+};
+// Which of the three separate lists an outcome belongs to. `unconfirmed_*` are
+// NOT negatives: "we do not know" is never rendered as "he does not have it".
+var PILOT_CARD_OUTCOME_GROUP = { met:'met', missing:'missing', unconfirmed_requirement:'unconfirmed', unconfirmed_fact:'unconfirmed' };
+var PILOT_CARD_STALE_TEXT = {
+  profile_version:['Вакансия изменилась — пересчитайте','Vacancy changed — rank again'],
+  profile_not_active:['Вакансия не активна','Vacancy is not active']
+};
+var PILOT_CARD_REFUSAL_TEXT = {
+  rank_not_found:['Этот кандидат не оценён по этой вакансии','This candidate has not been scored for this vacancy'],
+  profile_not_active:['Вакансия не активна','The vacancy is not active'],
+  profile_version_stale:['Вакансия изменилась — оцените заново','The vacancy has changed — rank again'],
+  already_confirmed:['Кандидат уже в шортлисте','Already on the shortlist'],
+  confirmation_no_actor:['Не удалось определить, кто подтверждает','The person confirming could not be identified'],
+  not_confirmed:['Этот кандидат не в шортлисте','Not on the shortlist'],
+  already_withdrawn:['Уже снят из шортлиста','Already withdrawn'],
+  withdraw_not_permitted:['Снять может автор подтверждения или администратор','Only the person who confirmed it, or an administrator, can withdraw'],
+  fact_no_source_object:['Факт должен ссылаться на документ этого кандидата','A fact must cite a document of THIS candidate'],
+  fact_no_uncertainty:['У факта нет ни уверенности, ни пометки неизвестности','A fact carries a confidence or an uncertainty'],
+  fact_no_actor:['Правку вносит конкретный человек','A correction is made by somebody'],
+  fact_unknown_key:['Недопустимое поле факта','A key outside the allowed set'],
+  fact_shape:['Неверный формат факта','Malformed fact'],
+  'crewing not found':['Компания не найдена','Crewing not found']
+};
+function cardT(key) {
+  var lang = getUiLang() === 'ru' ? 'ru' : 'en';
+  return PILOT_CARD_TEXT[lang][key] || PILOT_CARD_TEXT.en[key] || key;
+}
+function cardPair(table, code, unknownKey) {
+  var row = table[code];
+  if (!row) return cardT(unknownKey || 'unknown_outcome_code')+': '+String(code == null ? '—' : code);
+  return row[getUiLang() === 'ru' ? 0 : 1];
+}
+function cardMember(userId) { return cardT('member')+' '+String(userId == null || userId === '' ? '—' : userId); }
+function cardFreshDetail(intakeId, generation) {
+  return {
+    intakeId:String(intakeId), generation:generation,
+    card:null, cardLoading:false, cardError:null, cardRequest:0,
+    facts:null, factsLoading:false, factsError:null, factsRequest:0,
+    ranks:null, ranksLoading:false, ranksError:null, ranksRequest:0,
+    profiles:null, profilesError:null, profilesRequest:0,
+    form:{ mode:'record', field:'', value:'', source_object:'', page:'', span:'' },
+    attempts:[], attemptSeq:0, pending:false
+  };
+}
+function pilotDetail() { var p = state.intakePilot; return p && p.detail ? p.detail : null; }
+function pilotDetailToken() {
+  var d = pilotDetail(); if (!d) return null;
+  return { context:pilotContextSnapshot(), intakeId:d.intakeId, generation:d.generation };
+}
+function pilotDetailStillCurrent(token) {
+  var d = pilotDetail();
+  return !!(token && d && pilotContextStillCurrent(token.context) && d.intakeId === token.intakeId && d.generation === token.generation);
+}
+function pilotOpenCard(intakeId) {
+  var p = state.intakePilot, context = pilotContextSnapshot();
+  if (__demoMode || !pilotContextReady(context)) return;
+  if (p.contextKey !== pilotContextKey(context)) pilotFreshStateForContext(context);
+  p.detailGeneration = (p.detailGeneration || 0) + 1;
+  p.detail = cardFreshDetail(intakeId, p.detailGeneration);
+  renderIntakePilot();
+  pilotCardRefreshAll();
+}
+function pilotCloseCard() {
+  var p = state.intakePilot;
+  p.detailGeneration = (p.detailGeneration || 0) + 1;
+  p.detail = null;
+  renderIntakePilot();
+}
+function pilotCardRefreshAll() { pilotCardLoad(); pilotFactsLoad(); pilotRanksLoad(); pilotProfilesLoad(); }
+async function pilotCardLoad() {
+  var d = pilotDetail(), token = pilotDetailToken(); if (!d) return;
+  var requestId = ++d.cardRequest; d.cardLoading = true; d.cardError = null; renderIntakePilot();
+  try {
+    var result = await invoke('crewing_intake_candidate_get', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
+    if (!pilotDetailStillCurrent(token) || requestId !== d.cardRequest) return;
+    d.card = result; d.cardLoading = false; renderIntakePilot();
+  } catch(error) {
+    if (!pilotDetailStillCurrent(token) || requestId !== d.cardRequest) return;
+    d.cardLoading = false; d.cardError = error; renderIntakePilot();
+  }
+}
+async function pilotFactsLoad() {
+  var d = pilotDetail(), token = pilotDetailToken(); if (!d) return false;
+  var requestId = ++d.factsRequest; d.factsLoading = true; d.factsError = null; renderIntakePilot();
+  try {
+    var result = await invoke('crewing_intake_fact_list', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
+    if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
+    d.facts = Array.isArray(result.items) ? result.items : []; d.factsLoading = false; renderIntakePilot(); return true;
+  } catch(error) {
+    if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
+    d.factsLoading = false; d.factsError = error; renderIntakePilot(); return false;
+  }
+}
+async function pilotRanksLoad() {
+  var d = pilotDetail(), token = pilotDetailToken(); if (!d) return false;
+  var requestId = ++d.ranksRequest; d.ranksLoading = true; d.ranksError = null; renderIntakePilot();
+  try {
+    var result = await invoke('crewing_intake_rank_list', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
+    if (!pilotDetailStillCurrent(token) || requestId !== d.ranksRequest) return false;
+    d.ranks = { items:Array.isArray(result.items)?result.items:[], unranked_active_profiles:Array.isArray(result.unranked_active_profiles)?result.unranked_active_profiles:[], confirmations:Array.isArray(result.confirmations)?result.confirmations:[] };
+    d.ranksLoading = false; renderIntakePilot(); return true;
+  } catch(error) {
+    if (!pilotDetailStillCurrent(token) || requestId !== d.ranksRequest) return false;
+    d.ranksLoading = false; d.ranksError = error; renderIntakePilot(); return false;
+  }
+}
+async function pilotProfilesLoad() {
+  var d = pilotDetail(), token = pilotDetailToken(); if (!d) return;
+  var requestId = ++d.profilesRequest; d.profilesError = null;
+  try {
+    var result = await invoke('crewing_intake_matching_profile_list', pilotExpected(token.context));
+    if (!pilotDetailStillCurrent(token) || requestId !== d.profilesRequest) return;
+    var map = {}; (Array.isArray(result.items) ? result.items : []).forEach(function(item){ if (item && item.id) map[item.id] = item; });
+    d.profiles = map; renderIntakePilot();
+  } catch(error) {
+    if (!pilotDetailStillCurrent(token) || requestId !== d.profilesRequest) return;
+    d.profiles = null; d.profilesError = error; renderIntakePilot();
+  }
+}
+function pilotCardErrorMessage(error) {
+  var err = pilotParseError(error);
+  if (err.kind === 'invalid_request') return cardT('invalid_form')+(err.detail ? ' ('+escapeHtml(String(err.detail))+')' : '');
+  // Domain refusal codes are read BEFORE the generic 403/404 mapping.
+  if (err.detail && PILOT_CARD_REFUSAL_TEXT[err.detail]) return cardPair(PILOT_CARD_REFUSAL_TEXT, err.detail);
+  if (err.kind === 'unexpected_success' || err.ambiguous) return cardT('unknown_outcome');
+  return pilotErrorMessage(err);
+}
+function pilotCardActiveConfirmation(pair) {
+  var d = pilotDetail(); if (!d || !d.ranks) return null;
+  for (var i = 0; i < d.ranks.confirmations.length; i++) {
+    var row = d.ranks.confirmations[i];
+    if (row.profile_id === pair.profile_id && Number(row.profile_version) === Number(pair.profile_version) && row.withdrawn_at == null) return row;
+  }
+  return null;
+}
+async function pilotCardWrite(op, target, command, args, readback) {
+  var d = pilotDetail(), token = pilotDetailToken(); if (!d || d.pending) return null;
+  var unresolved = d.attempts.filter(function(a){ return a.outcome === 'unknown'; });
+  if (unresolved.length) {
+    var ok = await inAppConfirm(cardT('previous_may_have_completed'), {confirmLabel:cardT('perform')});
+    if (!pilotDetailStillCurrent(token)) return null;
+    if (!ok) return null;
+  }
+  var attempt = { id:++d.attemptSeq, op:op, target:target, generation:d.generation, outcome:'pending', error:null, readback:null, result:null, at:new Date().toISOString() };
+  d.attempts.push(attempt); d.pending = true; renderIntakePilot();
+  try {
+    var result = await invoke(command, Object.assign(pilotExpected(token.context), args));
+    if (!pilotDetailStillCurrent(token) || attempt.generation !== d.generation) return null;
+    attempt.outcome = 'acked'; attempt.result = result === undefined ? null : result; d.pending = false; renderIntakePilot();
+    var refreshed = true;
+    for (var i = 0; i < readback.length; i++) { var fine = await readback[i](); if (!pilotDetailStillCurrent(token)) return null; refreshed = refreshed && fine !== false; }
+    attempt.readback = refreshed ? 'ok' : 'failed'; renderIntakePilot();
+    return attempt;
+  } catch(error) {
+    if (!pilotDetailStillCurrent(token) || attempt.generation !== d.generation) return null;
+    var err = pilotParseError(error);
+    attempt.error = err; attempt.outcome = (err.ambiguous || err.kind === 'unexpected_success') ? 'unknown' : 'refused';
+    d.pending = false; renderIntakePilot();
+    return attempt;
+  }
+}
+function pilotCardFormFact() {
+  var d = pilotDetail(); if (!d) return null;
+  var f = d.form, page = String(f.page == null ? '' : f.page).trim(), span = String(f.span == null ? '' : f.span);
+  var fact = { field:String(f.field || '').trim(), value:String(f.value == null ? '' : f.value), source_object:String(f.source_object || '').trim(), page:null, span:null };
+  if (page !== '') { if (!/^\d{1,9}$/.test(page)) return null; fact.page = Number(page); }
+  if (span !== '') fact.span = span;
+  if (!fact.field || !fact.source_object) return null;
+  return fact;
+}
+async function pilotFactSubmit() {
+  var d = pilotDetail(); if (!d) return;
+  var fact = pilotCardFormFact();
+  if (!fact) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
+  var objects = d.card && Array.isArray(d.card.objects) ? d.card.objects : [];
+  if (!objects.some(function(o){ return o && o.id === fact.source_object; })) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
+  d.formError = null;
+  var attempt;
+  if (d.form.mode === 'correct') attempt = await pilotCardWrite('fact_correct', fact.field, 'crewing_intake_fact_correct', {intakeId:d.intakeId, field:fact.field, fact:fact}, [pilotFactsLoad, pilotCardLoad]);
+  else attempt = await pilotCardWrite('fact_record', fact.field, 'crewing_intake_fact_record', {intakeId:d.intakeId, fact:fact}, [pilotFactsLoad, pilotCardLoad]);
+  if (attempt && attempt.outcome === 'acked') { d.form = { mode:'record', field:'', value:'', source_object:d.form.source_object, page:'', span:'' }; renderIntakePilot(); }
+}
+function pilotFactStartCorrection(field) {
+  var d = pilotDetail(); if (!d) return;
+  d.form.mode = 'correct'; d.form.field = String(field); d.formError = null; renderIntakePilot();
+}
+function pilotFactCancelCorrection() {
+  var d = pilotDetail(); if (!d) return;
+  d.form.mode = 'record'; d.form.field = ''; d.formError = null; renderIntakePilot();
+}
+async function pilotRankNow() {
+  var d = pilotDetail(); if (!d) return;
+  await pilotCardWrite('rank', d.intakeId, 'crewing_intake_candidate_rank', {intakeId:d.intakeId}, [pilotRanksLoad, pilotCardLoad]);
+}
+async function pilotShortlistConfirm(profileId, profileVersion) {
+  var d = pilotDetail(); if (!d) return;
+  var version = Number(profileVersion);
+  if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
+  await pilotCardWrite('confirm', profileId+'@'+version, 'crewing_intake_shortlist_confirm', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+}
+async function pilotShortlistWithdraw(profileId, profileVersion) {
+  var d = pilotDetail(); if (!d) return;
+  var version = Number(profileVersion);
+  if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
+  await pilotCardWrite('withdraw', profileId+'@'+version, 'crewing_intake_shortlist_withdraw', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+}
+function pilotCardProfileLabel(profileId) {
+  var d = pilotDetail(), meta = d && d.profiles ? d.profiles[profileId] : null;
+  if (!meta) return escapeHtml(cardT('profile')+' '+String(profileId)+'; '+cardT('name_unavailable'));
+  return escapeHtml(meta.name || profileId)+' <span class="pilot-note">('+escapeHtml(String(profileId))+' · '+escapeHtml(cardT('profile_current'))+' '+escapeHtml(String(meta.version))+' · '+escapeHtml(cardT('profile_state'))+' '+escapeHtml(String(meta.state))+')</span>';
+}
+function pilotCardConfidenceHtml(confidence) {
+  if (confidence == null) return escapeHtml(cardT('confidence_unknown'));
+  return escapeHtml(cardT('confidence'))+' '+escapeHtml(String(confidence));
+}
+function pilotCardFreshnessHtml() {
+  return '<div class="pilot-card-freshness" data-qa="pilot-rank-freshness">'+escapeHtml(cardT('freshness_unverified'))+'</div>';
+}
+function pilotCardFactVersionHtml(v, isCurrent) {
+  var uncertainty = v.uncertainty === 'operator_entered' ? cardT('entered_by_member') : (v.uncertainty == null ? '' : pilotT('unknown_reason')+': '+String(v.uncertainty));
+  return '<div class="pilot-fact-version'+(isCurrent?' current':'')+'" data-qa="pilot-fact-version" data-version="'+escapeAttr(String(v.version))+'">'
+    + '<div class="pilot-fact-value" data-qa="pilot-fact-value">'+escapeHtml(v.value == null ? '' : String(v.value))+'</div>'
+    + '<div class="pilot-note">'+escapeHtml(cardT('version'))+' '+escapeHtml(String(v.version))+' · '+escapeHtml(cardT('source_object'))+' '+escapeHtml(String(v.source_object))
+    + (v.page != null ? ' · '+escapeHtml(cardT('page'))+' '+escapeHtml(String(v.page)) : '')+(v.span != null && v.span !== '' ? ' · '+escapeHtml(cardT('span'))+' '+escapeHtml(String(v.span)) : '')
+    + ' · <span data-qa="pilot-fact-confidence">'+pilotCardConfidenceHtml(v.confidence)+'</span>'+(uncertainty ? ' · '+escapeHtml(uncertainty) : '')
+    + (v.corrected_by ? ' · '+escapeHtml(cardMember(v.corrected_by)) : '')+' · '+escapeHtml(pilotFormatTime(v.created_at))+'</div></div>';
+}
+function pilotCardFactsHtml() {
+  var d = pilotDetail();
+  if (d.factsLoading && d.facts == null) return '<div class="pilot-status">'+escapeHtml(pilotT('loading'))+'</div>';
+  var errorHtml = d.factsError ? '<div class="pilot-status error" data-qa="pilot-facts-error">'+escapeHtml(cardT('facts_failed'))+' '+pilotCardErrorMessage(d.factsError)+'</div>' : '';
+  if (d.facts == null) return errorHtml;
+  if (!d.facts.length) return errorHtml+'<div class="pilot-status" data-qa="pilot-facts-empty">'+escapeHtml(cardT('facts_empty'))+'</div>';
+  return errorHtml+d.facts.map(function(item){
+    var versions = Array.isArray(item.versions) ? item.versions : [];
+    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(String(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
+      + versions.map(function(v, index){ return pilotCardFactVersionHtml(v, index === 0); }).join('')+'</div>';
+  }).join('');
+}
+function pilotCardFactFormHtml() {
+  var d = pilotDetail(), objects = d.card && Array.isArray(d.card.objects) ? d.card.objects : [];
+  if (!d.card) return '';
+  if (!objects.length) return '<div class="pilot-status error" data-qa="pilot-no-objects">'+escapeHtml(cardT('no_objects'))+'</div>';
+  var f = d.form, correcting = f.mode === 'correct';
+  var options = objects.map(function(o){ return '<option value="'+escapeAttr(String(o.id))+'" '+(f.source_object === o.id ? 'selected' : '')+'>'+escapeHtml(String(o.id))+' · '+escapeHtml(String(o.content_type))+'</option>'; }).join('');
+  return '<div class="pilot-fact-form" data-qa="pilot-fact-form">'
+    + (correcting ? '<div class="pilot-status" data-qa="pilot-correcting">'+escapeHtml(cardT('correcting'))+': <strong>'+escapeHtml(f.field)+'</strong> <button class="ghost" onclick="pilotFactCancelCorrection()">'+escapeHtml(cardT('cancel_correction'))+'</button></div>' : '')
+    + '<div class="pilot-form-row"><label>'+escapeHtml(cardT('field'))+'<input id="pilot-fact-field" maxlength="120" value="'+escapeAttr(f.field)+'" '+(correcting?'readonly':'')+' oninput="state.intakePilot.detail.form.field=this.value"></label>'
+    + '<label>'+escapeHtml(cardT('source_object'))+'<select id="pilot-fact-source" onchange="state.intakePilot.detail.form.source_object=this.value"><option value="" '+(f.source_object?'':'selected')+'>—</option>'+options+'</select></label></div>'
+    + '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('value'))+'<textarea id="pilot-fact-value" maxlength="4096" rows="2" oninput="state.intakePilot.detail.form.value=this.value">'+escapeHtml(f.value)+'</textarea></label></div>'
+    + '<div class="pilot-form-row"><label>'+escapeHtml(cardT('page_optional'))+'<input id="pilot-fact-page" inputmode="numeric" maxlength="9" value="'+escapeAttr(String(f.page == null ? '' : f.page))+'" oninput="state.intakePilot.detail.form.page=this.value"></label>'
+    + '<label>'+escapeHtml(cardT('span_optional'))+'<input id="pilot-fact-span" maxlength="64" value="'+escapeAttr(f.span || '')+'" oninput="state.intakePilot.detail.form.span=this.value"></label>'
+    + '<button data-qa="pilot-fact-submit" onclick="pilotFactSubmit()" '+(d.pending?'disabled':'')+'>'+escapeHtml(correcting ? cardT('correct_fact') : cardT('add_fact'))+'</button></div>'
+    + (d.formError ? '<div class="pilot-status error" data-qa="pilot-form-error">'+escapeHtml(cardT('invalid_form'))+'</div>' : '')+'</div>';
+}
+function pilotCardReasonGroups(rank) {
+  var groups = { met:[], missing:[], unconfirmed:[], unknown:[] };
+  (Array.isArray(rank.reasons) ? rank.reasons : []).forEach(function(reason){
+    var group = PILOT_CARD_OUTCOME_GROUP[reason && reason.outcome] || 'unknown';
+    groups[group].push(reason || {});
+  });
+  return groups;
+}
+function pilotCardRankRowHtml(rank) {
+  var d = pilotDetail(), pair = { profile_id:rank.profile_id, profile_version:rank.profile_version };
+  var active = pilotCardActiveConfirmation(pair), groups = pilotCardReasonGroups(rank);
+  var stale = rank.stale ? '<span class="pilot-state '+(rank.stale_reason==='profile_not_active'?'revoked':'paused')+'" data-qa="pilot-rank-stale">'+escapeHtml(cardPair(PILOT_CARD_STALE_TEXT, rank.stale_reason, 'unknown_outcome_code'))+'</span>' : '';
+  function listHtml(key, rows) {
+    if (!rows.length) return '';
+    return '<div class="pilot-rank-list" data-qa="pilot-rank-'+key+'"><strong>'+escapeHtml(cardT('list_'+key))+'</strong>'+rows.map(function(r){
+      return '<div class="pilot-rank-reason" data-group="'+escapeAttr(key)+'" data-requirement="'+escapeAttr(String(r.requirement == null ? '' : r.requirement))+'">'+escapeHtml(String(r.requirement == null ? '—' : r.requirement))+' — '+escapeHtml(cardPair(PILOT_CARD_OUTCOME_TEXT, r.outcome))
+        + (r.wanted != null ? ' · '+escapeHtml(cardT('wanted'))+': '+escapeHtml(String(r.wanted)) : '')+(r.found != null ? ' · '+escapeHtml(cardT('found'))+': '+escapeHtml(String(r.found)) : '')+'</div>';
+    }).join('')+'</div>';
+  }
+  var jsPair = '\''+escapeJsString(String(rank.profile_id))+'\','+String(Number(rank.profile_version));
+  var action = active
+    ? '<button class="ghost" data-qa="pilot-withdraw" onclick="pilotShortlistWithdraw('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_withdraw'))+'</button><span class="pilot-note">'+escapeHtml(cardT('active_decision'))+': '+escapeHtml(cardMember(active.confirmed_by))+' · '+escapeHtml(pilotFormatTime(active.confirmed_at))+'</span>'
+    : '<button data-qa="pilot-confirm" onclick="pilotShortlistConfirm('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_add'))+'</button>';
+  return '<div class="pilot-rank-row" data-qa="pilot-rank-row" data-profile="'+escapeAttr(String(rank.profile_id))+'" data-version="'+escapeAttr(String(rank.profile_version))+'">'
+    + '<div class="pilot-queue-meta"><span class="pilot-state">'+escapeHtml(cardT('stored_comparison'))+'</span>'+stale+(rank.primary ? '<span>'+escapeHtml(cardT('primary'))+'</span>' : '')+'</div>'
+    + '<div class="pilot-queue-title">'+pilotCardProfileLabel(rank.profile_id)+'</div>'
+    + '<div class="pilot-note" data-qa="pilot-rank-version">'+escapeHtml(cardT('vacancy_version'))+': '+escapeHtml(String(rank.profile_version))+'</div>'
+    + pilotCardFreshnessHtml(rank)
+    + '<div class="pilot-note" data-qa="pilot-rank-decided">'+escapeHtml(rank.decided ? cardT('decided_yes') : cardT('decided_no'))+'</div>'
+    + listHtml('met', groups.met)+listHtml('missing', groups.missing)+listHtml('unconfirmed', groups.unconfirmed)+listHtml('unknown', groups.unknown)
+    + '<div class="pilot-note">'+escapeHtml(cardT('shortlist_note'))+'</div><div class="pilot-actions">'+action+'</div></div>';
+}
+function pilotCardRanksHtml() {
+  var d = pilotDetail();
+  if (d.ranksLoading && d.ranks == null) return '<div class="pilot-status">'+escapeHtml(pilotT('loading'))+'</div>';
+  var errorHtml = d.ranksError ? '<div class="pilot-status error" data-qa="pilot-ranks-error">'+escapeHtml(cardT('ranks_failed'))+' '+pilotCardErrorMessage(d.ranksError)+'</div>' : '';
+  var profilesNote = d.profilesError ? '<div class="pilot-note" data-qa="pilot-profiles-unavailable">'+escapeHtml(cardT('profiles_failed'))+'</div>' : '';
+  if (d.ranks == null) return errorHtml+profilesNote;
+  var rows = d.ranks.items.map(pilotCardRankRowHtml).join('');
+  if (!rows) rows = '<div class="pilot-status" data-qa="pilot-ranks-empty">'+escapeHtml(cardT('ranks_empty'))+'</div>';
+  var unranked = d.ranks.unranked_active_profiles.length ? '<div class="pilot-note" data-qa="pilot-unranked"><strong>'+escapeHtml(cardT('unranked'))+':</strong> '+d.ranks.unranked_active_profiles.map(function(u){ return escapeHtml(String(u.name || u.profile_id))+' ('+escapeHtml(String(u.profile_id))+')'; }).join(', ')+'</div>' : '';
+  return errorHtml+profilesNote+rows+unranked;
+}
+function pilotCardHistoryRowHtml(row) {
+  return '<div class="pilot-history-row" data-qa="pilot-history-row" data-id="'+escapeAttr(String(row.id))+'"><div class="pilot-queue-meta"><span class="pilot-state '+(row.withdrawn_at == null ? 'active' : 'revoked')+'">'+escapeHtml(row.withdrawn_at == null ? cardT('active_decision') : cardT('withdrawn'))+'</span><span>'+escapeHtml(cardT('history_id'))+' '+escapeHtml(String(row.id))+'</span></div>'
+    + '<div>'+pilotCardProfileLabel(row.profile_id)+' · '+escapeHtml(cardT('vacancy_version'))+': '+escapeHtml(String(row.profile_version))+'</div>'
+    + '<div class="pilot-note">'+escapeHtml(cardMember(row.confirmed_by))+' · '+escapeHtml(pilotFormatTime(row.confirmed_at))
+    + (row.withdrawn_at != null ? ' · '+escapeHtml(cardT('withdrawn'))+': '+escapeHtml(cardMember(row.withdrawn_by))+' · '+escapeHtml(pilotFormatTime(row.withdrawn_at)) : '')+'</div></div>';
+}
+function pilotCardHistoryHtml() {
+  var d = pilotDetail();
+  if (d.ranks == null) return d.ranksLoading ? '<div class="pilot-status">'+escapeHtml(pilotT('loading'))+'</div>' : (d.ranksError ? '<div class="pilot-status error">'+escapeHtml(cardT('ranks_failed'))+'</div>' : '');
+  if (!d.ranks.confirmations.length) return '<div class="pilot-status" data-qa="pilot-history-empty">'+escapeHtml(cardT('history_empty'))+'</div>';
+  return d.ranks.confirmations.map(pilotCardHistoryRowHtml).join('');
+}
+function pilotCardAttemptsHtml() {
+  var d = pilotDetail(), rows = d.attempts.slice(-5).reverse();
+  if (!rows.length) return '';
+  return '<div class="pilot-attempts" data-qa="pilot-attempts">'+rows.map(function(a){
+    var cls = a.outcome === 'acked' ? 'success' : (a.outcome === 'pending' ? '' : 'error');
+    var text = cardT('op_'+a.op)+' · '+escapeHtml(String(a.target))+' · '+cardT('outcome_'+a.outcome);
+    var extra = '';
+    if (a.outcome === 'acked' && a.op === 'rank' && a.result) extra = '<div>'+escapeHtml(cardT('rank_done'))+': '+escapeHtml(a.result.reason === 'ranked' ? cardT('rank_ranked') : (a.result.reason === 'no_active_profiles' ? cardT('rank_no_active') : pilotT('unknown_reason')+': '+String(a.result.reason)))+' · '+escapeHtml(String(a.result.ranked))+'/'+escapeHtml(String(a.result.written))+'</div>';
+    if (a.outcome === 'acked' && a.readback === 'failed') extra += '<div data-qa="pilot-attempt-refresh-failed">'+escapeHtml(cardT('acked_refresh_failed'))+'</div>';
+    if (a.outcome === 'refused') extra = '<div data-qa="pilot-attempt-refused">'+pilotCardErrorMessage(a.error)+'</div>';
+    if (a.outcome === 'unknown') extra = '<div data-qa="pilot-attempt-unknown">'+escapeHtml(cardT('unknown_outcome'))+' <button class="ghost" data-qa="pilot-check-state" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('check_state'))+'</button></div>';
+    return '<div class="pilot-status '+cls+'" data-qa="pilot-attempt" data-outcome="'+escapeAttr(a.outcome)+'" data-op="'+escapeAttr(a.op)+'"><strong>'+escapeHtml(text)+'</strong>'+extra+'</div>';
+  }).join('')+'</div>';
+}
+function pilotCardHeaderHtml() {
+  var d = pilotDetail(), c = d.card;
+  if (d.cardLoading && !c) return '<div class="pilot-status">'+escapeHtml(pilotT('loading'))+'</div>';
+  var errorHtml = d.cardError ? '<div class="pilot-status error" data-qa="pilot-card-error">'+escapeHtml(cardT('card_failed'))+' '+pilotCardErrorMessage(d.cardError)+'</div>' : '';
+  if (!c) return errorHtml;
+  var trust = c.source_trust === 'unverified' ? cardT('source_unverified') : cardT('source_trust')+': '+String(c.source_trust || '—');
+  var objects = (Array.isArray(c.objects) ? c.objects : []).map(function(o){ return '<div class="pilot-note" data-qa="pilot-object">'+escapeHtml(String(o.id))+' · '+escapeHtml(String(o.content_type))+'</div>'; }).join('');
+  return errorHtml+'<div class="pilot-queue-meta"><span class="pilot-state '+escapeAttr(c.state)+'">'+escapeHtml(pilotStateLabel(c.state))+'</span><span data-qa="pilot-source-trust">'+escapeHtml(trust)+'</span><span>'+escapeHtml(String(c.content_type))+'</span><span>'+escapeHtml(humanSize(c.content_bytes))+'</span></div>'
+    + '<div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(String(c.receipt_id))+' · '+escapeHtml(pilotFormatTime(c.created_at))+'</div>'+pilotSummaryHtml(c.summary)
+    + '<div class="pilot-note" style="margin-top:8px;"><strong>'+escapeHtml(cardT('objects'))+'</strong></div>'+(objects || '<div class="pilot-note">—</div>');
+}
+function pilotRenderCard(main) {
+  var d = pilotDetail();
+  main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'"><div class="pilot-hero"><div><h1>'+escapeHtml(cardT('card_title'))+'</h1><p data-qa="pilot-card-intake">'+escapeHtml(pilotT('intake'))+': '+escapeHtml(d.intakeId)+'</p></div><div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
+    + '<section class="pilot-card" data-qa="pilot-card-header">'+pilotCardHeaderHtml()+'</section>'+pilotCardAttemptsHtml()
+    + '<section class="pilot-card" data-qa="pilot-section-facts"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_facts'))+'</h2></div>'+pilotCardFactsHtml()+pilotCardFactFormHtml()+'</section>'
+    + '<section class="pilot-card" data-qa="pilot-section-ranks"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_ranks'))+'</h2><button data-qa="pilot-rank-now" onclick="pilotRankNow()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('rank_now'))+'</button></div><div class="pilot-note">'+escapeHtml(cardT('rank_note'))+'</div>'+pilotCardRanksHtml()+'</section>'
+    + '<section class="pilot-card" data-qa="pilot-section-history"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_history'))+'</h2></div>'+pilotCardHistoryHtml()+'</section></div>';
+}
+function pilotCardKeydown(ev) {
+  if (!ev || ev.key !== 'Escape' || state.view !== 'intake_pilot' || !pilotDetail()) return;
+  var overlay = document.getElementById('skipi-settings-overlay');
+  if (overlay && overlay.classList && overlay.classList.contains('open')) return;
+  if (document.getElementById('confirm-yes')) return;
+  pilotCloseCard();
+}
+if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') document.addEventListener('keydown', pilotCardKeydown);
+// ================== C3b-2 CANDIDATE CARD END ==================
 
 // ------------- mailing requests -------------
 async function renderMailingRequestsTree(opts) {
