@@ -1470,13 +1470,13 @@ function renderEntryChoice(next){
     '<div style="max-width:520px;width:100%;text-align:center;box-sizing:border-box;">'
     + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
-    + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">Вакансии, заявки и база моряков для крюинговых компаний.</p>'
+    + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">'+escapeHtml(tr('entry.tagline'))+'</p>'
     + '<div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<button id="ec-open" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Открыть существующий профиль<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">Подключитесь по токену или QR-коду, показанному на другом устройстве.</div></button>'
-    + '<button id="ec-create" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">Создать профиль<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">Новая компания или команда: настройте подключение и токен Skipi.</div></button>'
-    + '<button id="ec-demo" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;">🎬 Показать демонстрацию<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">Без регистрации и без токена — пример на готовых данных.</div></button>'
+    + '<button id="ec-open" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">'+escapeHtml(tr('entry.open_profile'))+'<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">'+escapeHtml(tr('entry.open_profile_desc'))+'</div></button>'
+    + '<button id="ec-create" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">'+escapeHtml(tr('entry.create_profile'))+'<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.create_profile_desc'))+'</div></button>'
+    + '<button id="ec-demo" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;">🎬 '+escapeHtml(tr('entry.show_demo'))+'<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
     + '</div>'
-    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.</p>'
+    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'
     + '</div>';
   document.body.appendChild(ov);
   document.getElementById('ec-open').onclick = function(){ openConnectDialog({ context: 'profile' }); };
@@ -1589,41 +1589,41 @@ function platformLabel(){
 function openConnectDialog(opts){
   opts = opts || {};
   closeConnectDialog();
-  var title = opts.title || 'Открыть существующий профиль';
+  var title = opts.title || tr('connect.title');
   var lead = (opts.context === 'device')
-    ? 'Подключите это устройство к существующему профилю Skipi Crewing.'
-    : 'Подключитесь к уже созданному профилю компании или команды.';
+    ? tr('connect.lead_device')
+    : tr('connect.lead_profile');
   var ov = document.createElement('div');
   ov.id = 'connect-dialog-overlay';
   ov.className = 'connect-overlay';
   ov.onclick = function(e){ if (e.target === ov) closeConnectDialog(); };
   ov.innerHTML =
     '<div class="connect-card" role="dialog" aria-modal="true">'
-    + '<button class="connect-close" onclick="closeConnectDialog()" aria-label="Закрыть">×</button>'
+    + '<button class="connect-close" onclick="closeConnectDialog()" aria-label="'+escapeAttr(tr('connect.close'))+'">×</button>'
     + '<h2>'+escapeHtml(title)+'</h2>'
     + '<p class="connect-sub">'+escapeHtml(lead)+'</p>'
     + '<div class="connect-tabs">'
-    + '<button class="connect-tab" id="connect-tab-token" onclick="connectShowTab(\'token\')">Токен</button>'
-    + '<button class="connect-tab" id="connect-tab-qr" onclick="connectShowTab(\'qr\')">QR-код</button>'
+    + '<button class="connect-tab" id="connect-tab-token" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.tab_token'))+'</button>'
+    + '<button class="connect-tab" id="connect-tab-qr" onclick="connectShowTab(\'qr\')">'+escapeHtml(tr('connect.tab_qr'))+'</button>'
     + '</div>'
     + '<div id="connect-pane-token">'
-    + '<div class="connect-field"><label for="connect-token-input">Токен подключения</label>'
-    + '<input id="connect-token-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Вставьте токен с другого устройства"></div>'
-    + '<p class="connect-help">Токен показан на другом устройстве в Skipi: «Настройки → Сопряжённые устройства». Это не пароль.</p>'
+    + '<div class="connect-field"><label for="connect-token-input">'+escapeHtml(tr('connect.token_label'))+'</label>'
+    + '<input id="connect-token-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+escapeAttr(tr('connect.token_placeholder'))+'"></div>'
+    + '<p class="connect-help">'+escapeHtml(tr('connect.help'))+'</p>'
     + '<div class="connect-error" id="connect-error"></div>'
     + '<div class="connect-actions">'
-    + '<button class="connect-ghost" onclick="connectClearToken()">Очистить</button>'
-    + '<button class="connect-primary" id="connect-submit" onclick="connectSubmitToken()">Подключить</button>'
+    + '<button class="connect-ghost" onclick="connectClearToken()">'+escapeHtml(tr('connect.clear'))+'</button>'
+    + '<button class="connect-primary" id="connect-submit" onclick="connectSubmitToken()">'+escapeHtml(tr('connect.submit'))+'</button>'
     + '</div>'
     + '</div>'
     + '<div id="connect-pane-qr" style="display:none;">'
     + '<div class="connect-qr-stage">'
     + '<div class="qr-ico">&#9930;</div>'
-    + '<p class="qr-text">Сканирование QR-кода требует доступа к камере устройства.</p>'
-    + '<p class="qr-note">Камера ещё не подключена в этой сборке — используйте ввод токена.</p>'
+    + '<p class="qr-text">'+escapeHtml(tr('connect.qr_text'))+'</p>'
+    + '<p class="qr-note">'+escapeHtml(tr('connect.qr_note'))+'</p>'
     + '</div>'
     + '<div class="connect-actions">'
-    + '<button class="connect-primary" onclick="connectShowTab(\'token\')">Ввести токен вручную</button>'
+    + '<button class="connect-primary" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.enter_manually'))+'</button>'
     + '</div>'
     + '</div>'
     + '</div>';
@@ -1667,10 +1667,10 @@ function connectShowError(msg){
 function connectFriendlyError(e){
   var raw = (e && e.message) ? e.message : ('' + e);
   try { console.warn('[crewing] connect failed'); } catch(_){}
-  if (/already.*connect|conflict|\b409\b/i.test(raw)) return 'Это устройство уже подключено к профилю.';
-  if (/invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw)) return 'Токен недействителен или истёк. Проверьте код на другом устройстве и попробуйте снова.';
-  if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) return 'Сервер недоступен. Проверьте интернет и повторите попытку.';
-  return 'Не удалось подключиться. Проверьте токен и повторите попытку.';
+  if (/already.*connect|conflict|\b409\b/i.test(raw)) return tr('connect.err_already');
+  if (/invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw)) return tr('connect.err_token');
+  if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) return tr('connect.err_server');
+  return tr('connect.err_generic');
 }
 
 async function connectSubmitToken(){
@@ -1734,6 +1734,8 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Settings','mobile.settings_desc':'Connection, appearance, device and app information.','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.work_mode':'Work mode','mobile.work_question':'How will you use Skipi Crewing?','mobile.work_desc':'Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.','mobile.role_owner':'Team lead / manager','mobile.role_owner_desc':'I run the crewing company account, validate the company token, post vacancies, and invite teammates.','mobile.role_member':'Team member','mobile.role_member_desc':'I join an existing company team. I need my public user ID and then a personal team token from the manager.','mobile.exploring':'Just want to look around?','mobile.open_demo':'Open demo','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.member_title':'Join an existing team','mobile.member_desc':'Send this public user ID to your team lead. Your private key stays on this device.','mobile.member_after':'After the lead adds you, paste the personal team token in Connection and press Validate.','mobile.i_have_token':'I have a token','mobile.manager_setup':'Manager setup','mobile.manager_desc':'Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.','mobile.member_setup':'Member setup','mobile.member_setup_desc':'Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.','mobile.show_my_id':'Show my ID','mobile.change_role':'Change role','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.work_role':'Work role','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
 	    'vacancies.empty_select':'Select a vacancy on the left to view details and applications.','vacancies.sort.open_first':'Open first','vacancies.sort.with_replies':'With replies first','vacancies.sort.stale':'Stale (no replies)','vacancies.sort.newest':'Newest first','vacancies.sort.oldest':'Oldest first',
+	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.open_profile':'Open an existing profile','entry.open_profile_desc':'Connect with a token or a QR code shown on another device.','entry.create_profile':'Create a profile','entry.create_profile_desc':'A new company or team: set up the connection and the Skipi token.','entry.show_demo':'Show the demonstration','entry.show_demo_desc':'No sign-up and no token - an example on prepared data.','entry.demo_note':'The demonstration is an example with prepared data and no sign-up. Changes are not available.',
+    'connect.title':'Open an existing profile','connect.lead_device':'Connect this device to an existing Skipi Crewing profile.','connect.lead_profile':'Connect to a company or team profile that already exists.','connect.close':'Close','connect.tab_token':'Token','connect.tab_qr':'QR code','connect.token_label':'Connection token','connect.token_placeholder':'Paste the token from the other device','connect.help':'The token is shown on the other device in Skipi: Settings -> Paired devices. It is not a password.','connect.clear':'Clear','connect.submit':'Connect','connect.qr_text':'Scanning a QR code needs access to the device camera.','connect.qr_note':'The camera is not wired in this build - use token entry.','connect.enter_manually':'Enter the token manually','connect.err_already':'This device is already connected to a profile.','connect.err_token':'The token is invalid or has expired. Check the code on the other device and try again.','connect.err_server':'The server is unavailable. Check your internet connection and try again.','connect.err_generic':'Could not connect. Check the token and try again.',
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
@@ -1746,6 +1748,8 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Настройки','mobile.settings_desc':'Подключение, внешний вид, устройство и сведения о приложении.','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.work_mode':'Рабочий режим','mobile.work_question':'Как вы будете использовать Skipi Crewing?','mobile.work_desc':'Выбор роли только помогает настроить приложение. Реальные права всё равно задаются токеном компании и доступом команды.','mobile.role_owner':'Глава команды / менеджер','mobile.role_owner_desc':'Я управляю аккаунтом крюинговой компании, проверяю токен, публикую вакансии и приглашаю коллег.','mobile.role_member':'Член команды','mobile.role_member_desc':'Я присоединяюсь к существующей команде. Мне нужен мой публичный ID, затем персональный токен от менеджера.','mobile.exploring':'Хотите просто посмотреть?','mobile.open_demo':'Открыть демонстрацию','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.member_title':'Присоединиться к команде','mobile.member_desc':'Отправьте этот публичный ID главе команды. Приватный ключ остаётся на устройстве.','mobile.member_after':'Когда менеджер добавит вас, вставьте персональный токен команды в подключении и нажмите Проверить.','mobile.i_have_token':'У меня есть токен','mobile.manager_setup':'Настройка менеджера','mobile.manager_desc':'Проверьте токен компании, затем публикуйте вакансии и приглашайте коллег из командных инструментов на desktop.','mobile.member_setup':'Настройка члена команды','mobile.member_setup_desc':'Вставьте персональный токен, выданный главой команды. Если вам нужен публичный ID, откройте экран входа в команду.','mobile.show_my_id':'Показать мой ID','mobile.change_role':'Сменить роль','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.work_role':'Рабочая роль','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
 	    'vacancies.empty_select':'Выберите вакансию слева, чтобы посмотреть детали и заявки.','vacancies.sort.open_first':'Открытые сначала','vacancies.sort.with_replies':'С откликами сначала','vacancies.sort.stale':'Зависшие (без откликов)','vacancies.sort.newest':'От новых к старым','vacancies.sort.oldest':'От старых к новым',
+	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.open_profile':'Открыть существующий профиль','entry.open_profile_desc':'Подключитесь по токену или QR-коду, показанному на другом устройстве.','entry.create_profile':'Создать профиль','entry.create_profile_desc':'Новая компания или команда: настройте подключение и токен Skipi.','entry.show_demo':'Показать демонстрацию','entry.show_demo_desc':'Без регистрации и без токена — пример на готовых данных.','entry.demo_note':'Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.',
+    'connect.title':'Открыть существующий профиль','connect.lead_device':'Подключите это устройство к существующему профилю Skipi Crewing.','connect.lead_profile':'Подключитесь к уже созданному профилю компании или команды.','connect.close':'Закрыть','connect.tab_token':'Токен','connect.tab_qr':'QR-код','connect.token_label':'Токен подключения','connect.token_placeholder':'Вставьте токен с другого устройства','connect.help':'Токен показан на другом устройстве в Skipi: «Настройки → Сопряжённые устройства». Это не пароль.','connect.clear':'Очистить','connect.submit':'Подключить','connect.qr_text':'Сканирование QR-кода требует доступа к камере устройства.','connect.qr_note':'Камера ещё не подключена в этой сборке — используйте ввод токена.','connect.enter_manually':'Ввести токен вручную','connect.err_already':'Это устройство уже подключено к профилю.','connect.err_token':'Токен недействителен или истёк. Проверьте код на другом устройстве и попробуйте снова.','connect.err_server':'Сервер недоступен. Проверьте интернет и повторите попытку.','connect.err_generic':'Не удалось подключиться. Проверьте токен и повторите попытку.',
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
