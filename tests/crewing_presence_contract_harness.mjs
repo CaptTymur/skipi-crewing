@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
+const HARNESS_SOURCE = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
+
 const REQUIRED_FLOOR = ['mail', 'crew_flow', 'compliance', 'seafarers', 'documents', 'apps', 'settings'];
 const GLOBAL_CSS_TOKENS = ['.mod-tab', '.modules-bar', '.mobile-nav-btn', '.mobile-bottom-nav', '.mobile-module-rail'];
 const ALLOWED_HIDING_SCOPES = ['body.launching', 'body.mobile-shell'];
@@ -471,6 +473,26 @@ if (M) {
 // (Apps last), canonical bottom-nav-<view> QA, no "More" slot, no rail scroll
 // mechanics; Requirements/Documents reachable from the mobile Apps grid whose
 // module tiles precede plugin tiles.
+// S4: the comment block above is the only record of WHY the rail is what it is;
+// a canon change that leaves it untouched silently rewrites history. Scoped to
+// the CONSECUTIVE comment lines of that block only — a looser match would read
+// these assertions themselves and pass on its own source (measured, 2026-09-24).
+const RAIL_PROVENANCE = (() => {
+  const lines = HARNESS_SOURCE.split('\n');
+  const start = lines.findIndex((l) => l.startsWith('// ===== mobile rail canon'));
+  if (start < 0) return '';
+  const out = [];
+  for (let i = start; i < lines.length && lines[i].startsWith('//'); i += 1) out.push(lines[i]);
+  return out.join('\n');
+})();
+ok(RAIL_PROVENANCE !== '', 'the rail provenance comment block is present');
+ok(/\(654\)/.test(RAIL_PROVENANCE) && /\(658\)/.test(RAIL_PROVENANCE),
+  'the rail provenance comment records the K2 decision (654)/(658)');
+ok(/crew_flow[\s\S]*compliance[\s\S]*seafarers[\s\S]*documents[\s\S]*apps/.test(RAIL_PROVENANCE),
+  'the provenance comment states the rail composition it is protecting');
+ok(/23\.07/.test(RAIL_PROVENANCE) && /07\.08/.test(RAIL_PROVENANCE) && /\u2116101/.test(RAIL_PROVENANCE),
+  'the older rail provenance (OWNER 23.07 / 07.08 / \u2116101) is kept, not replaced');
+
 section('mobile rail canon — 5 fixed slots, canonical QA, no scroll');
 if (M) {
   M.state.settings = {

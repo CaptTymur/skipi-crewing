@@ -231,6 +231,8 @@ async function invoke(cmd, args = {}) {
       },
     };
   }
+  // K2/S3: the everyday state of the pilot until K1 is "connected, queue empty".
+  if (cmd === 'crewing_intake_candidate_list') return { items: [], limit: 50, offset: 0, total: 0 };
   if (cmd === 'save_seafarer_from_bundle') return { seafarer: { id: 'demo-sf1', display_name: 'Oleksandr K.' }, saved_documents: 1 };
   if (cmd === 'list_saved_seafarers') return [];
   if (cmd === 'register_my_pubkey') return null;
@@ -413,9 +415,22 @@ if (M) {
     ok(Array.isArray(noDemoSignals) && noDemoSignals.length === 0, 'non-demo Crew Flow does not auto-seed fixture signals');
     ok(!/cf-demo-|Oleksandr K\.|Ramon S\.|Marko P\.|Ivan M\./.test(noDemoHtml), 'non-demo Crew Flow renders no fixture candidates');
     // K2: outside demo mode Crew Flow is the live intake queue surface, never a
-    // pointer back to the retired vacancies module.
+    // pointer back to the retired vacancies module — but it must still TELL THE
+    // HUMAN WHERE TO GO (S3: the pin must not shrink to "the text is absent").
     ok(noDemoHtml.includes('data-qa="crew-flow-view"') && !noDemoHtml.includes('Vacancies -> Applications'),
       'non-demo Crew Flow shows the live intake surface, not the retired vacancies direction');
+    ok(noDemoHtml.includes('data-qa="crew-flow-empty"'), 'non-demo Crew Flow renders an explicit empty state');
+    ok(/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
+      'the empty state still offers the only producer of candidates until K1 (the pilot upload)');
+    // S3: connected + empty queue is the everyday pilot state; the copy must say
+    // HOW candidates appear, in both interface languages.
+    const emptyLive = { en: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[0] || '', ru: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[1] || '' };
+    ok(/[A-Za-z]/.test(emptyLive.en) && !/[\u0400-\u04FF]/.test(emptyLive.en), 'crew_flow.empty_live has an en value without Cyrillic');
+    ok(/[\u0400-\u04FF]/.test(emptyLive.ru), 'crew_flow.empty_live has a ru value in Cyrillic');
+    ok(/identifier|inbound/i.test(emptyLive.en) && /идентификатор/i.test(emptyLive.ru),
+      'the connected-but-empty copy names HOW candidates appear (the inbound identifier), RU and EN');
+    ok(noDemoHtml.includes('Кандидаты появятся') || noDemoHtml.includes('Candidates appear'),
+      'the connected-but-empty state is what the operator actually sees in Crew Flow');
     ok(!elFor('main').innerHTML.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 panel is default-off outside demo mode');
   }
   store.set('skipi_crewing_demo', '1');

@@ -1025,13 +1025,14 @@ console.log('# K2 modules/crew-flow');
     };
     return { items, facts };
   }
-  function makeCrewContext({ language = 'en', settings, demo = false, native = true } = {}) {
+  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false } = {}) {
     const srv = k2Server();
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
     const calls = [];
     const toasts = [];
     const views = [];
+    const timeline = [];
     const store = new Map();
     let lang = language;
     const ctx = {
@@ -1057,16 +1058,44 @@ console.log('# K2 modules/crew-flow');
       humanSize(b) { return `${b} B`; },
       certLabelById(id) { return String(id); },
       showToast(msg, kind) { toasts.push([msg, kind]); },
-      showView(v) { views.push(v); ctx.state.view = v; if (v === 'mail') ctx.__mailRender = ctx.renderMailboxTree(); },
+      showView(v) {
+        views.push(v); ctx.state.view = v;
+        // The real showView('mail') starts an UNAWAITED mailbox render that paints
+        // #main when it settles (S1). With mailRace a second, later chain is started
+        // too, exactly as loadMailboxStatus without in-flight de-duplication does.
+        if (v === 'mail') { ctx.renderMailboxTree(); if (mailRace) ctx.renderMailboxTree(); }
+      },
       mobileShow(v) { views.push('mobile:' + v); ctx.state.view = 'mobile-' + v; },
       mobileMain(htmlStr) { nodes.get('mobile-main').innerHTML = htmlStr; },
       isMobileShellActive() { return String(ctx.state.view || '').indexOf('mobile-') === 0; },
-      openMailCompose() { nodes.get('main').innerHTML = '<h1>Compose mail</h1><input id="mail-compose-to" value=""><input id="mail-compose-subject" value="">'; nodes.set('mail-compose-to', { id: 'mail-compose-to', value: '' }); nodes.set('mail-compose-subject', { id: 'mail-compose-subject', value: '' }); },
+      openMailCompose() {
+        if (composeBroken) { timeline.push('compose-refused'); return; }
+        timeline.push('compose-open');
+        nodes.get('main').innerHTML = '<h1>Compose mail</h1><input id="mail-compose-to" value=""><input id="mail-compose-subject" value="">';
+        nodes.set('mail-compose-to', { id: 'mail-compose-to', value: '' });
+        nodes.set('mail-compose-subject', { id: 'mail-compose-subject', value: '' });
+      },
       // The real showView('mail') only STARTS this; it repaints #main when it
-      // settles. The stub reproduces that ordering so the compose form cannot be
-      // opened too early (defect found by the K2 visual pass, frame k06).
-      async renderMailboxTree() { await Promise.resolve(); await Promise.resolve(); nodes.get('main').innerHTML = '<div class="empty">Connect your crewing mailbox.</div>'; },
-      saveCrewFlowReadState() { store.set('skipi_crewing_crew_flow_read_state_v2', JSON.stringify(ctx.state.crewFlowReadState)); },
+      // settles. The stub reproduces that ordering — and the real contract of
+      // publishing the in-flight render on state.mail.viewPending (S1) — so the
+      // compose form cannot be opened too early (visual-pass defect k06).
+      mailboxState() { if (!ctx.state.mail) ctx.state.mail = { folder: 'INBOX', messages: [], selected: null, mailbox: null, viewPending: null }; return ctx.state.mail; },
+      renderMailboxTree() {
+        const mail = ctx.mailboxState();
+        const run = (async () => {
+          for (let i = 0; i < 4; i += 1) await Promise.resolve();
+          await new Promise((r) => setTimeout(r, 0));
+          nodes.get('main').innerHTML = '<div class="empty">Connect your crewing mailbox.</div>';
+        })();
+        mail.viewPending = run;
+        run.then(() => { if (mail.viewPending === run) mail.viewPending = null; },
+                 () => { if (mail.viewPending === run) mail.viewPending = null; });
+        return run;
+      },
+      saveCrewFlowReadState() {
+        for (const [id, row] of Object.entries(ctx.state.crewFlowReadState || {})) timeline.push('read-state:' + (row && row.action));
+        store.set('skipi_crewing_crew_flow_read_state_v2', JSON.stringify(ctx.state.crewFlowReadState));
+      },
       async refreshCrewFlowRankings() { return null; },
       async ensureCrewFlowRankings() { return null; },
       findApplicationById() { return null; },
@@ -1088,7 +1117,7 @@ console.log('# K2 modules/crew-flow');
         if (command === 'save_seafarer_from_bundle') return { id: 'sf-1', display_name: 'Oleh V.' };
         return null;
       },
-      calls, nodes, toasts, views, store,
+      calls, nodes, toasts, views, store, timeline,
       setTimeout, clearTimeout, queueMicrotask,
       __K2_STRINGS: { en: {}, ru: {} },
     };
@@ -1214,6 +1243,110 @@ console.log('# K2 modules/crew-flow');
       softOk(!emptyHtml.includes(absent), `K2-6: the ${lang} empty state no longer mentions the retired vacancies direction`);
       softOk(!emptyCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'), `K2-6: no queue request is made without a connection (${lang})`);
     }
+  const fxSlice = (from, to) => {
+      const a = html.indexOf(from);
+      if (a < 0) return '';
+      const b = html.indexOf(to, a);
+      return b > a ? html.slice(a, b) : '';
+    };
+
+    // ---- S1: one mailbox chain, and 'emailed' only after the form is open -----
+    // (a) loadMailboxStatus must de-duplicate an in-flight request: two Crew Flow
+    //     paths ask at the same moment and must share one answer, not race.
+    {
+      const mbSlice = fxSlice('function mailboxState() {', '\nasync function renderMailboxTree(');
+      softOk(mbSlice !== '', 'S1: the mailbox status slice is bounded');
+      const calls = [];
+      let mbCtx = null;
+      try {
+        mbCtx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {},
+          async invoke(cmd) { calls.push(cmd); await new Promise((r) => setTimeout(r, 0)); return { configured: false, status: 'not_configured' }; },
+        });
+        vm.runInContext(mbSlice + '\nthis.__mb = { loadMailboxStatus, mailboxState };', mbCtx);
+      } catch (e) { console.log('    (S1 mailbox slice: ' + (e && e.message) + ')'); }
+      if (mbCtx && mbCtx.__mb) {
+        const [a, b] = await Promise.all([mbCtx.__mb.loadMailboxStatus(false), mbCtx.__mb.loadMailboxStatus(false)]);
+        softOk(calls.filter((c) => c === 'get_mailbox_status').length === 1,
+          'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request — got ' + calls.length);
+        softOk(a === b && !!a, 'S1a: both callers get the same status object');
+        const again = await mbCtx.__mb.loadMailboxStatus(false);
+        softOk(again === a && calls.length === 1, 'S1a: the cached status is still reused after the flight ends');
+        const forced = await mbCtx.__mb.loadMailboxStatus(true);
+        softOk(!!forced && calls.length === 2, 'S1a: force still re-asks exactly once');
+      } else {
+        softOk(false, 'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request');
+      }
+    }
+    // (b) the compose form must survive a SECOND, unawaited mailbox render, and
+    //     the 'emailed' review state must be written only after it is on screen.
+    {
+      const raceCtx = makeCrewContext({ mailRace: true });
+      raceCtx.__crew.renderCrewFlowView(); await flush();
+      raceCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(raceCtx, "crewFlowWriteEmail('intake-1','reply');");
+      await flush(12);
+      softOk(/Compose mail/.test(raceCtx.nodes.get('main').innerHTML),
+        'S1b: the compose form survives every mailbox render started by showView(mail)');
+      softOk((raceCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test',
+        'S1b: the surviving form still carries the candidate address');
+      const tl = raceCtx.timeline;
+      const iCompose = tl.indexOf('compose-open');
+      const iRead = tl.findIndex((e) => e === 'read-state:emailed');
+      softOk(iCompose !== -1 && iRead !== -1 && iCompose < iRead,
+        'S1b: the emailed review state is written AFTER the form is open — timeline [' + tl.join(' > ') + ']');
+      const failCtx = makeCrewContext({ mailRace: true, composeBroken: true });
+      failCtx.__crew.renderCrewFlowView(); await flush();
+      failCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(failCtx, "crewFlowWriteEmail('intake-1','reply');");
+      await flush(12);
+      const rs = JSON.parse(failCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rs['intake-1'] && rs['intake-1'].action === 'emailed'),
+        'S1b: when the compose form cannot be opened, nothing is marked as emailed');
+    }
+
+    // ---- S2: surviving copy must not send the operator to a deleted module ----
+    {
+      const screens = [
+        ['compliance list', fxSlice('function renderComplianceProfilesEmptyMain', '\nfunction renderComplianceProfileDetail')],
+        ['compliance tree', fxSlice('function renderComplianceProfilesTree', '\nfunction renderComplianceProfilesEmptyMain')],
+        ['compliance detail', fxSlice('function renderComplianceProfileDetail', '\nfunction renderComplianceProfileForm')],
+        ['compliance form', fxSlice('function renderComplianceProfileForm', '\nasync function saveComplianceProfile')],
+        ['settings org', fxSlice("  if (settingsTab==='org') {", "  } else if (settingsTab==='data') {")],
+        ['settings access', fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {")],
+      ];
+      const nav = /вакансии|вакансию|вакансий|вакансиях|вакансия|Vacanc|vacanc/;
+      for (const [name, slice] of screens) {
+        softOk(slice !== '', 'S2: the "' + name + '" screen slice is bounded');
+        const hits = (slice.match(new RegExp(nav.source, 'g')) || []);
+        softOk(hits.length === 0, 'S2: "' + name + '" no longer points at the retired vacancies module — got ' + hits.length + ' [' + [...new Set(hits)].join(',') + ']');
+      }
+      softOk(/Crew Flow/.test(fxSlice('function renderComplianceProfilesEmptyMain', '\nfunction renderComplianceProfileDetail')),
+        'S2: the compliance empty state (the pilot operator’s first screen) names Crew Flow as the real destination');
+    }
+
+    // ---- S5: one guard pin, one localized team row ---------------------------
+    {
+      const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
+      softOk(pins === 'b72a59ca947ddb6a70a07b0328b61f9a29eca090', 'S5: the workflow pins exactly the K2 route guard SHA');
+      const pinAssert = html === null ? '' : '';
+      softOk(!/93b1a51eb59d0dff5f2db3f2289b8afb09761f39/.test(fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8')),
+        'S5: the harness no longer accepts the two superseded guard pins');
+      softOk(!html.includes('Vacancies -> Applications'), 'S5: the three unreachable "Vacancies -> Applications" strings are gone');
+      const access = fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {");
+      softOk(/tr\('settings\.team_access[^']*'\)/.test(access) || /crewFlowTr|tr\('team\./.test(access),
+        'S5: the team-access settings row is served through tr(), not a Russian literal');
+    }
+
+    // ---- S7: the mobile Crew Flow subtitle is localized -----------------------
+    {
+      softOk(!/if \(view === 'crew_flow'\) return \[mobileModuleLabel\('crew_flow'\), 'Incoming candidate signals'\];/.test(html),
+        'S7: the mobile Crew Flow subtitle is no longer a hardcoded English literal');
+      softOk(/'crew_flow\.mobile_subtitle':'[^'Ѐ-ӿ]+'/.test(html) && /'crew_flow\.mobile_subtitle':'[^']*[Ѐ-ӿ]/.test(html),
+        'S7: crew_flow.mobile_subtitle exists in both the en and the ru dictionary');
+    }
+
     // 9. demo mode is untouched
     const demoCtx = makeCrewContext({ demo: true });
     try { demoCtx.__crew.renderCrewFlowView(); } catch (e) { console.log('    (K2 demo render: ' + (e && e.message) + ')'); }
