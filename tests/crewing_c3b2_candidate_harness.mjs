@@ -286,7 +286,7 @@ console.log('# positive chain on isolated copies: card → facts → correction 
   ok(/data-group="missing" data-requirement="rank"[^<]*Requirement not met · wanted: Chief Officer · entered: Master/.test(rowB), 'B: rank missing with literal wanted/found');
   ok(/data-group="unconfirmed" data-requirement="certificate:radio_operator"[^<]*Fact not entered/.test(rowC) && !/data-group="missing" data-requirement="certificate:radio_operator"/.test(rowC), 'C: unconfirmed fact stays unconfirmed, never rendered as missing');
   ok([rowA, rowB, rowC].every((r) => /data-qa="pilot-rank-freshness">Fact freshness for this comparison is unverified/.test(r)), 'every stored comparison states fact freshness is unverified');
-  ok([rowA, rowB, rowC].every((r) => /Vacancy version used: 1/.test(r) && /(Master|Chief Officer) · [ABC] <span class="pilot-note">\(prof-[ABC] · current version 1 · state active\)/.test(r)), 'rows show vacancy version used and the current profile name/version/state');
+  ok([rowA, rowB, rowC].every((r) => /Profile version used: 1/.test(r) && /(Master|Chief Officer) · [ABC] <span class="pilot-note">\(prof-[ABC] · current version 1 · state active\)/.test(r)), 'rows show the profile version used and the current profile name/version/state');
   ok(!/data-qa="pilot-unranked"/.test(main(ctx)), 'no unranked gap remains after ranking every active profile');
   ok(/quarantined|ranked/.test(main(ctx)) && /Document unverified · synthetic data only/.test(main(ctx)), 'ranked state does not upgrade source trust');
   // confirm a decided=false pair (B)
@@ -295,7 +295,7 @@ console.log('# positive chain on isolated copies: card → facts → correction 
   ok(confirm && JSON.stringify(confirm.args.pair) === JSON.stringify({ profile_id: 'prof-B', profile_version: 1 }), 'confirm sends exactly the viewed pair');
   ok(attempts(ctx).slice(-1)[0].outcome === 'acked', 'a decided=false pair can be shortlisted for further consideration');
   const hist1 = historyRow(ctx, 'decision-1');
-  ok(hist1 && /Active decision/.test(hist1) && /Team member user-op-1/.test(hist1) && /Vacancy version used: 1/.test(hist1) && /UTC/.test(hist1), 'history shows id, seat user, UTC time, pair and active state');
+  ok(hist1 && /Active decision/.test(hist1) && /Team member user-op-1/.test(hist1) && /Profile version used: 1/.test(hist1) && /UTC/.test(hist1), 'history shows id, seat user, UTC time, pair and active state');
   ok(/data-group="missing" data-requirement="rank"/.test(rankRow(ctx, 'prof-B', 1)) && /data-qa="pilot-withdraw"/.test(main(ctx)), 'after confirmation the missing reason and freshness caveat remain; withdraw is offered');
   ok(/Decision history · original comparison was not preserved/.test(main(ctx)), 'history header states the original comparison is not preserved');
   // double confirm -> already_confirmed
@@ -323,7 +323,7 @@ console.log('# RU/EN, nullable values, unknown codes and refusal precedence');
   const ctx = makeContext({ language: 'ru' });
   await positiveChainUntilRank(ctx);
   ok(/Карточка кандидата/.test(main(ctx)) && /Сведения и источники/.test(main(ctx)) && /Сохранённые оценки/.test(main(ctx)) && /История решений · исходная оценка не сохранена/.test(main(ctx)), 'Russian section titles');
-  ok(/Актуальность фактов для этой оценки не подтверждена/.test(main(ctx)) && /Версия вакансии в оценке: 1/.test(main(ctx)) && /Сведения не внесены/.test(main(ctx)) && /Введено сотрудником/.test(main(ctx)) && /Запрос пересчёта выполнен/.test(main(ctx)) && /Добавить в шортлист для дальнейшего рассмотрения/.test(main(ctx)) && /Документ не проверен · только синтетические данные/.test(main(ctx)), 'Russian mandatory honesty strings');
+  ok(/Актуальность фактов для этой оценки не подтверждена/.test(main(ctx)) && /Версия профиля в оценке: 1/.test(main(ctx)) && /Сведения не внесены/.test(main(ctx)) && /Введено сотрудником/.test(main(ctx)) && /Запрос пересчёта выполнен/.test(main(ctx)) && /Добавить в шортлист для дальнейшего рассмотрения/.test(main(ctx)) && /Документ не проверен · только синтетические данные/.test(main(ctx)), 'Russian mandatory honesty strings');
   detail(ctx).form.value = 'draft survives'; ctx.setLang('en'); ctx.__pilot.renderIntakePilot();
   ok(/Fact freshness for this comparison is unverified/.test(main(ctx)) && /draft survives/.test(main(ctx)), 'language switch re-renders in English and keeps the form draft');
   const s = ctx.server;
@@ -332,20 +332,20 @@ console.log('# RU/EN, nullable values, unknown codes and refusal precedence');
   s.ranks.push({ profile_id: 'prof-B', profile_version: 1, primary: true, met: [], missing: [], unconfirmed: [], reasons: [{ requirement: 'future:thing', outcome: 'future_outcome', wanted: null, found: null }], decided: false });
   s.ranks.splice(1, 1);
   await ctx.__pilot.pilotCardRefreshAll(); await flush();
-  ok(/data-qa="pilot-rank-stale">Vacancy changed — rank again/.test(rankRow(ctx, 'prof-A', 1)), 'profile_version staleness has its own badge');
-  ok(/data-qa="pilot-rank-stale">Vacancy is not active/.test(rankRow(ctx, 'prof-C', 1)), 'profile_not_active staleness has its own badge');
+  ok(/data-qa="pilot-rank-stale">Profile changed — compare again/.test(rankRow(ctx, 'prof-A', 1)), 'profile_version staleness has its own badge');
+  ok(/data-qa="pilot-rank-stale">Profile is not active/.test(rankRow(ctx, 'prof-C', 1)), 'profile_not_active staleness has its own badge');
   ok(/Bosun · D \(prof-D\)/.test(main(ctx)), 'a profile created after the run is listed as unranked');
   ok(/data-version="3"[\s\S]*?data-qa="pilot-fact-confidence">confidence 0<\/span> · Unknown reason: future_code/.test(main(ctx)), 'confidence 0 renders as measured zero and an unknown uncertainty code stays visible');
   ok(/data-version="2"[\s\S]*?confidence unknown/.test(main(ctx)), 'confidence null renders as unknown');
-  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)) && /primary vacancy/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown, and primary is labelled');
-  ok(/Vacancy changed — rank again/.test(rankRow(ctx, 'prof-A', 1)) && /data-qa="pilot-rank-freshness"/.test(rankRow(ctx, 'prof-A', 1)), 'vacancy staleness and fact freshness are two separate statements');
+  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)) && /primary profile/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown, and primary is labelled');
+  ok(/Profile changed — compare again/.test(rankRow(ctx, 'prof-A', 1)) && /data-qa="pilot-rank-freshness"/.test(rankRow(ctx, 'prof-A', 1)), 'profile staleness and fact freshness are two separate statements');
   // refusal precedence: domain code before generic 404/403
   await ctx.__pilot.pilotShortlistConfirm('prof-D', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">This candidate has not been scored for this vacancy/.test(main(ctx)) && !/Section unavailable/.test(main(ctx)), 'rank_not_found 404 is the domain refusal, not "section unavailable"');
+  ok(/data-qa="pilot-attempt-refused">This candidate has not been scored for this compliance profile/.test(main(ctx)) && !/Section unavailable/.test(main(ctx)), 'rank_not_found 404 is the domain refusal, not "section unavailable"');
   await ctx.__pilot.pilotShortlistConfirm('prof-A', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">The vacancy has changed — rank again/.test(main(ctx)), 'profile_version_stale 409');
+  ok(/data-qa="pilot-attempt-refused">The compliance profile has changed — compare again/.test(main(ctx)), 'profile_version_stale 409');
   await ctx.__pilot.pilotShortlistConfirm('prof-C', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">The vacancy is not active/.test(main(ctx)), 'profile_not_active 409');
+  ok(/data-qa="pilot-attempt-refused">The compliance profile is not active/.test(main(ctx)), 'profile_not_active 409');
   s.user = 'user-op-2';
   await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
   s.user = 'user-op-1';
@@ -390,7 +390,7 @@ console.log('# fences: pending, context change, A→B, A→B→A, request identi
   const first = ctx.__pilot.pilotRankNow(); const second = ctx.__pilot.pilotRankNow();
   ok(mutationCalls(ctx).length === 1 && /data-qa="pilot-rank-now"[^>]*disabled/.test(main(ctx)), 'duplicate clicks dispatch one write and the button is disabled while pending');
   gate.resolve({ ranked: 0, written: 0, reason: 'no_active_profiles', profiles: [] }); await first; await second; await flush();
-  ok(/Ranking request completed: No active vacancies · 0\/0/.test(main(ctx)) && attempts(ctx)[0].outcome === 'acked', 'no_active_profiles is a successful answer without a computation, not a refusal');
+  ok(/Ranking request completed: No active compliance profiles · 0\/0/.test(main(ctx)) && attempts(ctx)[0].outcome === 'acked', 'no_active_profiles is a successful answer without a computation, not a refusal');
 }
 {
   const ctx = makeContext(); await openCard(ctx);
@@ -486,7 +486,7 @@ const controls = [
       ctx.server.profiles.push({ id: 'prof-N', crewing_id: 'crew-synthetic', name: 'No certs · N', version: 1, state: 'active', rank: 'Master', certs: null });
       await positiveChainUntilRank(ctx);
       const row = rankRow(ctx, 'prof-N', 1);
-      assert.ok(/data-group="unconfirmed" data-requirement="mandatory_certs"[^<]*Requirement not stated in vacancy/.test(row), 'unstated requirement stays a separate unknown');
+      assert.ok(/data-group="unconfirmed" data-requirement="mandatory_certs"[^<]*Requirement not stated in the profile/.test(row), 'unstated requirement stays a separate unknown');
       assert.ok(!/data-group="missing" data-requirement="mandatory_certs"/.test(row), 'unstated requirement is not counted as violated');
     },
   },
@@ -520,7 +520,7 @@ const controls = [
     async sensor(ctx) {
       await positiveChainUntilRank(ctx); await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
       const row = historyRow(ctx, 'decision-1');
-      assert.ok(row && /Team member user-op-1/.test(row) && /Vacancy version used: 1/.test(row), 'history row carries decision fields');
+      assert.ok(row && /Team member user-op-1/.test(row) && /Profile version used: 1/.test(row), 'history row carries decision fields');
       assert.ok(!/pilot-history-reason/.test(row) && !/certificate:|=missing|=met|unconfirmed/.test(row), 'history row carries no current reason marker');
     },
   },
@@ -1028,7 +1028,7 @@ console.log('# K2 modules/crew-flow');
     };
     return { items, facts };
   }
-  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false, noProfiles = false } = {}) {
+  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false } = {}) {
     const srv = k2Server();
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
@@ -1113,7 +1113,7 @@ console.log('# K2 modules/crew-flow');
       sUidOf() { return ''; },
       async saveRankedCandidate() { return null; },
       async saveCurrentBundleSeafarer() { return null; },
-      inAppConfirm: async () => true,
+      inAppConfirm: async (msg) => { timeline.push('confirm:' + String(msg).slice(0, 24)); return confirmAnswer; },
       async invoke(command, args) {
         calls.push({ command, args: JSON.parse(JSON.stringify(args ?? null)) });
         if (command === 'crewing_intake_rank_list' && noProfiles) return { items: [], unranked_active_profiles: [], confirmations: [] };
@@ -1142,8 +1142,12 @@ console.log('# K2 modules/crew-flow');
     const dictEnd2 = html.indexOf('// ── @skipi/settings v0.3.0 dictionary', dictStart2);
     vm.createContext(ctx);
     vm.runInContext(html.slice(dictStart2, dictEnd2) + '\nthis.__K2_STRINGS = UI_STRINGS;', ctx);
-    if (native) ctx.window.__TAURI__ = { core: { invoke: () => {} }, dialog: {}, event: {} };
+    // Three transports, not two: a real browser has NO __TAURI__ at all, the fleet
+    // web shim defines only core, and an explicit web marker must win over both.
+    if (noTauri) delete ctx.window.__TAURI__;
+    else if (native) ctx.window.__TAURI__ = { core: { invoke: () => {} }, dialog: {}, event: {} };
     else ctx.window.__TAURI__ = { core: { invoke: () => {} } };
+    if (webShell) ctx.window.__SKIPI_WEB_SHELL__ = true;
     vm.runInContext(
       `${k2crew}\n${c3b1Source}\n${c3b2Source}\n${mobileCrewBlock}\n` +
       'this.__crew = { renderCrewFlowView, renderCrewFlowDetail, renderCrewFlowTreeBody, crewFlowState, crewFlowReadInfo, pilotEnter, pilotLoadQueue, pilotOpenCard, pilotCloseCard, renderIntakePilot, mobileRenderCrewFlow };',
@@ -1322,6 +1326,60 @@ console.log('# K2 modules/crew-flow');
         'S1b: when the compose form cannot be opened, nothing is marked as emailed');
     }
 
+
+
+    // ---- A2 (supervisor acceptance): three mutants that survived all 16 -----
+    // (a) the confirm before the irreversible save must exist AND its refusal
+    //     must stop the write; (b) a real browser has no __TAURI__ at all and
+    //     must be treated as web; (c) an explicit web marker must win.
+    {
+      const askCtx = makeCrewContext({});
+      askCtx.__crew.renderCrewFlowView(); await flush();
+      askCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(askCtx, "crewFlowSaveToSeafarers('intake-1');");
+      await flush(10);
+      softOk(askCtx.timeline.some((e) => e.startsWith('confirm:')),
+        'A2a: the irreversible save asks for confirmation first');
+      const iConfirm = askCtx.timeline.findIndex((e) => e.startsWith('confirm:'));
+      const savedAt = askCtx.calls.findIndex((c) => c.command === 'save_seafarer_from_bundle');
+      softOk(iConfirm !== -1 && savedAt !== -1, 'A2a: and then writes');
+
+      const noCtx = makeCrewContext({ confirmAnswer: false });
+      noCtx.__crew.renderCrewFlowView(); await flush();
+      noCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(noCtx, "crewFlowSaveToSeafarers('intake-1');");
+      await flush(10);
+      softOk(noCtx.timeline.some((e) => e.startsWith('confirm:')), 'A2a: a declined save still asked');
+      softOk(!noCtx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+        'A2a: declining the confirm writes NOTHING to the seafarer database');
+      const rsNo = JSON.parse(noCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rsNo['intake-1'] && rsNo['intake-1'].saved_to_db), 'A2a: and marks nothing as saved');
+
+      for (const [name, opts] of [['a real browser (no __TAURI__)', { noTauri: true }],
+                                  ['an explicit web shell marker', { webShell: true, native: true }]]) {
+        const webCtx = makeCrewContext(opts);
+        webCtx.__crew.renderCrewFlowView(); await flush();
+        webCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        const btn = (webCtx.nodes.get('main').innerHTML.match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>/) || [''])[0];
+        softOk(/disabled/.test(btn), 'A2b/c: on ' + name + ' the save action is disabled');
+        await tryRun(webCtx, "crewFlowSaveToSeafarers('intake-1');");
+        await flush(10);
+        softOk(!webCtx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+          'A2b/c: on ' + name + ' the handler itself refuses to write, not only the button');
+      }
+    }
+    // ---- A1: the candidate card must not call into the retired module -------
+    {
+      const cardTexts = fxSlice('var PILOT_CARD_TEXT = {', 'var PILOT_CARD_OUTCOME_GROUP');
+      softOk(cardTexts !== '', 'A1: the candidate-card dictionaries are bounded');
+      const hits = cardTexts.match(/[Vv]acanc\w*|[Вв]аканси\w*/g) || [];
+      softOk(hits.length === 0,
+        'A1: the candidate card names compliance profiles, not vacancies — got ' + hits.length + ' [' + [...new Set(hits)].join(',') + ']');
+      // \w is ASCII-only in JS — a Cyrillic class has to be spelled out, or the
+      // probe silently measures nothing (measured: it failed on correct text).
+      softOk(/compliance profile/i.test(cardTexts) && /профил[а-яё]* соответствия/i.test(cardTexts),
+        'A1: and says so in both languages');
+    }
 
     // ---- fix-up 2 (counselor close N6 + the manager's live acceptance) -------
     // C1: "matched" is a claim about the SERVER. It may be written only after the
