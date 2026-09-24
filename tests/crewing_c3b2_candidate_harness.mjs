@@ -421,13 +421,15 @@ console.log('# C3c-1 mobile shell: view intake_pilot reachable and renders the c
   const slice = (from, to) => { const a = html.indexOf(from); assert.ok(a > 0, `anchor missing: ${from}`); const b = html.indexOf(to, a); assert.ok(b > a, `end anchor missing: ${to}`); return html.slice(a, b); };
   const mobileShowSource = slice('function mobileShow(view) {', '\nfunction mobileBack()');
   ok(/if \(view === 'intake_pilot'\) return mobileRenderIntakePilot\(\);/.test(mobileShowSource), 'mobileShow routes intake_pilot to the mobile pilot renderer');
-  ok(/if \(mobileState\.view === 'intake_pilot' && view !== 'intake_pilot'\) pilotLeave\(\);/.test(mobileShowSource), 'leaving the mobile pilot view resets pilot state (pilotLeave)');
+  ok(/if \(pilotIsHostView\(mobileState\.view\) && !pilotIsHostView\(view\)\) pilotLeave\(\);/.test(mobileShowSource), 'leaving every mobile pilot host view resets pilot state (pilotLeave; K2 hosts are intake_pilot + crew_flow)');
   ok(/function mobileRenderIntakePilot\(\)\{ pilotEnter\(\); \}/.test(html), 'mobile pilot renderer is pilotEnter on the same C3b-1/C3b-2 renderers (no second renderer)');
   const tiles = slice('function appsMobileModuleTilesHtml()', '\nfunction appsLauncherHtml()');
-  const tile = /\{ view:'intake_pilot', icon:'[^']+', qa:'data-qa="([^"]+)"' \}/.exec(tiles);
-  ok(!!tile && !/^apps-module-tile-/.test(tile[1]) && !/^bottom-nav-/.test(tile[1]), `mobile Apps grid carries an intake_pilot tile with a non-canonical hook (${tile ? tile[1] : 'absent'})`);
-  ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
-  ok(/var MOBILE_RAIL_QA = \{ vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', crew_flow: 'bottom-nav-crew_flow', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays the canonical 5 slots');
+  // K2 (OWNER (654)/(658)): the pilot lost its Apps tile — it is entered only
+  // from Crew Flow, which still gives it no canonical rail/module-tile hook.
+  ok(!/view:'intake_pilot'/.test(tiles), 'the mobile Apps grid no longer carries an intake_pilot tile');
+  ok(/data-qa="crew-flow-open-pilot"/.test(html), 'the pilot is entered from Crew Flow (crew-flow-open-pilot)');
+  ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot') && !html.includes('apps-pilot-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
+  ok(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays five canonical slots (K2 composition)');
   const chrome = slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
   ok((chrome.match(/mobileNavButton\('/g) || []).length === 5 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail still renders exactly 5 slots, none for intake_pilot');
   ok(/intake_pilot: 'apps',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to the Apps grid');
@@ -631,7 +633,7 @@ const controls = [
   },
   {
     id: 'M18', block: 'c3b1', defect: 'pilot renders into the hidden desktop #main under the mobile shell',
-    edits: [["function pilotContainer() { return document.getElementById(state.view === 'mobile-intake_pilot' ? 'mobile-main' : 'main'); }",
+    edits: [["function pilotContainer() { return document.getElementById(pilotHostIsMobile() ? 'mobile-main' : 'main'); }",
       "function pilotContainer() { return document.getElementById('main'); }"]],
     async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
   },
@@ -995,7 +997,7 @@ console.log('# K2 modules/crew-flow');
   softOk(!html.includes('Вакансии / Рассылки'), 'K2-8: the legacy "Вакансии / Рассылки" settings label is gone');
   softOk(!/navItem\('work'/.test(html), 'K2-8: the legacy desktop work settings nav item is gone');
   softOk(!/id:'work'/.test(html) && !/if \(page === 'work'\)/.test(html), 'K2-8: the legacy mobile work settings page is gone');
-  softOk(count(/id="s-reply"/g) >= 1 && count(/id="m-reply"/g) >= 1,
+  softOk(count(/inputCtrl\('s-reply'/g) >= 1 && count(/id="m-reply"/g) >= 1,
     'K2-8: the reply-to email field keeps a home in settings (value is never cleared)');
 
   // --- 10. hiding is not deleting --------------------------------------------

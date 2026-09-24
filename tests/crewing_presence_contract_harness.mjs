@@ -359,12 +359,14 @@ if (M) {
   await M.openSettings();
   const legacyDesktop = elFor('modal-host').innerHTML;
   ok(!legacyDesktop.includes('settings5-shell'), 'flag-off desktop keeps legacy settings renderer');
-  ['Организация', 'Данные организации', 'Вакансии / Рассылки', 'Сопряжённые устройства', 'Доступ / токены', 'Приложение'].forEach((label) => {
+  // K2 (OWNER (654)/(658)): the legacy work settings page retired with the
+  // vacancies/mailings modules; the remaining legacy sections still must exist.
+  ['Организация', 'Данные организации', 'Сопряжённые устройства', 'Доступ / токены', 'Приложение'].forEach((label) => {
     ok(legacyDesktop.includes(label), 'flag-off legacy desktop settings still includes ' + label);
   });
   M.mobileOpenSettingsHome();
   const legacyMobileList = elFor('mobile-main').innerHTML;
-  ok(legacyMobileList.includes('Вакансии / Рассылки'), 'flag-off mobile keeps legacy work settings page');
+  ok(legacyMobileList.includes('Данные организации'), 'flag-off mobile keeps the legacy organization-data settings page');
 
   store.set('skipi_crewing_settings5', '1');
   await M.openSettings('modules');
@@ -483,10 +485,10 @@ if (M) {
   ok(!!railHtml, 'mobile chrome renders the bottom rail');
   const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
   const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'vacancies,mailings,seafarers,crew_flow,apps',
-    'rail renders exactly 5 buttons in canonical order vacancies,mailings,seafarers,crew_flow,apps — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
+    'rail renders exactly 5 buttons in canonical order crew_flow,compliance,seafarers,documents,apps — got [' + railViews.join(',') + ']');
   const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
-  ok(railQa.join(',') === 'bottom-nav-vacancies,bottom-nav-mailings,bottom-nav-seafarers,bottom-nav-crew_flow,bottom-nav-apps',
+  ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers,bottom-nav-documents,bottom-nav-apps',
     'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
   ok(railViews[railViews.length - 1] === 'apps' && railQa[railQa.length - 1] === 'bottom-nav-apps',
     'last rail slot is Apps');
@@ -495,8 +497,8 @@ if (M) {
   ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
     'no legacy bottom-nav-home / bottom-nav-workspace slugs on the rail');
   const headerHtml = (chrome.match(/<header[\s\S]*?<\/header>/) || [''])[0];
-  ok(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\('vacancies'\)"/.test(headerHtml),
-    'header keeps home button (mobile-top-home → vacancies)');
+  ok(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\('crew_flow'\)"/.test(headerHtml),
+    'header keeps home button (mobile-top-home → crew_flow)');
   ok(headerHtml.includes('mobileOpenSettingsHome()'), 'header keeps settings gear (mobileOpenSettingsHome)');
 
   // Rail scroll mechanics removed: no horizontal overflow, no scroll-snap, no hint arrows.
@@ -517,8 +519,8 @@ if (M) {
   bodyEl.classList.contains = origContains;
   const appsHtml = elFor('mobile-main').innerHTML;
   const tileOrder = [...appsHtml.matchAll(/data-qa="apps-module-tile-([a-z_]+)"/g)].map((m) => m[1]);
-  ok(tileOrder.join(',') === 'vacancies,mailings,seafarers,crew_flow,compliance,documents',
-    'mobile Apps grid shows module tiles vacancies,mailings,seafarers,crew_flow,compliance,documents — got [' + tileOrder.join(',') + ']');
+  ok(tileOrder.join(',') === 'seafarers,crew_flow,compliance,documents',
+    'mobile Apps grid shows module tiles seafarers,crew_flow,compliance,documents — got [' + tileOrder.join(',') + ']');
   const firstModuleTile = appsHtml.indexOf('data-qa="apps-module-tile-');
   const pluginRegion = appsHtml.indexOf('id="apps-launch-body"');
   ok(firstModuleTile !== -1 && pluginRegion !== -1 && firstModuleTile < pluginRegion,

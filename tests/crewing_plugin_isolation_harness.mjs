@@ -231,15 +231,18 @@ section('launcher mobile rail hooks (rendered via mobileNavButton)');
   const end = HTML.indexOf('async function bootMobile', start);
   ok(start > 0 && end > start, 'MOBILE_RAIL_QA + mobileNavButton block found');
   const navBtn = new Function('escapeAttr', 'escapeHtml', HTML.slice(start, end) + '\nreturn mobileNavButton;')(escapeAttr, escapeHtml);
-  const home = navBtn('vacancies', 'vacancies', '&#8962;', 'Vacancies');
-  ok(home.includes('data-qa="bottom-nav-vacancies"'), 'vacancies rail button carries bottom-nav-vacancies');
-  ok(home.includes('data-mview="vacancies"') && home.includes('active'), 'vacancies rail button keeps data-mview hook and active state');
-  ok(navBtn('mailings', 'vacancies', '✉', 'Mailings').includes('data-qa="bottom-nav-mailings"'), 'mailings rail button carries bottom-nav-mailings');
-  ok(navBtn('seafarers', 'vacancies', '👤', 'Seafarers').includes('data-qa="bottom-nav-seafarers"'), 'seafarers rail button carries bottom-nav-seafarers');
-  ok(navBtn('apps', 'vacancies', '🧩', 'Apps').includes('data-qa="bottom-nav-apps"'), 'apps rail button carries bottom-nav-apps');
+  // K2 (OWNER (654)/(658)): the rail composition is crew_flow · compliance ·
+  // seafarers · documents · apps; the retired work modules left it entirely.
+  const home = navBtn('crew_flow', 'crew_flow', '📥', 'Crew Flow');
+  ok(home.includes('data-qa="bottom-nav-crew_flow"'), 'crew_flow rail button carries bottom-nav-crew_flow');
+  ok(home.includes('data-mview="crew_flow"') && home.includes('active'), 'crew_flow rail button keeps data-mview hook and active state');
+  ok(navBtn('compliance', 'crew_flow', '▣', 'Compliance').includes('data-qa="bottom-nav-compliance"'), 'compliance rail button carries bottom-nav-compliance');
+  ok(navBtn('seafarers', 'crew_flow', '👤', 'Seafarers').includes('data-qa="bottom-nav-seafarers"'), 'seafarers rail button carries bottom-nav-seafarers');
+  ok(navBtn('documents', 'crew_flow', '📄', 'Docs').includes('data-qa="bottom-nav-documents"'), 'documents rail button carries bottom-nav-documents');
+  ok(navBtn('apps', 'crew_flow', '🧩', 'Apps').includes('data-qa="bottom-nav-apps"'), 'apps rail button carries bottom-nav-apps');
   ok(!HTML.includes('bottom-nav-home') && !HTML.includes('bottom-nav-workspace'), 'legacy bottom-nav-home/workspace slugs are gone');
-  const docs = navBtn('documents', 'vacancies', '📄', 'Docs');
-  ok(!/bottom-nav-/.test(docs) && docs.includes('data-mview="documents"'), 'off-rail views get no bottom-nav hook and keep data-mview');
+  const offRail = navBtn('mail', 'crew_flow', '✉', 'Mail');
+  ok(!/bottom-nav-/.test(offRail) && offRail.includes('data-mview="mail"'), 'off-rail views get no bottom-nav hook and keep data-mview');
 }
 
 section('launcher behavioral: launcher / manage / detail / lifecycle');

@@ -806,28 +806,16 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
 <body>
 <div class="modules-bar">
   <div class="desktop-stack-label" id="desktop-stack-label" data-qa="desktop-stack-label">Skipi Crewing · Stack SKIPI-2026.08-R1</div>
-  <div class="mod-tab active" id="mt-vacancies" onclick="showView('vacancies')" title="My posted vacancies">
-    <span>My vacancies</span><span id="nav-vacancies-badge" class="nav-badge" style="display:none;">0</span>
-  </div>
-  <div class="mod-tab" id="mt-mailings" onclick="showView('mailings')" title="CV mailing requests">
-    <span>Рассылки</span>
+  <div class="mod-tab active" id="mt-crew_flow" onclick="showView('crew_flow')" title="Incoming candidate queue">
+    <span>Crew Flow</span>
   </div>
   <div class="mod-tab" id="mt-mail" onclick="showView('mail')" title="Personal mailbox">
     <span>Почта</span>
   </div>
-  <div class="mod-tab" id="mt-crew_flow" onclick="showView('crew_flow')" title="Incoming candidate signals">
-    <span>Crew Flow</span>
-  </div>
-  <div class="mod-tab" id="mt-intake_pilot" data-qa="crewing-intake-pilot" onclick="showView('intake_pilot')" title="Synthetic candidate intake pilot">
-    <span>Intake pilot</span>
-  </div>
-  <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable candidate requirement profiles">
-    <span>Профили требований клиента</span>
+  <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable compliance profiles">
+    <span>Профиль соответствия</span>
   </div>
   <!-- Presence-contract compatibility marker; not visible UI: Compliance Profiles / Профили соответствия -->
-  <div class="mod-tab" id="mt-team" onclick="showView('team')" title="Team access">
-    <span>Team</span>
-  </div>
   <div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
     <span>Seafarers DB</span>
   </div>
@@ -1706,7 +1694,7 @@ async function connectSubmitToken(){
     var eo = document.getElementById('entry-choice-overlay'); if (eo) eo.remove();
     showToast('Подключено к ' + (activation.display_name || 'Skipi Crewing'), 'success');
     state.vacancies = [];
-    if (isMobileShellActive()) mobileShow('vacancies');
+    if (isMobileShellActive()) mobileShow('crew_flow');
     else location.reload();
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Подключить'; }
@@ -1725,10 +1713,11 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.mail':'Mail','nav.intake_pilot':'Intake pilot','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.mail':'Mail','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.mail':'Mail','nav.intake_pilot':'Intake pilot','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.mail':'Mail','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'crew_flow.subtitle':'Candidates that arrived through your inbound identifier. Nothing is decided for you.','crew_flow.refresh':'Refresh queue','crew_flow.open_pilot':'Upload a test document','crew_flow.loading':'Loading the candidate queue...','crew_flow.failed':'The candidate queue could not be loaded','crew_flow.empty_title':'No candidates yet','crew_flow.empty_unconnected':'Connect your company in Settings -> Access / tokens, then candidates will appear here.','crew_flow.empty_live':'Candidates appear here once documents reach your inbound identifier.','crew_flow.pick_title':'Pick a candidate','crew_flow.pick_note':'Open a row on the left to see the recorded facts, the comparisons and the operator actions.','crew_flow.facts':'facts','crew_flow.ranks':'comparisons','crew_flow.actions':'Operator actions','crew_flow.save':'Save to Seafarers DB','crew_flow.save_confirm':'Save this candidate to the seafarer database? The action cannot be undone from Crew Flow.','crew_flow.saved':'Candidate saved to the Seafarers DB.','crew_flow.save_failed':'Save failed','crew_flow.save_web_note':'Available in the web version after K3.','crew_flow.email':'Write email','crew_flow.request_docs':'Request documents','crew_flow.email_missing':'No address received: record the email fact on the card first.','crew_flow.email_desktop_only':'Mail is a desktop module; open this candidate on the desktop app.','crew_flow.subject_reply':'Re: application','crew_flow.subject_docs':'Documents for application','crew_flow.match':'Match against a profile','crew_flow.ignore':'Ignore','crew_flow.later':'Keep for later','crew_flow.later_done':'Candidate kept for later.','crew_flow.state_saved_to_db':'saved to Seafarers DB','crew_flow.state_ignored':'ignored','crew_flow.state_kept_for_later':'kept for later','crew_flow.state_emailed':'email written','crew_flow.state_requested_documents':'documents requested','crew_flow.state_matched':'compared against profiles',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
-    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Requirements','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.home':'Home','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable client requirement profiles.','mobile.no_profiles':'No client requirement profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
+    'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is your vacancies list. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Requirements','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.home':'Home','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable compliance profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
 	    'settings.appearance_title':'Appearance','settings.appearance_desc':'Visual preferences. More options arrive as the app grows.','settings.theme':'Theme','settings.theme_desc':'Pick Dark or Light. Takes effect immediately on Save.','settings.language':'Language','settings.language_desc':'Interface language.',
 	    'mobile.settings_title':'Settings','mobile.settings_desc':'Connection, appearance, device and app information.','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.work_mode':'Work mode','mobile.work_question':'How will you use Skipi Crewing?','mobile.work_desc':'Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.','mobile.role_owner':'Team lead / manager','mobile.role_owner_desc':'I run the crewing company account, validate the company token, post vacancies, and invite teammates.','mobile.role_member':'Team member','mobile.role_member_desc':'I join an existing company team. I need my public user ID and then a personal team token from the manager.','mobile.exploring':'Just want to look around?','mobile.open_demo':'Open demo','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.member_title':'Join an existing team','mobile.member_desc':'Send this public user ID to your team lead. Your private key stays on this device.','mobile.member_after':'After the lead adds you, paste the personal team token in Connection and press Validate.','mobile.i_have_token':'I have a token','mobile.manager_setup':'Manager setup','mobile.manager_desc':'Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.','mobile.member_setup':'Member setup','mobile.member_setup_desc':'Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.','mobile.show_my_id':'Show my ID','mobile.change_role':'Change role','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.work_role':'Work role','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
@@ -1743,10 +1732,11 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.mail':'Почта','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профили требований клиента','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
-	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.mail':'Почта','left.compliance':'Профили требований клиента','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.mail':'Почта','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профиль соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.mail':'Почта','left.compliance':'Профиль соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
+    'crew_flow.subtitle':'Кандидаты, пришедшие на ваш входящий идентификатор. Решение остаётся за вами.','crew_flow.refresh':'Обновить очередь','crew_flow.open_pilot':'Загрузить тестовый документ','crew_flow.loading':'Загружаю очередь кандидатов...','crew_flow.failed':'Очередь кандидатов не загружена','crew_flow.empty_title':'Кандидатов пока нет','crew_flow.empty_unconnected':'Подключите компанию в Настройках -> Доступ / токены, и кандидаты появятся здесь.','crew_flow.empty_live':'Кандидаты появятся, когда на ваш входящий идентификатор придут документы.','crew_flow.pick_title':'Выберите кандидата','crew_flow.pick_note':'Откройте строку слева, чтобы увидеть записанные сведения, оценки и действия оператора.','crew_flow.facts':'сведения','crew_flow.ranks':'оценки','crew_flow.actions':'Действия оператора','crew_flow.save':'В базу моряков','crew_flow.save_confirm':'Сохранить кандидата в базу моряков? Действие нельзя отменить из Crew Flow.','crew_flow.saved':'Кандидат сохранён в базе моряков.','crew_flow.save_failed':'Не удалось сохранить','crew_flow.save_web_note':'В веб-версии — после K3.','crew_flow.email':'Написать email','crew_flow.request_docs':'Запросить документы','crew_flow.email_missing':'Адрес не получен: запишите факт email в карточке.','crew_flow.email_desktop_only':'Почта — десктопный модуль; откройте кандидата в десктопном приложении.','crew_flow.subject_reply':'Re: заявка','crew_flow.subject_docs':'Документы по заявке','crew_flow.match':'Сопоставить с профилем','crew_flow.ignore':'Игнорировать','crew_flow.later':'Отложить','crew_flow.later_done':'Кандидат отложен.','crew_flow.state_saved_to_db':'в базе моряков','crew_flow.state_ignored':'игнорирован','crew_flow.state_kept_for_later':'отложен','crew_flow.state_emailed':'письмо написано','crew_flow.state_requested_documents':'документы запрошены','crew_flow.state_matched':'сопоставлен с профилями',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
-    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Требования','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.home':'Домой','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые профили требований клиента.','mobile.no_profiles':'Профилей требований пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
+    'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет список ваших вакансий. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Требования','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.home':'Домой','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые профили соответствия.','mobile.no_profiles':'Профилей соответствия пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
 	    'settings.appearance_title':'Внешний вид','settings.appearance_desc':'Настройки интерфейса. Больше опций появится в следующих версиях.','settings.theme':'Тема','settings.theme_desc':'Тёмная или светлая. Применяется сразу после сохранения.','settings.language':'Язык','settings.language_desc':'Язык интерфейса.',
 	    'mobile.settings_title':'Настройки','mobile.settings_desc':'Подключение, внешний вид, устройство и сведения о приложении.','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.work_mode':'Рабочий режим','mobile.work_question':'Как вы будете использовать Skipi Crewing?','mobile.work_desc':'Выбор роли только помогает настроить приложение. Реальные права всё равно задаются токеном компании и доступом команды.','mobile.role_owner':'Глава команды / менеджер','mobile.role_owner_desc':'Я управляю аккаунтом крюинговой компании, проверяю токен, публикую вакансии и приглашаю коллег.','mobile.role_member':'Член команды','mobile.role_member_desc':'Я присоединяюсь к существующей команде. Мне нужен мой публичный ID, затем персональный токен от менеджера.','mobile.exploring':'Хотите просто посмотреть?','mobile.open_demo':'Открыть демонстрацию','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.member_title':'Присоединиться к команде','mobile.member_desc':'Отправьте этот публичный ID главе команды. Приватный ключ остаётся на устройстве.','mobile.member_after':'Когда менеджер добавит вас, вставьте персональный токен команды в подключении и нажмите Проверить.','mobile.i_have_token':'У меня есть токен','mobile.manager_setup':'Настройка менеджера','mobile.manager_desc':'Проверьте токен компании, затем публикуйте вакансии и приглашайте коллег из командных инструментов на desktop.','mobile.member_setup':'Настройка члена команды','mobile.member_setup_desc':'Вставьте персональный токен, выданный главой команды. Если вам нужен публичный ID, откройте экран входа в команду.','mobile.show_my_id':'Показать мой ID','mobile.change_role':'Сменить роль','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.work_role':'Рабочая роль','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
@@ -1761,24 +1751,24 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
 	  },
   tl: {
-    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
-    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
+    'nav.vacancies':'Mga vacancy','nav.mailings':'Mga mailing','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Mga dokumento',
+    'left.vacancies':'Mga vacancy','left.mailings':'Mga mailing','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Mga dokumento',
     'common.new':'+ Bago','common.search':'Hanapin...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Lumipat ng vault',
     'settings.connection':'Koneksyon','settings.profile':'Profile ng crewing','settings.vaults':'Mga vault','settings.interface':'Interface','settings.appearance':'Hitsura','settings.help':'Tulong','settings.about':'Tungkol sa Skipi Crewing',
     'settings.appearance_title':'Hitsura','settings.appearance_desc':'Mga visual preference. Darating pa ang iba pang opsyon.','settings.theme':'Tema','settings.theme_desc':'Darating ang light theme sa susunod na release.','settings.language':'Wika','settings.language_desc':'Wika ng interface.',
     'vacancy.new_title':'Bagong vacancy','mailing.new_title':'Bagong mailing request','mailing.empty':'Wala pang mailing requests.','vacancy.empty':'Wala pang na-post na vacancy.','documents.empty':'Pumili ng dokumento sa kaliwa.'
   },
   hi: {
-    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
-    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
+    'nav.vacancies':'मेरी vacancies','nav.mailings':'मेलिंग','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'दस्तावेज़',
+    'left.vacancies':'मेरी vacancies','left.mailings':'मेलिंग','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'दस्तावेज़',
     'common.new':'+ नया','common.search':'खोजें...','common.settings':'सेटिंग्स','common.vault':'Vault','common.switch_vault':'Vault बदलें',
     'settings.connection':'कनेक्शन','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'दिखावट','settings.help':'सहायता','settings.about':'Skipi Crewing के बारे में',
     'settings.appearance_title':'दिखावट','settings.appearance_desc':'Visual preferences. और विकल्प आगे आएंगे.','settings.theme':'Theme','settings.theme_desc':'Light theme अगले release में आएगा.','settings.language':'भाषा','settings.language_desc':'Interface भाषा.',
     'vacancy.new_title':'नई vacancy','mailing.new_title':'नई mailing request','mailing.empty':'अभी कोई mailing request नहीं है.','vacancy.empty':'अभी कोई vacancy post नहीं हुई.','documents.empty':'बाईं तरफ़ से document चुनें.'
   },
   id: {
-    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Client Requirement Profiles','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
-    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Client Requirement Profiles','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
+    'nav.vacancies':'Lowongan saya','nav.mailings':'Mailing','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Dokumen',
+    'left.vacancies':'Lowongan saya','left.mailings':'Mailing','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Dokumen',
     'common.new':'+ Baru','common.search':'Cari...','common.settings':'Pengaturan','common.vault':'Vault','common.switch_vault':'Ganti vault',
     'settings.connection':'Koneksi','settings.profile':'Profil crewing','settings.vaults':'Vault','settings.interface':'Antarmuka','settings.appearance':'Tampilan','settings.help':'Bantuan','settings.about':'Tentang Skipi Crewing',
     'settings.appearance_title':'Tampilan','settings.appearance_desc':'Preferensi tampilan. Opsi lain akan ditambahkan.','settings.theme':'Tema','settings.theme_desc':'Light theme akan hadir di rilis berikutnya.','settings.language':'Bahasa','settings.language_desc':'Bahasa antarmuka.',
@@ -2538,7 +2528,7 @@ async function loadTaxonomy() {
 }
 
 var state = {
-  view: 'vacancies',
+  view: 'crew_flow',
   settings: null,
   vacancies: [],
   mailingRequests: [],
@@ -2919,17 +2909,19 @@ function updateTeamNavVisibility() {
 function showView(v) {
   if (v === 'team' && !hasTeamAccess()) {
     showToast('Team module requires a special Skipi token.', 'warn');
-    v = 'vacancies';
+    v = 'crew_flow';
   }
   var previousView = state.view;
-  if (previousView === 'intake_pilot' && v !== 'intake_pilot') pilotLeave();
+  // K2: Crew Flow hosts the same pilot renderers, so pilot state is reset only
+  // when the operator leaves BOTH host views (crew_flow and intake_pilot).
+  if (pilotIsHostView(previousView) && !pilotIsHostView(v)) pilotLeave();
   state.view = v;
   if (previousView === 'team' && v !== 'team') stopTeamChatPoll();
   if (previousView === 'apps' && v !== 'apps') pluginUnmountCurrent();
   updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
-  var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : v));
-  ['vacancies','mailings','mail','crew_flow','intake_pilot','compliance','team','seafarers','documents','apps'].forEach(function(k){
+  var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : (v==='intake_pilot' ? 'crew_flow' : v)));
+  ['mail','crew_flow','compliance','seafarers','documents','apps'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -3099,7 +3091,7 @@ function renderTeamOnboarding(mode) {
       + '<div class="team-onboarding-actions">'
       + '<button class="ghost" onclick="openTeamOnboarding(\'start\')">Back</button>'
       + '<button class="ghost" onclick="teamOnboardingOpenConnection()">I have a token</button>'
-      + '<button onclick="teamOnboardingShowTeam()">Show Team screen</button>'
+      + '<button onclick="teamOnboardingOpenAccess()">Open access settings</button>'
       + '</div>';
   } else {
     body = '<div class="team-onboarding-options">'
@@ -3132,9 +3124,9 @@ async function teamOnboardingOpenConnection() {
   openSettings('connection');
 }
 
-async function teamOnboardingShowTeam() {
+async function teamOnboardingOpenAccess() {
   await closeTeamOnboarding(true);
-  showView('team');
+  openSettings('access');
 }
 
 async function syncTeamRoleFromMembers() {
@@ -4617,7 +4609,7 @@ function openComplianceProfileById(id) {
 
 function renderComplianceProfilesEmptyMain() {
   var m = document.getElementById('main');
-  m.innerHTML = '<h1>Профили требований клиента</h1>'
+  m.innerHTML = '<h1>Профиль соответствия</h1>'
     + '<div class="sub">Переиспользуемые шаблоны требований к кандидату. Крюинг выбирает профиль при публикации вакансии, сервер замораживает snapshot в вакансии.</div>'
     + '<div class="card">'
     + '<h3 style="margin-top:0;">Как это используется</h3>'
@@ -4767,7 +4759,7 @@ function renderComplianceProfileForm(profile) {
   var m = document.getElementById('main');
   var editing = !!profile;
   var readonly = !!(profile && profile.status === 'archived');
-  var title = editing ? 'Редактировать профиль требований' : 'Новый профиль требований';
+  var title = editing ? 'Редактировать профиль соответствия' : 'Новый профиль соответствия';
   m.innerHTML = '<h1>'+title+'</h1>'
     + '<div class="sub">Выберите обязательные документы и дополнительные требования. Уже опубликованные вакансии сохраняют старый snapshot.</div>'
     + '<div class="card">'
@@ -4815,7 +4807,7 @@ async function saveComplianceProfile(profileId) {
     state.complianceProfilesLoaded = false;
     await renderComplianceProfilesTree({force:true});
     showView('compliance');
-    showToast('Requirement profile saved', 'success');
+    showToast('Compliance profile saved', 'success');
   } catch(e) {
     showToast('Save failed: '+e, 'error');
   }
@@ -5276,6 +5268,285 @@ function crewFlowDemoFixturesEnabled() {
   return !!(typeof __demoMode !== 'undefined' && __demoMode);
 }
 
+// ===== K2 live candidate queue (OWNER (654)/(658), 2026-09-24) ==============
+// Outside demo mode, and once the pilot context is configured, Crew Flow shows
+// the server intake queue (crewing_intake_candidate_list) instead of the demo
+// fixtures: a row is a candidate, opening a row hosts the C3b-2 candidate card
+// inside the Crew Flow container, and the operator acts from one panel.
+// Nothing is deleted anywhere: "ignore" is a local review state.
+function crewFlowLiveEnabled() {
+  if (crewFlowDemoFixturesEnabled()) return false;
+  if (typeof pilotContextReady !== 'function' || typeof pilotContextSnapshot !== 'function') return false;
+  return pilotContextReady(pilotContextSnapshot());
+}
+function crewFlowMode() {
+  if (crewFlowDemoFixturesEnabled()) return 'demo';
+  return crewFlowLiveEnabled() ? 'live' : 'unconnected';
+}
+// S-web: the bundle-save path needs the native file bridge (the fleet web shim
+// hands back a webbundle:// handle the native command cannot open). Native is
+// asserted positively — an unknown transport is treated as web, never native.
+function crewFlowNativeTransport() {
+  try {
+    var w = (typeof window !== 'undefined') ? window : null;
+    if (!w) return false;
+    if (w.__SKIPI_WEB_SHELL__ === true) return false;
+    var t = w.__TAURI__;
+    if (!t) return false;
+    return !!(w.__TAURI_INTERNALS__ || t.dialog || t.fs || t.event || t.process || t.updater || t.clipboardManager);
+  } catch (e) { return false; }
+}
+function crewFlowTr(key) { return tr('crew_flow.' + key); }
+function crewFlowFactCache() {
+  if (!state.crewFlowFacts) state.crewFlowFacts = {};
+  return state.crewFlowFacts;
+}
+function crewFlowFactsFor(intakeId) {
+  var cache = crewFlowFactCache();
+  var out = Object.assign({}, cache[intakeId] || {});
+  var d = (state.intakePilot && state.intakePilot.detail) || null;
+  if (d && d.intakeId === intakeId && Array.isArray(d.facts)) {
+    d.facts.forEach(function(row){
+      if (!row || !row.field || !Array.isArray(row.versions) || !row.versions.length) return;
+      var value = row.versions[0] ? row.versions[0].value : null;
+      if (value == null || String(value) === '') return;
+      out[row.field] = String(value);
+    });
+    cache[intakeId] = out;
+  }
+  return out;
+}
+function crewFlowQueueItems() {
+  var p = state.intakePilot;
+  var q = (p && p.queue) || null;
+  return (q && Array.isArray(q.items)) ? q.items : [];
+}
+function crewFlowVisibleLiveRows() {
+  var showIgnored = !!state.crewFlowShowIgnored;
+  return crewFlowQueueItems().filter(function(item){
+    if (!item || !item.intake_id) return false;
+    if (showIgnored) return true;
+    var read = crewFlowReadInfo(item.intake_id);
+    return !(read && read.action === 'ignored');
+  });
+}
+function crewFlowEnsureLiveQueue() {
+  if (!crewFlowLiveEnabled()) return;
+  var p = state.intakePilot;
+  if (!p) return;
+  var snapshot = pilotContextSnapshot();
+  if (p.contextKey !== pilotContextKey(snapshot)) pilotFreshStateForContext(snapshot);
+  if (p.queueLoading || p.queueLastUpdated || p.queueError) return;
+  pilotLoadQueue(0);
+}
+function crewFlowRefreshQueue() {
+  if (!crewFlowLiveEnabled()) return;
+  var p = state.intakePilot;
+  pilotLoadQueue((p && p.queue && p.queue.offset) || 0);
+}
+function crewFlowOpenPilot() {
+  if (pilotHostIsMobile()) { if (typeof mobileShow === 'function') mobileShow('intake_pilot'); return; }
+  showView('intake_pilot');
+}
+function crewFlowOpenCandidate(intakeId) {
+  if (typeof pilotOpenCard !== 'function') return;
+  pilotOpenCard(intakeId);
+}
+function crewFlowRerender() {
+  if (pilotHostIsMobile()) { if (typeof mobileRenderCrewFlow === 'function') mobileRenderCrewFlow(); return; }
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+}
+// K2: the host entry every pilot loader re-renders through (renderIntakePilot
+// delegates here while state.view is a Crew Flow view).
+function renderCrewFlowHost() {
+  if (pilotHostIsMobile()) { if (typeof mobileRenderCrewFlow === 'function') mobileRenderCrewFlow(); return; }
+  renderCrewFlowTreeBody();
+  renderCrewFlowDetail();
+}
+function crewFlowRowTitle(item) {
+  var facts = crewFlowFactsFor(item.intake_id);
+  return facts.name || item.intake_id;
+}
+function crewFlowRowSubtitle(item) {
+  var facts = crewFlowFactsFor(item.intake_id);
+  var bits = [];
+  if (facts.rank) bits.push(facts.rank);
+  bits.push(String(item.content_type || '—'));
+  bits.push(pilotFormatTime(item.created_at));
+  return bits.join(' · ');
+}
+function crewFlowRowBadges(item) {
+  var summary = item.summary || null;
+  var read = crewFlowReadInfo(item.intake_id);
+  var out = '<span class="badge">' + escapeHtml(pilotStateLabel(item.state)) + '</span>';
+  if (summary) {
+    out += '<span class="badge">' + escapeHtml(crewFlowTr('facts')) + ': ' + escapeHtml(String(summary.facts)) + '</span>'
+        +  '<span class="badge">' + escapeHtml(crewFlowTr('ranks')) + ': ' + escapeHtml(String(summary.ranks)) + '</span>';
+    if (summary.needs_review_reason) out += '<span class="badge">' + escapeHtml(pilotReason(summary.needs_review_reason)) + '</span>';
+  }
+  if (read && read.action) out += '<span class="badge">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</span>';
+  return out;
+}
+function crewFlowReviewLabel(action) {
+  var key = 'state_' + String(action || '');
+  var label = crewFlowTr(key);
+  return label === 'crew_flow.' + key ? String(action || '') : label;
+}
+function crewFlowLiveTreeHtml(mode) {
+  if (mode !== 'live') {
+    return '<div class="tree-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_unconnected')) + '</div>';
+  }
+  var p = state.intakePilot || {};
+  if (p.queueLoading) return '<div class="tree-empty">' + escapeHtml(crewFlowTr('loading')) + '</div>';
+  if (p.queueError) return '<div class="tree-empty" data-qa="crew-flow-queue-error">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div>';
+  var rows = crewFlowVisibleLiveRows();
+  if (!rows.length) return '<div class="tree-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
+  var selected = (state.intakePilot && state.intakePilot.detail) ? state.intakePilot.detail.intakeId : null;
+  return rows.map(function(item){
+    return '<div class="tree-item ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      +   '<div><strong>' + escapeHtml(crewFlowRowTitle(item)) + '</strong></div>'
+      +   '<div class="meta">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
+      +   '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">' + crewFlowRowBadges(item) + '</div>'
+      + '</div>';
+  }).join('');
+}
+function crewFlowHeadHtml(mode) {
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
+    + '<div><h1>Crew Flow</h1><div class="sub">' + escapeHtml(crewFlowTr('subtitle')) + '</div></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + (mode === 'live' ? '<button class="ghost" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
+    + '<button class="ghost" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
+    + '</div></div>';
+}
+function crewFlowLiveMainHtml(mode) {
+  var head = '<div data-qa="crew-flow-view">' + crewFlowHeadHtml(mode);
+  if (mode !== 'live') {
+    return head
+      + '<div class="empty-state" data-qa="crew-flow-empty"><strong>' + escapeHtml(crewFlowTr('empty_title')) + '</strong>'
+      + '<div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('empty_unconnected')) + '</div></div></div>';
+  }
+  var p = state.intakePilot || {};
+  var body;
+  if (p.queueLoading) body = '<div class="sub">' + escapeHtml(crewFlowTr('loading')) + '</div>';
+  else if (p.queueError) body = '<div class="empty-state" data-qa="crew-flow-queue-error"><strong>' + escapeHtml(crewFlowTr('failed')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div></div>';
+  else if (!crewFlowVisibleLiveRows().length) body = '<div class="empty-state" data-qa="crew-flow-empty"><strong>' + escapeHtml(crewFlowTr('empty_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('empty_live')) + '</div></div>';
+  else body = '<div class="empty-state"><strong>' + escapeHtml(crewFlowTr('pick_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('pick_note')) + '</div></div>';
+  return head + '<div data-qa="crew-flow-live">' + body + '</div></div>';
+}
+function crewFlowLiveMobileHtml(mode) {
+  var head = '<div class="mobile-card" data-qa="crew-flow-view">' + '<div class="mobile-detail-head"><h1>Crew Flow</h1></div>'
+    + '<div class="mobile-muted">' + escapeHtml(crewFlowTr('subtitle')) + '</div>'
+    + '<div class="mobile-actions" style="margin-top:10px;">'
+    + (mode === 'live' ? '<button class="mobile-secondary" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
+    + '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
+    + '</div></div>';
+  if (mode !== 'live') {
+    return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_unconnected')) + '</div>';
+  }
+  var p = state.intakePilot || {};
+  if (p.queueLoading) return head + '<div class="mobile-empty">' + escapeHtml(crewFlowTr('loading')) + '</div>';
+  if (p.queueError) return head + '<div class="mobile-empty" data-qa="crew-flow-queue-error">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div>';
+  var rows = crewFlowVisibleLiveRows();
+  if (!rows.length) return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
+  return head + '<div data-qa="crew-flow-live">' + rows.map(function(item){
+    return '<button class="mobile-list-item" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      +   '<div class="mobile-list-title"><span>' + escapeHtml(crewFlowRowTitle(item)) + '</span></div>'
+      +   '<div class="mobile-list-meta">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
+      +   '<div class="mobile-chip-row">' + crewFlowRowBadges(item) + '</div>'
+      + '</button>';
+  }).join('') + '</div>';
+}
+// D6: one operator panel above the hosted candidate card.
+function crewFlowActionsHtml(intakeId) {
+  var facts = crewFlowFactsFor(intakeId);
+  var email = String(facts.email || '').trim();
+  var native = crewFlowNativeTransport();
+  var mobile = pilotHostIsMobile();
+  var mailBlocked = !email || mobile;
+  var read = crewFlowReadInfo(intakeId) || {};
+  var id = escapeJsString(intakeId);
+  var btn = function(qa, label, disabled, onclick, primary){
+    return '<button class="' + (primary ? '' : 'ghost') + '" data-qa="crew-flow-action-' + qa + '"'
+      + (disabled ? ' disabled' : '')
+      + ' onclick="' + onclick + '" style="padding:6px 12px;font-size:12px;' + (primary ? 'background:var(--accent);color:#fff;border:none;border-radius:4px;font-weight:700;cursor:pointer;' : '') + '">'
+      + escapeHtml(label) + '</button>';
+  };
+  return '<div class="card" data-qa="crew-flow-actions" style="margin:0 0 12px;padding:12px;">'
+    + '<label>' + escapeHtml(crewFlowTr('actions')) + '</label>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+    +   btn('save', crewFlowTr('save'), !native, "crewFlowSaveToSeafarers('" + id + "')", true)
+    +   btn('email', crewFlowTr('email'), mailBlocked, "crewFlowWriteEmail('" + id + "','reply')", false)
+    +   btn('request_docs', crewFlowTr('request_docs'), mailBlocked, "crewFlowWriteEmail('" + id + "','docs')", false)
+    +   btn('match', crewFlowTr('match'), false, "crewFlowMatchToProfile('" + id + "')", false)
+    +   btn('ignore', crewFlowTr('ignore'), false, "crewFlowIgnoreSignal('" + id + "')", false)
+    +   btn('later', crewFlowTr('later'), false, "crewFlowKeepForLater('" + id + "')", false)
+    + '</div>'
+    + (native ? '' : '<div class="sub" data-qa="crew-flow-save-hint" style="margin-top:7px;">' + escapeHtml(crewFlowTr('save_web_note')) + '</div>')
+    + (email ? '' : '<div class="sub" data-qa="crew-flow-email-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('email_missing')) + '</div>')
+    + ((email && mobile) ? '<div class="sub" data-qa="crew-flow-email-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('email_desktop_only')) + '</div>' : '')
+    + (read.action ? '<div class="sub" data-qa="crew-flow-review-state" style="margin-top:7px;">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</div>' : '')
+    + '</div>';
+}
+// U1: db.rs:739-1029 accepts an empty extracted_to / cv_path; the candidate is
+// saved under its own `intake:` identity, so nothing that already exists in the
+// seafarer database can be replaced by this path. The write is irreversible
+// from Crew Flow, so it is confirmed first.
+async function crewFlowSaveToSeafarers(intakeId) {
+  if (!crewFlowNativeTransport()) { showToast(crewFlowTr('save_web_note'), 'warn'); return; }
+  var confirmed = await inAppConfirm(crewFlowTr('save_confirm'), { confirmLabel: crewFlowTr('save') });
+  if (!confirmed) return;
+  var facts = crewFlowFactsFor(intakeId);
+  var identity = 'intake:' + intakeId;
+  try {
+    await invoke('save_seafarer_from_bundle', {
+      applicationId: identity,
+      seafarerUserId: '',
+      manifest: { exported_by: { name: facts.name || '', rank: facts.rank || '', messaging_user_id: identity }, documents: [] },
+      extractedTo: '',
+      applicantSummary: {
+        name: facts.name || '',
+        rank: facts.rank || '',
+        nationality: facts.nationality || '',
+        email: facts.email || ''
+      },
+      cvPath: ''
+    });
+    crewFlowMarkRead(intakeId, 'saved_to_db', { saved_to_db: true });
+    showToast(crewFlowTr('saved'), 'success');
+  } catch (e) {
+    showToast(crewFlowTr('save_failed') + ': ' + e, 'error');
+  }
+  crewFlowRerender();
+}
+function crewFlowWriteEmail(intakeId, kind) {
+  var facts = crewFlowFactsFor(intakeId);
+  var to = String(facts.email || '').trim();
+  if (!to) { showToast(crewFlowTr('email_missing'), 'warn'); return; }
+  if (pilotHostIsMobile()) { showToast(crewFlowTr('email_desktop_only'), 'warn'); return; }
+  crewFlowMarkRead(intakeId, kind === 'docs' ? 'requested_documents' : 'emailed');
+  showView('mail');
+  openMailCompose();
+  var toEl = document.getElementById('mail-compose-to');
+  if (toEl) toEl.value = to;
+  var subjectEl = document.getElementById('mail-compose-subject');
+  if (subjectEl) subjectEl.value = (kind === 'docs' ? crewFlowTr('subject_docs') : crewFlowTr('subject_reply')) + ' ' + intakeId;
+}
+async function crewFlowMatchToProfile(intakeId) {
+  var p = state.intakePilot;
+  if (!p || !p.detail || p.detail.intakeId !== intakeId) { crewFlowOpenCandidate(intakeId); return; }
+  crewFlowMarkRead(intakeId, 'matched');
+  await pilotRankNow();
+}
+function crewFlowKeepForLater(intakeId) {
+  crewFlowMarkRead(intakeId, 'kept_for_later');
+  showToast(crewFlowTr('later_done'), 'info');
+  crewFlowRerender();
+}
+// ===== K2 live candidate queue END =========================================
+
 function crewFlowState() {
   if (!Array.isArray(state.crewFlowSignals)) state.crewFlowSignals = [];
   if (!state.crewFlowSignals.length && crewFlowDemoFixturesEnabled()) {
@@ -5485,7 +5756,7 @@ function track1MatchSummaryHtml(row) {
       + '</div>';
   }).join('');
   return '<div class="card" data-qa="track1-match-summary" style="margin:0;padding:12px;">'
-    + '<label>Local Client Requirement Profiles</label>'
+    + '<label>Local Compliance Profiles</label>'
     + '<div style="font-weight:800;margin-top:4px;">'+escapeHtml(summary)+'</div>'
     + '<div class="sub" style="margin-top:4px;">Coverage and gaps come from existing rank_compliance_candidate.</div>'
     + '<div data-qa="track1-recommended-action" style="margin-top:8px;padding:8px 10px;border:1px solid rgba(0,69,100,.22);border-radius:6px;background:rgba(0,69,100,.06);font-size:12px;">'
@@ -5617,6 +5888,8 @@ function renderCrewFlowTree() {
 function renderCrewFlowTreeBody() {
   var tree = document.getElementById('crew-flow-tree');
   if (!tree) return;
+  var crewMode = crewFlowMode();
+  if (crewMode !== 'demo') { tree.innerHTML = crewFlowLiveTreeHtml(crewMode); return; }
   var q = (state.crewFlowSearch || '').toLowerCase();
   var rows = crewFlowState().filter(function(row){
     if (!q) return true;
@@ -5664,6 +5937,12 @@ function openCrewFlowSignal(id) {
 
 function renderCrewFlowView() {
   renderCrewFlowTree();
+  if (crewFlowMode() !== 'demo') {
+    crewFlowEnsureLiveQueue();
+    renderCrewFlowTreeBody();
+    renderCrewFlowDetail();
+    return;
+  }
   var rows = crewFlowState();
   if (state.selectedCrewFlowSignal && rows.indexOf(state.selectedCrewFlowSignal) === -1) state.selectedCrewFlowSignal = null;
   if (!state.selectedCrewFlowSignal) state.selectedCrewFlowSignal = rows[0] || null;
@@ -5674,6 +5953,18 @@ function renderCrewFlowView() {
 
 function renderCrewFlowDetail() {
   var main = document.getElementById('main');
+  if (!main) return;
+  var crewMode = crewFlowMode();
+  if (crewMode !== 'demo') {
+    var pilotState = state.intakePilot;
+    if (crewMode === 'live' && pilotState && pilotState.detail) {
+      pilotRenderCard(main);
+      main.innerHTML = crewFlowActionsHtml(pilotState.detail.intakeId) + main.innerHTML;
+      return;
+    }
+    main.innerHTML = crewFlowLiveMainHtml(crewMode);
+    return;
+  }
   var row = state.selectedCrewFlowSignal || crewFlowState()[0];
   if (!row) {
     main.innerHTML = '<h1>Crew Flow</h1><div class="empty-state"><strong>No candidates yet.</strong><div style="margin-top:6px;color:var(--text2);">Real applicants appear in Vacancies -> Applications. Crew Flow will stay empty until there are real candidate signals.</div></div>';
@@ -5746,8 +6037,7 @@ async function crewFlowAddSignal(id) {
 function crewFlowIgnoreSignal(id) {
   crewFlowMarkRead(id, 'ignored');
   showToast('Crew Flow signal ignored.', 'info');
-  renderCrewFlowTreeBody();
-  renderCrewFlowDetail();
+  crewFlowRerender();
 }
 // CREW FLOW MODULE END
 
@@ -5803,8 +6093,21 @@ function pilotContextKey(context) {
 function pilotContextReady(context) {
   return !!(context.server_url && context.bearer_token && context.crewing_id);
 }
-function pilotViewActive() { return state.view === 'intake_pilot' || state.view === 'mobile-intake_pilot'; }
-function pilotContainer() { return document.getElementById(state.view === 'mobile-intake_pilot' ? 'mobile-main' : 'main'); }
+// K2 (OWNER (654)/(658)): the C3b-1/C3b-2 renderers are hosted by TWO views —
+// the technical `intake_pilot` surface and the `crew_flow` module, which is the
+// operator's home after K2. Both shells (desktop `<view>` and mobile
+// `mobile-<view>`) resolve through the same gates, so a load started in one
+// host is never discarded as a stale context by the other.
+var PILOT_HOST_VIEWS = ['intake_pilot', 'crew_flow'];
+function pilotIsHostView(view) {
+  var v = String(view || '');
+  if (v.indexOf('mobile-') === 0) v = v.slice(7);
+  return PILOT_HOST_VIEWS.indexOf(v) !== -1;
+}
+function pilotHostIsMobile() { return String(state.view || '').indexOf('mobile-') === 0; }
+function pilotCrewFlowHost() { return state.view === 'crew_flow' || state.view === 'mobile-crew_flow'; }
+function pilotViewActive() { return pilotIsHostView(state.view); }
+function pilotContainer() { return document.getElementById(pilotHostIsMobile() ? 'mobile-main' : 'main'); }
 function pilotContextStillCurrent(context) {
   return pilotViewActive() && pilotContextKey(context) === pilotContextKey(pilotContextSnapshot());
 }
@@ -5938,6 +6241,9 @@ function pilotQueueHtml() {
   return rows+'<div class="pilot-pagination" data-qa="pilot-pagination"><button class="ghost" onclick="pilotLoadQueue('+Math.max(0,q.offset-q.limit)+')" '+(q.offset<=0?'disabled':'')+'>'+escapeHtml(pilotT('previous'))+'</button><span>'+escapeHtml(pilotT('range'))+' '+start+'–'+end+' '+escapeHtml(pilotT('of'))+' '+escapeHtml(String(q.total))+'</span><button class="ghost" onclick="pilotLoadQueue('+(q.offset+q.limit)+')" '+(q.offset+q.items.length>=q.total?'disabled':'')+'>'+escapeHtml(pilotT('next'))+'</button></div>';
 }
 function renderIntakePilot() {
+  // K2: when Crew Flow hosts the pilot state, the module paints its own surface
+  // (queue rows + operator actions) from exactly the same state and loaders.
+  if (pilotCrewFlowHost()) { if (typeof renderCrewFlowHost === 'function') renderCrewFlowHost(); return; }
   var p = state.intakePilot, context = pilotContextSnapshot();
   if (p.contextKey !== pilotContextKey(context)) pilotFreshStateForContext(context);
   var main = pilotContainer(); if (!main) return;
@@ -7521,7 +7827,9 @@ function renderVacanciesEmptyMain() {
 }
 
 function updateSidebarBadge(n) {
-  var b = document.getElementById('nav-vacancies-badge');
+  // K2: the vacancies nav badge left the module bar with its tab; the retired
+  // vacancy code (removed in K2b) still calls this, so it stays a safe no-op.
+  var b = document.getElementById('retired-vacancies-nav-badge');
   if (!b) return;
   if (n > 0) { b.textContent = n; b.style.display = 'inline-block'; }
   else b.style.display = 'none';
@@ -7716,7 +8024,7 @@ function renderVacancyComplianceProfileBlock(v) {
   if (!snap) return '';
   var mandatory = snap.mandatory_certs || [];
   var extras = snap.extra_requirements || [];
-  return '<div class="row full"><div><label>Client requirement profile</label>'
+  return '<div class="row full"><div><label>Compliance profile</label>'
     + '<details style="margin-top:4px;">'
     + '<summary style="cursor:pointer;color:var(--accent);font-weight:700;">'+escapeHtml(snap.name || 'Attached profile')+'</summary>'
     + (snap.description?'<div style="white-space:pre-wrap;color:var(--text2);font-size:12px;margin-top:8px;">'+escapeHtml(snap.description)+'</div>':'')
@@ -9671,7 +9979,7 @@ function renderNewVacancy() {
         .map(function(c){return '<option value="'+escapeAttr(c)+'">';}).join('')
     + '</datalist>'
     + '</div></div>'
-    + '<div class="row full"><div><label>Client requirement profile (optional)</label>'
+    + '<div class="row full"><div><label>Compliance profile (optional)</label>'
     + '<select id="f-compliance-profile">'+complianceProfileOptionsHtml()+'</select>'
     + '<div id="f-compliance-help" style="font-size:11px;color:var(--text2);margin-top:4px;"></div>'
     + '</div></div>'
@@ -9792,7 +10100,7 @@ function parseFloatOrNull(id){ var v=val(id); return v===''?null:parseFloat(v); 
 
 // ------------- settings (Obsidian-style modal) -------------
 // Canonical Crewing settings IA (2026-06-25 UI Standard):
-//   org → Организация · data → Данные организации · work → Вакансии / Рассылки
+//   org → Организация · data → Данные организации
 //   devices → Сопряжённые устройства · access → Доступ / токены · app → Приложение
 var settingsTab = 'org';
 var SETTINGS5_FLAG_KEY = 'skipi_crewing_settings5';
@@ -9837,7 +10145,7 @@ function _crewingSettingsSectionFor(tab){
     case 'appearance': case 'interface': case 'app': case 'language': return 'application';
     case 'devices': return 'devices';
     case 'team': case 'access': return 'team';
-    case 'work_data': case 'work': return 'home-crewing-work-data';
+    case 'work_data': return 'home-crewing-work-data';
     default: return 'profile';
   }
 }
@@ -10268,10 +10576,9 @@ function renderSettingsModal() {
   // Canonical Crewing settings IA (UI Standard 2026-06-25), Obsidian-style sidebar.
   var nav =
     '<div class="settings-nav-header"><h2>Настройки</h2>'
-    + '<p>Организационное рабочее пространство: вакансии, рассылки, кандидаты.</p></div>'
+    + '<p>Организационное рабочее пространство: кандидаты, соответствие, документы.</p></div>'
     + navItem('org',     'O', 'Организация')
     + navItem('data',    'D', 'Данные организации')
-    + navItem('work',    'V', 'Вакансии / Рассылки')
     + navItem('devices', 'U', 'Сопряжённые устройства')
     + navItem('access',  'K', 'Доступ / токены')
     + navItem('app',     'A', 'Приложение');
@@ -10335,19 +10642,6 @@ function renderSettingsModal() {
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия приложения</div></div><div class="setting-control"><code data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</code></div></div>'
         )
       + '</div>';
-  } else if (settingsTab==='work') {
-    body = '<div class="settings-section">'
-      + mainHeader('Вакансии / Рассылки', 'Публикация вакансий, рассылки и работа с кандидатами.', 'Workflows')
-      + sectionTitle('Ответы кандидатам')
-      + grp(
-          settingRow('Email для ответов', 'Куда приходят ответы моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
-        )
-      + sectionTitle('Рабочие разделы')
-      + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Вакансии</div><div class="setting-desc">Публикация и управление вакансиями, заявки кандидатов.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'vacancies\');">Открыть</button></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Рассылки</div><div class="setting-desc">Постоянные запросы на получение CV от моряков.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'vacancies\');">Открыть</button></div></div>'
-        )
-      + '</div>';
   } else if (settingsTab==='devices') {
     var dver = escapeHtml(appVersionLabel() || '');
     var dplat = escapeHtml(platformLabel());
@@ -10376,9 +10670,19 @@ function renderSettingsModal() {
           + '</div>')
         + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
         )
+      + sectionTitle('Ответы кандидатам')
+      + grp(
+          settingRow('Email для ответов', 'Куда приходят ответы кандидатов. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
+        )
+      + (hasTeamAccess()
+          ? sectionTitle('Команда')
+            + grp(
+                '<div class="setting-row" data-qa="settings-team-access-open"><div class="setting-info"><div class="setting-label">Управление доступом команды</div><div class="setting-desc">Выдача персональных токенов сотрудникам. Доступно только с командным токеном.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'team\');">Открыть</button></div></div>'
+              )
+          : '')
       + sectionTitle('Демонстрация')
       + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовыми данными — вакансии, заявки, кандидаты — без токена.</div></div><div class="setting-control"><button type="button" class="ghost" style="padding:6px 14px;font-size:12px;" onclick="enterDemoMode()">Загрузить демо</button></div></div>'
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовыми данными — кандидаты, документы, профили — без токена.</div></div><div class="setting-control"><button type="button" class="ghost" style="padding:6px 14px;font-size:12px;" onclick="enterDemoMode()">Загрузить демо</button></div></div>'
         )
       + '</div>';
   } else if (settingsTab==='app') {
@@ -11292,19 +11596,16 @@ function appsLauncherBodyHtml(){
   h += '</div>';
   return h;
 }
-// Mobile Apps grid: module tiles first (rail modules + Requirements/Documents
-// which moved off the canonical 5-slot rail), then plugins. Desktop launcher
-// is unchanged (isMobileShellActive() gate).
+// Mobile Apps grid: module tiles first, then plugins. Desktop launcher is
+// unchanged (isMobileShellActive() gate). K2: the retired work modules and the
+// intake pilot lost their tiles — the pilot is entered from Crew Flow only.
 function appsMobileModuleTilesHtml(){
   if (!isMobileShellActive()) return '';
   var tiles = [
-    { view:'vacancies', icon:'&#8962;', qa:'data-qa="apps-module-tile-vacancies"' },
-    { view:'mailings', icon:'✉', qa:'data-qa="apps-module-tile-mailings"' },
     { view:'seafarers', icon:'👤', qa:'data-qa="apps-module-tile-seafarers"' },
     { view:'crew_flow', icon:'📥', qa:'data-qa="apps-module-tile-crew_flow"' },
     { view:'compliance', icon:'▣', qa:'data-qa="apps-module-tile-compliance"' },
-    { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' },
-    { view:'intake_pilot', icon:'📨', qa:'data-qa="apps-pilot-tile-intake_pilot"' }
+    { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' }
   ];
   var h = '<div class="apps-sec-title">Modules</div>'
     + '<div class="apps-launch-grid" data-qa="apps-modules-grid">';
@@ -11538,7 +11839,7 @@ function mobileModuleLabel(view) {
     documents: 'nav.documents',
     intake_pilot: 'nav.intake_pilot',
   };
-  return tr(map[view] || 'nav.vacancies');
+  return map[view] ? tr(map[view]) : 'Crew Flow';
 }
 
 function mobileViewChromeTitle(view) {
@@ -11601,7 +11902,7 @@ function mobileRenderChrome(view) {
     + (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">'+escapeHtml(tr('demo.banner'))+'</span><button class="mdb-exit" onclick="exitDemoMode()">'+escapeHtml(tr('demo.exit'))+'</button></div>' : '')
     + '<header class="mobile-top'+(__demoMode ? ' mt-with-banner' : '')+'">'
     + '<div class="mobile-brand-wrap">'
-    + '<button class="mobile-top-home'+(navView === 'vacancies' ? ' active' : '')+'" onclick="mobileShow(\'vacancies\')" title="'+escapeAttr(mobileTr('home'))+'" aria-label="'+escapeAttr(mobileTr('home'))+'">&#8962;</button>'
+    + '<button class="mobile-top-home'+(navView === 'crew_flow' ? ' active' : '')+'" onclick="mobileShow(\'crew_flow\')" title="'+escapeAttr(mobileTr('home'))+'" aria-label="'+escapeAttr(mobileTr('home'))+'">&#8962;</button>'
     + '<div class="mobile-brand"><div class="mobile-brand-title">'+escapeHtml(title[0])+'</div><div class="mobile-brand-sub">'+escapeHtml(title[1] || '')+'</div></div>'
     + '</div>'
     + '<div class="mobile-top-actions">'
@@ -11613,10 +11914,10 @@ function mobileRenderChrome(view) {
     + '<main class="mobile-main" id="mobile-main"></main>'
     + (showBottomNav ? '<nav class="mobile-bottom mobile-bottom-nav" id="mobile-bottom-nav">'
     + '<div class="mobile-module-rail" id="mobile-module-rail">'
-    + mobileNavButton('vacancies', navView, '&#8962;', mobileModuleLabel('vacancies'))
-    + mobileNavButton('mailings', navView, '✉', mobileModuleLabel('mailings'))
-    + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
     + mobileNavButton('crew_flow', navView, '📥', mobileModuleLabel('crew_flow'))
+    + mobileNavButton('compliance', navView, '▣', mobileModuleLabel('compliance'))
+    + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
+    + mobileNavButton('documents', navView, '📄', mobileModuleLabel('documents'))
     + mobileNavButton('apps', navView, '🧩', 'Apps')
     + '</div>'
     + '</nav>' : '')
@@ -11643,10 +11944,10 @@ function mobileParentView(view) {
 
 // Canonical cross-home rail hooks (CANON-mobile-unified-standard-v1; existing
 // data-mview hooks stay): every rail slot carries bottom-nav-<view> with the
-// module's own slug. The rail is 5 fixed slots (Crew Flow took the reserved
-// slot, №101 19.08; Apps stays last); Settings enters only via the header
-// gear, Requirements/Documents via the mobile Apps grid module tiles.
-var MOBILE_RAIL_QA = { vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', crew_flow: 'bottom-nav-crew_flow', apps: 'bottom-nav-apps' };
+// module's own slug. The rail is 5 fixed slots (K2, OWNER (654)/(658): the
+// retired work modules left the rail and Crew Flow took the first slot as the
+// home module; Apps stays last); Settings enters only via the header gear.
+var MOBILE_RAIL_QA = { crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' };
 function mobileNavButton(view, active, icon, label) {
   var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
   return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
@@ -11664,7 +11965,7 @@ async function bootMobile() {
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('work_role'); }); return; }
   if (shouldShowMobileWorkRoleChoice()) { mobileShow('work_role'); return; }
-  mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+  mobileShow(mobileHasConnection() ? 'crew_flow' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
   }).catch(function(e){
@@ -11673,13 +11974,13 @@ async function bootMobile() {
 }
 
 function mobileShow(view) {
-  if (view === 'team') view = 'vacancies';
-  if (!mobileHasConnection() && ['vacancies','mailings','compliance','draft'].indexOf(view) !== -1) {
+  if (view === 'team') view = 'crew_flow';
+  if (!mobileHasConnection() && ['crew_flow','compliance','draft'].indexOf(view) !== -1) {
     view = 'connection';
   }
   if (state.view === 'team') stopTeamChatPoll();
   if (mobileState.view === 'apps' && view !== 'apps') pluginUnmountCurrent();
-  if (mobileState.view === 'intake_pilot' && view !== 'intake_pilot') pilotLeave();
+  if (pilotIsHostView(mobileState.view) && !pilotIsHostView(view)) pilotLeave();
   mobileState.view = view;
   state.view = 'mobile-' + view;
   document.body.classList.add('mobile-shell');
@@ -11704,7 +12005,7 @@ function mobileShow(view) {
   if (view === 'document') return mobileRenderDocumentDetail();
   if (view === 'draft') return mobileRenderDraft();
   if (view === 'vacancy') return mobileRenderVacancyDetail();
-  return mobileRenderVacancies();
+  return mobileRenderCrewFlow();
 }
 
 function mobileBack() {
@@ -11723,7 +12024,7 @@ function mobileBack() {
   if (mobileState.view === 'document') return mobileShow('documents');
   if (mobileState.view === 'crew_flow_signal') return mobileShow('crew_flow');
   if (mobileState.view === 'vacancy') return mobileShow('vacancies');
-  mobileShow(mobileParentView(mobileState.view || 'vacancies'));
+  mobileShow(mobileParentView(mobileState.view || 'crew_flow'));
 }
 
 function mobileMain(html) {
@@ -11732,7 +12033,7 @@ function mobileMain(html) {
 }
 
 function mobileRefreshCurrent() {
-  var view = mobileState.view || 'vacancies';
+  var view = mobileState.view || 'crew_flow';
   if (view === 'vacancies') return mobileLoadVacancies(true);
   if (view === 'mailings') return mobileLoadMailings(true);
   if (view === 'compliance') return mobileLoadCompliance(true);
@@ -11876,7 +12177,6 @@ function mobileSettingsSections() {
     { group: 'ОСНОВНОЕ', items: [
       { id:'org',  badge:'O', title:'Организация',         sub:'Профиль компании, контакты и рабочая роль.', value:'Org' },
       { id:'data', badge:'D', title:'Данные организации',  sub:'Хранилище, подключение и диагностика.',       value:'Данные' },
-      { id:'work', badge:'V', title:'Вакансии / Рассылки', sub:'Публикация вакансий, рассылки, кандидаты.',   value:'Работа' },
     ]},
     { group: 'РАБОЧИЕ НАСТРОЙКИ', items: [
       { id:'devices', badge:'U', title:'Сопряжённые устройства', sub:'Принятый shell; controls не переименовываются.', pill:'accepted' },
@@ -11905,7 +12205,7 @@ function mobileSettingsValidPage(p){
     if (!p || p === 'list') return null;
     return settingsFiveSection(p);
   }
-  return ['org','data','work','devices','access','app'].indexOf(p) !== -1 ? p : null;
+  return ['org','data','devices','access','app'].indexOf(p) !== -1 ? p : null;
 }
 function mobileOpenSettingsHome(){
   // Menu 4: the mobile settings entry opens the shared @skipi/settings module
@@ -11974,23 +12274,6 @@ function mobileSettingsDataHtml() {
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing ID</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('version'))+'</strong><span data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</span></div></div>'
     + '</div>';
-}
-
-function mobileSettingsWorkHtml() {
-  var s = state.settings || {};
-  return mobileSettingsHead('Вакансии / Рассылки', 'Публикация вакансий, рассылки и работа с кандидатами.')
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">Ответы кандидатам</div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
-    + '<div class="mobile-muted" style="margin-bottom:8px;">Куда приходят ответы моряков на вакансии. Если пусто — используется контактный email организации.</div>'
-    + '<div class="mobile-actions"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
-    + '</div>'
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">Рабочие разделы</div>'
-    + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;">'
-    + '<button class="mobile-secondary" onclick="mobileShow(\'vacancies\')">Открыть вакансии</button>'
-    + '<button class="mobile-secondary" onclick="mobileShow(\'mailings\')">Открыть рассылки</button>'
-    + '</div></div>';
 }
 
 function mobileSettingsDevicesHtml() {
@@ -12186,7 +12469,6 @@ function mobileRenderSettings() {
   }
   if (page === 'org')     return mobileMain(mobileSettingsOrgHtml());
   if (page === 'data')    return mobileMain(mobileSettingsDataHtml());
-  if (page === 'work')    return mobileMain(mobileSettingsWorkHtml());
   if (page === 'devices') return mobileMain(mobileSettingsDevicesHtml());
   if (page === 'access')  return mobileMain(mobileSettingsAccessHtml());
   if (page === 'app')     return mobileMain(mobileSettingsAppHtml());
@@ -12927,6 +13209,20 @@ async function mobileRestoreComplianceProfile() {
 // ------------- mobile crew flow (mobile surface over the existing desktop
 // Crew Flow signal state; signal content/logic is reused, not changed) -------------
 function mobileRenderCrewFlow() {
+  var crewMode = crewFlowMode();
+  if (crewMode !== 'demo') {
+    crewFlowEnsureLiveQueue();
+    var pilotState = state.intakePilot;
+    if (crewMode === 'live' && pilotState && pilotState.detail) {
+      var host = document.getElementById('mobile-main');
+      if (!host) return;
+      pilotRenderCard(host);
+      host.innerHTML = crewFlowActionsHtml(pilotState.detail.intakeId) + host.innerHTML;
+      return;
+    }
+    mobileMain(crewFlowLiveMobileHtml(crewMode));
+    return;
+  }
   var rows = crewFlowState().slice();
   if (!rows.length) {
     mobileMain('<div class="mobile-empty" data-qa="mobile-crew-flow-empty">'+escapeHtml(crewFlowDemoFixturesEnabled() ? 'No crew flow signals.' : 'No candidates yet. Review real applicants in Vacancies -> Applications.')+'</div>');
@@ -13527,7 +13823,7 @@ async function trialActivateLicense(){
     trialHideOverlay();
     trialRemoveBanner();
     showToast('Доступ активирован.', 'success');
-    if (shouldUseMobileShell()) mobileShow(mobileHasConnection() ? 'vacancies' : 'connection');
+    if (shouldUseMobileShell()) mobileShow(mobileHasConnection() ? 'crew_flow' : 'connection');
     else await bootDesktopMain();
   } catch (e) {
     if (err) err.textContent = 'неверный токен';
@@ -13558,7 +13854,7 @@ async function bootDesktopMain(){
   await loadTaxonomy();
   updateVaultLabel();
   renderDemoBanner();
-  showView('vacancies');
+  showView('crew_flow');
   setupFileDragDrop();
   setTimeout(checkForUpdates, 2000);
   setTimeout(autoRegisterMessagingPubkey, 1500);

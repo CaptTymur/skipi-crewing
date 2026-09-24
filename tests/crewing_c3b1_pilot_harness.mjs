@@ -18,7 +18,11 @@ function ok(condition, message) {
 }
 
 console.log('# static bridge and surface boundaries');
-ok(/id="mt-intake_pilot"[^>]+showView\('intake_pilot'\)/.test(html), 'desktop pilot entry is wired');
+// K2 (OWNER (654)/(658)): the pilot lost its own module tab; it is entered from
+// the Crew Flow header button, which routes through the same showView/mobileShow.
+ok(!/id="mt-intake_pilot"/.test(html), 'the pilot no longer claims a desktop module tab');
+ok(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(html), 'desktop pilot entry is wired from Crew Flow');
+ok(/function crewFlowOpenPilot\(\) \{[\s\S]*?mobileShow\('intake_pilot'\)[\s\S]*?showView\('intake_pilot'\);/.test(html), 'the Crew Flow pilot entry routes through showView/mobileShow');
 ok(!/MOBILE_RAIL_QA\s*=\s*\{[^}]*intake_pilot/s.test(html), 'mobile rail remains unchanged');
 ok(rust.includes('.redirect(Policy::none())'), 'native pilot disables redirects');
 ok(rust.includes('spawn_blocking(operation)'), 'blocking HTTP work is kept off the UI command task');
