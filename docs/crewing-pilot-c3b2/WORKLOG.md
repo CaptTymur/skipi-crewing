@@ -305,3 +305,77 @@ is stage 2 on the emulator, not something this stand can answer.**
 - **Retired-module code is still present** (`showView('vacancies')` inside vacancy flows, `mobileParentView` entries, the vacancy/mailing/team screens). That is K2a by D2; K2b removes the code.
 - **Self-referential probes, caught three times in this session and each time before use:** (1) the PID file first recorded this session's own bash wrapper, because `$!` returned it; corrected against the known fact that the stand answered 200. (2) The S4 provenance probe matched its own assertions' source and passed on nothing; scoped to the consecutive comment lines. (3) The S5 probe spelled a superseded SHA out and so always read it back from its own file; the needles are now assembled from halves. The rule this file keeps: a probe is calibrated on a fact already known before anything is proved with it.
 
+### Fix-up 2 — counselor N6, the manager's live acceptance, the supervisor's ACCEPT WITH LIMITS
+
+Sources: `skipi-counselor/artifacts/2026-09-24-close-k2-fdc9b7c2.md` (N6);
+`skipi-supervisor/audits/2026-09-24-accept-k2-fdc9b7c2.md` (`1505f258`); the manager's live
+acceptance on «е» (desktop AppImage in Xephyr, Android x86_64 on the emulator, both on `fdc9b7c2`).
+Failing test first: `206e2cc` — c3b2 **412 passed, 14 failed**.
+
+**Two of my own open boundaries were closed by the live acceptance, not by me.** «В базу моряков» is
+ACTIVE on both native builds, so the `crewFlowNativeTransport()` discriminator is confirmed on real
+packages rather than read from `lib.rs`; the confirm is shown; the save created
+`seafarers/intake_<id>` in an isolated vault, which closes **U1 live**; the email action is
+`disabled` with its hint; the five-slot rail fits at 412 dp. What I could measure in a headless
+stand was a boundary, and this is what lies beyond it.
+
+- **C1** — `crewFlowMatchToProfile` wrote "compared against profiles" before `pilotRankNow()` and
+  unconditionally. With zero active profiles the server answers *successfully* having done nothing,
+  and the candidate still got the label. `pilotRankNow` now returns its attempt; the review state is
+  written only when the write was acked **and** `ranked >= 1`; otherwise an honest toast. Same class
+  as S1: a state written before the answer is a lie with a timestamp. Controls m19, m20.
+- **C2 / C3 / C4 / C5 / C6** — the save confirm now states the truth of the product (a saved
+  seafarer cannot be deleted anywhere); the web note no longer ships an internal card identifier to
+  the user's screen; the action panel says that "ignore" and "keep for later" live on this device
+  and that other clients still show the candidate; the connection screen names Crew Flow and the
+  inbound identifier instead of a vacancies list (the last S2-class pointer, found live on the
+  emulator); `applyI18nChrome` lists only the tabs that exist.
+- **A1** — the candidate card itself called into the retired module (seven strings and their RU
+  pairs). The ranking entity on the server is the matching/compliance profile; the copy says so now
+  in both languages. **Server codes are untouched** — only the human halves of the stale/refusal/
+  outcome catalogues changed. 13 c3b2 pins were rewritten by value, and the S2-class regex now
+  covers the card dictionaries: zero vacancy mentions there.
+- **A2** — three mutants survived all 16 harnesses. **They were not defects: the product already
+  asked for the confirm and already failed closed on transport. The tests could not see it.**
+  `inAppConfirm` was stubbed as `async () => true`, so no test could distinguish a confirm that is
+  asked from one that is ignored; "web" was modelled only as `__TAURI__={core}`, so the branch a
+  real browser takes — no `__TAURI__` at all — was never exercised; and `__SKIPI_WEB_SHELL__` never
+  appeared in any test. All three are now cases, the refusal path included (declining the confirm
+  writes nothing and marks nothing), and m21–m23 make them red. This is the honest shape of the
+  finding: a green suite proved less than it appeared to.
+- **A3 (recorded, not fixed):** in the EN interface the *body* of the compliance module is hardcoded
+  Russian — class №444, pre-K2, outside this route. The EN frames carry this as a known limit.
+- **A5 (recorded):** 108 of 110 lines in `pids.txt` were the bash wrapper's `$!`, not the Chrome
+  process. In this slice the PID written is the real process; where a wrapper makes `$!` meaningless,
+  the PID comes from an authoritative source (the kernel socket table for the port I chose), never
+  from a name mask. The same class already cost me one wrong line earlier in this card.
+- **Android hardware BACK (recorded, not fixed, K3/K4 tail):** from the candidate card the hardware
+  BACK button closes the app and returns to the previous application instead of returning to the
+  queue. The base was not measured, so I cannot say whether K2 introduced it; the shape is the Tauri
+  shell's, not Crew Flow's.
+
+- **Numbers after fix-up 2 (all 16 green):** c3b1 61/0 · **c3b2 438/0** · compliance 15/0 ·
+  crew_flow_demo 96/0 · mailbox 25/0 · mail_cv 28/0 · plugin_isolation 153/0 · **presence 196/0** ·
+  theme 38/0 · provenance 12 · stack 20 · negative 5 · csp/settings5/trial×2 OK. Gate on the full
+  diff: `status: pass`, `task: crewing-k2-modules`, `errors: []`, 8 files, 14 commands pass.
+- **A false verdict from my own mutation runner, found and fixed.** The 16:25Z full series printed
+  `SURVIVED/BROKEN` for all 23 rows. It was not 23 survivals: the runner's `killed` predicate
+  required `git status --porcelain` to be COMPLETELY empty, and the untracked `scratchpad/` (my own
+  evidence directory, un-excluded at the close of fix-up 1) made that false on every row. The
+  per-row evidence in that same log shows every mutant going red and every restore going green.
+  The predicate now looks only at TRACKED changes (`--untracked-files=no`), and the runner takes an
+  id filter so a subset can be re-measured. This is the same class as the three self-referential
+  probes earlier in this card: the predicate measured something that had changed in the
+  environment, not the thing it claims to measure.
+- **Frames: 25, zero unexplained `PHASE-FAILED`.** k03/k04 re-shot with the new panel hints;
+  **k23/k24** the save confirm RU/EN with the dialog open and unanswered (A2a evidence); **k25/k26**
+  the mobile connection screen RU/EN after C5. **A4:** k21 was the same scene as k08 — it is dropped
+  and k08/k09 now carry both the tab-bar and the S2 copy assertions; `numstat.txt` is refreshed in
+  the keep-set; the base half of the S6 measurement is kept; `skipi-settings.js` / `.css` are now
+  served by the stand.
+- **A frame that was lying, found by serving that asset.** Until now the stand 404'd
+  `skipi-settings.js`, so `openSettings()` fell back to the LEGACY settings shell and k17 showed it.
+  With the asset served — which is what the shipped dist does — settings open the @skipi/settings
+  module shell instead. k17 is re-targeted accordingly (no «Вакансии / Рассылки», «Рабочие данные»
+  present). The legacy shell is still real as a fallback and is what the presence harness pins;
+  the frame simply now shows the path a user actually takes.
