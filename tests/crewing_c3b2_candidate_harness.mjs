@@ -1028,7 +1028,7 @@ console.log('# K2 modules/crew-flow');
     };
     return { items, facts };
   }
-  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false } = {}) {
+  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false, noProfiles = false } = {}) {
     const srv = k2Server();
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
@@ -1116,13 +1116,20 @@ console.log('# K2 modules/crew-flow');
       inAppConfirm: async () => true,
       async invoke(command, args) {
         calls.push({ command, args: JSON.parse(JSON.stringify(args ?? null)) });
+        if (command === 'crewing_intake_rank_list' && noProfiles) return { items: [], unranked_active_profiles: [], confirmations: [] };
+        if (command === 'crewing_intake_matching_profile_list' && noProfiles) return { items: [] };
         if (command === 'crewing_intake_candidate_list') return { items: srv.items, limit: 50, offset: 0, total: srv.items.length };
         if (command === 'crewing_intake_alias_list') return { items: [] };
         if (command === 'crewing_intake_candidate_get') return srv.items.find((i) => i.intake_id === args.intakeId) || srv.items[0];
         if (command === 'crewing_intake_fact_list') return { items: srv.facts[args.intakeId] || [] };
         if (command === 'crewing_intake_rank_list') return { items: [], unranked_active_profiles: [{ profile_id: 'p1', name: 'Master · Alpha' }, { profile_id: 'p2', name: 'Master · Beta' }], confirmations: [] };
         if (command === 'crewing_intake_matching_profile_list') return { items: [{ id: 'p1', crewing_id: 'crew-synthetic', name: 'Master · Alpha', version: 1, state: 'active' }, { id: 'p2', crewing_id: 'crew-synthetic', name: 'Master · Beta', version: 1, state: 'active' }] };
-        if (command === 'crewing_intake_candidate_rank') return { ranked: 2, written: 2, reason: 'ranked', profiles: ['p1', 'p2'] };
+        if (command === 'crewing_intake_candidate_rank') {
+          timeline.push('invoke:rank');
+          return noProfiles
+            ? { ranked: 0, written: 0, reason: 'no_active_profiles', profiles: [] }
+            : { ranked: 2, written: 2, reason: 'ranked', profiles: ['p1', 'p2'] };
+        }
         if (command === 'save_seafarer_from_bundle') return { id: 'sf-1', display_name: 'Oleh V.' };
         return null;
       },
@@ -1313,6 +1320,66 @@ console.log('# K2 modules/crew-flow');
       const rs = JSON.parse(failCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
       softOk(!(rs['intake-1'] && rs['intake-1'].action === 'emailed'),
         'S1b: when the compose form cannot be opened, nothing is marked as emailed');
+    }
+
+
+    // ---- fix-up 2 (counselor close N6 + the manager's live acceptance) -------
+    // C1: "matched" is a claim about the SERVER. It may be written only after the
+    // server confirms a comparison was made, and never when there is nothing to
+    // compare against.
+    {
+      const okCtx = makeCrewContext({});
+      okCtx.__crew.renderCrewFlowView(); await flush();
+      okCtx.__crew.pilotOpenCard('intake-2'); await flush();
+      await tryRun(okCtx, "crewFlowMatchToProfile('intake-2');");
+      await flush(10);
+      const tl = okCtx.timeline;
+      const iRank = tl.indexOf('invoke:rank');
+      const iMark = tl.indexOf('read-state:matched');
+      softOk(iRank !== -1, 'C1: "match against a profile" dispatches the rank command');
+      softOk(iMark !== -1 && iRank < iMark,
+        'C1: the matched review state is written AFTER the server answers — timeline [' + tl.join(' > ') + ']');
+      const noneCtx = makeCrewContext({ noProfiles: true });
+      noneCtx.__crew.renderCrewFlowView(); await flush();
+      noneCtx.__crew.pilotOpenCard('intake-2'); await flush();
+      await tryRun(noneCtx, "crewFlowMatchToProfile('intake-2');");
+      await flush(10);
+      const rsNone = JSON.parse(noneCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rsNone['intake-2'] && rsNone['intake-2'].action === 'matched'),
+        'C1: with no compliance profiles nothing is marked as compared');
+      softOk(noneCtx.toasts.some(([m]) => /profile|профил/i.test(String(m))),
+        'C1: with no compliance profiles the operator is told why, not left with a false label');
+    }
+    // C2: the confirm must state the truth of the product — a saved seafarer
+    // cannot be deleted anywhere, not only "not from Crew Flow".
+    softOk(!/нельзя отменить из Crew Flow|cannot be undone from Crew Flow/.test(html),
+      'C2: the save confirm no longer claims the limit is only Crew Flow');
+    softOk(/'crew_flow\.save_confirm':'[^']*базе моряков/.test(html) && /'crew_flow\.save_confirm':'[^']*seafarer database/.test(html),
+      'C2: the save confirm says a saved seafarer cannot be deleted anywhere (RU and EN)');
+    // C3: no internal card identifiers in user-facing copy.
+    softOk(!/K3/.test((html.match(/'crew_flow\.save_web_note':'[^']*'/g) || []).join(' ')),
+      'C3: the web-version note carries no internal identifier');
+    softOk((html.match(/'crew_flow\.save_web_note':'[^']*'/g) || []).length === 2,
+      'C3: the web-version note exists in both dictionaries');
+    // C4: ignore / keep-for-later are device-local until there is server state.
+    softOk((html.match(/'crew_flow\.local_decision':'[^']*'/g) || []).length === 2,
+      'C4: the local-decision note exists in both dictionaries');
+    softOk(/data-qa="crew-flow-local-note"/.test(html),
+      'C4: the action panel carries the local-decision note');
+    // C5: the connection screen must not promise a vacancies list any more.
+    softOk(!/first screen is your vacancies|первым экраном станет список ваших вакансий/.test(html),
+      'C5: the connection screen no longer promises a vacancies list');
+    softOk((html.match(/'mobile\.connect_desc':'[^']*Crew Flow/g) || []).length === 2,
+      'C5: the connection screen names Crew Flow as the first screen (RU and EN)');
+    // C6: the chrome i18n table must not carry retired tab ids.
+    {
+      const chromeTable = fxSlice('function applyI18nChrome() {', '\n}');
+      softOk(chromeTable !== '', 'C6: the applyI18nChrome table is bounded');
+      for (const id of ['mt-vacancies', 'mt-mailings', 'mt-team', 'mt-intake_pilot']) {
+        softOk(!chromeTable.includes(id), 'C6: the chrome i18n table no longer lists ' + id);
+      }
+      softOk(chromeTable.includes('mt-compliance') && chromeTable.includes('mt-seafarers'),
+        'C6: the surviving modules stay in the chrome i18n table');
     }
 
     // ---- S2: surviving copy must not send the operator to a deleted module ----
