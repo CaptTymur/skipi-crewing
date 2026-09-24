@@ -49,7 +49,10 @@ for (const code of ['rank_not_found', 'profile_not_active', 'profile_version_sta
   ok(rust.includes(`"${code}",`), `safe allowlist carries domain code ${code}`);
 }
 ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc370983366672c41b41116754ce/.test(workflow), 'runtime pin d6238191 is unchanged');
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: (93b1a51eb59d0dff5f2db3f2289b8afb09761f39|7bd9300601e5445a9a60f1136d2fd57a9e9b32c5)/.test(workflow), 'guard pin is the accepted base pin or the reviewed 7bd pin');
+// S5: exactly ONE accepted guard pin. A list of three quietly accepts two
+// superseded gate configurations — the pin then proves nothing about WHICH
+// gate ran. The K2 route lives only in b72a59ca.
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: b72a59ca947ddb6a70a07b0328b61f9a29eca090\n/.test(workflow), 'the workflow pins exactly the K2 route guard SHA b72a59ca');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -283,7 +286,7 @@ console.log('# positive chain on isolated copies: card → facts → correction 
   ok(/data-group="missing" data-requirement="rank"[^<]*Requirement not met · wanted: Chief Officer · entered: Master/.test(rowB), 'B: rank missing with literal wanted/found');
   ok(/data-group="unconfirmed" data-requirement="certificate:radio_operator"[^<]*Fact not entered/.test(rowC) && !/data-group="missing" data-requirement="certificate:radio_operator"/.test(rowC), 'C: unconfirmed fact stays unconfirmed, never rendered as missing');
   ok([rowA, rowB, rowC].every((r) => /data-qa="pilot-rank-freshness">Fact freshness for this comparison is unverified/.test(r)), 'every stored comparison states fact freshness is unverified');
-  ok([rowA, rowB, rowC].every((r) => /Vacancy version used: 1/.test(r) && /(Master|Chief Officer) · [ABC] <span class="pilot-note">\(prof-[ABC] · current version 1 · state active\)/.test(r)), 'rows show vacancy version used and the current profile name/version/state');
+  ok([rowA, rowB, rowC].every((r) => /Profile version used: 1/.test(r) && /(Master|Chief Officer) · [ABC] <span class="pilot-note">\(prof-[ABC] · current version 1 · state active\)/.test(r)), 'rows show the profile version used and the current profile name/version/state');
   ok(!/data-qa="pilot-unranked"/.test(main(ctx)), 'no unranked gap remains after ranking every active profile');
   ok(/quarantined|ranked/.test(main(ctx)) && /Document unverified · synthetic data only/.test(main(ctx)), 'ranked state does not upgrade source trust');
   // confirm a decided=false pair (B)
@@ -292,7 +295,7 @@ console.log('# positive chain on isolated copies: card → facts → correction 
   ok(confirm && JSON.stringify(confirm.args.pair) === JSON.stringify({ profile_id: 'prof-B', profile_version: 1 }), 'confirm sends exactly the viewed pair');
   ok(attempts(ctx).slice(-1)[0].outcome === 'acked', 'a decided=false pair can be shortlisted for further consideration');
   const hist1 = historyRow(ctx, 'decision-1');
-  ok(hist1 && /Active decision/.test(hist1) && /Team member user-op-1/.test(hist1) && /Vacancy version used: 1/.test(hist1) && /UTC/.test(hist1), 'history shows id, seat user, UTC time, pair and active state');
+  ok(hist1 && /Active decision/.test(hist1) && /Team member user-op-1/.test(hist1) && /Profile version used: 1/.test(hist1) && /UTC/.test(hist1), 'history shows id, seat user, UTC time, pair and active state');
   ok(/data-group="missing" data-requirement="rank"/.test(rankRow(ctx, 'prof-B', 1)) && /data-qa="pilot-withdraw"/.test(main(ctx)), 'after confirmation the missing reason and freshness caveat remain; withdraw is offered');
   ok(/Decision history · original comparison was not preserved/.test(main(ctx)), 'history header states the original comparison is not preserved');
   // double confirm -> already_confirmed
@@ -320,7 +323,7 @@ console.log('# RU/EN, nullable values, unknown codes and refusal precedence');
   const ctx = makeContext({ language: 'ru' });
   await positiveChainUntilRank(ctx);
   ok(/Карточка кандидата/.test(main(ctx)) && /Сведения и источники/.test(main(ctx)) && /Сохранённые оценки/.test(main(ctx)) && /История решений · исходная оценка не сохранена/.test(main(ctx)), 'Russian section titles');
-  ok(/Актуальность фактов для этой оценки не подтверждена/.test(main(ctx)) && /Версия вакансии в оценке: 1/.test(main(ctx)) && /Сведения не внесены/.test(main(ctx)) && /Введено сотрудником/.test(main(ctx)) && /Запрос пересчёта выполнен/.test(main(ctx)) && /Добавить в шортлист для дальнейшего рассмотрения/.test(main(ctx)) && /Документ не проверен · только синтетические данные/.test(main(ctx)), 'Russian mandatory honesty strings');
+  ok(/Актуальность фактов для этой оценки не подтверждена/.test(main(ctx)) && /Версия профиля в оценке: 1/.test(main(ctx)) && /Сведения не внесены/.test(main(ctx)) && /Введено сотрудником/.test(main(ctx)) && /Запрос пересчёта выполнен/.test(main(ctx)) && /Добавить в шортлист для дальнейшего рассмотрения/.test(main(ctx)) && /Документ не проверен · только синтетические данные/.test(main(ctx)), 'Russian mandatory honesty strings');
   detail(ctx).form.value = 'draft survives'; ctx.setLang('en'); ctx.__pilot.renderIntakePilot();
   ok(/Fact freshness for this comparison is unverified/.test(main(ctx)) && /draft survives/.test(main(ctx)), 'language switch re-renders in English and keeps the form draft');
   const s = ctx.server;
@@ -329,20 +332,20 @@ console.log('# RU/EN, nullable values, unknown codes and refusal precedence');
   s.ranks.push({ profile_id: 'prof-B', profile_version: 1, primary: true, met: [], missing: [], unconfirmed: [], reasons: [{ requirement: 'future:thing', outcome: 'future_outcome', wanted: null, found: null }], decided: false });
   s.ranks.splice(1, 1);
   await ctx.__pilot.pilotCardRefreshAll(); await flush();
-  ok(/data-qa="pilot-rank-stale">Vacancy changed — rank again/.test(rankRow(ctx, 'prof-A', 1)), 'profile_version staleness has its own badge');
-  ok(/data-qa="pilot-rank-stale">Vacancy is not active/.test(rankRow(ctx, 'prof-C', 1)), 'profile_not_active staleness has its own badge');
+  ok(/data-qa="pilot-rank-stale">Profile changed — compare again/.test(rankRow(ctx, 'prof-A', 1)), 'profile_version staleness has its own badge');
+  ok(/data-qa="pilot-rank-stale">Profile is not active/.test(rankRow(ctx, 'prof-C', 1)), 'profile_not_active staleness has its own badge');
   ok(/Bosun · D \(prof-D\)/.test(main(ctx)), 'a profile created after the run is listed as unranked');
   ok(/data-version="3"[\s\S]*?data-qa="pilot-fact-confidence">confidence 0<\/span> · Unknown reason: future_code/.test(main(ctx)), 'confidence 0 renders as measured zero and an unknown uncertainty code stays visible');
   ok(/data-version="2"[\s\S]*?confidence unknown/.test(main(ctx)), 'confidence null renders as unknown');
-  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)) && /primary vacancy/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown, and primary is labelled');
-  ok(/Vacancy changed — rank again/.test(rankRow(ctx, 'prof-A', 1)) && /data-qa="pilot-rank-freshness"/.test(rankRow(ctx, 'prof-A', 1)), 'vacancy staleness and fact freshness are two separate statements');
+  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)) && /primary profile/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown, and primary is labelled');
+  ok(/Profile changed — compare again/.test(rankRow(ctx, 'prof-A', 1)) && /data-qa="pilot-rank-freshness"/.test(rankRow(ctx, 'prof-A', 1)), 'profile staleness and fact freshness are two separate statements');
   // refusal precedence: domain code before generic 404/403
   await ctx.__pilot.pilotShortlistConfirm('prof-D', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">This candidate has not been scored for this vacancy/.test(main(ctx)) && !/Section unavailable/.test(main(ctx)), 'rank_not_found 404 is the domain refusal, not "section unavailable"');
+  ok(/data-qa="pilot-attempt-refused">This candidate has not been scored for this compliance profile/.test(main(ctx)) && !/Section unavailable/.test(main(ctx)), 'rank_not_found 404 is the domain refusal, not "section unavailable"');
   await ctx.__pilot.pilotShortlistConfirm('prof-A', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">The vacancy has changed — rank again/.test(main(ctx)), 'profile_version_stale 409');
+  ok(/data-qa="pilot-attempt-refused">The compliance profile has changed — compare again/.test(main(ctx)), 'profile_version_stale 409');
   await ctx.__pilot.pilotShortlistConfirm('prof-C', 1); await flush();
-  ok(/data-qa="pilot-attempt-refused">The vacancy is not active/.test(main(ctx)), 'profile_not_active 409');
+  ok(/data-qa="pilot-attempt-refused">The compliance profile is not active/.test(main(ctx)), 'profile_not_active 409');
   s.user = 'user-op-2';
   await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
   s.user = 'user-op-1';
@@ -387,7 +390,7 @@ console.log('# fences: pending, context change, A→B, A→B→A, request identi
   const first = ctx.__pilot.pilotRankNow(); const second = ctx.__pilot.pilotRankNow();
   ok(mutationCalls(ctx).length === 1 && /data-qa="pilot-rank-now"[^>]*disabled/.test(main(ctx)), 'duplicate clicks dispatch one write and the button is disabled while pending');
   gate.resolve({ ranked: 0, written: 0, reason: 'no_active_profiles', profiles: [] }); await first; await second; await flush();
-  ok(/Ranking request completed: No active vacancies · 0\/0/.test(main(ctx)) && attempts(ctx)[0].outcome === 'acked', 'no_active_profiles is a successful answer without a computation, not a refusal');
+  ok(/Ranking request completed: No active compliance profiles · 0\/0/.test(main(ctx)) && attempts(ctx)[0].outcome === 'acked', 'no_active_profiles is a successful answer without a computation, not a refusal');
 }
 {
   const ctx = makeContext(); await openCard(ctx);
@@ -421,13 +424,15 @@ console.log('# C3c-1 mobile shell: view intake_pilot reachable and renders the c
   const slice = (from, to) => { const a = html.indexOf(from); assert.ok(a > 0, `anchor missing: ${from}`); const b = html.indexOf(to, a); assert.ok(b > a, `end anchor missing: ${to}`); return html.slice(a, b); };
   const mobileShowSource = slice('function mobileShow(view) {', '\nfunction mobileBack()');
   ok(/if \(view === 'intake_pilot'\) return mobileRenderIntakePilot\(\);/.test(mobileShowSource), 'mobileShow routes intake_pilot to the mobile pilot renderer');
-  ok(/if \(mobileState\.view === 'intake_pilot' && view !== 'intake_pilot'\) pilotLeave\(\);/.test(mobileShowSource), 'leaving the mobile pilot view resets pilot state (pilotLeave)');
+  ok(/if \(pilotIsHostView\(mobileState\.view\) && !pilotIsHostView\(view\)\) pilotLeave\(\);/.test(mobileShowSource), 'leaving every mobile pilot host view resets pilot state (pilotLeave; K2 hosts are intake_pilot + crew_flow)');
   ok(/function mobileRenderIntakePilot\(\)\{ pilotEnter\(\); \}/.test(html), 'mobile pilot renderer is pilotEnter on the same C3b-1/C3b-2 renderers (no second renderer)');
   const tiles = slice('function appsMobileModuleTilesHtml()', '\nfunction appsLauncherHtml()');
-  const tile = /\{ view:'intake_pilot', icon:'[^']+', qa:'data-qa="([^"]+)"' \}/.exec(tiles);
-  ok(!!tile && !/^apps-module-tile-/.test(tile[1]) && !/^bottom-nav-/.test(tile[1]), `mobile Apps grid carries an intake_pilot tile with a non-canonical hook (${tile ? tile[1] : 'absent'})`);
-  ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
-  ok(/var MOBILE_RAIL_QA = \{ vacancies: 'bottom-nav-vacancies', mailings: 'bottom-nav-mailings', seafarers: 'bottom-nav-seafarers', crew_flow: 'bottom-nav-crew_flow', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays the canonical 5 slots');
+  // K2 (OWNER (654)/(658)): the pilot lost its Apps tile — it is entered only
+  // from Crew Flow, which still gives it no canonical rail/module-tile hook.
+  ok(!/view:'intake_pilot'/.test(tiles), 'the mobile Apps grid no longer carries an intake_pilot tile');
+  ok(/data-qa="crew-flow-open-pilot"/.test(html), 'the pilot is entered from Crew Flow (crew-flow-open-pilot)');
+  ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot') && !html.includes('apps-pilot-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
+  ok(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays five canonical slots (K2 composition)');
   const chrome = slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
   ok((chrome.match(/mobileNavButton\('/g) || []).length === 5 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail still renders exactly 5 slots, none for intake_pilot');
   ok(/intake_pilot: 'apps',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to the Apps grid');
@@ -481,7 +486,7 @@ const controls = [
       ctx.server.profiles.push({ id: 'prof-N', crewing_id: 'crew-synthetic', name: 'No certs · N', version: 1, state: 'active', rank: 'Master', certs: null });
       await positiveChainUntilRank(ctx);
       const row = rankRow(ctx, 'prof-N', 1);
-      assert.ok(/data-group="unconfirmed" data-requirement="mandatory_certs"[^<]*Requirement not stated in vacancy/.test(row), 'unstated requirement stays a separate unknown');
+      assert.ok(/data-group="unconfirmed" data-requirement="mandatory_certs"[^<]*Requirement not stated in the profile/.test(row), 'unstated requirement stays a separate unknown');
       assert.ok(!/data-group="missing" data-requirement="mandatory_certs"/.test(row), 'unstated requirement is not counted as violated');
     },
   },
@@ -515,7 +520,7 @@ const controls = [
     async sensor(ctx) {
       await positiveChainUntilRank(ctx); await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
       const row = historyRow(ctx, 'decision-1');
-      assert.ok(row && /Team member user-op-1/.test(row) && /Vacancy version used: 1/.test(row), 'history row carries decision fields');
+      assert.ok(row && /Team member user-op-1/.test(row) && /Profile version used: 1/.test(row), 'history row carries decision fields');
       assert.ok(!/pilot-history-reason/.test(row) && !/certificate:|=missing|=met|unconfirmed/.test(row), 'history row carries no current reason marker');
     },
   },
@@ -631,7 +636,7 @@ const controls = [
   },
   {
     id: 'M18', block: 'c3b1', defect: 'pilot renders into the hidden desktop #main under the mobile shell',
-    edits: [["function pilotContainer() { return document.getElementById(state.view === 'mobile-intake_pilot' ? 'mobile-main' : 'main'); }",
+    edits: [["function pilotContainer() { return document.getElementById(pilotHostIsMobile() ? 'mobile-main' : 'main'); }",
       "function pilotContainer() { return document.getElementById('main'); }"]],
     async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
   },
@@ -907,6 +912,587 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
   ok(titleEn[0] === 'Apps' && titleEn[1] === 'Plugins for your team', 'R3: the mobile Apps header renders the en values at runtime');
   ok(titleRu[0] === 'Приложения' && titleRu[1] === 'Плагины для вашей команды', 'R3: the mobile Apps header renders the ru values at runtime');
   ok(titleRu[0] !== titleEn[0] && titleRu[1] !== titleEn[1], 'R3: the mobile Apps header actually changes with the interface language');
+}
+
+// ---------------------------------------------------------------------------
+// # K2 modules/crew-flow (OWNER (654)/(658), 2026-09-24; PREP §5 checks 1–10)
+// Crew Flow becomes the home module: it shows the live pilot intake queue with
+// an operator action panel, the retired work modules (vacancies, mailings) and
+// the Team/Intake-pilot tabs leave the navigation, and the client requirement
+// profiles are renamed to the compliance profile. Every check here is RED on
+// the K2 base commit and GREEN on the candidate.
+// ---------------------------------------------------------------------------
+console.log('# K2 modules/crew-flow');
+{
+  const k2slice = (from, to) => {
+    const a = html.indexOf(from);
+    if (a < 0) return '';
+    const b = html.indexOf(to, a);
+    return b > a ? html.slice(a, b) : '';
+  };
+  const count = (re) => (html.match(re) || []).length;
+
+  // --- 1. retired entries are gone from the shipped HTML ---------------------
+  softOk(!html.includes('id="mt-vacancies"'), 'K2-1: desktop vacancies tab is gone');
+  softOk(!html.includes('id="mt-mailings"'), 'K2-1: desktop mailings tab is gone');
+  softOk(!html.includes('id="mt-team"'), 'K2-1: desktop team tab is gone');
+  softOk(!html.includes('nav-vacancies-badge'), 'K2-1: vacancies nav badge is gone');
+  softOk(!html.includes('id="mt-intake_pilot"'), 'K2-1: desktop intake-pilot tab is gone');
+  softOk(count(/mobileNavButton\('vacancies'/g) === 0 && count(/mobileNavButton\('mailings'/g) === 0,
+    'K2-1: the mobile rail builds no vacancies/mailings slot');
+  softOk(!html.includes('apps-module-tile-vacancies') && !html.includes('apps-module-tile-mailings'),
+    'K2-1: the mobile Apps grid carries no vacancies/mailings module tile');
+  softOk(!html.includes('apps-pilot-tile-intake_pilot'), 'K2-1: the mobile Apps grid carries no intake-pilot tile');
+
+  // --- 2. the new canonical rail and the pilot entry inside Crew Flow --------
+  softOk(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' \};/.test(html),
+    'K2-2: MOBILE_RAIL_QA is the five D3 slots crew_flow·compliance·seafarers·documents·apps');
+  const k2chrome = k2slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
+  const k2railOrder = [...k2chrome.matchAll(/mobileNavButton\('([a-z_]+)'/g)].map((m) => m[1]);
+  softOk(k2railOrder.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
+    'K2-2: mobileRenderChrome renders exactly the five D3 slots in order — got [' + k2railOrder.join(',') + ']');
+  softOk(count(/data-qa="crew-flow-open-pilot"/g) >= 2,
+    'K2-2: the pilot entry data-qa="crew-flow-open-pilot" exists in both the desktop and the mobile Crew Flow render');
+  // must-keep tokens introduced by PR-P (presence contract for crew_flow)
+  softOk(html.includes('data-qa="crew-flow-view"') && html.includes('id="mt-crew_flow"') && html.includes("crew_flow: 'bottom-nav-crew_flow'"),
+    'K2-2: PR-P must-keep crew_flow presence tokens survive the K2 dist');
+  // S11: Team stays reachable from Settings → Доступ / токены (only token issuer)
+  const k2access = k2slice("} else if (settingsTab==='access') {", "} else if (settingsTab==='app') {");
+  softOk(k2access.includes('data-qa="settings-team-access-open"') && /showView\(\\?'team\\?'\)/.test(k2access) && k2access.includes('hasTeamAccess()'),
+    'K2-2/S11: Settings → Доступ / токены keeps a gated entry into the team view');
+
+  // --- 3. start view and fallbacks --------------------------------------------
+  softOk(/var state = \{\s*\n\s*view: 'crew_flow',/.test(html), 'K2-3: the desktop start view is crew_flow');
+  const k2showView = k2slice('function showView(v) {', '\nfunction renderVacanciesTree');
+  softOk(k2showView !== '' && !/v = 'vacancies';/.test(k2showView), 'K2-3: showView no longer falls back to vacancies');
+  softOk(/v = 'crew_flow';/.test(k2showView), 'K2-3: the team gate in showView falls back to crew_flow');
+  softOk(k2slice('async function bootDesktopMain(){', '\n(async function(){').includes("showView('crew_flow');"),
+    'K2-3: desktop boot opens crew_flow');
+  softOk(count(/mobileShow\(mobileHasConnection\(\) \? 'crew_flow' : 'connection'\)/g) === 2,
+    'K2-3: both mobile boot paths open crew_flow when connected');
+  const k2mobileShow = k2slice('function mobileShow(view) {', '\nfunction mobileBack()');
+  softOk(k2mobileShow !== '' && !/return mobileRenderVacancies\(\);/.test(k2mobileShow),
+    'K2-3: mobileShow no longer defaults to the vacancies renderer');
+  softOk(!/view = 'vacancies';/.test(k2mobileShow), 'K2-3: mobileShow no longer rewrites a view to vacancies');
+  softOk(/if \(view === 'team'\) view = 'crew_flow';/.test(k2mobileShow), 'K2-3: the mobile team fallback is crew_flow');
+  // S-входы: the three live entries named by the supervisor
+  softOk(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\(\\?'crew_flow\\?'\)/.test(html),
+    'K2-3/S: the mobile header home button opens crew_flow');
+  softOk(k2slice('function connectSubmit', '\nfunction connectShowError').includes("mobileShow('crew_flow')")
+      || /state\.vacancies = \[\];\s*\n\s*if \(isMobileShellActive\(\)\) mobileShow\('crew_flow'\);/.test(html),
+    'K2-3/S: navigation after a successful company token lands on crew_flow');
+  softOk(!/renderTeamOnboarding[\s\S]{0,4000}?showView\('team'\)/.test(html)
+      || k2slice('async function teamOnboardingShowTeam() {', '\nasync function syncTeamRoleFromMembers') === ''
+      || !html.includes('onclick="teamOnboardingShowTeam()"'),
+    'K2-3/S: the fresh-install team onboarding no longer routes into the hidden team view');
+
+  // --- 7. rename: compliance profile -----------------------------------------
+  const markerLine = '<!-- Presence-contract compatibility marker; not visible UI: Compliance Profiles / Профили соответствия -->';
+  const htmlNoMarker = html.split(markerLine).join('');
+  const renameRe = /Профил[ьи] требований|профил[ьияей]+ требований|Профилей требований|[Rr]equirement [Pp]rofiles?|Client Requirement/g;
+  const leftovers = htmlNoMarker.match(renameRe) || [];
+  softOk(leftovers.length === 0, 'K2-7: no "client requirement profile" wording outside the presence marker — got ' + leftovers.length + ' [' + [...new Set(leftovers)].join(' | ') + ']');
+  softOk(/'nav\.compliance':'Compliance Profile'/.test(html) && /'nav\.compliance':'Профиль соответствия'/.test(html),
+    'K2-7: nav.compliance is Compliance Profile / Профиль соответствия in the en and ru dictionaries');
+  softOk(html.includes(markerLine), 'K2-7: the presence compatibility marker comment is untouched');
+
+  // --- 8. legacy work settings section ---------------------------------------
+  softOk(!html.includes('Вакансии / Рассылки'), 'K2-8: the legacy "Вакансии / Рассылки" settings label is gone');
+  softOk(!/navItem\('work'/.test(html), 'K2-8: the legacy desktop work settings nav item is gone');
+  softOk(!/id:'work'/.test(html) && !/if \(page === 'work'\)/.test(html), 'K2-8: the legacy mobile work settings page is gone');
+  softOk(count(/inputCtrl\('s-reply'/g) >= 1 && count(/id="m-reply"/g) >= 1,
+    'K2-8: the reply-to email field keeps a home in settings (value is never cleared)');
+
+  // --- 10. hiding is not deleting --------------------------------------------
+  const k2crew = k2slice('// CREW FLOW MODULE START', '// CREW FLOW MODULE END');
+  softOk(k2crew !== '' && !/delete_vacancy_remote|delete_mailing_request_remote|delete_document|localStorage\.removeItem/.test(k2crew),
+    'K2-10: the Crew Flow module deletes nothing — retired modules are hidden, not wiped');
+
+  // ------------------------------------------------------------------ runtime
+  // 4/5/6: isolated vm over the Crew Flow + C3b-1 + C3b-2 blocks with a recording
+  // invoke stub serving a synthetic queue of three candidates.
+  const mobileCrewBlock = k2slice('function mobileRenderCrewFlow() {', '\nfunction mobileRenderSeafarers()');
+  function k2Server() {
+    const items = [
+      { intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', content_type: 'application/pdf', content_bytes: 120, state: 'quarantined', created_at: '2026-09-24T09:00:00', objects: [{ id: 'o1', content_type: 'application/pdf' }], summary: { state: 'quarantined', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null } },
+      { intake_id: 'intake-2', receipt_id: 'r2', crewing_id: 'crew-synthetic', content_type: 'application/pdf', content_bytes: 140, state: 'ranked', created_at: '2026-09-24T08:00:00', objects: [{ id: 'o2', content_type: 'application/pdf' }], summary: { state: 'ranked', facts: 2, ranks: 2, ranks_stale: 0, active_confirmations: 1, needs_review_reason: null } },
+      { intake_id: 'intake-3', receipt_id: 'r3', crewing_id: 'crew-synthetic', content_type: 'text/plain', content_bytes: 90, state: 'needs_review', created_at: '2026-09-24T07:00:00', objects: [{ id: 'o3', content_type: 'text/plain' }], summary: { state: 'needs_review', facts: 1, ranks: 0, ranks_stale: 0, active_confirmations: 0, needs_review_reason: 'unreadable_source' } },
+    ];
+    const facts = {
+      'intake-1': [{ field: 'name', versions: [{ field: 'name', value: 'Oleh V.', version: 1, source_object: 'o1', created_at: '2026-09-24T09:05:00' }] },
+        { field: 'rank', versions: [{ field: 'rank', value: 'Master', version: 1, source_object: 'o1', created_at: '2026-09-24T09:06:00' }] },
+        { field: 'email', versions: [{ field: 'email', value: 'oleh@example.test', version: 1, source_object: 'o1', created_at: '2026-09-24T09:07:00' }] }],
+      'intake-2': [{ field: 'name', versions: [{ field: 'name', value: 'Ramon S.', version: 1, source_object: 'o2', created_at: '2026-09-24T08:05:00' }] },
+        { field: 'rank', versions: [{ field: 'rank', value: 'Chief Officer', version: 1, source_object: 'o2', created_at: '2026-09-24T08:06:00' }] }],
+      'intake-3': [{ field: 'name', versions: [{ field: 'name', value: 'Marko P.', version: 1, source_object: 'o3', created_at: '2026-09-24T07:05:00' }] }],
+    };
+    return { items, facts };
+  }
+  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false } = {}) {
+    const srv = k2Server();
+    const nodes = new Map();
+    for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
+    const calls = [];
+    const toasts = [];
+    const views = [];
+    const timeline = [];
+    const store = new Map();
+    let lang = language;
+    const ctx = {
+      console, Promise, Date, Math, JSON, Number, String, Array, Object, Uint8Array, RegExp, Boolean, isNaN, parseInt, parseFloat,
+      __demoMode: demo,
+      state: {
+        view: 'crew_flow',
+        settings: settings === undefined ? { server_url: 'http://127.0.0.1:43123', bearer_token: 'synthetic-token', crewing_id: 'crew-synthetic' } : settings,
+        intakePilot: freshPilotState(),
+        crewFlowSignals: [], crewFlowReadState: {}, applicationsByVacancy: {}, attachmentsByApp: {}, messagesByApp: {},
+      },
+      window: { crypto: { randomUUID: () => 'ev-1', getRandomValues: (a) => a.fill(7) } },
+      navigator: { clipboard: { writeText: async () => {} } },
+      localStorage: { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) },
+      document: { getElementById(id) { return nodes.get(id) || null; }, addEventListener() {}, body: { classList: { contains: () => false, add() {}, remove() {} } } },
+      FileReader: class {},
+      getUiLang() { return lang; },
+      setLang(v) { lang = v; },
+      tr(key) { const d = ctx.__K2_STRINGS; return (d[lang] && d[lang][key]) || d.en[key] || key; },
+      mobileTr(key) { return ctx.tr('mobile.' + key); },
+      escapeHtml: esc, escapeAttr: esc,
+      escapeJsString(v) { return String(v ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); },
+      humanSize(b) { return `${b} B`; },
+      certLabelById(id) { return String(id); },
+      showToast(msg, kind) { toasts.push([msg, kind]); },
+      showView(v) {
+        views.push(v); ctx.state.view = v;
+        // The real showView('mail') starts an UNAWAITED mailbox render that paints
+        // #main when it settles (S1). With mailRace a SECOND chain starts a tick
+        // later — i.e. while the compose path is already waiting on the first.
+        // That is the case a single `await renderMailboxTree()` cannot cover: it
+        // resolves, opens the form, and the late chain then wipes it. Only waiting
+        // until nothing is in flight survives, which is what the fix does.
+        if (v === 'mail') {
+          ctx.renderMailboxTree();
+          if (mailRace) { ctx.renderMailboxTree(); setTimeout(() => ctx.renderMailboxTree(), 0); }
+        }
+      },
+      mobileShow(v) { views.push('mobile:' + v); ctx.state.view = 'mobile-' + v; },
+      mobileMain(htmlStr) { nodes.get('mobile-main').innerHTML = htmlStr; },
+      isMobileShellActive() { return String(ctx.state.view || '').indexOf('mobile-') === 0; },
+      openMailCompose() {
+        if (composeBroken) { timeline.push('compose-refused'); return; }
+        timeline.push('compose-open');
+        nodes.get('main').innerHTML = '<h1>Compose mail</h1><input id="mail-compose-to" value=""><input id="mail-compose-subject" value="">';
+        nodes.set('mail-compose-to', { id: 'mail-compose-to', value: '' });
+        nodes.set('mail-compose-subject', { id: 'mail-compose-subject', value: '' });
+      },
+      // The real showView('mail') only STARTS this; it repaints #main when it
+      // settles. The stub reproduces that ordering — and the real contract of
+      // publishing the in-flight render on state.mail.viewPending (S1) — so the
+      // compose form cannot be opened too early (visual-pass defect k06).
+      mailboxState() { if (!ctx.state.mail) ctx.state.mail = { folder: 'INBOX', messages: [], selected: null, mailbox: null, viewPending: null }; return ctx.state.mail; },
+      renderMailboxTree() {
+        const mail = ctx.mailboxState();
+        const run = (async () => {
+          for (let i = 0; i < 4; i += 1) await Promise.resolve();
+          await new Promise((r) => setTimeout(r, 0));
+          nodes.get('main').innerHTML = '<div class="empty">Connect your crewing mailbox.</div>';
+        })();
+        mail.viewPending = run;
+        run.then(() => { if (mail.viewPending === run) mail.viewPending = null; },
+                 () => { if (mail.viewPending === run) mail.viewPending = null; });
+        return run;
+      },
+      saveCrewFlowReadState() {
+        for (const [id, row] of Object.entries(ctx.state.crewFlowReadState || {})) timeline.push('read-state:' + (row && row.action));
+        store.set('skipi_crewing_crew_flow_read_state_v2', JSON.stringify(ctx.state.crewFlowReadState));
+      },
+      async refreshCrewFlowRankings() { return null; },
+      async ensureCrewFlowRankings() { return null; },
+      findApplicationById() { return null; },
+      mailCandidateEnrichmentForMessage() { return null; },
+      latestPdfAttachmentFromSender() { return null; },
+      sUidOf() { return ''; },
+      async saveRankedCandidate() { return null; },
+      async saveCurrentBundleSeafarer() { return null; },
+      inAppConfirm: async (msg) => { timeline.push('confirm:' + String(msg).slice(0, 24)); return confirmAnswer; },
+      async invoke(command, args) {
+        calls.push({ command, args: JSON.parse(JSON.stringify(args ?? null)) });
+        if (command === 'crewing_intake_rank_list' && noProfiles) return { items: [], unranked_active_profiles: [], confirmations: [] };
+        if (command === 'crewing_intake_matching_profile_list' && noProfiles) return { items: [] };
+        if (command === 'crewing_intake_candidate_list') return { items: srv.items, limit: 50, offset: 0, total: srv.items.length };
+        if (command === 'crewing_intake_alias_list') return { items: [] };
+        if (command === 'crewing_intake_candidate_get') return srv.items.find((i) => i.intake_id === args.intakeId) || srv.items[0];
+        if (command === 'crewing_intake_fact_list') return { items: srv.facts[args.intakeId] || [] };
+        if (command === 'crewing_intake_rank_list') return { items: [], unranked_active_profiles: [{ profile_id: 'p1', name: 'Master · Alpha' }, { profile_id: 'p2', name: 'Master · Beta' }], confirmations: [] };
+        if (command === 'crewing_intake_matching_profile_list') return { items: [{ id: 'p1', crewing_id: 'crew-synthetic', name: 'Master · Alpha', version: 1, state: 'active' }, { id: 'p2', crewing_id: 'crew-synthetic', name: 'Master · Beta', version: 1, state: 'active' }] };
+        if (command === 'crewing_intake_candidate_rank') {
+          timeline.push('invoke:rank');
+          return noProfiles
+            ? { ranked: 0, written: 0, reason: 'no_active_profiles', profiles: [] }
+            : { ranked: 2, written: 2, reason: 'ranked', profiles: ['p1', 'p2'] };
+        }
+        if (command === 'save_seafarer_from_bundle') return { id: 'sf-1', display_name: 'Oleh V.' };
+        return null;
+      },
+      calls, nodes, toasts, views, store, timeline,
+      setTimeout, clearTimeout, queueMicrotask,
+      __K2_STRINGS: { en: {}, ru: {} },
+    };
+    // real dictionaries so the RU/EN crew_flow.* strings are exercised
+    const dictStart2 = html.indexOf('var UI_STRINGS = {');
+    const dictEnd2 = html.indexOf('// ── @skipi/settings v0.3.0 dictionary', dictStart2);
+    vm.createContext(ctx);
+    vm.runInContext(html.slice(dictStart2, dictEnd2) + '\nthis.__K2_STRINGS = UI_STRINGS;', ctx);
+    // Three transports, not two: a real browser has NO __TAURI__ at all, the fleet
+    // web shim defines only core, and an explicit web marker must win over both.
+    if (noTauri) delete ctx.window.__TAURI__;
+    else if (native) ctx.window.__TAURI__ = { core: { invoke: () => {} }, dialog: {}, event: {} };
+    else ctx.window.__TAURI__ = { core: { invoke: () => {} } };
+    if (webShell) ctx.window.__SKIPI_WEB_SHELL__ = true;
+    vm.runInContext(
+      `${k2crew}\n${c3b1Source}\n${c3b2Source}\n${mobileCrewBlock}\n` +
+      'this.__crew = { renderCrewFlowView, renderCrewFlowDetail, renderCrewFlowTreeBody, crewFlowState, crewFlowReadInfo, pilotEnter, pilotLoadQueue, pilotOpenCard, pilotCloseCard, renderIntakePilot, mobileRenderCrewFlow };',
+      ctx,
+    );
+    return ctx;
+  }
+
+  const tryRun = (ctx, code) => { try { return vm.runInContext(code, ctx); } catch (e) { console.log('    (K2 runtime: ' + (e && e.message) + ')'); return undefined; } };
+
+  // 4. live queue in Crew Flow
+  let liveCtx = null;
+  try { liveCtx = makeCrewContext({}); } catch (e) { console.error('  K2 runtime load failed:', e && e.message); }
+  softOk(!!liveCtx, 'K2-4: the Crew Flow + pilot blocks load together in an isolated vm');
+  if (liveCtx) {
+    liveCtx.__crew.renderCrewFlowView();
+    await flush();
+    const mainHtml = liveCtx.nodes.get('main').innerHTML + '\n' + liveCtx.nodes.get('crew-flow-tree').innerHTML;
+    const rows = (mainHtml.match(/data-qa="crew-flow-row"/g) || []).length;
+    softOk(rows === 3, 'K2-4: Crew Flow renders one row per live intake candidate — got ' + rows);
+    softOk(liveCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'), 'K2-4: the live source is crewing_intake_candidate_list');
+    softOk(!liveCtx.calls.some((c) => c.command === 'fetch_my_vacancies'), 'K2-4: Crew Flow never asks for vacancies');
+    softOk(mainHtml.includes('data-qa="crew-flow-live"'), 'K2-4: the live Crew Flow surface is marked');
+    liveCtx.__crew.pilotOpenCard('intake-1');
+    await flush();
+    const cardHtml = liveCtx.nodes.get('main').innerHTML;
+    softOk(/data-qa="crewing-intake-card-view"/.test(cardHtml) && liveCtx.state.view === 'crew_flow',
+      'K2-4: opening a row hosts the C3b-2 candidate card inside #main while state.view stays crew_flow');
+    const actionIds = [...cardHtml.matchAll(/data-qa="crew-flow-action-([a-z_]+)"/g)].map((m) => m[1]);
+    softOk(cardHtml.includes('data-qa="crew-flow-actions"'), 'K2-4: the operator action panel renders on the card');
+    softOk(['save', 'email', 'request_docs', 'match', 'ignore', 'later'].every((id) => actionIds.includes(id)),
+      'K2-5: the action panel carries the five operator actions (email/request-docs is one action, two controls) — got [' + actionIds.join(',') + ']');
+
+    // 5. individual actions
+    const emailBtn = (cardHtml.match(/<button[^>]*data-qa="crew-flow-action-email"[^>]*>/) || [''])[0];
+    softOk(!/disabled/.test(emailBtn), 'K2-5: "write email" is enabled when the email fact exists');
+    liveCtx.__crew.pilotCloseCard();
+    await flush();
+    liveCtx.__crew.pilotOpenCard('intake-3');
+    await flush();
+    const noEmailCard = liveCtx.nodes.get('main').innerHTML;
+    const noEmailBtn = (noEmailCard.match(/<button[^>]*data-qa="crew-flow-action-email"[^>]*>/) || [''])[0];
+    softOk(/disabled/.test(noEmailBtn) && /data-qa="crew-flow-email-hint"/.test(noEmailCard),
+      'K2-5: without an email fact the action is disabled and explains why');
+
+    const mailCtx = makeCrewContext({});
+    mailCtx.__crew.renderCrewFlowView(); await flush();
+    mailCtx.__crew.pilotOpenCard('intake-1'); await flush();
+    await tryRun(mailCtx, "crewFlowWriteEmail('intake-1','reply');");
+    await flush();
+    softOk(mailCtx.views.includes('mail'), 'K2-5: "write email" opens the Mail module');
+    softOk((mailCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test', 'K2-5: the compose "to" field is prefilled from the email fact');
+    softOk(/Compose mail/.test(mailCtx.nodes.get('main').innerHTML),
+      'K2-5: the compose form survives the asynchronous mailbox render (visual-pass defect k06)');
+
+    const ignCtx = makeCrewContext({});
+    ignCtx.__crew.renderCrewFlowView(); await flush();
+    tryRun(ignCtx, "crewFlowIgnoreSignal('intake-1');");
+    await flush();
+    const readState = JSON.parse(ignCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+    softOk(readState['intake-1'] && readState['intake-1'].action === 'ignored', 'K2-5: "ignore" writes the ignored read-state for the intake id');
+    const afterIgnore = ignCtx.nodes.get('main').innerHTML + '\n' + ignCtx.nodes.get('crew-flow-tree').innerHTML;
+    softOk((afterIgnore.match(/data-qa="crew-flow-row"/g) || []).length === 2, 'K2-5: an ignored candidate leaves the main list');
+
+    const saveCtx = makeCrewContext({});
+    saveCtx.__crew.renderCrewFlowView(); await flush();
+    saveCtx.__crew.pilotOpenCard('intake-1'); await flush();
+    await tryRun(saveCtx, "crewFlowSaveToSeafarers('intake-1');");
+    await flush();
+    const saveCall = saveCtx.calls.find((c) => c.command === 'save_seafarer_from_bundle');
+    softOk(!!saveCall && saveCall.args.applicationId === 'intake:intake-1', 'K2-5: "save to seafarers DB" uses application_id intake:<intake_id>');
+    softOk(!!saveCall && saveCall.args.applicantSummary && saveCall.args.applicantSummary.rank === 'Master', 'K2-5: the saved applicant summary carries the rank fact');
+    softOk(!!saveCall && saveCall.args.manifest && saveCall.args.manifest.exported_by && saveCall.args.manifest.exported_by.messaging_user_id === 'intake:intake-1',
+      'K2-5/U1: the manifest messaging_user_id is the intake: namespace');
+
+    const matchCtx = makeCrewContext({});
+    matchCtx.__crew.renderCrewFlowView(); await flush();
+    matchCtx.__crew.pilotOpenCard('intake-2'); await flush();
+    await tryRun(matchCtx, "crewFlowMatchToProfile('intake-2');");
+    await flush();
+    softOk(matchCtx.calls.some((c) => c.command === 'crewing_intake_candidate_rank'), 'K2-5: "match against a profile" dispatches crewing_intake_candidate_rank');
+
+    // S-web: the save action is native-transport only until K3
+    const webCtx = makeCrewContext({ native: false });
+    webCtx.__crew.renderCrewFlowView(); await flush();
+    webCtx.__crew.pilotOpenCard('intake-1'); await flush();
+    const webCard = webCtx.nodes.get('main').innerHTML;
+    const webSaveBtn = (webCard.match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>/) || [''])[0];
+    softOk(/disabled/.test(webSaveBtn) && /data-qa="crew-flow-save-hint"/.test(webCard),
+      'K2-5/S-web: on the web shim "save to seafarers DB" is disabled with an explicit K3 note');
+    const nativeCard = liveCtx.nodes.get('main').innerHTML;
+    softOk(!/disabled/.test((nativeCard.match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>/) || [''])[0]),
+      'K2-5/S-web: on the native transport the same action is enabled');
+
+    // mobile shell hosts the same live list
+    const mobCtx = makeCrewContext({});
+    mobCtx.state.view = 'mobile-crew_flow';
+    tryRun(mobCtx, "state.view = 'mobile-crew_flow'; mobileRenderCrewFlow();");
+    await flush();
+    const mobHtml = mobCtx.nodes.get('mobile-main').innerHTML;
+    softOk((mobHtml.match(/data-qa="crew-flow-row"/g) || []).length === 3 && mobHtml.includes('data-qa="crew-flow-live"'),
+      'K2-4: the mobile shell renders the same live queue into #mobile-main');
+    softOk(/if \(view === 'crew_flow'\) return mobileRenderCrewFlow\(\);/.test(k2mobileShow), 'K2-4: mobileShow routes crew_flow to the mobile Crew Flow renderer');
+
+    // 6. honest empty state without a connection
+    for (const [lang, needle, absent] of [['ru', 'Доступ / токены', 'Vacancies -> Applications'], ['en', 'Access / tokens', 'Vacancies -> Applications']]) {
+      const emptyCtx = makeCrewContext({ language: lang, settings: {} });
+      emptyCtx.__crew.renderCrewFlowView();
+      await flush();
+      const emptyHtml = emptyCtx.nodes.get('main').innerHTML + '\n' + emptyCtx.nodes.get('crew-flow-tree').innerHTML;
+      softOk(emptyHtml.includes(needle) && emptyHtml.includes('data-qa="crew-flow-empty"'),
+        `K2-6: without a connection the ${lang} empty state points at Settings (${needle})`);
+      softOk(!emptyHtml.includes(absent), `K2-6: the ${lang} empty state no longer mentions the retired vacancies direction`);
+      softOk(!emptyCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'), `K2-6: no queue request is made without a connection (${lang})`);
+    }
+  const fxSlice = (from, to) => {
+      const a = html.indexOf(from);
+      if (a < 0) return '';
+      const b = html.indexOf(to, a);
+      return b > a ? html.slice(a, b) : '';
+    };
+
+    // ---- S1: one mailbox chain, and 'emailed' only after the form is open -----
+    // (a) loadMailboxStatus must de-duplicate an in-flight request: two Crew Flow
+    //     paths ask at the same moment and must share one answer, not race.
+    {
+      const mbSlice = fxSlice('function mailboxState() {', '\n// K2/S1: the render is published');
+      softOk(mbSlice !== '', 'S1: the mailbox status slice is bounded');
+      const calls = [];
+      let mbCtx = null;
+      try {
+        mbCtx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {},
+          async invoke(cmd) { calls.push(cmd); await new Promise((r) => setTimeout(r, 0)); return { configured: false, status: 'not_configured' }; },
+        });
+        vm.runInContext(mbSlice + '\nthis.__mb = { loadMailboxStatus, mailboxState };', mbCtx);
+      } catch (e) { console.log('    (S1 mailbox slice: ' + (e && e.message) + ')'); }
+      if (mbCtx && mbCtx.__mb) {
+        const [a, b] = await Promise.all([mbCtx.__mb.loadMailboxStatus(false), mbCtx.__mb.loadMailboxStatus(false)]);
+        softOk(calls.filter((c) => c === 'get_mailbox_status').length === 1,
+          'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request — got ' + calls.length);
+        softOk(a === b && !!a, 'S1a: both callers get the same status object');
+        const again = await mbCtx.__mb.loadMailboxStatus(false);
+        softOk(again === a && calls.length === 1, 'S1a: the cached status is still reused after the flight ends');
+        const forced = await mbCtx.__mb.loadMailboxStatus(true);
+        softOk(!!forced && calls.length === 2, 'S1a: force still re-asks exactly once');
+      } else {
+        softOk(false, 'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request');
+      }
+    }
+    // (b) the compose form must survive a SECOND, unawaited mailbox render, and
+    //     the 'emailed' review state must be written only after it is on screen.
+    {
+      const raceCtx = makeCrewContext({ mailRace: true });
+      raceCtx.__crew.renderCrewFlowView(); await flush();
+      raceCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(raceCtx, "crewFlowWriteEmail('intake-1','reply');");
+      await flush(12);
+      softOk(/Compose mail/.test(raceCtx.nodes.get('main').innerHTML),
+        'S1b: the compose form survives every mailbox render started by showView(mail)');
+      softOk((raceCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test',
+        'S1b: the surviving form still carries the candidate address');
+      const tl = raceCtx.timeline;
+      const iCompose = tl.indexOf('compose-open');
+      const iRead = tl.findIndex((e) => e === 'read-state:emailed');
+      softOk(iCompose !== -1 && iRead !== -1 && iCompose < iRead,
+        'S1b: the emailed review state is written AFTER the form is open — timeline [' + tl.join(' > ') + ']');
+      const failCtx = makeCrewContext({ mailRace: true, composeBroken: true });
+      failCtx.__crew.renderCrewFlowView(); await flush();
+      failCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(failCtx, "crewFlowWriteEmail('intake-1','reply');");
+      await flush(12);
+      const rs = JSON.parse(failCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rs['intake-1'] && rs['intake-1'].action === 'emailed'),
+        'S1b: when the compose form cannot be opened, nothing is marked as emailed');
+    }
+
+
+
+    // ---- A2 (supervisor acceptance): three mutants that survived all 16 -----
+    // (a) the confirm before the irreversible save must exist AND its refusal
+    //     must stop the write; (b) a real browser has no __TAURI__ at all and
+    //     must be treated as web; (c) an explicit web marker must win.
+    {
+      const askCtx = makeCrewContext({});
+      askCtx.__crew.renderCrewFlowView(); await flush();
+      askCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(askCtx, "crewFlowSaveToSeafarers('intake-1');");
+      await flush(10);
+      softOk(askCtx.timeline.some((e) => e.startsWith('confirm:')),
+        'A2a: the irreversible save asks for confirmation first');
+      const iConfirm = askCtx.timeline.findIndex((e) => e.startsWith('confirm:'));
+      const savedAt = askCtx.calls.findIndex((c) => c.command === 'save_seafarer_from_bundle');
+      softOk(iConfirm !== -1 && savedAt !== -1, 'A2a: and then writes');
+
+      const noCtx = makeCrewContext({ confirmAnswer: false });
+      noCtx.__crew.renderCrewFlowView(); await flush();
+      noCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(noCtx, "crewFlowSaveToSeafarers('intake-1');");
+      await flush(10);
+      softOk(noCtx.timeline.some((e) => e.startsWith('confirm:')), 'A2a: a declined save still asked');
+      softOk(!noCtx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+        'A2a: declining the confirm writes NOTHING to the seafarer database');
+      const rsNo = JSON.parse(noCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rsNo['intake-1'] && rsNo['intake-1'].saved_to_db), 'A2a: and marks nothing as saved');
+
+      for (const [name, opts] of [['a real browser (no __TAURI__)', { noTauri: true }],
+                                  ['an explicit web shell marker', { webShell: true, native: true }]]) {
+        const webCtx = makeCrewContext(opts);
+        webCtx.__crew.renderCrewFlowView(); await flush();
+        webCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        const btn = (webCtx.nodes.get('main').innerHTML.match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>/) || [''])[0];
+        softOk(/disabled/.test(btn), 'A2b/c: on ' + name + ' the save action is disabled');
+        await tryRun(webCtx, "crewFlowSaveToSeafarers('intake-1');");
+        await flush(10);
+        softOk(!webCtx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+          'A2b/c: on ' + name + ' the handler itself refuses to write, not only the button');
+      }
+    }
+    // ---- A1: the candidate card must not call into the retired module -------
+    {
+      const cardTexts = fxSlice('var PILOT_CARD_TEXT = {', 'var PILOT_CARD_OUTCOME_GROUP');
+      softOk(cardTexts !== '', 'A1: the candidate-card dictionaries are bounded');
+      const hits = cardTexts.match(/[Vv]acanc\w*|[Вв]аканси\w*/g) || [];
+      softOk(hits.length === 0,
+        'A1: the candidate card names compliance profiles, not vacancies — got ' + hits.length + ' [' + [...new Set(hits)].join(',') + ']');
+      // \w is ASCII-only in JS — a Cyrillic class has to be spelled out, or the
+      // probe silently measures nothing (measured: it failed on correct text).
+      softOk(/compliance profile/i.test(cardTexts) && /профил[а-яё]* соответствия/i.test(cardTexts),
+        'A1: and says so in both languages');
+    }
+
+    // ---- fix-up 2 (counselor close N6 + the manager's live acceptance) -------
+    // C1: "matched" is a claim about the SERVER. It may be written only after the
+    // server confirms a comparison was made, and never when there is nothing to
+    // compare against.
+    {
+      const okCtx = makeCrewContext({});
+      okCtx.__crew.renderCrewFlowView(); await flush();
+      okCtx.__crew.pilotOpenCard('intake-2'); await flush();
+      await tryRun(okCtx, "crewFlowMatchToProfile('intake-2');");
+      await flush(10);
+      const tl = okCtx.timeline;
+      const iRank = tl.indexOf('invoke:rank');
+      const iMark = tl.indexOf('read-state:matched');
+      softOk(iRank !== -1, 'C1: "match against a profile" dispatches the rank command');
+      softOk(iMark !== -1 && iRank < iMark,
+        'C1: the matched review state is written AFTER the server answers — timeline [' + tl.join(' > ') + ']');
+      const noneCtx = makeCrewContext({ noProfiles: true });
+      noneCtx.__crew.renderCrewFlowView(); await flush();
+      noneCtx.__crew.pilotOpenCard('intake-2'); await flush();
+      await tryRun(noneCtx, "crewFlowMatchToProfile('intake-2');");
+      await flush(10);
+      const rsNone = JSON.parse(noneCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(rsNone['intake-2'] && rsNone['intake-2'].action === 'matched'),
+        'C1: with no compliance profiles nothing is marked as compared');
+      softOk(noneCtx.toasts.some(([m]) => /profile|профил/i.test(String(m))),
+        'C1: with no compliance profiles the operator is told why, not left with a false label');
+    }
+    // C2: the confirm must state the truth of the product — a saved seafarer
+    // cannot be deleted anywhere, not only "not from Crew Flow".
+    softOk(!/нельзя отменить из Crew Flow|cannot be undone from Crew Flow/.test(html),
+      'C2: the save confirm no longer claims the limit is only Crew Flow');
+    softOk(/'crew_flow\.save_confirm':'[^']*базе моряков/.test(html) && /'crew_flow\.save_confirm':'[^']*seafarer database/.test(html),
+      'C2: the save confirm says a saved seafarer cannot be deleted anywhere (RU and EN)');
+    // C3: no internal card identifiers in user-facing copy.
+    softOk(!/K3/.test((html.match(/'crew_flow\.save_web_note':'[^']*'/g) || []).join(' ')),
+      'C3: the web-version note carries no internal identifier');
+    softOk((html.match(/'crew_flow\.save_web_note':'[^']*'/g) || []).length === 2,
+      'C3: the web-version note exists in both dictionaries');
+    // C4: ignore / keep-for-later are device-local until there is server state.
+    softOk((html.match(/'crew_flow\.local_decision':'[^']*'/g) || []).length === 2,
+      'C4: the local-decision note exists in both dictionaries');
+    softOk(/data-qa="crew-flow-local-note"/.test(html),
+      'C4: the action panel carries the local-decision note');
+    // C5: the connection screen must not promise a vacancies list any more.
+    softOk(!/first screen is your vacancies|первым экраном станет список ваших вакансий/.test(html),
+      'C5: the connection screen no longer promises a vacancies list');
+    softOk((html.match(/'mobile\.connect_desc':'[^']*Crew Flow/g) || []).length === 2,
+      'C5: the connection screen names Crew Flow as the first screen (RU and EN)');
+    // C6: the chrome i18n table must not carry retired tab ids.
+    {
+      const chromeTable = fxSlice('function applyI18nChrome() {', '\n}');
+      softOk(chromeTable !== '', 'C6: the applyI18nChrome table is bounded');
+      for (const id of ['mt-vacancies', 'mt-mailings', 'mt-team', 'mt-intake_pilot']) {
+        softOk(!chromeTable.includes(id), 'C6: the chrome i18n table no longer lists ' + id);
+      }
+      softOk(chromeTable.includes('mt-compliance') && chromeTable.includes('mt-seafarers'),
+        'C6: the surviving modules stay in the chrome i18n table');
+    }
+
+    // ---- S2: surviving copy must not send the operator to a deleted module ----
+    {
+      const screens = [
+        ['compliance list', fxSlice('function renderComplianceProfilesEmptyMain', '\nfunction renderComplianceProfileDetail')],
+        ['compliance tree', fxSlice('function renderComplianceProfilesTree', '\nfunction renderComplianceProfilesEmptyMain')],
+        ['compliance detail', fxSlice('function renderComplianceProfileDetail', '\nfunction renderComplianceProfileForm')],
+        ['compliance form', fxSlice('function renderComplianceProfileForm', '\nasync function saveComplianceProfile')],
+        ['settings org', fxSlice("  if (settingsTab==='org') {", "  } else if (settingsTab==='data') {")],
+        ['settings access', fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {")],
+      ];
+      const nav = /вакансии|вакансию|вакансий|вакансиях|вакансия|Vacanc|vacanc/;
+      for (const [name, slice] of screens) {
+        softOk(slice !== '', 'S2: the "' + name + '" screen slice is bounded');
+        const hits = (slice.match(new RegExp(nav.source, 'g')) || []);
+        softOk(hits.length === 0, 'S2: "' + name + '" no longer points at the retired vacancies module — got ' + hits.length + ' [' + [...new Set(hits)].join(',') + ']');
+      }
+      softOk(/Crew Flow/.test(fxSlice('function renderComplianceProfilesEmptyMain', '\nfunction renderComplianceProfileDetail')),
+        'S2: the compliance empty state (the pilot operator’s first screen) names Crew Flow as the real destination');
+    }
+
+    // ---- S5: one guard pin, one localized team row ---------------------------
+    {
+      const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
+      softOk(pins === 'b72a59ca947ddb6a70a07b0328b61f9a29eca090', 'S5: the workflow pins exactly the K2 route guard SHA');
+      // The needles are assembled from halves on purpose: a probe that spells a
+      // SHA out reads its own source and can never pass (self-referential-probe
+      // class — measured three times in this session, this line included).
+      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5'];
+      const selfSrc = fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8');
+      softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
+        'S5: neither the harness nor the workflow still accepts a superseded guard pin');
+      softOk(!html.includes('Vacancies -> Applications'), 'S5: the three unreachable "Vacancies -> Applications" strings are gone');
+      const access = fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {");
+      softOk(/tr\('settings\.team_access[^']*'\)/.test(access) || /crewFlowTr|tr\('team\./.test(access),
+        'S5: the team-access settings row is served through tr(), not a Russian literal');
+    }
+
+    // ---- S7: the mobile Crew Flow subtitle is localized -----------------------
+    {
+      softOk(!/if \(view === 'crew_flow'\) return \[mobileModuleLabel\('crew_flow'\), 'Incoming candidate signals'\];/.test(html),
+        'S7: the mobile Crew Flow subtitle is no longer a hardcoded English literal');
+      softOk(/'crew_flow\.mobile_subtitle':'[^'Ѐ-ӿ]+'/.test(html) && /'crew_flow\.mobile_subtitle':'[^']*[Ѐ-ӿ]/.test(html),
+        'S7: crew_flow.mobile_subtitle exists in both the en and the ru dictionary');
+    }
+
+    // 9. demo mode is untouched
+    const demoCtx = makeCrewContext({ demo: true });
+    try { demoCtx.__crew.renderCrewFlowView(); } catch (e) { console.log('    (K2 demo render: ' + (e && e.message) + ')'); }
+    await flush();
+    const demoHtml = demoCtx.nodes.get('main').innerHTML + '\n' + demoCtx.nodes.get('crew-flow-tree').innerHTML;
+    softOk(demoHtml.includes('Oleksandr K.') && !demoCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'),
+      'K2-9: demo mode still renders the fixture signals and never calls the live queue');
+  }
 }
 
 console.log('\n# control matrix');

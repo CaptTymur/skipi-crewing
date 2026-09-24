@@ -199,3 +199,183 @@ Base `d32438ab` (`dist/index.html` sha256 `fe37adf9…`, 13932 lines), worktree 
 - **Visual acceptance V1 (headless, 127.0.0.1, никогда `:1`).** Smoke on the BASE dist first: entry overlay renders, no parse-time error (only the stand's own `/favicon.ico` 404) → V1 taken, V2 native chain not needed. Chrome via Playwright (`channel=chrome`, `--proxy-server=http://127.0.0.1:1 --proxy-bypass-list=127.0.0.1` — four `ERR_PROXY_CONNECTION_FAILED` in the demo frames are that mechanism working); `window.__TAURI__` stub injected only through `page.add_init_script` before navigation (`:1103` reads it at parse time), product never edited for the stand. **18 frames** RU/EN × 9: entry choice, connect dialog, vacancies empty state, sort value, confirm dialog, Demo toast, pilot subtitle, Settings → Application (provenance line + version chip), mobile 390×844 Apps. Each frame carries a visible language marker (`lang`, `localStorage['skipi-crewing-ui-language']`, `getUiLang()`, `demo`), `steps.jsonl` alongside. Version chip measured, not eyeballed: `scrollWidth == clientWidth == 568` → not clipped (no CSS change needed, PREP F9 branch “≤5 lines” not taken).
 - **Findings, not fixed here** (A9 / F14 class, for the manager to file): (1) the mobile Apps *body* (launcher heading `Apps`, «First-party tools for your crewing team…», `Find a plugin…`, `MODULES`, `No installed plugins`) stays English in RU — A9/№433 territory; (2) the rail label `'Apps'` (`:11606`) and `'Modules / Apps'` (`:11880`/`:12044`) stay literals, pinned by the isolation and presence harnesses outside this route — №433 remains OPEN on them; (3) `showToast('Failed to close: '+e)` and its neighbours are English-hardcoded and appear in the RU UI (seen in the frames as «Failed to close: Error: demo_read_only»); (4) `connectSubmitToken` strings «Введите токен подключения.» (`:1679`) and «Подключаю…» (`:1682`) stay Russian-hardcoded — they sit outside the PREP-named A4b range, so they were not touched; (5) desktop top-tab labels overflow onto the neighbouring tab in both languages (pre-existing, RU «Профили требований клиента» / EN «Client Requirement Profiles»); (6) legacy `customConfirm` is dead code with RU defaults.
 - Processes: static server and every driver recorded in `scratchpad/labels/pids.txt` at launch (pid, exe, cgroup, start ticks); teardown by that file only, verified against `/proc/<pid>/exe` + cgroup + start ticks; no `pgrep -f`, no name mask, in teardown or in any listing. Disk 101 GB free before, after unchanged (no build).
+
+## 2026-09-24T14:49Z–15:55Z — K2: Crew Flow shows the live candidate queue; module composition
+
+Task `skipi-ops/handoffs/EXEC-PROMPT-2026-09-24-crewing-k2-crew-flow-modules.md`; card `skipi-ops/handoffs/TASKCARD-2026-09-24-crewing-k2-crew-flow-modules.md` (WORKLOG/ПЕРЕДАЧА delegated there; this file is the in-repo journal). Authority OWNER (654)/(658); PREP `skipi-ops/handoffs/crewing-k2-prep-20260924/PREP.md`, §0 revisions are authority. Base `61a17999dd181cdfd3d1f97480aa827d9ffbd56a` (main after PR-P), worktree `crewing-k2-20260924`, branch `feature/crewing-k2-modules-20260924`, route `crewing-k2-modules` (eight paths, this file is the eighth). No Rust, no `presence-manifest.json`, no `src-tauri/**`, no tags, no `cargo` (nothing native changed).
+
+### Numbers
+
+- **Harnesses, base → candidate (all 16 rc=0 on both):** c3b1 59/0 → 61/0 · **c3b2 317/0 → 408/0** · compliance_manual 15/0 → 15/0 · **crew_flow_demo 90/0 → 96/0** · mailbox 25/0 → 25/0 · mail_cv 28/0 → 28/0 · plugin_isolation 152/0 → 153/0 · **presence 193/0 → 196/0** · theme 38/0 → 38/0 · provenance 12 · stack 20 · negative 5 · csp/settings5/trial×2 OK.
+  - presence: the S8 acceptance number for the dist slice was `192 passed, 0 failed` and was hit exactly; the final 196 is 192 + **4** new S4 provenance checks added in the fix-up slice. One base check disappears by construction: the legacy settings label list lost «Вакансии / Рассылки» with the module.
+  - crew_flow_demo +6 = the S3 checks (explicit empty state, the pilot upload still offered, `crew_flow.empty_live` en/ru, the wording that names the inbound identifier, and the connected-but-empty text actually rendering).
+- **Gate:** `skipi-guard verify --home crewing --auto-task --run-harness --base 61a17999… --head HEAD` → `status: pass`, `task: crewing-k2-modules`, `errors: []`, `protected touches: 0`, **14/14 route harness commands pass**. The same verdict came independently from the pre-push hook on every pushed commit, and from the `guard` check on PR #52.
+- **Diff against the base:** `dist/index.html` +468/−131 · `tests/crewing_c3b2_candidate_harness.mjs` +462/−7 · `tests/crewing_presence_contract_harness.mjs` +46/−13 · `tests/crewing_crew_flow_demo_harness.mjs` +23/−5 · `tests/crewing_plugin_isolation_harness.mjs` +11/−8 · `tests/crewing_c3b1_pilot_harness.mjs` +5/−1 · `.github/workflows/skipi-guard.yml` +1/−1 · this file. **`presence-manifest.json`: not a byte. `src-tauri/**`, `gen/android`, `tauri.conf.json`, version, tags: untouched.**
+
+### RED → GREEN
+
+- Slice 1, `8b1342d`: the `# K2 modules/crew-flow` section (PREP §5 checks 1–10) committed failing first — **330 passed, 48 failed** on the base, green on the candidate.
+- Slice 2 (fix-up), `1f1f5ff`: the supervisor's S1–S5/S7 checks committed failing first — **c3b2 391/17, presence 194/2**. `crew_flow_demo` was green at that commit on purpose: **S3 is a test-only finding** — the product copy already named the destination and how candidates appear; what was missing was the pin. Its ability to fail is proved by mutation m14, not by its colour.
+
+### What changed in the product (PREP §2 D3–D9 + S1–S5/S7)
+
+- D3 rail `crew_flow · compliance · seafarers · documents · apps`; `crew_flow` is the start view on both shells; the team/vacancies fallbacks and the three live entries the supervisor named (mobile home button, post-token navigation, team onboarding) all land on Crew Flow.
+- D4 the intake pilot lost its tab and its Apps tile; it is entered from the Crew Flow header (`data-qa="crew-flow-open-pilot"`).
+- D5 outside demo and with a configured pilot context Crew Flow renders `crewing_intake_candidate_list`; opening a row hosts the C3b-2 card in the Crew Flow container via `PILOT_HOST_VIEWS` (`pilotViewActive`/`pilotContainer`/`pilotContextStillCurrent` generalized). Unconnected → honest RU/EN empty state pointing at Settings → Доступ / токены.
+- D6 one operator panel: save to the seafarer DB (confirmed first, U1), write email / request documents, match against a profile, ignore, keep for later.
+- D7 rename to Профиль соответствия / Compliance Profile; the presence marker comment untouched. D8 the legacy work settings section removed, `reply_to` kept and moved to Доступ / токены. D9 + fix-up: 42 `crew_flow.*`/`team.access.*`/`compliance.*` strings in en and ru.
+- S1 `loadMailboxStatus` de-duplicates an in-flight request; `renderMailboxTree` publishes its render on `mail.viewPending`; `crewFlowWriteEmail` waits through `mailboxViewReady()` until nothing is in flight, and writes `emailed` only after the form is on screen.
+- S2 the compliance screens and the org/access settings no longer send the operator into the retired vacancies module. S5 one guard pin, no unreachable "Vacancies -> Applications", the team row through `tr()`. S7 the mobile Crew Flow subtitle through `crew_flow.mobile_subtitle`.
+
+### Mutation controls — Each mutant was applied on the candidate SHA, run against its sensor harness, then reverted; the
+tree was verified clean after every restore, and nothing but the mutation itself was written to
+the checkout during the series (`scratchpad/k2/mutations.log`).
+
+| id | defect reintroduced | sensor: clean → mutant → restored |
+|---|---|---|
+| m1 | a vacancies slot back on the canonical rail | c3b2 408/0 → 406/2 → 408/0; presence 196/0 → 194/2 → 196/0 |
+| m2 | the desktop vacancies module tab back | c3b2 408/0 → 406/2 → 408/0 |
+| m3 | `state.view: 'vacancies'` back | c3b2 408/0 → 407/1 → 408/0 |
+| m3b | post-token navigation back to vacancies (S-inputs) | c3b2 408/0 → 407/1 → 408/0 |
+| m4 | Crew Flow source pointed at `fetch_my_vacancies` | c3b2 408/0 → 403/5 → 408/0 |
+| m5 | "write email" enabled without an email fact | c3b2 408/0 → 407/1 → 408/0 |
+| m6 | "ignore" made a no-op | c3b2 408/0 → 406/2 → 408/0 |
+| m7 | one "Client Requirement Profiles" literal back | c3b2 408/0 → 407/1 → 408/0 |
+| m8 | the legacy work settings nav item back | c3b2 408/0 → 406/2 → 408/0 |
+| m9 | demo fixtures seeded outside demo mode | crew_flow_demo 96/0 → 94/2 → 96/0 |
+| m11 | S1a: the in-flight mailbox de-duplication dropped | c3b2 408/0 → 404/4 → 408/0 |
+| m12 | S1b: 'emailed' written before the form exists | c3b2 408/0 → 407/1 → 408/0 |
+| m12b | S1b: wait for ONE mailbox chain instead of all in flight | c3b2 408/0 → 407/1 → 408/0 |
+| m13 | S2: the compliance empty state sends the operator to vacancies | c3b2 408/0 → 407/1 → 408/0 |
+| m14 | S3: the empty queue stops saying HOW candidates appear | crew_flow_demo 96/0 → 94/2 → 96/0 |
+| m15 | S4: the K2 decision dropped from the rail provenance | presence 196/0 → 195/1 → 196/0 |
+| m16 | S5: the workflow pin re-widened to a superseded guard SHA | c3b2 408/0 → hard assert on the pin → 408/0 |
+| m17 | S7: the mobile subtitle hardcoded in English again | c3b2 408/0 → 407/1 → 408/0 |
+
+**18 mutants, 18 killed.** m10 (open compose with no wait at all) is retired: after S1 its anchor
+no longer exists, and m12b supersedes it — m12b keeps a wait and still proves that waiting for one
+chain is not enough. m12b is itself a lesson: its first version SURVIVED, because the stub started
+both racing chains in the same tick and the single await therefore resolved last. The stub now
+starts the second chain a tick later — the case the single await cannot cover — and the control
+was re-measured in both directions (single await 407/1 RED, `mailboxViewReady()` 408/0 GREEN).
+
+### Visual acceptance (EXEC step, headless)
+
+22 frames, headless Chrome on `127.0.0.1` only — **the owner's display `:1` was never used**.
+The stand is `scratchpad/k2/stand/`: the product dist is served unmodified with two `<script src>`
+tags added (a `window.__TAURI__` stub serving a synthetic queue of three candidates, and a driver);
+the product was never edited for the stand. Every frame is produced by a real trigger on the
+product's own handlers (a click on a row or a button, `openSettings()`), and every frame carries
+machine assertions read back from the live DOM (`rows=N`, `has:`/`no:`, `norow:`, `emaildisabled=`,
+`extra:`), recorded in `scratchpad/k2/steps.jsonl` together with the driver steps, Chrome's exit
+code and the PNG sha256. **Zero unexplained `PHASE-FAILED`.**
+
+k01/k02 Crew Flow list RU/EN · k03/k04 candidate card with facts, comparisons and the operator
+panel RU/EN · k05 email disabled without the fact (EN) · k06 email enabled → compose prefilled with
+the candidate address (EN) · k07 ignore → the row left the list (RU) · k08/k09 the module bar
+without vacancies/mailings/team/pilot, with «Профиль соответствия» RU/EN · k10/k11 the unconnected
+empty state RU/EN · k12/k13 the mobile rail of five D3 slots RU/EN · k14/k15 the mobile Apps grid
+without the retired tiles RU/EN · k16 the mobile candidate card (RU) · k17 legacy settings without
+«Вакансии / Рассылки» (RU) · k18 demo mode unchanged (EN) · **k19/k20 connected-but-empty queue
+RU/EN** (the everyday pilot state until K1) · **k21 the compliance empty state after S2** (RU) ·
+**k22 the mobile connected-but-empty queue** (RU) · `zz-base-desktop-tabs-ru` and
+`zz-base-mobile-rail-ru` rendered from the base commit as the before picture.
+
+**S6 — the mobile frames looked overflowed; measured, they are not, and there is no K2 delta.**
+The first mobile frames showed cropped text and four rail slots out of five. Measured on the same
+screens for the base commit and for the candidate:
+
+| screen | base `61a17999` | candidate |
+|---|---|---|
+| mobile Crew Flow list | innerWidth 500 · scrollWidth 500 · overflowing nodes 0 · rail 5/5 visible | identical |
+| mobile candidate card | innerWidth 500 · scrollWidth 500 · overflowing nodes 0 · rail 5/5 visible | identical |
+| mobile Apps grid | innerWidth 500 · scrollWidth 500 · overflowing nodes 0 · rail 5/5 visible | identical |
+
+Headless Chrome clamps the viewport to a **500 px minimum** whatever `--window-size` says (measured
+at 390, 412 and 500 — `innerWidth` is 500 in all three). A 390-wide screenshot was therefore a crop
+of a 500-wide viewport, and the base commit cropped identically. The product layout was NOT changed
+for the stand; the mobile frames are now taken at the real viewport width. **The 390 px device check
+is stage 2 on the emulator, not something this stand can answer.**
+
+### Findings and boundaries
+
+- **Defect found by the visual pass and fixed with its test (`ef833e9`, deepened in `120f2c1`):** «Написать email» opened the compose form before the asynchronous mailbox render settled, so `#main` was repainted with the mailbox empty state and the operator lost the draft (frame k06). The first fix awaited one render; the supervisor showed that only worked because that await happened to be registered last — S1 replaced the ordering assumption with de-duplication plus a wait on every chain in flight.
+- **`crewFlowNativeTransport()` is read from code, not measured on a build.** That the desktop/Android packages expose a native Tauri namespace rests on `src-tauri/src/lib.rs:2181–2182` (dialog and fs registered unconditionally) and `tauri.conf.json` `withGlobalTauri: true`. Fail-closed: an unknown transport counts as web and «В базу моряков» stays disabled. **Stage 2 acceptance on the rebuilt app must confirm the button is NOT disabled.**
+- **Three pins were rewritten outside the PREP §1 list**, each a direct consequence of a step PREP itself prescribes: c3b2 `:53` (the guard pin — that is step 1 of the prompt; narrowed to a single SHA in the fix-up), c3b2 `:424` (`mobileShow` → `pilotLeave`) and the M18 mutation anchor (`pilotContainer`) — both are the verbatim text of functions D5 orders generalized onto `PILOT_HOST_VIEWS`. M17/M19 untouched.
+- **Retired-module code is still present** (`showView('vacancies')` inside vacancy flows, `mobileParentView` entries, the vacancy/mailing/team screens). That is K2a by D2; K2b removes the code.
+- **Self-referential probes, caught three times in this session and each time before use:** (1) the PID file first recorded this session's own bash wrapper, because `$!` returned it; corrected against the known fact that the stand answered 200. (2) The S4 provenance probe matched its own assertions' source and passed on nothing; scoped to the consecutive comment lines. (3) The S5 probe spelled a superseded SHA out and so always read it back from its own file; the needles are now assembled from halves. The rule this file keeps: a probe is calibrated on a fact already known before anything is proved with it.
+
+### Fix-up 2 — counselor N6, the manager's live acceptance, the supervisor's ACCEPT WITH LIMITS
+
+Sources: `skipi-counselor/artifacts/2026-09-24-close-k2-fdc9b7c2.md` (N6);
+`skipi-supervisor/audits/2026-09-24-accept-k2-fdc9b7c2.md` (`1505f258`); the manager's live
+acceptance on «е» (desktop AppImage in Xephyr, Android x86_64 on the emulator, both on `fdc9b7c2`).
+Failing test first: `206e2cc` — c3b2 **412 passed, 14 failed**.
+
+**Two of my own open boundaries were closed by the live acceptance, not by me.** «В базу моряков» is
+ACTIVE on both native builds, so the `crewFlowNativeTransport()` discriminator is confirmed on real
+packages rather than read from `lib.rs`; the confirm is shown; the save created
+`seafarers/intake_<id>` in an isolated vault, which closes **U1 live**; the email action is
+`disabled` with its hint; the five-slot rail fits at 412 dp. What I could measure in a headless
+stand was a boundary, and this is what lies beyond it.
+
+- **C1** — `crewFlowMatchToProfile` wrote "compared against profiles" before `pilotRankNow()` and
+  unconditionally. With zero active profiles the server answers *successfully* having done nothing,
+  and the candidate still got the label. `pilotRankNow` now returns its attempt; the review state is
+  written only when the write was acked **and** `ranked >= 1`; otherwise an honest toast. Same class
+  as S1: a state written before the answer is a lie with a timestamp. Controls m19, m20.
+- **C2 / C3 / C4 / C5 / C6** — the save confirm now states the truth of the product (a saved
+  seafarer cannot be deleted anywhere); the web note no longer ships an internal card identifier to
+  the user's screen; the action panel says that "ignore" and "keep for later" live on this device
+  and that other clients still show the candidate; the connection screen names Crew Flow and the
+  inbound identifier instead of a vacancies list (the last S2-class pointer, found live on the
+  emulator); `applyI18nChrome` lists only the tabs that exist.
+- **A1** — the candidate card itself called into the retired module (seven strings and their RU
+  pairs). The ranking entity on the server is the matching/compliance profile; the copy says so now
+  in both languages. **Server codes are untouched** — only the human halves of the stale/refusal/
+  outcome catalogues changed. 13 c3b2 pins were rewritten by value, and the S2-class regex now
+  covers the card dictionaries: zero vacancy mentions there.
+- **A2** — three mutants survived all 16 harnesses. **They were not defects: the product already
+  asked for the confirm and already failed closed on transport. The tests could not see it.**
+  `inAppConfirm` was stubbed as `async () => true`, so no test could distinguish a confirm that is
+  asked from one that is ignored; "web" was modelled only as `__TAURI__={core}`, so the branch a
+  real browser takes — no `__TAURI__` at all — was never exercised; and `__SKIPI_WEB_SHELL__` never
+  appeared in any test. All three are now cases, the refusal path included (declining the confirm
+  writes nothing and marks nothing), and m21–m23 make them red. This is the honest shape of the
+  finding: a green suite proved less than it appeared to.
+- **A3 (recorded, not fixed):** in the EN interface the *body* of the compliance module is hardcoded
+  Russian — class №444, pre-K2, outside this route. The EN frames carry this as a known limit.
+- **A5 (recorded):** 108 of 110 lines in `pids.txt` were the bash wrapper's `$!`, not the Chrome
+  process. In this slice the PID written is the real process; where a wrapper makes `$!` meaningless,
+  the PID comes from an authoritative source (the kernel socket table for the port I chose), never
+  from a name mask. The same class already cost me one wrong line earlier in this card.
+- **Android hardware BACK (recorded, not fixed, K3/K4 tail):** from the candidate card the hardware
+  BACK button closes the app and returns to the previous application instead of returning to the
+  queue. The base was not measured, so I cannot say whether K2 introduced it; the shape is the Tauri
+  shell's, not Crew Flow's.
+
+- **Numbers after fix-up 2 (all 16 green):** c3b1 61/0 · **c3b2 438/0** · compliance 15/0 ·
+  crew_flow_demo 96/0 · mailbox 25/0 · mail_cv 28/0 · plugin_isolation 153/0 · **presence 196/0** ·
+  theme 38/0 · provenance 12 · stack 20 · negative 5 · csp/settings5/trial×2 OK. Gate on the full
+  diff: `status: pass`, `task: crewing-k2-modules`, `errors: []`, 8 files, 14 commands pass.
+- **A false verdict from my own mutation runner, found and fixed.** The 16:25Z full series printed
+  `SURVIVED/BROKEN` for all 23 rows. It was not 23 survivals: the runner's `killed` predicate
+  required `git status --porcelain` to be COMPLETELY empty, and the untracked `scratchpad/` (my own
+  evidence directory, un-excluded at the close of fix-up 1) made that false on every row. The
+  per-row evidence in that same log shows every mutant going red and every restore going green.
+  The predicate now looks only at TRACKED changes (`--untracked-files=no`), and the runner takes an
+  id filter so a subset can be re-measured. This is the same class as the three self-referential
+  probes earlier in this card: the predicate measured something that had changed in the
+  environment, not the thing it claims to measure.
+- **Frames: 25, zero unexplained `PHASE-FAILED`.** k03/k04 re-shot with the new panel hints;
+  **k23/k24** the save confirm RU/EN with the dialog open and unanswered (A2a evidence); **k25/k26**
+  the mobile connection screen RU/EN after C5. **A4:** k21 was the same scene as k08 — it is dropped
+  and k08/k09 now carry both the tab-bar and the S2 copy assertions; `numstat.txt` is refreshed in
+  the keep-set; the base half of the S6 measurement is kept; `skipi-settings.js` / `.css` are now
+  served by the stand.
+- **A frame that was lying, found by serving that asset.** Until now the stand 404'd
+  `skipi-settings.js`, so `openSettings()` fell back to the LEGACY settings shell and k17 showed it.
+  With the asset served — which is what the shipped dist does — settings open the @skipi/settings
+  module shell instead. k17 is re-targeted accordingly (no «Вакансии / Рассылки», «Рабочие данные»
+  present). The legacy shell is still real as a fallback and is what the presence harness pins;
+  the frame simply now shows the path a user actually takes.

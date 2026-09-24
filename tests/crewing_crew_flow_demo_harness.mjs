@@ -47,7 +47,7 @@ ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'C
 ok(track1Block.includes('track1CandidateIntakeEnabled') && track1Block.includes('__demoMode'), 'Track 1 panel is gated by demo mode');
 ok(track1Block.includes('Source evidence') && track1Block.includes('Email CV') && track1Block.includes('Mail'), 'Track 1 panel renders source evidence');
 ok(track1Block.includes('Structured profile / vault draft'), 'Track 1 panel renders extracted profile/vault bridge');
-ok(track1Block.includes('Local Client Requirement Profiles'), 'Track 1 match target is local Client Requirement Profiles');
+ok(track1Block.includes('Local Compliance Profiles'), 'Track 1 match target is the local compliance profiles');
 ok(track1Block.includes('AI extraction is decision support only'), 'Track 1 states AI is decision support');
 ok(track1Block.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 states source-of-truth boundary');
 ok(track1Block.includes('rank_compliance_candidate'), 'Track 1 summary names existing rank_compliance_candidate source');
@@ -231,6 +231,8 @@ async function invoke(cmd, args = {}) {
       },
     };
   }
+  // K2/S3: the everyday state of the pilot until K1 is "connected, queue empty".
+  if (cmd === 'crewing_intake_candidate_list') return { items: [], limit: 50, offset: 0, total: 0 };
   if (cmd === 'save_seafarer_from_bundle') return { seafarer: { id: 'demo-sf1', display_name: 'Oleksandr K.' }, saved_documents: 1 };
   if (cmd === 'list_saved_seafarers') return [];
   if (cmd === 'register_my_pubkey') return null;
@@ -314,7 +316,7 @@ if (M) {
   ok(mainHtml.includes('Structured profile / vault draft') && mainHtml.includes('Certificates:') && mainHtml.includes('Sea service:'), 'Track 1 extracted profile bridge renders');
   ok(mainHtml.includes('AI extraction is decision support only'), 'Track 1 AI boundary renders');
   ok(mainHtml.includes('Source of truth: documents, structured fields, audit trail, and human action'), 'Track 1 source-of-truth note renders');
-  ok(mainHtml.includes('Local Client Requirement Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local requirement profile match summary renders 93/81/72');
+  ok(mainHtml.includes('Local Compliance Profiles') && mainHtml.includes('Captain · Client Alpha') && mainHtml.includes('93%') && mainHtml.includes('72%'), 'Track 1 local compliance profile match summary renders 93/81/72');
   ok(mainHtml.includes('covered') && mainHtml.includes('missing') && mainHtml.includes('expired') && mainHtml.includes('uncertain') && mainHtml.includes('no_file') && mainHtml.includes('gaps:'), 'Track 1 match summary renders coverage buckets');
   ok(mainHtml.includes('data-qa="track1-recommended-action"') && mainHtml.includes('Recommended:') && mainHtml.includes('save to Seafarers DB') && mainHtml.includes('request missing documents'), 'Track 1 match summary renders recommended save + request-docs action');
   ok(mainHtml.includes('data-qa="track1-action-add"') && mainHtml.includes('data-qa="track1-action-request_docs"') && mainHtml.includes('data-qa="track1-action-match"') && mainHtml.includes('data-qa="track1-action-keep"'), 'Track 1 renders live manager action buttons');
@@ -375,8 +377,8 @@ if (M) {
   ok(M.mobileState.view === 'crew_flow', 'mobileShow(crew_flow) opens the crew_flow mobile view');
   const railHtml = (elFor('mobile-root').innerHTML.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
   const railViews = [...railHtml.matchAll(/data-mview="([^"]+)"/g)].map((m) => m[1]);
-  ok(railViews.join(',') === 'vacancies,mailings,seafarers,crew_flow,apps',
-    'rail renders canon 5 fixed slots with Crew Flow 4th and Apps last — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
+    'rail renders canon 5 fixed slots with Crew Flow first and Apps last (K2) — got [' + railViews.join(',') + ']');
   ok(railHtml.includes('data-qa="bottom-nav-crew_flow"'), 'crew_flow rail slot carries the canonical bottom-nav-crew_flow QA hook');
   const railCssBody = (HTML.match(/\.mobile-module-rail\s*\{([^}]*)\}/) || ['', ''])[1];
   ok(railCssBody !== '' && !/overflow-x\s*:\s*(auto|scroll)/i.test(railCssBody), 'rail CSS keeps fixed slots without scroll mechanics');
@@ -412,7 +414,23 @@ if (M) {
     const noDemoHtml = elFor('main').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML;
     ok(Array.isArray(noDemoSignals) && noDemoSignals.length === 0, 'non-demo Crew Flow does not auto-seed fixture signals');
     ok(!/cf-demo-|Oleksandr K\.|Ramon S\.|Marko P\.|Ivan M\./.test(noDemoHtml), 'non-demo Crew Flow renders no fixture candidates');
-    ok(noDemoHtml.includes('No candidates yet') && noDemoHtml.includes('Vacancies -> Applications'), 'non-demo Crew Flow shows honest empty state with Applications direction');
+    // K2: outside demo mode Crew Flow is the live intake queue surface, never a
+    // pointer back to the retired vacancies module — but it must still TELL THE
+    // HUMAN WHERE TO GO (S3: the pin must not shrink to "the text is absent").
+    ok(noDemoHtml.includes('data-qa="crew-flow-view"') && !noDemoHtml.includes('Vacancies -> Applications'),
+      'non-demo Crew Flow shows the live intake surface, not the retired vacancies direction');
+    ok(noDemoHtml.includes('data-qa="crew-flow-empty"'), 'non-demo Crew Flow renders an explicit empty state');
+    ok(/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
+      'the empty state still offers the only producer of candidates until K1 (the pilot upload)');
+    // S3: connected + empty queue is the everyday pilot state; the copy must say
+    // HOW candidates appear, in both interface languages.
+    const emptyLive = { en: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[0] || '', ru: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[1] || '' };
+    ok(/[A-Za-z]/.test(emptyLive.en) && !/[\u0400-\u04FF]/.test(emptyLive.en), 'crew_flow.empty_live has an en value without Cyrillic');
+    ok(/[\u0400-\u04FF]/.test(emptyLive.ru), 'crew_flow.empty_live has a ru value in Cyrillic');
+    ok(/identifier|inbound/i.test(emptyLive.en) && /идентификатор/i.test(emptyLive.ru),
+      'the connected-but-empty copy names HOW candidates appear (the inbound identifier), RU and EN');
+    ok(noDemoHtml.includes('Кандидаты появятся') || noDemoHtml.includes('Candidates appear'),
+      'the connected-but-empty state is what the operator actually sees in Crew Flow');
     ok(!elFor('main').innerHTML.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 panel is default-off outside demo mode');
   }
   store.set('skipi_crewing_demo', '1');
