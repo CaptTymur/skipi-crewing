@@ -1064,9 +1064,15 @@ console.log('# K2 modules/crew-flow');
       showView(v) {
         views.push(v); ctx.state.view = v;
         // The real showView('mail') starts an UNAWAITED mailbox render that paints
-        // #main when it settles (S1). With mailRace a second, later chain is started
-        // too, exactly as loadMailboxStatus without in-flight de-duplication does.
-        if (v === 'mail') { ctx.renderMailboxTree(); if (mailRace) ctx.renderMailboxTree(); }
+        // #main when it settles (S1). With mailRace a SECOND chain starts a tick
+        // later — i.e. while the compose path is already waiting on the first.
+        // That is the case a single `await renderMailboxTree()` cannot cover: it
+        // resolves, opens the form, and the late chain then wipes it. Only waiting
+        // until nothing is in flight survives, which is what the fix does.
+        if (v === 'mail') {
+          ctx.renderMailboxTree();
+          if (mailRace) { ctx.renderMailboxTree(); setTimeout(() => ctx.renderMailboxTree(), 0); }
+        }
       },
       mobileShow(v) { views.push('mobile:' + v); ctx.state.view = 'mobile-' + v; },
       mobileMain(htmlStr) { nodes.get('mobile-main').innerHTML = htmlStr; },
