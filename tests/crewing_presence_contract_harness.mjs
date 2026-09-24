@@ -469,10 +469,19 @@ if (M) {
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
 // OWNER 23.07 + 07.08 + №101 19.08 "Крю флоу занимает зарезервированный слот"):
-// exactly 5 fixed slots Vacancies · Mailings · Seafarers · Crew Flow · Apps
-// (Apps last), canonical bottom-nav-<view> QA, no "More" slot, no rail scroll
-// mechanics; Requirements/Documents reachable from the mobile Apps grid whose
-// module tiles precede plugin tiles.
+// exactly 5 fixed slots, Apps last, canonical bottom-nav-<view> QA, no "More"
+// slot, no rail scroll mechanics; off-rail modules reachable from the mobile
+// Apps grid whose module tiles precede plugin tiles.
+// History of the composition, kept in full — the rule above never changed, only
+// which five modules fill it:
+//   until K2 (OWNER 23.07 / 07.08 / №101 19.08): Vacancies · Mailings ·
+//     Seafarers · Crew Flow · Apps, with Requirements/Documents off the rail.
+//   from K2 (OWNER (654) composition + (658) "K2 first", 2026-09-24): the work
+//     modules (vacancies, mailings) are retired from the product, Crew Flow
+//     becomes the home module and takes the first slot, and the freed slots go
+//     to Compliance and Documents:
+//       crew_flow · compliance · seafarers · documents · apps.
+//     №101's guarantee is unchanged: Crew Flow still holds a reserved slot.
 // S4: the comment block above is the only record of WHY the rail is what it is;
 // a canon change that leaves it untouched silently rewrites history. Scoped to
 // the CONSECUTIVE comment lines of that block only — a looser match would read

@@ -49,7 +49,10 @@ for (const code of ['rank_not_found', 'profile_not_active', 'profile_version_sta
   ok(rust.includes(`"${code}",`), `safe allowlist carries domain code ${code}`);
 }
 ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc370983366672c41b41116754ce/.test(workflow), 'runtime pin d6238191 is unchanged');
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: (93b1a51eb59d0dff5f2db3f2289b8afb09761f39|7bd9300601e5445a9a60f1136d2fd57a9e9b32c5|b72a59ca947ddb6a70a07b0328b61f9a29eca090)/.test(workflow), 'guard pin is the accepted base pin, the reviewed 7bd pin or the K2 route pin b72a59ca');
+// S5: exactly ONE accepted guard pin. A list of three quietly accepts two
+// superseded gate configurations — the pin then proves nothing about WHICH
+// gate ran. The K2 route lives only in b72a59ca.
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: b72a59ca947ddb6a70a07b0328b61f9a29eca090\n/.test(workflow), 'the workflow pins exactly the K2 route guard SHA b72a59ca');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -1254,7 +1257,7 @@ console.log('# K2 modules/crew-flow');
     // (a) loadMailboxStatus must de-duplicate an in-flight request: two Crew Flow
     //     paths ask at the same moment and must share one answer, not race.
     {
-      const mbSlice = fxSlice('function mailboxState() {', '\nasync function renderMailboxTree(');
+      const mbSlice = fxSlice('function mailboxState() {', '\n// K2/S1: the render is published');
       softOk(mbSlice !== '', 'S1: the mailbox status slice is bounded');
       const calls = [];
       let mbCtx = null;
@@ -1330,9 +1333,13 @@ console.log('# K2 modules/crew-flow');
     {
       const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
       softOk(pins === 'b72a59ca947ddb6a70a07b0328b61f9a29eca090', 'S5: the workflow pins exactly the K2 route guard SHA');
-      const pinAssert = html === null ? '' : '';
-      softOk(!/93b1a51eb59d0dff5f2db3f2289b8afb09761f39/.test(fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8')),
-        'S5: the harness no longer accepts the two superseded guard pins');
+      // The needles are assembled from halves on purpose: a probe that spells a
+      // SHA out reads its own source and can never pass (self-referential-probe
+      // class — measured three times in this session, this line included).
+      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5'];
+      const selfSrc = fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8');
+      softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
+        'S5: neither the harness nor the workflow still accepts a superseded guard pin');
       softOk(!html.includes('Vacancies -> Applications'), 'S5: the three unreachable "Vacancies -> Applications" strings are gone');
       const access = fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {");
       softOk(/tr\('settings\.team_access[^']*'\)/.test(access) || /crewFlowTr|tr\('team\./.test(access),
