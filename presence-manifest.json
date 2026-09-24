@@ -10,38 +10,6 @@
   ],
   "required_modules": [
     {
-      "id": "vacancies",
-      "name": "My vacancies",
-      "desktop_navigation": {
-        "route": "vacancies",
-        "nav_selector": "#mt-vacancies",
-        "route_driver": "showView"
-      },
-      "mobile_navigation": {
-        "route": "vacancies",
-        "nav_selector": "[data-mview=\"vacancies\"]",
-        "route_driver": "mobileShow"
-      },
-      "surface_markers": ["My vacancies", "Vacancies"],
-      "css_tokens": ["mt-vacancies", "data-mview=\"vacancies\""]
-    },
-    {
-      "id": "mailings",
-      "name": "Mailings",
-      "desktop_navigation": {
-        "route": "mailings",
-        "nav_selector": "#mt-mailings",
-        "route_driver": "showView"
-      },
-      "mobile_navigation": {
-        "route": "mailings",
-        "nav_selector": "[data-mview=\"mailings\"]",
-        "route_driver": "mobileShow"
-      },
-      "surface_markers": ["Mailings", "Рассылки"],
-      "css_tokens": ["mt-mailings", "data-mview=\"mailings\""]
-    },
-    {
       "id": "mail",
       "name": "Mail",
       "desktop_navigation": {
@@ -51,6 +19,22 @@
       },
       "surface_markers": ["CREWING MAILBOX MODULE START", "Personal mailbox", "Connect mailbox"],
       "css_tokens": ["mt-mail"]
+    },
+    {
+      "id": "crew_flow",
+      "name": "Crew Flow",
+      "desktop_navigation": {
+        "route": "crew_flow",
+        "nav_selector": "#mt-crew_flow",
+        "route_driver": "showView"
+      },
+      "mobile_navigation": {
+        "route": "crew_flow",
+        "nav_selector": "[data-mview=\"crew_flow\"]",
+        "route_driver": "mobileShow"
+      },
+      "surface_markers": ["Crew Flow", "data-qa=\"crew-flow-view\""],
+      "css_tokens": ["mt-crew_flow", "data-mview=\"crew_flow\""]
     },
     {
       "id": "compliance",
@@ -67,17 +51,6 @@
       },
       "surface_markers": ["Compliance Profiles", "Профили соответствия"],
       "css_tokens": ["mt-compliance", "data-mview=\"compliance\""]
-    },
-    {
-      "id": "team",
-      "name": "Team",
-      "desktop_navigation": {
-        "route": "team",
-        "nav_selector": "#mt-team",
-        "route_driver": "showView"
-      },
-      "surface_markers": ["Team", "AI Assistant"],
-      "css_tokens": ["mt-team"]
     },
     {
       "id": "seafarers",

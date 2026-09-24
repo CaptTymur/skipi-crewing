@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
-const REQUIRED_FLOOR = ['vacancies', 'mailings', 'mail', 'compliance', 'team', 'seafarers', 'documents', 'apps', 'settings'];
+const REQUIRED_FLOOR = ['mail', 'crew_flow', 'compliance', 'seafarers', 'documents', 'apps', 'settings'];
 const GLOBAL_CSS_TOKENS = ['.mod-tab', '.modules-bar', '.mobile-nav-btn', '.mobile-bottom-nav', '.mobile-module-rail'];
 const ALLOWED_HIDING_SCOPES = ['body.launching', 'body.mobile-shell'];
 
@@ -456,8 +456,10 @@ if (M) {
   }
   ok(!mobileSaveErr, 'settings5 mobile save/theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
 
+  // K2 (owner654/658, 2026-09-24): the legacy work modules (vacancies, mailings) are retired from the product;
+  // the presence floor for them is intentionally dropped together with the manifest entries (PR-P).
   for (const id of ['vacancies', 'mailings']) {
-    ok(modIds.includes(id), 'work module remains protected in presence manifest after settings extraction: ' + id);
+    ok(!modIds.includes(id), 'retired work module is no longer listed in the presence manifest (K2): ' + id);
   }
 }
 
