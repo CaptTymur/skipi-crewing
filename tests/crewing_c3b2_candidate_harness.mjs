@@ -1057,11 +1057,15 @@ console.log('# K2 modules/crew-flow');
       humanSize(b) { return `${b} B`; },
       certLabelById(id) { return String(id); },
       showToast(msg, kind) { toasts.push([msg, kind]); },
-      showView(v) { views.push(v); ctx.state.view = v; },
+      showView(v) { views.push(v); ctx.state.view = v; if (v === 'mail') ctx.__mailRender = ctx.renderMailboxTree(); },
       mobileShow(v) { views.push('mobile:' + v); ctx.state.view = 'mobile-' + v; },
       mobileMain(htmlStr) { nodes.get('mobile-main').innerHTML = htmlStr; },
       isMobileShellActive() { return String(ctx.state.view || '').indexOf('mobile-') === 0; },
       openMailCompose() { nodes.get('main').innerHTML = '<h1>Compose mail</h1><input id="mail-compose-to" value=""><input id="mail-compose-subject" value="">'; nodes.set('mail-compose-to', { id: 'mail-compose-to', value: '' }); nodes.set('mail-compose-subject', { id: 'mail-compose-subject', value: '' }); },
+      // The real showView('mail') only STARTS this; it repaints #main when it
+      // settles. The stub reproduces that ordering so the compose form cannot be
+      // opened too early (defect found by the K2 visual pass, frame k06).
+      async renderMailboxTree() { await Promise.resolve(); await Promise.resolve(); nodes.get('main').innerHTML = '<div class="empty">Connect your crewing mailbox.</div>'; },
       saveCrewFlowReadState() { store.set('skipi_crewing_crew_flow_read_state_v2', JSON.stringify(ctx.state.crewFlowReadState)); },
       async refreshCrewFlowRankings() { return null; },
       async ensureCrewFlowRankings() { return null; },
@@ -1143,10 +1147,12 @@ console.log('# K2 modules/crew-flow');
     const mailCtx = makeCrewContext({});
     mailCtx.__crew.renderCrewFlowView(); await flush();
     mailCtx.__crew.pilotOpenCard('intake-1'); await flush();
-    tryRun(mailCtx, "crewFlowWriteEmail('intake-1','reply');");
+    await tryRun(mailCtx, "crewFlowWriteEmail('intake-1','reply');");
     await flush();
     softOk(mailCtx.views.includes('mail'), 'K2-5: "write email" opens the Mail module');
     softOk((mailCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test', 'K2-5: the compose "to" field is prefilled from the email fact');
+    softOk(/Compose mail/.test(mailCtx.nodes.get('main').innerHTML),
+      'K2-5: the compose form survives the asynchronous mailbox render (visual-pass defect k06)');
 
     const ignCtx = makeCrewContext({});
     ignCtx.__crew.renderCrewFlowView(); await flush();

@@ -5521,13 +5521,17 @@ async function crewFlowSaveToSeafarers(intakeId) {
   }
   crewFlowRerender();
 }
-function crewFlowWriteEmail(intakeId, kind) {
+async function crewFlowWriteEmail(intakeId, kind) {
   var facts = crewFlowFactsFor(intakeId);
   var to = String(facts.email || '').trim();
   if (!to) { showToast(crewFlowTr('email_missing'), 'warn'); return; }
   if (pilotHostIsMobile()) { showToast(crewFlowTr('email_desktop_only'), 'warn'); return; }
   crewFlowMarkRead(intakeId, kind === 'docs' ? 'requested_documents' : 'emailed');
   showView('mail');
+  // showView('mail') only STARTS the mailbox load; when that load settles it
+  // paints #main with the mailbox state, so a compose form opened before it is
+  // silently overwritten (caught by the K2 visual pass, frame k06). Wait first.
+  if (typeof renderMailboxTree === 'function') { try { await renderMailboxTree(); } catch (e) {} }
   openMailCompose();
   var toEl = document.getElementById('mail-compose-to');
   if (toEl) toEl.value = to;
