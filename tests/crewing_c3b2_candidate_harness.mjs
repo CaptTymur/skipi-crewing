@@ -1561,6 +1561,12 @@ console.log('# K2 modules/crew-flow');
         'K2.1-4: the contact facts are shown as written');
       softOk(/data-qa="pilot-contact-add"/.test(bothHtml) && /pilotContactStart\('contact:phone'\)|pilotContactStart\('contact:email'\)/.test(bothHtml),
         'K2.1-4: "specify" leads into the existing operator fact form');
+      // The original is fetched FIRST, so the letter's own From is on the card
+      // when the draft opens: without that the "addressee is not the From" check
+      // would be measuring a value the screen never had.
+      await tryRun(bothCtx, "pilotLetterDownload();"); await flush(10);
+      softOk(/letter-from@example\.test/.test(bothCtx.nodes.get('main').innerHTML),
+        'K2.1-5: the letter From is on the card (the address the draft must NOT use)');
       await tryRun(bothCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
       const draftSection = (htmlStr) => (htmlStr.match(/<section class="pilot-card" data-qa="pilot-draft">[\s\S]*?<\/section>/) || [''])[0];
       const bothDraft = draftSection(bothCtx.nodes.get('main').innerHTML);
