@@ -51,8 +51,9 @@ for (const code of ['rank_not_found', 'profile_not_active', 'profile_version_sta
 ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc370983366672c41b41116754ce/.test(workflow), 'runtime pin d6238191 is unchanged');
 // S5: exactly ONE accepted guard pin. A list of three quietly accepts two
 // superseded gate configurations — the pin then proves nothing about WHICH
-// gate ran. The K2 route lives only in b72a59ca.
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: aa3b2efb19cb4448226075be36b3f8c7b302c3df\n/.test(workflow), 'the workflow pins exactly the K2 route guard SHA b72a59ca');
+// gate ran. The accepted configuration is aa3b2efb (K2 route plus the K2.1
+// single-screen route); the superseded b72a59ca must not be accepted.
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: aa3b2efb19cb4448226075be36b3f8c7b302c3df\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 routes)');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -1463,7 +1464,7 @@ console.log('# K2 modules/crew-flow');
     // ---- S5: one guard pin, one localized team row ---------------------------
     {
       const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
-      softOk(pins === 'aa3b2efb19cb4448226075be36b3f8c7b302c3df', 'S5: the workflow pins exactly the K2 route guard SHA');
+      softOk(pins === 'aa3b2efb19cb4448226075be36b3f8c7b302c3df', 'S5: the workflow pins exactly the accepted guard SHA');
       // The needles are assembled from halves on purpose: a probe that spells a
       // SHA out reads its own source and can never pass (self-referential-probe
       // class — measured three times in this session, this line included).
