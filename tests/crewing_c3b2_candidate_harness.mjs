@@ -1179,6 +1179,9 @@ console.log('# K2 modules/crew-flow');
   // An async runtime failure must be REPORTED like a synchronous one: an
   // unhandled rejection kills the process and hides every later check, which is
   // exactly what happened when this file first measured the K2.1 base.
+  // The product's own caption for a key, read out of the shipped dictionary in the
+  // context's current language: a check must not re-spell a user-facing sentence.
+  const cardText = (ctx, key) => vm.runInContext('PILOT_CARD_TEXT[getUiLang() === \'ru\' ? \'ru\' : \'en\'][' + JSON.stringify(key) + ']', ctx);
   const tryRun = (ctx, code) => {
     try {
       const result = vm.runInContext(code, ctx);
@@ -1455,7 +1458,12 @@ console.log('# K2 modules/crew-flow');
       // The needles are assembled from halves on purpose: a probe that spells a
       // SHA out reads its own source and can never pass (self-referential-probe
       // class — measured three times in this session, this line included).
-      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5'];
+      // b72a59ca joined the list with the K2.1 pin bump (PR #54): it is the gate
+      // configuration WITHOUT the K2.1 route, so accepting it would mean the
+      // workflow could run a gate that never heard of this task. RISKS №497: a pin
+      // bump touching more than one file skips assert-config-superset, so a
+      // downgrade of the pin passes CI green — this line is what notices.
+      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5', 'b72a59ca' + '947ddb6a70a07b0328b61f9a29eca090'];
       const selfSrc = fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8');
       softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
         'S5: neither the harness nor the workflow still accepts a superseded guard pin');
@@ -1554,16 +1562,17 @@ console.log('# K2 modules/crew-flow');
       softOk(/data-qa="pilot-contact-add"/.test(bothHtml) && /pilotContactStart\('contact:phone'\)|pilotContactStart\('contact:email'\)/.test(bothHtml),
         'K2.1-4: "specify" leads into the existing operator fact form');
       await tryRun(bothCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
-      const bothDraft = bothCtx.nodes.get('main').innerHTML;
+      const draftSection = (htmlStr) => (htmlStr.match(/<section class="pilot-card" data-qa="pilot-draft">[\s\S]*?<\/section>/) || [''])[0];
+      const bothDraft = draftSection(bothCtx.nodes.get('main').innerHTML);
       softOk(/data-qa="pilot-draft-to"[^>]*>[^<]*oleh@example\.test/.test(bothDraft) && !/old-card@example\.test/.test(bothDraft),
         'K2.1-16: with both facts present the addressee is contact:email, never the old card field');
-      softOk(!/letter-from@example\.test/.test(bothDraft),
+      softOk(bothDraft !== '' && !/letter-from@example\.test/.test(bothDraft),
         'K2.1-5: the addressee is the recorded contact, never the From of the letter');
       const legacyCtx = makeCrewContext({ contactMode: 'legacy' });
       legacyCtx.__crew.renderCrewFlowView(); await flush();
       legacyCtx.__crew.pilotOpenCard('intake-1'); await flush();
       await tryRun(legacyCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
-      const legacyDraft = legacyCtx.nodes.get('main').innerHTML;
+      const legacyDraft = draftSection(legacyCtx.nodes.get('main').innerHTML);
       softOk(/data-qa="pilot-draft-to"[^>]*>[^<]*old-card@example\.test/.test(legacyDraft) && /data-qa="pilot-draft-legacy"/.test(legacyDraft)
         && /address from the old card/.test(legacyDraft),
         'K2.1-16: with only the pre-S2 field the draft uses it AND says the address comes from the old card');
@@ -1603,7 +1612,7 @@ console.log('# K2 modules/crew-flow');
       const errState = JSON.parse(errCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
       softOk(!(errState['intake-1'] && errState['intake-1'].action === 'draft_opened'),
         'K2.1-6: a refused client marks nothing');
-      softOk(errCtx.toasts.some(([m]) => /mail client|почтовый клиент/i.test(String(m))),
+      softOk(errCtx.toasts.some(([m]) => String(m) === cardText(errCtx, 'draft_failed')),
         'K2.1-6: a refused client is explained to the operator');
       softOk(!/data-qa="pilot-draft-state"/.test(errCtx.nodes.get('main').innerHTML),
         'K2.1-6: no draft-opened state is shown when the client refused');
@@ -1693,12 +1702,12 @@ console.log('# K2 modules/crew-flow');
       gone404.__crew.renderCrewFlowView(); await flush();
       gone404.__crew.pilotOpenCard('intake-1'); await flush();
       await tryRun(gone404, "pilotLetterDownload();"); await flush(10);
-      softOk(gone404.toasts.some(([m]) => /unavailable|недоступ/i.test(String(m))),
+      softOk(gone404.toasts.some(([m]) => String(m) === cardText(gone404, 'bytes_unavailable')),
         'K2.1-18: a 404 on the original is told to the operator');
       softOk(!/data-qa="pilot-letter-saved"/.test(gone404.nodes.get('main').innerHTML),
         'K2.1-18: a refused original leaves no saved-copy claim on the card');
       await tryRun(gone404, "pilotAttachmentDownload(1);"); await flush(10);
-      softOk(gone404.toasts.filter(([m]) => /unavailable|недоступ/i.test(String(m))).length >= 2,
+      softOk(gone404.toasts.some(([m]) => String(m) === cardText(gone404, 'attach_unavailable')),
         'K2.1-18: a 404 on an attachment is told to the operator too');
     }
 
