@@ -9,6 +9,9 @@ const html = fs.readFileSync('dist/index.html', 'utf8');
 const rust = fs.readFileSync('src-tauri/src/crewing_intake.rs', 'utf8');
 const lib = fs.readFileSync('src-tauri/src/lib.rs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/skipi-guard.yml', 'utf8');
+// K2.1: contact.rs is NEW in this candidate. A missing file must read as a RED
+// assertion, not as an import-time crash that hides every other check.
+const contactRs = fs.existsSync('src-tauri/src/contact.rs') ? fs.readFileSync('src-tauri/src/contact.rs', 'utf8') : '';
 
 const c3b1Start = html.indexOf('// ================= C3b-1 SYNTHETIC INTAKE PILOT START =================');
 const c3b1End = html.indexOf('// ================== C3b-1 SYNTHETIC INTAKE PILOT END ==================', c3b1Start);
@@ -801,7 +804,7 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
     'entry.tagline','entry.open_profile','entry.open_profile_desc','entry.create_profile','entry.create_profile_desc','entry.show_demo','entry.show_demo_desc','entry.demo_note',
     'connect.title','connect.lead_device','connect.lead_profile','connect.close','connect.tab_token','connect.tab_qr','connect.token_label','connect.token_placeholder','connect.help','connect.clear','connect.submit','connect.qr_text','connect.qr_note','connect.enter_manually','connect.err_already','connect.err_token','connect.err_server','connect.err_generic',
     'common.cancel','common.ok',
-    'confirm.team_remove','confirm.profile_archive','confirm.profile_archive_note','confirm.mailbox_disconnect','confirm.message_delete','confirm.mailing_close','confirm.mailing_close_note','confirm.mailing_delete','confirm.document_delete','confirm.document_delete_note','confirm.vacancy_close','confirm.vacancy_close_note','confirm.vacancy_delete','confirm.vacancy_delete_note','confirm.vacancy_delete_hint','confirm.vault_folder','confirm.vault_folder_note',
+    'confirm.team_remove','confirm.profile_archive','confirm.profile_archive_note','confirm.mailbox_disconnect','confirm.mailing_close','confirm.mailing_close_note','confirm.mailing_delete','confirm.document_delete','confirm.document_delete_note','confirm.vacancy_close','confirm.vacancy_close_note','confirm.vacancy_delete','confirm.vacancy_delete_note','confirm.vacancy_delete_hint','confirm.vault_folder','confirm.vault_folder_note',
     'confirm.remove','confirm.archive','confirm.disconnect','confirm.delete','confirm.delete_forever','confirm.close','confirm.close_request','confirm.close_vacancy','confirm.use_folder',
     'about.verification_unavailable','about.verification_mismatch',
     'mobile.apps_title','mobile.apps_sub',
@@ -1013,24 +1016,45 @@ console.log('# K2 modules/crew-flow');
   // 4/5/6: isolated vm over the Crew Flow + C3b-1 + C3b-2 blocks with a recording
   // invoke stub serving a synthetic queue of three candidates.
   const mobileCrewBlock = k2slice('function mobileRenderCrewFlow() {', '\nfunction mobileRenderSeafarers()');
-  function k2Server() {
+  // K2.1 (OWNER (739)): the receipt carries the attachment METADATA list (S3) and
+  // the rfc822 object of the original letter. Bytes are never in the card.
+  const K2_ATTACHMENTS = [
+    { ordinal: 1, filename: 'oleh-cv.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 210000, verdict: 'accepted', reason: null, eligible: true },
+    { ordinal: 2, filename: 'payload.exe', declared_type: 'application/pdf', measured_type: 'application/x-dosexec', byte_size: 4096, verdict: 'rejected', reason: 'type_mismatch', eligible: false },
+  ];
+  // Hostile-by-construction names: the product must show them as TEXT.
+  const K2_ATTACHMENTS_HOSTILE = [
+    { ordinal: 1, filename: '<img src=x onerror=1>.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 11, verdict: 'accepted', reason: null, eligible: true },
+    { ordinal: 2, filename: "a'b\"c.pdf", declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 12, verdict: 'needs_review', reason: 'scanner_unavailable', eligible: true },
+    { ordinal: 3, filename: '', declared_type: 'application/octet-stream', measured_type: 'application/octet-stream', byte_size: 0, verdict: 'rejected', reason: 'empty', eligible: false },
+  ];
+  const K2_HEAD_TEXT = 'Return-Path: <bounce@example.test>\r\nFrom: =?utf-8?B?0J7Qu9C10LMg0JI=?= <letter-from@example.test>\r\nDate: Wed, 24 Sep 2026 09:00:00 +0000\r\nSubject: =?utf-8?Q?CV_=D0=9C=D0=B0=D1=81=D1=82=D0=B5=D1=80?=\r\n\t<2/O>\r\n\r\nbody must never be parsed as a header\r\nSubject: forged\r\n';
+  function k2Server({ contactMode = 'both', attachments = K2_ATTACHMENTS } = {}) {
     const items = [
-      { intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', content_type: 'application/pdf', content_bytes: 120, state: 'quarantined', created_at: '2026-09-24T09:00:00', objects: [{ id: 'o1', content_type: 'application/pdf' }], summary: { state: 'quarantined', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null } },
+      { intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', content_type: 'message/rfc822', content_bytes: 120, state: 'quarantined', created_at: '2026-09-24T09:00:00', objects: [{ id: 'o1', content_type: 'application/pdf' }, { id: 'o-letter', content_type: 'message/rfc822' }], attachments, summary: { state: 'quarantined', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null } },
       { intake_id: 'intake-2', receipt_id: 'r2', crewing_id: 'crew-synthetic', content_type: 'application/pdf', content_bytes: 140, state: 'ranked', created_at: '2026-09-24T08:00:00', objects: [{ id: 'o2', content_type: 'application/pdf' }], summary: { state: 'ranked', facts: 2, ranks: 2, ranks_stale: 0, active_confirmations: 1, needs_review_reason: null } },
       { intake_id: 'intake-3', receipt_id: 'r3', crewing_id: 'crew-synthetic', content_type: 'text/plain', content_bytes: 90, state: 'needs_review', created_at: '2026-09-24T07:00:00', objects: [{ id: 'o3', content_type: 'text/plain' }], summary: { state: 'needs_review', facts: 1, ranks: 0, ranks_stale: 0, active_confirmations: 0, needs_review_reason: 'unreadable_source' } },
     ];
     const facts = {
       'intake-1': [{ field: 'name', versions: [{ field: 'name', value: 'Oleh V.', version: 1, source_object: 'o1', created_at: '2026-09-24T09:05:00' }] },
         { field: 'rank', versions: [{ field: 'rank', value: 'Master', version: 1, source_object: 'o1', created_at: '2026-09-24T09:06:00' }] },
-        { field: 'email', versions: [{ field: 'email', value: 'oleh@example.test', version: 1, source_object: 'o1', created_at: '2026-09-24T09:07:00' }] }],
+        ...(contactMode === 'both' || contactMode === 'contact'
+          ? [{ field: 'contact:email', versions: [{ field: 'contact:email', value: 'oleh@example.test', version: 1, source_object: 'o1', uncertainty: 'operator_entered', created_at: '2026-09-24T09:07:00' }] },
+            { field: 'contact:phone', versions: [{ field: 'contact:phone', value: '+380 50 000 00 00', version: 1, source_object: 'o1', created_at: '2026-09-24T09:07:30' }] }]
+          : []),
+        ...(contactMode === 'both' || contactMode === 'legacy'
+          ? [{ field: 'email', versions: [{ field: 'email', value: 'old-card@example.test', version: 1, source_object: 'o1', created_at: '2026-09-24T09:07:00' }] }]
+          : []),
+        { field: 'rank_as_written', versions: [{ field: 'rank_as_written', value: 'Mastre', version: 1, source_object: 'o1', uncertainty: 'rank_ambiguous', created_at: '2026-09-24T09:08:00' }] }],
       'intake-2': [{ field: 'name', versions: [{ field: 'name', value: 'Ramon S.', version: 1, source_object: 'o2', created_at: '2026-09-24T08:05:00' }] },
         { field: 'rank', versions: [{ field: 'rank', value: 'Chief Officer', version: 1, source_object: 'o2', created_at: '2026-09-24T08:06:00' }] }],
       'intake-3': [{ field: 'name', versions: [{ field: 'name', value: 'Marko P.', version: 1, source_object: 'o3', created_at: '2026-09-24T07:05:00' }] }],
     };
     return { items, facts };
   }
-  function makeCrewContext({ language = 'en', settings, demo = false, native = true, mailRace = false, composeBroken = false, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false } = {}) {
-    const srv = k2Server();
+  function makeCrewContext({ language = 'en', settings, demo = false, native = true, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false,
+    contactMode = 'both', attachments, bytes404 = false, mailtoFails = false, realEscaping = false, mailbox } = {}) {
+    const srv = k2Server({ contactMode, attachments });
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
     const calls = [];
@@ -1064,44 +1088,10 @@ console.log('# K2 modules/crew-flow');
       showToast(msg, kind) { toasts.push([msg, kind]); },
       showView(v) {
         views.push(v); ctx.state.view = v;
-        // The real showView('mail') starts an UNAWAITED mailbox render that paints
-        // #main when it settles (S1). With mailRace a SECOND chain starts a tick
-        // later — i.e. while the compose path is already waiting on the first.
-        // That is the case a single `await renderMailboxTree()` cannot cover: it
-        // resolves, opens the form, and the late chain then wipes it. Only waiting
-        // until nothing is in flight survives, which is what the fix does.
-        if (v === 'mail') {
-          ctx.renderMailboxTree();
-          if (mailRace) { ctx.renderMailboxTree(); setTimeout(() => ctx.renderMailboxTree(), 0); }
-        }
       },
       mobileShow(v) { views.push('mobile:' + v); ctx.state.view = 'mobile-' + v; },
       mobileMain(htmlStr) { nodes.get('mobile-main').innerHTML = htmlStr; },
       isMobileShellActive() { return String(ctx.state.view || '').indexOf('mobile-') === 0; },
-      openMailCompose() {
-        if (composeBroken) { timeline.push('compose-refused'); return; }
-        timeline.push('compose-open');
-        nodes.get('main').innerHTML = '<h1>Compose mail</h1><input id="mail-compose-to" value=""><input id="mail-compose-subject" value="">';
-        nodes.set('mail-compose-to', { id: 'mail-compose-to', value: '' });
-        nodes.set('mail-compose-subject', { id: 'mail-compose-subject', value: '' });
-      },
-      // The real showView('mail') only STARTS this; it repaints #main when it
-      // settles. The stub reproduces that ordering — and the real contract of
-      // publishing the in-flight render on state.mail.viewPending (S1) — so the
-      // compose form cannot be opened too early (visual-pass defect k06).
-      mailboxState() { if (!ctx.state.mail) ctx.state.mail = { folder: 'INBOX', messages: [], selected: null, mailbox: null, viewPending: null }; return ctx.state.mail; },
-      renderMailboxTree() {
-        const mail = ctx.mailboxState();
-        const run = (async () => {
-          for (let i = 0; i < 4; i += 1) await Promise.resolve();
-          await new Promise((r) => setTimeout(r, 0));
-          nodes.get('main').innerHTML = '<div class="empty">Connect your crewing mailbox.</div>';
-        })();
-        mail.viewPending = run;
-        run.then(() => { if (mail.viewPending === run) mail.viewPending = null; },
-                 () => { if (mail.viewPending === run) mail.viewPending = null; });
-        return run;
-      },
       saveCrewFlowReadState() {
         for (const [id, row] of Object.entries(ctx.state.crewFlowReadState || {})) timeline.push('read-state:' + (row && row.action));
         store.set('skipi_crewing_crew_flow_read_state_v2', JSON.stringify(ctx.state.crewFlowReadState));
@@ -1109,7 +1099,6 @@ console.log('# K2 modules/crew-flow');
       async refreshCrewFlowRankings() { return null; },
       async ensureCrewFlowRankings() { return null; },
       findApplicationById() { return null; },
-      mailCandidateEnrichmentForMessage() { return null; },
       latestPdfAttachmentFromSender() { return null; },
       sUidOf() { return ''; },
       async saveRankedCandidate() { return null; },
@@ -1132,10 +1121,31 @@ console.log('# K2 modules/crew-flow');
             : { ranked: 2, written: 2, reason: 'ranked', profiles: ['p1', 'p2'] };
         }
         if (command === 'save_seafarer_from_bundle') return { id: 'sf-1', display_name: 'Oleh V.' };
+        // K2.1 byte routes: one audited request per press; 404 is the server's
+        // answer for an ineligible/absent part and must reach the operator as a
+        // human sentence, not as a silent nothing.
+        if (command === 'crewing_intake_object_download') {
+          if (bytes404) throw { kind: 'server', status: 404, detail: null, ambiguous: false };
+          timeline.push('invoke:object_download');
+          return { path: '/home/op/Downloads/Skipi/Crewing/intake-1/letter-intake-1.eml', bytes: 2048, sha256: 'a'.repeat(64), head_text: K2_HEAD_TEXT };
+        }
+        if (command === 'crewing_intake_attachment_download') {
+          if (bytes404) throw { kind: 'server', status: 404, detail: null, ambiguous: false };
+          timeline.push('invoke:attachment_download:' + String(args && args.ordinal));
+          return { path: '/home/op/Downloads/Skipi/Crewing/intake-1/attachment-' + String(args && args.ordinal) + '.pdf', bytes: 1024, sha256: 'b'.repeat(64) };
+        }
+        if (command === 'crewing_intake_open_saved') { timeline.push('invoke:open_saved:' + String(args && args.path)); return null; }
+        if (command === 'open_mailto') {
+          if (mailtoFails) throw 'no mail client';
+          timeline.push('invoke:open_mailto');
+          return null;
+        }
+        if (command === 'get_mailbox_status') return mailbox === undefined ? { configured: true, status: 'active', email_masked: 'o***@crewing.example' } : mailbox;
+        if (command === 'disconnect_mailbox') { timeline.push('invoke:disconnect_mailbox'); return null; }
         return null;
       },
       calls, nodes, toasts, views, store, timeline,
-      setTimeout, clearTimeout, queueMicrotask,
+      setTimeout, clearTimeout, queueMicrotask, atob, TextDecoder, Uint8Array,
       __K2_STRINGS: { en: {}, ru: {} },
     };
     // real dictionaries so the RU/EN crew_flow.* strings are exercised
@@ -1149,6 +1159,15 @@ console.log('# K2 modules/crew-flow');
     else if (native) ctx.window.__TAURI__ = { core: { invoke: () => {} }, dialog: {}, event: {} };
     else ctx.window.__TAURI__ = { core: { invoke: () => {} } };
     if (webShell) ctx.window.__SKIPI_WEB_SHELL__ = true;
+    // K2.1 check 13: `esc` above escapes an apostrophe, the product's escapeHtml
+    // does NOT (only escapeAttr does). A stub that escapes more than the product
+    // cannot see an attribute-escaping defect, so the two real one-line
+    // definitions are installed FROM THE SHIPPED BYTES when a check needs them.
+    if (realEscaping) {
+      const defs = (html.match(/function escapeAttr\(s\)\{[^\n]*\n/) || [''])[0] + (html.match(/function escapeHtml\(s\)\{[^\n]*\n/) || [''])[0];
+      if (!/escapeAttr/.test(defs) || !/escapeHtml/.test(defs)) throw new Error('escaping definitions not found in dist');
+      vm.runInContext(defs, ctx);
+    }
     vm.runInContext(
       `${k2crew}\n${c3b1Source}\n${c3b2Source}\n${mobileCrewBlock}\n` +
       'this.__crew = { renderCrewFlowView, renderCrewFlowDetail, renderCrewFlowTreeBody, crewFlowState, crewFlowReadInfo, pilotEnter, pilotLoadQueue, pilotOpenCard, pilotCloseCard, renderIntakePilot, mobileRenderCrewFlow };',
@@ -1157,7 +1176,18 @@ console.log('# K2 modules/crew-flow');
     return ctx;
   }
 
-  const tryRun = (ctx, code) => { try { return vm.runInContext(code, ctx); } catch (e) { console.log('    (K2 runtime: ' + (e && e.message) + ')'); return undefined; } };
+  // An async runtime failure must be REPORTED like a synchronous one: an
+  // unhandled rejection kills the process and hides every later check, which is
+  // exactly what happened when this file first measured the K2.1 base.
+  const tryRun = (ctx, code) => {
+    try {
+      const result = vm.runInContext(code, ctx);
+      if (result && typeof result.then === 'function') {
+        return result.catch((e) => { console.log('    (K2 runtime async: ' + (e && (e.message || e)) + ')'); return undefined; });
+      }
+      return result;
+    } catch (e) { console.log('    (K2 runtime: ' + (e && e.message) + ')'); return undefined; }
+  };
 
   // 4. live queue in Crew Flow
   let liveCtx = null;
@@ -1183,26 +1213,29 @@ console.log('# K2 modules/crew-flow');
       'K2-5: the action panel carries the five operator actions (email/request-docs is one action, two controls) — got [' + actionIds.join(',') + ']');
 
     // 5. individual actions
+    // K2.1 (OWNER (739)): "write email" no longer routes into a mail module — it
+    // opens the draft ON the card. It is therefore enabled with or without a
+    // recorded contact: a missing address is answered with a dialog (check 7),
+    // never with a dead button.
     const emailBtn = (cardHtml.match(/<button[^>]*data-qa="crew-flow-action-email"[^>]*>/) || [''])[0];
-    softOk(!/disabled/.test(emailBtn), 'K2-5: "write email" is enabled when the email fact exists');
+    softOk(emailBtn !== '' && !/disabled/.test(emailBtn), 'K2-5: "write email" is enabled when the contact fact exists');
     liveCtx.__crew.pilotCloseCard();
     await flush();
     liveCtx.__crew.pilotOpenCard('intake-3');
     await flush();
     const noEmailCard = liveCtx.nodes.get('main').innerHTML;
     const noEmailBtn = (noEmailCard.match(/<button[^>]*data-qa="crew-flow-action-email"[^>]*>/) || [''])[0];
-    softOk(/disabled/.test(noEmailBtn) && /data-qa="crew-flow-email-hint"/.test(noEmailCard),
-      'K2-5: without an email fact the action is disabled and explains why');
+    softOk(noEmailBtn !== '' && !/disabled/.test(noEmailBtn) && /data-qa="crew-flow-email-hint"/.test(noEmailCard),
+      'K2.1/K2-5: without a contact fact the action stays reachable and the panel says the address is missing');
 
     const mailCtx = makeCrewContext({});
     mailCtx.__crew.renderCrewFlowView(); await flush();
     mailCtx.__crew.pilotOpenCard('intake-1'); await flush();
     await tryRun(mailCtx, "crewFlowWriteEmail('intake-1','reply');");
     await flush();
-    softOk(mailCtx.views.includes('mail'), 'K2-5: "write email" opens the Mail module');
-    softOk((mailCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test', 'K2-5: the compose "to" field is prefilled from the email fact');
-    softOk(/Compose mail/.test(mailCtx.nodes.get('main').innerHTML),
-      'K2-5: the compose form survives the asynchronous mailbox render (visual-pass defect k06)');
+    softOk(!mailCtx.views.includes('mail'), 'K2.1/K2-5: "write email" no longer routes into the retired Mail module');
+    softOk(/data-qa="pilot-draft"/.test(mailCtx.nodes.get('main').innerHTML),
+      'K2.1/K2-5: "write email" opens the draft on the candidate card');
 
     const ignCtx = makeCrewContext({});
     ignCtx.__crew.renderCrewFlowView(); await flush();
@@ -1271,63 +1304,17 @@ console.log('# K2 modules/crew-flow');
       return b > a ? html.slice(a, b) : '';
     };
 
-    // ---- S1: one mailbox chain, and 'emailed' only after the form is open -----
-    // (a) loadMailboxStatus must de-duplicate an in-flight request: two Crew Flow
-    //     paths ask at the same moment and must share one answer, not race.
+    // ---- S1 (K2.1): the draft replaces the mailbox chain -----------------------
+    // The old S1a/S1b measured a module that no longer exists (one in-flight
+    // get_mailbox_status; a compose form surviving an unawaited mailbox render).
+    // What must be measured now is the SAME property on the surviving path: the
+    // review state is a claim about what the operator did, so it is written only
+    // after the external client actually accepted the draft. Both directions are
+    // in the K2.1 section below (checks 6 and 15); nothing is dropped silently.
     {
-      const mbSlice = fxSlice('function mailboxState() {', '\n// K2/S1: the render is published');
-      softOk(mbSlice !== '', 'S1: the mailbox status slice is bounded');
-      const calls = [];
-      let mbCtx = null;
-      try {
-        mbCtx = vm.createContext({
-          console, Promise, String, Object, Array, JSON, Number, setTimeout,
-          state: {},
-          async invoke(cmd) { calls.push(cmd); await new Promise((r) => setTimeout(r, 0)); return { configured: false, status: 'not_configured' }; },
-        });
-        vm.runInContext(mbSlice + '\nthis.__mb = { loadMailboxStatus, mailboxState };', mbCtx);
-      } catch (e) { console.log('    (S1 mailbox slice: ' + (e && e.message) + ')'); }
-      if (mbCtx && mbCtx.__mb) {
-        const [a, b] = await Promise.all([mbCtx.__mb.loadMailboxStatus(false), mbCtx.__mb.loadMailboxStatus(false)]);
-        softOk(calls.filter((c) => c === 'get_mailbox_status').length === 1,
-          'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request — got ' + calls.length);
-        softOk(a === b && !!a, 'S1a: both callers get the same status object');
-        const again = await mbCtx.__mb.loadMailboxStatus(false);
-        softOk(again === a && calls.length === 1, 'S1a: the cached status is still reused after the flight ends');
-        const forced = await mbCtx.__mb.loadMailboxStatus(true);
-        softOk(!!forced && calls.length === 2, 'S1a: force still re-asks exactly once');
-      } else {
-        softOk(false, 'S1a: two concurrent loadMailboxStatus callers share ONE in-flight request');
-      }
+      softOk(!html.includes('function mailboxViewReady(') && !html.includes('function loadMailboxStatus('),
+        'S1/K2.1: the mailbox render chain the old S1 measured is gone from the shipped HTML');
     }
-    // (b) the compose form must survive a SECOND, unawaited mailbox render, and
-    //     the 'emailed' review state must be written only after it is on screen.
-    {
-      const raceCtx = makeCrewContext({ mailRace: true });
-      raceCtx.__crew.renderCrewFlowView(); await flush();
-      raceCtx.__crew.pilotOpenCard('intake-1'); await flush();
-      await tryRun(raceCtx, "crewFlowWriteEmail('intake-1','reply');");
-      await flush(12);
-      softOk(/Compose mail/.test(raceCtx.nodes.get('main').innerHTML),
-        'S1b: the compose form survives every mailbox render started by showView(mail)');
-      softOk((raceCtx.nodes.get('mail-compose-to') || {}).value === 'oleh@example.test',
-        'S1b: the surviving form still carries the candidate address');
-      const tl = raceCtx.timeline;
-      const iCompose = tl.indexOf('compose-open');
-      const iRead = tl.findIndex((e) => e === 'read-state:emailed');
-      softOk(iCompose !== -1 && iRead !== -1 && iCompose < iRead,
-        'S1b: the emailed review state is written AFTER the form is open — timeline [' + tl.join(' > ') + ']');
-      const failCtx = makeCrewContext({ mailRace: true, composeBroken: true });
-      failCtx.__crew.renderCrewFlowView(); await flush();
-      failCtx.__crew.pilotOpenCard('intake-1'); await flush();
-      await tryRun(failCtx, "crewFlowWriteEmail('intake-1','reply');");
-      await flush(12);
-      const rs = JSON.parse(failCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
-      softOk(!(rs['intake-1'] && rs['intake-1'].action === 'emailed'),
-        'S1b: when the compose form cannot be opened, nothing is marked as emailed');
-    }
-
-
 
     // ---- A2 (supervisor acceptance): three mutants that survived all 16 -----
     // (a) the confirm before the irreversible save must exist AND its refusal
@@ -1493,6 +1480,312 @@ console.log('# K2 modules/crew-flow');
     const demoHtml = demoCtx.nodes.get('main').innerHTML + '\n' + demoCtx.nodes.get('crew-flow-tree').innerHTML;
     softOk(demoHtml.includes('Oleksandr K.') && !demoCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'),
       'K2-9: demo mode still renders the fixture signals and never calls the live queue');
+
+    // -----------------------------------------------------------------------
+    // # K2.1 single screen (OWNER (739) п.2–5; card D1 checks 1–18)
+    // The mailbox module is retired and the candidate card becomes THE screen:
+    // the original letter, its attachments, the contacts as written, the stored
+    // comparisons, and one draft that leaves through an external client. Every
+    // check below is RED on the K2.1 base commit.
+    // -----------------------------------------------------------------------
+    console.log('# K2.1 single screen');
+
+    // ---- 1. the module is gone from the shipped HTML ------------------------
+    softOk(!html.includes('id="mt-mail"'), 'K2.1-1: the desktop mail tab is gone');
+    softOk(!html.includes("showView('mail')") && !/\['mail','crew_flow'/.test(html),
+      'K2.1-1: no route into a mail view and no mail slot in the tab-highlight list');
+    softOk(!html.includes('CREWING MAILBOX MODULE START') && !html.includes('CREWING MAILBOX MODULE END'),
+      'K2.1-1: the mailbox module block is gone');
+    for (const gone of ['function mailboxViewReady(', 'function openMailCompose(', 'function classifyMailCvMessage(',
+      'function mailCandidateEnrichmentForMessage(', 'function renderMailboxTree(', 'function sendMailFromCompose(',
+      'function deleteMailMessage(', 'function saveMailboxSettings(', 'function mailboxPayloadFromForm(']) {
+      softOk(!html.includes(gone), 'K2.1-1: ' + gone.slice(9, -1) + ' left with the module');
+    }
+    softOk(!/mobileNavButton\('mail'/.test(html) && !html.includes("mail: 'bottom-nav-mail'"),
+      'K2.1-1: the mobile rail builds no mail slot');
+    softOk(html.includes('data-qa="crew-flow-view"') && html.includes('id="mt-crew_flow"') && html.includes('data-mview="'),
+      'K2.1-1: the must-keep Crew Flow presence tokens survive');
+
+    // ---- 2/3/13. the four blocks, eligibility and escaping -----------------
+    {
+      const cardCtx = makeCrewContext({});
+      cardCtx.__crew.renderCrewFlowView(); await flush();
+      cardCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      const cardHtml2 = cardCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-section-letter"/.test(cardHtml2) && /data-qa="pilot-section-attachments"/.test(cardHtml2)
+        && /data-qa="pilot-section-contacts"/.test(cardHtml2) && /data-qa="pilot-section-ranks"/.test(cardHtml2),
+        'K2.1-2: the card renders the four blocks letter · attachments · contacts · comparisons');
+      softOk(/data-qa="pilot-letter-object">o-letter · message\/rfc822/.test(cardHtml2) && /data-qa="pilot-letter-open"/.test(cardHtml2),
+        'K2.1-2: the letter block names the rfc822 object and offers the original');
+      softOk(cardCtx.calls.filter((c) => /download/.test(c.command)).length === 0,
+        'K2.1-2: opening a card asks for NO bytes — the byte routes are explicit presses only');
+      const rows = [...cardHtml2.matchAll(/data-qa="pilot-attachment" data-ordinal="(\d+)"/g)].map((m) => m[1]);
+      softOk(rows.join(',') === '1,2', 'K2.1-2: attachment rows render in ordinal order — got [' + rows.join(',') + ']');
+      softOk(/oleh-cv\.pdf/.test(cardHtml2) && /210000 B/.test(cardHtml2) && /accepted/.test(cardHtml2),
+        'K2.1-2: an attachment row carries filename, size and the verdict in words');
+      const dl = [...cardHtml2.matchAll(/data-qa="pilot-attachment-download" data-ordinal="(\d+)"/g)].map((m) => m[1]);
+      softOk(dl.join(',') === '1', 'K2.1-3: only the eligible attachment offers a download — got [' + dl.join(',') + ']');
+      softOk(/data-qa="pilot-attachment-blocked"[^>]*>[^<]*declared type does not match the content/.test(cardHtml2),
+        'K2.1-3: the ineligible attachment states its reason instead of a button');
+      softOk(/Eligibility is not an antivirus verdict/.test(cardHtml2),
+        'K2.1-3: the block says eligibility is not an antivirus verdict (no green tick)');
+      // 13: real escaping, hostile filenames, empty filename
+      const hostileCtx = makeCrewContext({ realEscaping: true, attachments: K2_ATTACHMENTS_HOSTILE });
+      hostileCtx.__crew.renderCrewFlowView(); await flush();
+      hostileCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      const hostile = hostileCtx.nodes.get('main').innerHTML;
+      softOk(!/<img src=x/.test(hostile) && /&lt;img src=x onerror=1&gt;\.pdf/.test(hostile),
+        'K2.1-13: a filename that is markup is rendered as text, not as markup');
+      softOk(!/data-ordinal="2"[^>]*a'b/.test(hostile) && /a&#39;b&quot;c\.pdf|a&#39;b&#34;c\.pdf/.test(hostile),
+        'K2.1-13: quotes and apostrophes in a filename are escaped for their attribute');
+      softOk(/without a name/.test(hostile), 'K2.1-13: an empty filename gets an explicit caption, not an empty cell');
+      softOk(/scanner unavailable/.test(hostile) && /data-qa="pilot-attachment-download" data-ordinal="2"/.test(hostile),
+        'K2.1-13: needs_review + scanner_unavailable stays eligible and says why');
+    }
+
+    // ---- 4/16. contacts as written, and WHICH address is the addressee ------
+    {
+      const bothCtx = makeCrewContext({});
+      bothCtx.__crew.renderCrewFlowView(); await flush();
+      bothCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      const bothHtml = bothCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-contact-email"[^>]*>[^<]*oleh@example\.test/.test(bothHtml) && /\+380 50 000 00 00/.test(bothHtml),
+        'K2.1-4: the contact facts are shown as written');
+      softOk(/data-qa="pilot-contact-add"/.test(bothHtml) && /pilotContactStart\('contact:phone'\)|pilotContactStart\('contact:email'\)/.test(bothHtml),
+        'K2.1-4: "specify" leads into the existing operator fact form');
+      await tryRun(bothCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const bothDraft = bothCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-draft-to"[^>]*>[^<]*oleh@example\.test/.test(bothDraft) && !/old-card@example\.test/.test(bothDraft),
+        'K2.1-16: with both facts present the addressee is contact:email, never the old card field');
+      softOk(!/letter-from@example\.test/.test(bothDraft),
+        'K2.1-5: the addressee is the recorded contact, never the From of the letter');
+      const legacyCtx = makeCrewContext({ contactMode: 'legacy' });
+      legacyCtx.__crew.renderCrewFlowView(); await flush();
+      legacyCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(legacyCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const legacyDraft = legacyCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-draft-to"[^>]*>[^<]*old-card@example\.test/.test(legacyDraft) && /data-qa="pilot-draft-legacy"/.test(legacyDraft)
+        && /address from the old card/.test(legacyDraft),
+        'K2.1-16: with only the pre-S2 field the draft uses it AND says the address comes from the old card');
+    }
+
+    // ---- 5/6. the draft leaves through an external client, state after Ok ---
+    {
+      const okCtx = makeCrewContext({});
+      okCtx.__crew.renderCrewFlowView(); await flush();
+      okCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(okCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const draftHtml = okCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-draft-subject"/.test(draftHtml) && /data-qa="pilot-draft-body"/.test(draftHtml)
+        && /data-qa="pilot-draft-open-client"/.test(draftHtml),
+        'K2.1-5: the draft carries an editable subject, an editable body and one control that opens the client');
+      softOk(/Master · Alpha/.test(draftHtml) || /Master/.test(draftHtml),
+        'K2.1-5: the autotext names the chosen compliance profile');
+      const beforeState = JSON.parse(okCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(beforeState['intake-1'] && beforeState['intake-1'].action === 'draft_opened'),
+        'K2.1-6: opening the draft alone marks nothing');
+      await tryRun(okCtx, "pilotDraftOpenClient();"); await flush(10);
+      const mailtoCall = okCtx.calls.find((c) => c.command === 'open_mailto');
+      softOk(!!mailtoCall && mailtoCall.args.to === 'oleh@example.test' && typeof mailtoCall.args.subject === 'string' && typeof mailtoCall.args.body === 'string',
+        'K2.1-5: the client is opened through open_mailto with the draft recipient, subject and body');
+      softOk(!!mailtoCall && !('attachment' in mailtoCall.args) && !('attachments' in mailtoCall.args) && !/attachment=/.test(String(mailtoCall.args.body)),
+        'K2.1-5: nothing is attached to the draft — mailto carries no files');
+      const afterState = JSON.parse(okCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(afterState['intake-1'] && afterState['intake-1'].action === 'draft_opened',
+        'K2.1-6: the draft_opened review state is written after the client accepted the draft');
+      softOk(/data-qa="pilot-draft-state"/.test(okCtx.nodes.get('main').innerHTML),
+        'K2.1-6: the card shows the draft-opened state');
+      const errCtx = makeCrewContext({ mailtoFails: true });
+      errCtx.__crew.renderCrewFlowView(); await flush();
+      errCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(errCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      await tryRun(errCtx, "pilotDraftOpenClient();"); await flush(10);
+      const errState = JSON.parse(errCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(!(errState['intake-1'] && errState['intake-1'].action === 'draft_opened'),
+        'K2.1-6: a refused client marks nothing');
+      softOk(errCtx.toasts.some(([m]) => /mail client|почтовый клиент/i.test(String(m))),
+        'K2.1-6: a refused client is explained to the operator');
+      softOk(!/data-qa="pilot-draft-state"/.test(errCtx.nodes.get('main').innerHTML),
+        'K2.1-6: no draft-opened state is shown when the client refused');
+    }
+
+    // ---- 7. no contact -> a dialog, not a refusal ---------------------------
+    {
+      const noneCtx = makeCrewContext({ contactMode: 'none' });
+      noneCtx.__crew.renderCrewFlowView(); await flush();
+      noneCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(noneCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const noneHtml = noneCtx.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-draft-need-contact"/.test(noneHtml) && /data-qa="pilot-draft-contact-input"/.test(noneHtml)
+        && /data-qa="pilot-draft-contact-save"/.test(noneHtml),
+        'K2.1-7: without a contact the draft asks for the address in a dialog');
+      softOk(!noneCtx.toasts.some(([m]) => /address|адрес/i.test(String(m))),
+        'K2.1-7: the missing address is not answered with a refusal toast');
+      await tryRun(noneCtx, "state.intakePilot.detail.draft.contactValue = 'typed@example.test'; pilotDraftContactSave();"); await flush(12);
+      const factCall = noneCtx.calls.find((c) => c.command === 'crewing_intake_fact_record');
+      softOk(!!factCall && factCall.args.fact && factCall.args.fact.field === 'contact:email' && factCall.args.fact.value === 'typed@example.test',
+        'K2.1-7: the typed address is recorded as the operator fact contact:email');
+      softOk(!!factCall && factCall.args.fact.source_object === 'o1',
+        'K2.1-7: the operator fact cites an object of THIS candidate');
+    }
+
+    // ---- 8. labels for rank_as_written and for the uncertainty codes --------
+    for (const [lang, field, code] of [['en', 'as written', 'the rank is written ambiguously'], ['ru', 'написание в документе', 'ранг записан неоднозначно']]) {
+      const labCtx = makeCrewContext({ language: lang });
+      labCtx.__crew.renderCrewFlowView(); await flush();
+      labCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      const labHtml = labCtx.nodes.get('main').innerHTML;
+      softOk(labHtml.includes(field), 'K2.1-8: rank_as_written has a ' + lang + ' caption');
+      softOk(labHtml.includes(code), 'K2.1-8: the rank_ambiguous code has a ' + lang + ' caption');
+      softOk(!/unknown_reason|причина неизвестна/.test(labHtml), 'K2.1-8: no raw "unknown reason: <code>" is shown (' + lang + ')');
+    }
+
+    // ---- 9. the web shell: a mailto link, and byte buttons disabled ---------
+    {
+      const webCtx2 = makeCrewContext({ webShell: true, native: false });
+      webCtx2.__crew.renderCrewFlowView(); await flush();
+      webCtx2.__crew.pilotOpenCard('intake-1'); await flush();
+      const webHtml = webCtx2.nodes.get('main').innerHTML;
+      softOk(/<button[^>]*data-qa="pilot-letter-open"[^>]*disabled/.test(webHtml)
+        && /<button[^>]*data-qa="pilot-attachment-download"[^>]*disabled/.test(webHtml),
+        'K2.1-9: on the web shell the byte controls are disabled with a note');
+      softOk(/data-qa="pilot-bytes-web-note"/.test(webHtml), 'K2.1-9: the web shell explains why the byte controls are off');
+      await tryRun(webCtx2, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const webDraft = webCtx2.nodes.get('main').innerHTML;
+      softOk(/data-qa="pilot-draft-mailto"[^>]*href="mailto:oleh@example\.test\?subject=/.test(webDraft),
+        'K2.1-9: on the web shell the draft is a mailto: link the browser can open');
+      softOk(!webCtx2.calls.some((c) => c.command === 'open_mailto'),
+        'K2.1-9: the web shell never calls the native open_mailto');
+    }
+
+    // ---- 10. the review-state key was renamed, in both dictionaries ---------
+    softOk(!/'crew_flow\.state_emailed'/.test(html), 'K2.1-10: crew_flow.state_emailed is gone');
+    softOk((html.match(/'crew_flow\.state_draft_opened':'[^']*'/g) || []).length === 2,
+      'K2.1-10: crew_flow.state_draft_opened exists in both dictionaries');
+    softOk(/'crew_flow\.state_draft_opened':'[^'Ѐ-ӿ]+'/.test(html) && /'crew_flow\.state_draft_opened':'[^']*[Ѐ-ӿ]/.test(html),
+      'K2.1-10: the draft-opened caption is localized, not one language twice');
+
+    // ---- 11. RFC 2047 best effort, on the letter the server returns ---------
+    {
+      const decCtx = makeCrewContext({});
+      decCtx.__crew.renderCrewFlowView(); await flush();
+      decCtx.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(decCtx, "pilotLetterDownload();"); await flush(10);
+      const decHtml = decCtx.nodes.get('main').innerHTML;
+      softOk(decCtx.calls.some((c) => c.command === 'crewing_intake_object_download' && c.args.objectId === 'o-letter'),
+        'K2.1-11: the original is fetched by the id of the rfc822 object');
+      softOk(/data-qa="pilot-letter-from"[^>]*>[^<]*Олег В/.test(decHtml),
+        'K2.1-11: a base64 encoded-word in From is decoded (B, utf-8)');
+      softOk(/data-qa="pilot-letter-subject"[^>]*>[^<]*CV Мастер/.test(decHtml),
+        'K2.1-11: a quoted-printable encoded-word in Subject is decoded and the folded line is joined (Q, utf-8)');
+      softOk(/data-qa="pilot-letter-date"[^>]*>[^<]*Wed, 24 Sep 2026/.test(decHtml), 'K2.1-11: Date is read from the header part');
+      softOk(!/forged/.test(decHtml), 'K2.1-11: only the header part is parsed — a header-looking line in the body is not read');
+      softOk(/data-qa="pilot-letter-saved"/.test(decHtml) && /data-qa="pilot-letter-open-saved"/.test(decHtml),
+        'K2.1-11: the saved copy is named and can be opened');
+      await tryRun(decCtx, "pilotLetterOpenSaved();"); await flush();
+      softOk(decCtx.calls.some((c) => c.command === 'crewing_intake_open_saved' && /Downloads\/Skipi\/Crewing/.test(String(c.args.path))),
+        'K2.1-11: the saved copy is opened through the typed command with the path the server write returned');
+    }
+
+    // ---- 18. a 404 from either byte route reaches the operator --------------
+    {
+      const gone404 = makeCrewContext({ bytes404: true });
+      gone404.__crew.renderCrewFlowView(); await flush();
+      gone404.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(gone404, "pilotLetterDownload();"); await flush(10);
+      softOk(gone404.toasts.some(([m]) => /unavailable|недоступ/i.test(String(m))),
+        'K2.1-18: a 404 on the original is told to the operator');
+      softOk(!/data-qa="pilot-letter-saved"/.test(gone404.nodes.get('main').innerHTML),
+        'K2.1-18: a refused original leaves no saved-copy claim on the card');
+      await tryRun(gone404, "pilotAttachmentDownload(1);"); await flush(10);
+      softOk(gone404.toasts.filter(([m]) => /unavailable|недоступ/i.test(String(m))).length >= 2,
+        'K2.1-18: a 404 on an attachment is told to the operator too');
+    }
+
+    // ---- 15. the ONE surviving mailbox row (R1) -----------------------------
+    {
+      const desktopRow = fxSlice("  if (section === 'modules') {", "  } else if (section === 'identity') {");
+      const mobileRow = fxSlice('function mobileSettingsFiveModulesHtml() {', '\nfunction mobileSettingsFiveIdentityHtml');
+      for (const [name, slice] of [['desktop settings5', desktopRow], ['mobile settings', mobileRow]]) {
+        softOk(slice !== '', 'K2.1-15: the "' + name + '" modules slice is bounded');
+        softOk(/settings\.mailbox_legacy/.test(slice) && /legacy-mailbox-disconnect/.test(slice) && /openMailboxSettings\(\)/.test(slice),
+          'K2.1-15: "' + name + '" carries the one legacy-mailbox row with its disconnect control');
+        softOk(!/mail-imap-host|mail-smtp-host|mail-password/.test(slice),
+          'K2.1-15: "' + name + '" carries no mailbox connect form any more');
+      }
+      softOk(/'settings\.mailbox_legacy':'[^']*Личный ящик \(устаревший\)/.test(html) && /'settings\.mailbox_legacy':'[^'Ѐ-ӿ]+'/.test(html),
+        'K2.1-15: the row label exists in both dictionaries (RU "Личный ящик (устаревший)")');
+      const mbSlice = fxSlice('function legacyMailboxState() {', '// CREWING LEGACY MAILBOX ROW (K2.1) END');
+      softOk(mbSlice !== '', 'K2.1-15: the legacy-mailbox slice is bounded');
+      const runRow = async (box, confirmAnswer) => {
+        const calls = [];
+        const toasts = [];
+        const nodes = new Map();
+        const ctx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {},
+          getUiLang: () => 'ru',
+          tr: (k) => k,
+          showToast: (m, kind) => toasts.push([String(m), kind]),
+          inAppConfirm: async () => { toasts.push(['confirm', 'ask']); return confirmAnswer; },
+          document: { getElementById: (id) => nodes.get(id) || null },
+          async invoke(cmd) { calls.push(cmd); if (cmd === 'get_mailbox_status') return box; return null; },
+        });
+        vm.runInContext(mbSlice + '\nthis.__mb = { legacyMailboxEnsureStatus, legacyMailboxDisconnect, legacyMailboxConfigured, legacyMailboxStatusText, openMailboxSettings };', ctx);
+        return { ctx, calls, toasts };
+      };
+      try {
+        const live = await runRow({ configured: true, status: 'active', email_masked: 'o***@crewing.example' }, true);
+        live.ctx.__mb.legacyMailboxEnsureStatus();
+        live.ctx.__mb.legacyMailboxEnsureStatus();
+        await flush(8);
+        softOk(live.calls.filter((c) => c === 'get_mailbox_status').length === 1,
+          'K2.1-15: the row asks the status ONCE, through get_mailbox_status — got ' + live.calls.length);
+        softOk(live.ctx.__mb.legacyMailboxConfigured() === true && /o\*\*\*@crewing\.example/.test(live.ctx.__mb.legacyMailboxStatusText()),
+          'K2.1-15: a connected mailbox is shown as connected, with the masked address');
+        await live.ctx.__mb.openMailboxSettings();
+        await flush(8);
+        softOk(live.toasts.some(([m]) => m === 'confirm') && live.calls.includes('disconnect_mailbox'),
+          'K2.1-15: disconnecting asks for a confirmation and then calls disconnect_mailbox');
+        softOk(live.ctx.__mb.legacyMailboxConfigured() === false,
+          'K2.1-15: after a disconnect the row no longer claims a connected mailbox');
+
+        const refused = await runRow({ configured: true, status: 'active' }, false);
+        refused.ctx.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        await refused.ctx.__mb.legacyMailboxDisconnect(); await flush(8);
+        softOk(!refused.calls.includes('disconnect_mailbox'), 'K2.1-15: a refused confirmation disconnects nothing');
+
+        const empty = await runRow({ configured: false, status: 'not_configured' }, true);
+        empty.ctx.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        await empty.ctx.__mb.legacyMailboxDisconnect(); await flush(8);
+        softOk(!empty.calls.includes('disconnect_mailbox') && empty.ctx.__mb.legacyMailboxConfigured() === false,
+          'K2.1-15: with nothing connected there is nothing to disconnect');
+      } catch (e) {
+        softOk(false, 'K2.1-15: the legacy-mailbox row runs in isolation — ' + (e && (e.message || e)));
+      }
+    }
+
+    // ---- 12/14/17. the native side the screen depends on -------------------
+    softOk(/#\[serde\(default\)\]\s*\n\s*pub attachments: Vec<CandidateIntakeAttachment>/.test(rust),
+      'K2.1-12: the receipt struct carries the attachments list (without it the typed command drops it silently)');
+    softOk(/pub\(crate\) struct CandidateIntakeAttachment \{[\s\S]*?pub ordinal[\s\S]*?pub filename[\s\S]*?pub declared_type[\s\S]*?pub measured_type[\s\S]*?pub byte_size[\s\S]*?pub verdict[\s\S]*?pub reason[\s\S]*?pub eligible/.test(rust),
+      'K2.1-12: the attachment row carries exactly the S3 fields');
+    for (const command of ['crewing_intake_object_download', 'crewing_intake_attachment_download', 'crewing_intake_open_saved']) {
+      softOk(rust.includes(`pub(crate) async fn ${command}(`), 'K2.1-12: ' + command + ' is a fixed native command');
+      softOk(lib.includes(`crewing_intake::${command},`), 'K2.1-12: ' + command + ' is registered in Tauri');
+    }
+    softOk(contactRs !== '' && /pub\(crate\) fn checked_recipient\(/.test(contactRs) && /pub fn open_mailto\(/.test(contactRs),
+      'K2.1-14: contact.rs exists and exposes the checked recipient and open_mailto');
+    softOk(lib.includes('mod contact;') && lib.includes('contact::open_mailto,'),
+      'K2.1-14: open_mailto is registered in Tauri and the module is declared');
+    softOk(/fn compose_escape\(/.test(contactRs) && /replace\('%', "%25"\)/.test(contactRs),
+      'K2.1-14: the Thunderbird compose value escapes the percent FIRST');
+    softOk(/#\[cfg\(test\)\]/.test(contactRs) && /a@b\.test%2Cattachment/.test(contactRs) && /Bcc/.test(contactRs),
+      'K2.1-17: contact.rs carries the negative unit tests for the recipient form');
+    softOk(/fn resolved_saved_path\(/.test(rust) && /#\[cfg\(test\)\]/.test(rust) && /canonicalize/.test(rust),
+      'K2.1-12: the saved-copy path guard is a canonicalizing function with unit tests');
+    softOk(!/mailto:/.test(rust) || !/attachment/.test((rust.match(/fn crewing_intake_open_saved[\s\S]*?\n}/) || [''])[0]),
+      'K2.1-12: the byte commands carry no mailto/attachment coupling');
   }
 }
 
