@@ -4900,8 +4900,16 @@ function legacyMailboxEnsureStatus() {
   });
 }
 function legacyMailboxPaint() {
+  // Both ids: the fallback renderers use `legacy-mailbox-status`, and the row
+  // rendered by the settings module uses `…-module`. Painting only the first one
+  // left the real screen reading «статус не проверен» for good — caught by the
+  // frame, which is what a frame is for.
+  var ids = ['legacy-mailbox-status', 'legacy-mailbox-status-module'];
+  for (var i = 0; i < ids.length; i++) {
+    var node = document.getElementById(ids[i]);
+    if (node) node.textContent = legacyMailboxStatusText();
+  }
   var el = document.getElementById('legacy-mailbox-status');
-  if (el) el.textContent = legacyMailboxStatusText();
   var btn = document.getElementById('legacy-mailbox-disconnect');
   if (!btn) return;
   if (legacyMailboxRevokeBlocked()) btn.setAttribute('disabled', 'disabled');
@@ -10592,7 +10600,7 @@ function _crewingSettingsSections(){
           + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
                 '<span data-qa="settings.mailbox.legacy" id="legacy-mailbox-status-module">'
               + ctx.escapeHtml(legacyMailboxStatusText())+'</span> '
-              + _crewSetHtmlButton(ctx, 'crewing-mailbox-disconnect', 'confirm.disconnect')));
+              + (legacyMailboxRevokeBlocked() ? '' : _crewSetHtmlButton(ctx, 'crewing-mailbox-disconnect', 'confirm.disconnect'))));
       },
       handlers: {
         // The same revoke path as every other surface: confirm, then
