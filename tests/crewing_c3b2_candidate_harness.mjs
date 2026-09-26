@@ -1781,6 +1781,50 @@ console.log('# K2 modules/crew-flow');
       }
     }
 
+    // ---- 19. copying is not opening (Советник N68) -------------------------
+    // On a phone the clipboard is the ONLY path out of the draft. Printing
+    // "draft opened in the mail client" there is a sentence the product cannot
+    // back: no client was opened. The two events get two states.
+    {
+      softOk((html.match(/'crew_flow\.state_draft_copied':'[^']*'/g) || []).length === 2,
+        'K2.1-19: crew_flow.state_draft_copied exists in both dictionaries');
+      softOk(/'crew_flow\.state_draft_copied':'[^'Ѐ-ӿ]+'/.test(html) && /'crew_flow\.state_draft_copied':'[^']*[Ѐ-ӿ]/.test(html),
+        'K2.1-19: the copied caption is localized, not one language twice');
+      for (const lang of ['ru', 'en']) {
+        const copyCtx = makeCrewContext({ language: lang });
+        copyCtx.state.view = 'mobile-crew_flow';
+        tryRun(copyCtx, "state.view = 'mobile-crew_flow'; mobileRenderCrewFlow();"); await flush();
+        copyCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        await tryRun(copyCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+        await tryRun(copyCtx, "pilotDraftCopy();"); await flush(10);
+        const readState = JSON.parse(copyCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+        softOk(readState['intake-1'] && readState['intake-1'].action === 'draft_copied',
+          'K2.1-19: the clipboard path records draft_copied (' + lang + ') — got ' + JSON.stringify((readState['intake-1'] || {}).action));
+        const openedText = copyCtx.__K2_STRINGS[lang]['crew_flow.state_draft_opened'];
+        const copiedText = copyCtx.__K2_STRINGS[lang]['crew_flow.state_draft_copied'];
+        const screen = copyCtx.nodes.get('mobile-main').innerHTML + '\n' + copyCtx.nodes.get('main').innerHTML;
+        softOk(!!copiedText && screen.includes(copiedText),
+          'K2.1-19: after copying the candidate reads as copied (' + lang + ')');
+        softOk(!!openedText && !screen.includes(openedText),
+          'K2.1-19: after copying NOTHING on the screen claims a mail client was opened (' + lang + ')');
+        softOk(copyCtx.toasts.some(([m]) => String(m) === cardText(copyCtx, 'draft_copied')),
+          'K2.1-19: the copy toast still tells the operator to paste it (' + lang + ')');
+        softOk(!copyCtx.calls.some((c) => c.command === 'open_mailto'),
+          'K2.1-19: the clipboard path opens no mail client (' + lang + ')');
+        // and the other direction: the client path still says "opened"
+        const clientCtx = makeCrewContext({ language: lang });
+        clientCtx.__crew.renderCrewFlowView(); await flush();
+        clientCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        await tryRun(clientCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+        await tryRun(clientCtx, "pilotDraftOpenClient();"); await flush(10);
+        const clientState = JSON.parse(clientCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+        softOk(clientState['intake-1'] && clientState['intake-1'].action === 'draft_opened',
+          'K2.1-19: the mail-client path still records draft_opened (' + lang + ')');
+        softOk(clientCtx.nodes.get('main').innerHTML.includes(openedText),
+          'K2.1-19: and the card says the client was opened (' + lang + ')');
+      }
+    }
+
     // ---- 12/14/17. the native side the screen depends on -------------------
     softOk(/#\[serde\(default\)\]\s*\n\s*pub attachments: Vec<CandidateIntakeAttachment>/.test(rust),
       'K2.1-12: the receipt struct carries the attachments list (without it the typed command drops it silently)');
