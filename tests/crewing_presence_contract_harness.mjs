@@ -15,7 +15,7 @@ const ROOT = path.join(__dirname, '..');
 
 const HARNESS_SOURCE = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 
-const REQUIRED_FLOOR = ['mail', 'crew_flow', 'compliance', 'seafarers', 'documents', 'apps', 'settings'];
+const REQUIRED_FLOOR = ['crew_flow', 'compliance', 'seafarers', 'documents', 'apps', 'settings'];
 const GLOBAL_CSS_TOKENS = ['.mod-tab', '.modules-bar', '.mobile-nav-btn', '.mobile-bottom-nav', '.mobile-module-rail'];
 const ALLOWED_HIDING_SCOPES = ['body.launching', 'body.mobile-shell'];
 
@@ -465,6 +465,10 @@ if (M) {
   for (const id of ['vacancies', 'mailings']) {
     ok(!modIds.includes(id), 'retired work module is no longer listed in the presence manifest (K2): ' + id);
   }
+
+  // K2.1 (owner739, 2026-09-26): the personal mailbox module (mail) is retired as well — intake lives on the
+  // server and letters surface in Crew Flow; its floor entry leaves together with the manifest entry (PR-P2).
+  ok(!modIds.includes('mail'), 'retired mailbox module is no longer listed in the presence manifest (K2.1): mail');
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
