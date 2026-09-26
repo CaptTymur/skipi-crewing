@@ -31,6 +31,14 @@ pub(crate) fn checked_recipient(to: &str) -> Result<String, String> {
     if value.is_empty() || value.len() > RECIPIENT_MAX_LEN {
         return Err("recipient_shape".to_string());
     }
+    // A leading `-` is not a cosmetic issue: `xdg-email` reads such an argument
+    // as a flag and fails, and the screen would then write "draft opened" for a
+    // draft that never opened. `Ok` here means "the client was started", which is
+    // already a weaker claim than "the operator saw the draft" — it must at least
+    // not be false (Супервайзор, e05a3c4c).
+    if value.starts_with('-') {
+        return Err("recipient_shape".to_string());
+    }
     if value.chars().any(|c| {
         matches!(c, '%' | ',' | '\'' | '"' | '<' | '>' | '\r' | '\n' | '\0')
             || c.is_whitespace()
@@ -187,6 +195,11 @@ mod tests {
         assert!(checked_recipient("a@b..test").is_err());
         assert!(checked_recipient("a b@c.test").is_err());
         assert!(checked_recipient("два@example.test").is_err());
+        assert!(
+            checked_recipient("-x@y.test").is_err(),
+            "a leading dash reaches xdg-email as a flag"
+        );
+        assert!(checked_recipient("--attach=/etc/passwd@y.test").is_err());
         assert!(checked_recipient(&format!("{}@example.test", "a".repeat(250))).is_err());
         // the one accepted shape, trimmed
         assert_eq!(

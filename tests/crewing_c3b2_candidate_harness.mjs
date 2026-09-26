@@ -1029,7 +1029,7 @@ console.log('# K2 modules/crew-flow');
     { ordinal: 3, filename: '', declared_type: 'application/octet-stream', measured_type: 'application/octet-stream', byte_size: 0, verdict: 'rejected', reason: 'empty', eligible: false },
   ];
   const K2_HEAD_TEXT = 'Return-Path: <bounce@example.test>\r\nFrom: =?utf-8?B?0J7Qu9C10LMg0JI=?= <letter-from@example.test>\r\nDate: Wed, 24 Sep 2026 09:00:00 +0000\r\nSubject: =?utf-8?Q?CV_=D0=9C=D0=B0=D1=81=D1=82=D0=B5=D1=80?=\r\n\t<2/O>\r\n\r\nbody must never be parsed as a header\r\nSubject: forged\r\n';
-  function k2Server({ contactMode = 'both', attachments = K2_ATTACHMENTS } = {}) {
+  function k2Server({ contactMode = 'both', attachments = K2_ATTACHMENTS, contactEmail = 'oleh@example.test' } = {}) {
     const items = [
       { intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', content_type: 'message/rfc822', content_bytes: 120, state: 'quarantined', created_at: '2026-09-24T09:00:00', objects: [{ id: 'o1', content_type: 'application/pdf' }, { id: 'o-letter', content_type: 'message/rfc822' }], attachments, summary: { state: 'quarantined', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null } },
       { intake_id: 'intake-2', receipt_id: 'r2', crewing_id: 'crew-synthetic', content_type: 'application/pdf', content_bytes: 140, state: 'ranked', created_at: '2026-09-24T08:00:00', objects: [{ id: 'o2', content_type: 'application/pdf' }], summary: { state: 'ranked', facts: 2, ranks: 2, ranks_stale: 0, active_confirmations: 1, needs_review_reason: null } },
@@ -1039,7 +1039,7 @@ console.log('# K2 modules/crew-flow');
       'intake-1': [{ field: 'name', versions: [{ field: 'name', value: 'Oleh V.', version: 1, source_object: 'o1', created_at: '2026-09-24T09:05:00' }] },
         { field: 'rank', versions: [{ field: 'rank', value: 'Master', version: 1, source_object: 'o1', created_at: '2026-09-24T09:06:00' }] },
         ...(contactMode === 'both' || contactMode === 'contact'
-          ? [{ field: 'contact:email', versions: [{ field: 'contact:email', value: 'oleh@example.test', version: 1, source_object: 'o1', uncertainty: 'operator_entered', created_at: '2026-09-24T09:07:00' }] },
+          ? [{ field: 'contact:email', versions: [{ field: 'contact:email', value: contactEmail, version: 1, source_object: 'o1', uncertainty: 'operator_entered', created_at: '2026-09-24T09:07:00' }] },
             { field: 'contact:phone', versions: [{ field: 'contact:phone', value: '+380 50 000 00 00', version: 1, source_object: 'o1', created_at: '2026-09-24T09:07:30' }] }]
           : []),
         ...(contactMode === 'both' || contactMode === 'legacy'
@@ -1053,8 +1053,9 @@ console.log('# K2 modules/crew-flow');
     return { items, facts };
   }
   function makeCrewContext({ language = 'en', settings, demo = false, native = true, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false,
-    contactMode = 'both', attachments, bytes404 = false, mailtoFails = false, realEscaping = false, mailbox } = {}) {
-    const srv = k2Server({ contactMode, attachments });
+    contactMode = 'both', attachments, bytes404 = false, mailtoFails = false, realEscaping = false, mailbox,
+    contactEmail = 'oleh@example.test' } = {}) {
+    const srv = k2Server({ contactMode, attachments, contactEmail });
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
     const calls = [];
@@ -1723,9 +1724,8 @@ console.log('# K2 modules/crew-flow');
       const mobileRow = fxSlice('function mobileSettingsFiveModulesHtml() {', '\nfunction mobileSettingsFiveIdentityHtml');
       for (const [name, slice] of [['desktop settings5', desktopRow], ['mobile settings', mobileRow]]) {
         softOk(slice !== '', 'K2.1-15: the "' + name + '" modules slice is bounded');
-        softOk(/settings\.mailbox_legacy/.test(slice) && /legacy-mailbox-disconnect/.test(slice) && /openMailboxSettings\(\)/.test(slice)
-          && /data-qa="settings\.mailbox\.legacy"/.test(slice),
-          'K2.1-15: "' + name + '" carries the one legacy-mailbox row with its disconnect control and its QA hook');
+        softOk(/legacyMailboxRowHtml\('(desktop|mobile)'\)/.test(slice),
+          'K2.1-15: "' + name + '" renders the one legacy-mailbox row (one source; check 20 owns its markup and its reachability)');
         softOk(!/mail-imap-host|mail-smtp-host|mail-password/.test(slice),
           'K2.1-15: "' + name + '" carries no mailbox connect form any more');
       }
@@ -1824,6 +1824,100 @@ console.log('# K2 modules/crew-flow');
           'K2.1-19: and the card says the client was opened (' + lang + ')');
       }
     }
+
+    // ---- 20. the row must be on the screen the product ACTUALLY shows ------
+    // Supervisor REJECT on e05a3c4c: the row existed only in the settings5
+    // preview shell, and the product never sets that flag. Reachability, not
+    // presence: with the module gone, an unreachable row means a connected
+    // mailbox can never be revoked from the product again.
+    {
+      const legacyDesktopOrg = fxSlice("  if (settingsTab==='org') {", "  } else if (settingsTab==='data') {");
+      const legacyMobileOrg = fxSlice('function mobileSettingsOrgHtml() {', '\nfunction mobileSettingsDataHtml');
+      for (const [name, slice] of [['legacy desktop org', legacyDesktopOrg], ['legacy mobile org', legacyMobileOrg]]) {
+        softOk(slice !== '', 'K2.1-20: the "' + name + '" slice is bounded');
+        softOk(/legacyMailboxRowHtml\(/.test(slice),
+          'K2.1-20: the unflagged settings screen renders the legacy-mailbox row (' + name + ')');
+      }
+      softOk(!/setItem\(\s*SETTINGS5_FLAG_KEY|setItem\('skipi_crewing_settings5'/.test(html),
+        'K2.1-20: the product still never sets the settings5 flag — which is exactly why a row only in that shell is unreachable');
+      const rowFn = fxSlice('function legacyMailboxRowHtml(', '\nasync function legacyMailboxDisconnect');
+      softOk(rowFn !== '' && /data-qa="settings\.mailbox\.legacy-disconnect"/.test(rowFn) && /onclick="openMailboxSettings\(\)"/.test(rowFn),
+        'K2.1-20: the row carries the disconnect control wired to the entry point');
+      const disconnectFn = fxSlice('async function legacyMailboxDisconnect', '\n// The historic name');
+      softOk(/function openMailboxSettings\(\) \{ return legacyMailboxDisconnect\(\); \}/.test(html)
+        && /invoke\('disconnect_mailbox'\)/.test(disconnectFn) && /inAppConfirm/.test(disconnectFn),
+        'K2.1-20: and the byte chain runs row -> openMailboxSettings -> legacyMailboxDisconnect -> confirm -> disconnect_mailbox');
+      softOk((html.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length >= 1
+        && (html.match(/legacyMailboxRowHtml\('(desktop|mobile)'\)/g) || []).length === 4,
+        'K2.1-20: the same row is rendered by all four settings surfaces (two unflagged, two preview) from ONE source');
+    }
+
+    // ---- 21/22. the address the web path puts into a mailto: URL -----------
+    // Supervisor: the strict form lived only in Rust, and the web shell never
+    // goes there — `oleh@example.test?bcc=silent@attacker.test` became a hidden
+    // Bcc built out of a stranger's CV. And a leading "-" makes xdg-email fail,
+    // so "draft opened" would be written for a draft nobody ever saw.
+    {
+      const HOSTILE = [
+        ['bcc', 'oleh@example.test?bcc=silent@attacker.test'],
+        ['cc', 'oleh@example.test?cc=silent@attacker.test'],
+        ['attach', 'oleh@example.test?attach=/etc/passwd'],
+        ['crlf', 'oleh@example.test%0d%0aBcc:silent@attacker.test'],
+        ['comma', '"a,b"@c.test'],
+        ['quote', "a'b@c.test"],
+        ['leading dash', '-x@y.test'],
+      ];
+      for (const [label, addr] of HOSTILE) {
+        const webCtx = makeCrewContext({ webShell: true, native: false, realEscaping: true, contactEmail: addr });
+        webCtx.__crew.renderCrewFlowView(); await flush();
+        webCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        await tryRun(webCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+        const draft = webCtx.nodes.get('main').innerHTML;
+        softOk(!/data-qa="pilot-draft-mailto"/.test(draft) && /data-qa="pilot-draft-to-invalid"/.test(draft),
+          'K2.1-21: the web shell builds no mailto: link from a ' + label + ' address, and says so');
+        softOk(!/href="mailto:/.test(draft),
+          'K2.1-21: no mailto href exists at all for a ' + label + ' address');
+        // the native path refuses the same address, without inventing a state
+        const nativeCtx = makeCrewContext({ realEscaping: true, contactEmail: addr });
+        nativeCtx.__crew.renderCrewFlowView(); await flush();
+        nativeCtx.__crew.pilotOpenCard('intake-1'); await flush();
+        await tryRun(nativeCtx, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+        await tryRun(nativeCtx, "pilotDraftOpenClient();"); await flush(10);
+        const state21 = JSON.parse(nativeCtx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+        softOk(!nativeCtx.calls.some((c) => c.command === 'open_mailto'),
+          'K2.1-22: a ' + label + ' address never reaches open_mailto');
+        softOk(!(state21['intake-1'] && /draft_/.test(String(state21['intake-1'].action)))
+          && !/data-qa="pilot-draft-state"/.test(nativeCtx.nodes.get('main').innerHTML),
+          'K2.1-22: and nothing is marked as a draft for a ' + label + ' address');
+      }
+      // the honest address still works, and the href is built with encodeURIComponent
+      const goodWeb = makeCrewContext({ webShell: true, native: false, realEscaping: true });
+      goodWeb.__crew.renderCrewFlowView(); await flush();
+      goodWeb.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(goodWeb, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const goodDraft = goodWeb.nodes.get('main').innerHTML;
+      const rawHref = (goodDraft.match(/data-qa="pilot-draft-mailto" href="([^"]*)"/) || [])[1] || '';
+      // The attribute is escaped by escapeAttr, so `&` arrives as `&#38;`. What the
+      // browser will follow is the DECODED url; both halves are measured.
+      const href = rawHref.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+      softOk(href.startsWith('mailto:oleh@example.test?subject=') && href.includes('&body='),
+        'K2.1-21: a valid address still gets its mailto link — got ' + href.slice(0, 64));
+      // The BODY legitimately carries %0A (a multi-line message); what must never
+      // carry one is the ADDRESS part, where it would be a header injection.
+      const addressPart = href.slice('mailto:'.length).split('?')[0];
+      softOk(addressPart === 'oleh@example.test' && !/%0d|%0a|%2c|%3f|%26/i.test(addressPart),
+        'K2.1-21: the address part of the link is exactly the checked address — got ' + addressPart);
+      softOk(!/[ <>"']/.test(rawHref) && !/[ <>"']/.test(href) && href.indexOf(String.fromCharCode(10)) === -1 && href.indexOf(String.fromCharCode(13)) === -1,
+        'K2.1-21: the link carries no raw space, quote, angle bracket, CR or LF, escaped or not');
+      softOk(!/data-qa="pilot-draft-to-invalid"/.test(goodDraft),
+        'K2.1-21: and the valid address is not refused');
+    }
+    softOk(/fn checked_recipient/.test(contactRs) && /starts_with\('-'\)/.test(contactRs),
+      'K2.1-22: the Rust recipient check refuses a leading dash (xdg-email would read it as a flag)');
+    softOk(/-x@y\.test/.test(contactRs),
+      'K2.1-22: and carries the unit test for it');
+    softOk(/function cardCheckedRecipient\(/.test(html),
+      'K2.1-21: the screen has ONE recipient check of its own, next to the Rust one');
 
     // ---- 12/14/17. the native side the screen depends on -------------------
     softOk(/#\[serde\(default\)\]\s*\n\s*pub attachments: Vec<CandidateIntakeAttachment>/.test(rust),

