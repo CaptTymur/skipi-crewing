@@ -1974,14 +1974,18 @@ console.log('# K2 modules/crew-flow');
           const probe = await runRow26(box, true);
           softOk(probe.ctx.__mb.legacyMailboxRevokeBlocked() === false,
             'K2.1-26: the revoke attempt stays available with ' + label);
+          softOk(!/disabled/.test(probe.ctx.__mb.legacyMailboxRowHtml('desktop'))
+            && !/disabled/.test(probe.ctx.__mb.legacyMailboxRowHtml('mobile')),
+            'K2.1-26: and the rendered control is not disabled with ' + label);
           await probe.ctx.__mb.legacyMailboxDisconnect();
           await flush(8);
           softOk(probe.calls.includes('disconnect_mailbox'),
             'K2.1-26: and pressing it actually asks the server with ' + label);
         }
         const plain = await runRow26({ configured: false, status: 'not_configured' }, true);
-        softOk(plain.ctx.__mb.legacyMailboxRevokeBlocked() === true,
-          'K2.1-26: only a server that says plainly "not connected" disables the attempt');
+        softOk(plain.ctx.__mb.legacyMailboxRevokeBlocked() === true
+          && /disabled/.test(plain.ctx.__mb.legacyMailboxRowHtml('desktop')),
+          'K2.1-26: only a server that says plainly "not connected" disables the attempt, in the predicate AND in the markup');
         await plain.ctx.__mb.legacyMailboxDisconnect();
         await flush(8);
         softOk(!plain.calls.includes('disconnect_mailbox'),
