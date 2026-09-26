@@ -1841,8 +1841,9 @@ console.log('# K2 modules/crew-flow');
       softOk(!/setItem\(\s*SETTINGS5_FLAG_KEY|setItem\('skipi_crewing_settings5'/.test(html),
         'K2.1-20: the product still never sets the settings5 flag — which is exactly why a row only in that shell is unreachable');
       const rowFn = fxSlice('function legacyMailboxRowHtml(', '\nasync function legacyMailboxDisconnect');
-      softOk(rowFn !== '' && /data-qa="settings\.mailbox\.legacy-disconnect"/.test(rowFn) && /onclick="openMailboxSettings\(\)"/.test(rowFn),
-        'K2.1-20: the row carries the disconnect control wired to the entry point');
+      softOk(rowFn !== '' && /data-qa="settings\.mailbox\.legacy-disconnect"/.test(rowFn) && /onclick="openMailboxSettings\(\)"/.test(rowFn)
+        && (rowFn.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 2,
+        'K2.1-20: the row carries its QA hook (both shapes) and the disconnect control wired to the entry point');
       const disconnectFn = fxSlice('async function legacyMailboxDisconnect', '\n// The historic name');
       softOk(/function openMailboxSettings\(\) \{ return legacyMailboxDisconnect\(\); \}/.test(html)
         && /invoke\('disconnect_mailbox'\)/.test(disconnectFn) && /inAppConfirm/.test(disconnectFn),
