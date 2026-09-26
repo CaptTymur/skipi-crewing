@@ -379,3 +379,38 @@ stand was a boundary, and this is what lies beyond it.
   module shell instead. k17 is re-targeted accordingly (no «Вакансии / Рассылки», «Рабочие данные»
   present). The legacy shell is still real as a fallback and is what the presence harness pins;
   the frame simply now shows the path a user actually takes.
+
+## K2.1 — the mailbox module is retired, the candidate card is the screen (OWNER (739), 2026-09-26)
+
+- **What left:** the `CREWING MAILBOX MODULE` block, the desktop tab, the route, the tab-highlight
+  slot and the `tr` keys whose only consumers went with them. What arrived on the candidate card:
+  «Письмо» (From/Date/Subject parsed in dist from the header part the native side returns, RFC 2047
+  best effort), «Вложения» (the S3 metadata rows; verdict and reason are codes with RU/EN captions,
+  an unknown code is shown AS the code, and eligibility is stated as «можно скачать», never as a
+  scan certificate), «Контакты» (facts as written + «Указать» into the existing operator-fact form)
+  and a draft that leaves through the operator's own mail client — Crewing sends nothing itself.
+- **One row survived the module, and it took three rounds to make it REACHABLE.** A connected
+  mailbox keeps its credentials on the fleet server and the web cabinet offers no disconnect, so
+  the row «Личный ящик (устаревший): <статус> · [Отключить]» had to stay. Round 1 put it in the
+  settings5 preview shell — behind a flag the product never sets. Round 2 added the legacy
+  renderers — which are the FALLBACK for a settings module that failed to load. Only round 3 put it
+  where the product actually goes: `_crewingSettingsSections()`, the sections handed to
+  `window.SkipiSettings.mount` (`dist/index.html:844` loads the vendored module). The lesson is the
+  one already written in this file for k17 in the K2 wave — *a stand that 404s `skipi-settings.js`
+  shows the fallback, not the product* — and it was repeated anyway: the settings frames of rounds
+  1–2 were shot in that fallback. The stand now serves the module (four `200`s in `serve.log`) and
+  the frame director refuses to shoot if `window.SkipiSettings.mount` is missing.
+- **Two more things the screen must not claim.** Copying the draft to the clipboard — the only path
+  on a phone — used to write the same review state as opening a mail client; it now writes
+  `crew_flow.state_draft_copied`. And the web shell built its `mailto:` URL out of an unchecked
+  address, so `oleh@example.test?bcc=silent@attacker.test` from a stranger's CV became a hidden Bcc;
+  `cardCheckedRecipient()` is now the same strict form as `contact.rs checked_recipient` (a leading
+  `-` refused on both sides: `xdg-email` reads it as a flag, and `Ok` from `open_mailto` only means
+  the process started).
+- **Evidence:** 16 harnesses green, none deleted (both mail harnesses rewritten — the K2 route still
+  runs `crewing_mail_cv_intake_demo`, so the file must keep exiting 0); `cargo test --lib` 25/25;
+  gate `crewing-k21-single-screen` with `errors: []`; mutations m1–m23 red on the candidate SHA,
+  each reverted; 24 headless frames RU/EN. Four of those mutations first came back GREEN and each
+  one exposed a missing test, not a safe product: m10 (the command never went through its own path
+  guard), m13/m23 (checks that read a predicate but not the rendered control), m18 (a mutation that
+  was semantically a no-op).
