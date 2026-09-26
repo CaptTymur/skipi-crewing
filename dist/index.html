@@ -4867,6 +4867,19 @@ function legacyMailboxConfigured() {
   var box = legacyMailboxState().box;
   return !!(box && box.configured);
 }
+// A status that failed to load, or an error from the server, is NOT "there is
+// nothing connected" — it is "we do not know". Locking the control then would
+// take away the only way to revoke exactly when the operator needs it most. The
+// attempt is blocked only when the server says plainly that nothing is there;
+// everywhere else the press is allowed and the server gets the last word.
+function legacyMailboxRevokeBlocked() {
+  var m = legacyMailboxState();
+  if (!m.loaded) return false;
+  var box = m.box || {};
+  if (box.configured) return false;
+  var code = String(box.status || 'not_configured');
+  return code === 'not_configured' || code === 'disconnected';
+}
 // Called by the settings renderers. ONE request per session, and the answer is
 // painted into the row instead of re-rendering the settings surface: a re-render
 // started from inside a render is how the old mailbox module raced itself (K2/S1).
@@ -4891,8 +4904,8 @@ function legacyMailboxPaint() {
   if (el) el.textContent = legacyMailboxStatusText();
   var btn = document.getElementById('legacy-mailbox-disconnect');
   if (!btn) return;
-  if (legacyMailboxConfigured()) btn.removeAttribute('disabled');
-  else btn.setAttribute('disabled', 'disabled');
+  if (legacyMailboxRevokeBlocked()) btn.setAttribute('disabled', 'disabled');
+  else btn.removeAttribute('disabled');
 }
 // ONE row, four surfaces. Two of them are the settings screens the product
 // actually shows (`renderSettingsModal` → «Организация», `mobileSettingsOrgHtml`)
@@ -4905,7 +4918,7 @@ function legacyMailboxRowHtml(shape) {
   legacyMailboxEnsureStatus();
   var label = escapeHtml(tr('settings.mailbox_legacy'));
   var desc = escapeHtml(tr('settings.mailbox_legacy_desc'));
-  var off = legacyMailboxConfigured() ? '' : ' disabled';
+  var off = legacyMailboxRevokeBlocked() ? ' disabled' : '';
   var status = '<span id="legacy-mailbox-status" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
   if (shape === 'mobile') {
     return '<div class="mobile-setting-row" data-qa="settings.mailbox.legacy"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
@@ -4916,7 +4929,7 @@ function legacyMailboxRowHtml(shape) {
 }
 async function legacyMailboxDisconnect() {
   var m = legacyMailboxState();
-  if (!legacyMailboxConfigured()) { showToast(tr('settings.mailbox_legacy_none'), 'warn'); return; }
+  if (legacyMailboxRevokeBlocked()) { showToast(tr('settings.mailbox_legacy_none'), 'warn'); return; }
   var ok = await inAppConfirm(tr('confirm.mailbox_disconnect'), { confirmLabel: tr('confirm.disconnect') });
   if (!ok) return;
   try {
@@ -6969,8 +6982,10 @@ function pilotDraftHtml() {
     : '<div class="pilot-note" data-qa="pilot-draft-to">'+escapeHtml(cardT('draft_to'))+': '+escapeHtml(dr.to)
       + (dr.legacy ? ' <span class="pilot-state paused" data-qa="pilot-draft-legacy">'+escapeHtml(cardT('contact_legacy'))+'</span>' : '')+'</div>';
   var checkedTo = cardCheckedRecipient(dr.to);
-  var leave = (!dr.needContact && !checkedTo)
-    ? '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>'
+  // No checked recipient — no link, ever. The earlier guard skipped the refusal
+  // while the contact dialog was open and let `mailto:null?subject=…` through.
+  var leave = !checkedTo
+    ? (dr.needContact ? '' : '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>')
     : web
     ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
       + '<span class="pilot-note" data-qa="pilot-draft-web-note">'+escapeHtml(cardT('draft_web_note'))+'</span>'
@@ -10544,6 +10559,7 @@ function _crewingSettingsSections(){
     { id:'home-crewing-work-data', order:450, icon:'W',
       labelKey:'settings.crewing.work_data', descriptionKey:'settings.crewing.work_data.description',
       renderHtml: function(ctx){
+        legacyMailboxEnsureStatus();
         var s = state.settings || {};
         var p = s.profile || {};
         var na = ctx.t('settings.crewing.not_set');
@@ -10567,9 +10583,21 @@ function _crewingSettingsSections(){
           + _crewSetHtmlRow(ctx, 'settings.crewing.contact_email', ctx.t('settings.crewing.contact_email.description'),
                 emailCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
-                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile')));
+                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'))
+          // K2.1 (OWNER (739), Супервайзор REJECT на ffe0573c): the ONE surviving
+          // mailbox operation lives HERE, in the sections handed to
+          // window.SkipiSettings.mount — that is the settings screen the product
+          // actually shows in both modes. The four legacy renderers carry the same
+          // row, but they are only the fallback for a module that failed to load.
+          + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
+                '<span data-qa="settings.mailbox.legacy" id="legacy-mailbox-status-module">'
+              + ctx.escapeHtml(legacyMailboxStatusText())+'</span> '
+              + _crewSetHtmlButton(ctx, 'crewing-mailbox-disconnect', 'confirm.disconnect')));
       },
       handlers: {
+        // The same revoke path as every other surface: confirm, then
+        // disconnect_mailbox, then an honest toast if the server refuses.
+        'crewing-mailbox-disconnect': function(){ return legacyMailboxDisconnect(); },
         'crewing-open-profile': function(){
           // Take the operator to the real desktop connection/profile view.
           closeSettings();

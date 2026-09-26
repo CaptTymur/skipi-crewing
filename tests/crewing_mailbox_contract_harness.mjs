@@ -222,6 +222,55 @@ await M.openMailboxSettings();
 ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === before,
   'with nothing connected there is nothing left to disconnect');
 
+section('runtime: the settings entry the product ACTUALLY uses (SkipiSettings.mount)');
+// Супервайзор REJECT на ffe0573c: dist/index.html:844 loads the vendored
+// settings module, and `openSettings` mounts IT whenever it is there — the
+// legacy renderers are the fallback for a module that failed to load. A row that
+// is only in the fallback is a row nobody sees. So this pass DEFINES
+// window.SkipiSettings.mount, drives the real entry point, and reads the
+// sections the module is actually handed.
+let mounted = null;
+// Fresh state for this pass: the smoke above ends with the mailbox disconnected,
+// and a row that correctly refuses to disconnect nothing would make this check
+// measure the wrong thing.
+mailbox = { configured: true, status: 'active', email_masked: 'o***@example.com', has_password: true };
+Object.assign(M.legacyMailboxState(), { box: null, loading: false, loaded: false });
+globalThis.window.SkipiSettings = {
+  mount(target, host, opts) {
+    mounted = { target, host, opts };
+    return { ready: Promise.resolve(), open() {}, unmount() {} };
+  },
+};
+await M.openSettings('work_data');
+for (let i = 0; i < 10; i += 1) await Promise.resolve();
+ok(!!mounted, 'the product mounted the vendored settings module (this is the real entry)');
+const appSections = (mounted && mounted.host && mounted.host.appSpecificSections) || [];
+ok(Array.isArray(appSections) && appSections.length >= 1, 'the module is handed the app-specific sections');
+const moduleCtx = {
+  t: (key) => mounted.host.t(key),
+  escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
+  escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
+  saveSettings: (next) => mounted.host.saveSettings(next),
+};
+const sectionHtml = appSections.map((sec) => (typeof sec.renderHtml === 'function' ? sec.renderHtml(moduleCtx) : '')).join('\n');
+ok(sectionHtml.includes('data-qa="settings.mailbox.legacy"'),
+  'K2.1-23: the sections that reach the module carry the legacy-mailbox row');
+ok(sectionHtml.includes('Личный ящик (устаревший)') || sectionHtml.includes('Personal mailbox (legacy)'),
+  'K2.1-23: with the label the owner will read');
+ok(/data-settings-action="crewing-mailbox-disconnect"/.test(sectionHtml),
+  'K2.1-23: and a control built to the module contract (data-settings-action)');
+const mailboxHandler = appSections.map((sec) => (sec.handlers || {})['crewing-mailbox-disconnect']).find(Boolean);
+ok(typeof mailboxHandler === 'function', 'K2.1-23: the module contract carries a handler for that control');
+for (let i = 0; i < 10; i += 1) await Promise.resolve();
+const beforeModule = calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length;
+globalThis.__CONFIRM_ANSWER = true;
+if (typeof mailboxHandler === 'function') await mailboxHandler(moduleCtx);
+for (let i = 0; i < 10; i += 1) await Promise.resolve();
+ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === beforeModule + 1,
+  'K2.1-23: pressing it on the real settings screen reaches disconnect_mailbox');
+ok(calls.some(([cmd]) => cmd === 'get_mailbox_status'), 'K2.1-23: and the row reads the status through the same command');
+delete globalThis.window.SkipiSettings;
+
 section('runtime smoke: the screen the product actually shows (no settings5 flag)');
 // Супервайзор REJECT на e05a3c4c: the row had existed only in the settings5
 // preview shell, behind a flag the product never sets — i.e. nowhere a user could
@@ -237,7 +286,7 @@ for (let i = 0; i < 10; i += 1) await Promise.resolve();
 const unflagged = elFor('modal-host').innerHTML;
 ok(!unflagged.includes('settings5-shell'), 'the unflagged desktop settings screen is the legacy renderer');
 ok(unflagged.includes('data-qa="settings.mailbox.legacy"') && unflagged.includes('Личный ящик (устаревший)'),
-  'the UNFLAGGED settings screen carries the legacy-mailbox row');
+  'K2.1-24: the fallback settings screen (module not loaded) carries the legacy-mailbox row too');
 ok(unflagged.includes('data-qa="settings.mailbox.legacy-disconnect"') && unflagged.includes('onclick="openMailboxSettings()"'),
   'and its disconnect control, on the screen the owner will actually open');
 ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-status').textContent),

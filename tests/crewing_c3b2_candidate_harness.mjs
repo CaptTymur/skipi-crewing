@@ -1920,6 +1920,80 @@ console.log('# K2 modules/crew-flow');
     softOk(/function cardCheckedRecipient\(/.test(html),
       'K2.1-21: the screen has ONE recipient check of its own, next to the Rust one');
 
+    // ---- 23/25/26. the entry the product actually uses, and two states -----
+    // Supervisor REJECT on ffe0573c: the row had moved from one unreachable
+    // surface to four. `dist/index.html:844` loads the vendored settings module,
+    // and when it is there `openSettings` mounts IT — the four renderers I had
+    // patched are the fallback for a module that failed to load. The row has to
+    // be in `_crewingSettingsSections()`, which is what reaches the module.
+    {
+      const sections = fxSlice('function _crewingSettingsSections(){', '\n// Role helper');
+      softOk(sections !== '', 'K2.1-23: the app-specific settings sections slice is bounded');
+      softOk(/data-qa="settings\.mailbox\.legacy"/.test(sections),
+        'K2.1-23: the sections handed to SkipiSettings.mount carry the legacy-mailbox row');
+      softOk(/_crewSetHtmlButton\(ctx, 'crewing-mailbox-disconnect'/.test(sections)
+        && /'crewing-mailbox-disconnect': function/.test(sections),
+        'K2.1-23: the row has a module-contract control with a handler behind it');
+      softOk(/legacyMailboxDisconnect\(\)/.test(sections) && /legacyMailboxEnsureStatus\(\)/.test(sections),
+        'K2.1-23: the handler goes to the same revoke path, and the row reads the status');
+      // 25: without a checked recipient there must be NO link at all — the old
+      // guard let `mailto:null?subject=…` through whenever the contact was missing.
+      const noneWeb = makeCrewContext({ webShell: true, native: false, realEscaping: true, contactMode: 'none' });
+      noneWeb.__crew.renderCrewFlowView(); await flush();
+      noneWeb.__crew.pilotOpenCard('intake-1'); await flush();
+      await tryRun(noneWeb, "crewFlowWriteEmail('intake-1','reply');"); await flush();
+      const noneDraft = noneWeb.nodes.get('main').innerHTML;
+      softOk(!/mailto:null/.test(noneDraft) && !/data-qa="pilot-draft-mailto"/.test(noneDraft),
+        'K2.1-25: with no contact the web shell builds no mailto link at all (not even mailto:null)');
+      softOk(/data-qa="pilot-draft-need-contact"/.test(noneDraft),
+        'K2.1-25: it asks for the address instead');
+      // 26: the revoke attempt must survive an unknown status. A mailbox whose
+      // status failed to load is not a mailbox that is known to be disconnected.
+      const mbSlice26 = fxSlice('function legacyMailboxState() {', '// CREWING LEGACY MAILBOX ROW (K2.1) END');
+      const runRow26 = async (box, confirmAnswer) => {
+        const calls = [];
+        const toasts = [];
+        const nodes = new Map();
+        const ctx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {}, getUiLang: () => 'en', tr: (k) => k,
+          escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
+          escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
+          showToast: (m, kind) => toasts.push([String(m), kind]),
+          inAppConfirm: async () => { toasts.push(['confirm', 'ask']); return confirmAnswer; },
+          document: { getElementById: (id) => nodes.get(id) || null },
+          async invoke(cmd) { calls.push(cmd); if (cmd === 'get_mailbox_status') { if (box === 'throw') throw new Error('unreachable'); return box; } return null; },
+        });
+        vm.runInContext(mbSlice26 + '\nthis.__mb = { legacyMailboxEnsureStatus, legacyMailboxDisconnect, legacyMailboxRevokeBlocked, legacyMailboxRowHtml };', ctx);
+        ctx.__mb.legacyMailboxEnsureStatus();
+        await flush(8);
+        return { ctx, calls, toasts };
+      };
+      try {
+        for (const [label, box] of [['an error status', { configured: false, status: 'error' }], ['an unreachable status', 'throw'], ['an unknown code', { configured: false, status: 'future_code' }]]) {
+          const probe = await runRow26(box, true);
+          softOk(probe.ctx.__mb.legacyMailboxRevokeBlocked() === false,
+            'K2.1-26: the revoke attempt stays available with ' + label);
+          await probe.ctx.__mb.legacyMailboxDisconnect();
+          await flush(8);
+          softOk(probe.calls.includes('disconnect_mailbox'),
+            'K2.1-26: and pressing it actually asks the server with ' + label);
+        }
+        const plain = await runRow26({ configured: false, status: 'not_configured' }, true);
+        softOk(plain.ctx.__mb.legacyMailboxRevokeBlocked() === true,
+          'K2.1-26: only a server that says plainly "not connected" disables the attempt');
+        await plain.ctx.__mb.legacyMailboxDisconnect();
+        await flush(8);
+        softOk(!plain.calls.includes('disconnect_mailbox'),
+          'K2.1-26: and then nothing is asked of the server');
+        const live = await runRow26({ configured: true, status: 'active' }, true);
+        softOk(live.ctx.__mb.legacyMailboxRevokeBlocked() === false && /disabled/.test(live.ctx.__mb.legacyMailboxRowHtml('desktop')) === false,
+          'K2.1-26: a connected mailbox is of course revocable, and its control is not disabled');
+      } catch (e) {
+        softOk(false, 'K2.1-26: the legacy-mailbox row runs in isolation — ' + (e && (e.message || e)));
+      }
+    }
+
     // ---- 12/14/17. the native side the screen depends on -------------------
     softOk(/#\[serde\(default\)\]\s*\n\s*pub attachments: Vec<CandidateIntakeAttachment>/.test(rust),
       'K2.1-12: the receipt struct carries the attachments list (without it the typed command drops it silently)');
