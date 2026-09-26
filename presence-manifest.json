@@ -10,17 +10,6 @@
   ],
   "required_modules": [
     {
-      "id": "mail",
-      "name": "Mail",
-      "desktop_navigation": {
-        "route": "mail",
-        "nav_selector": "#mt-mail",
-        "route_driver": "showView"
-      },
-      "surface_markers": ["CREWING MAILBOX MODULE START", "Personal mailbox", "Connect mailbox"],
-      "css_tokens": ["mt-mail"]
-    },
-    {
       "id": "crew_flow",
       "name": "Crew Flow",
       "desktop_navigation": {
