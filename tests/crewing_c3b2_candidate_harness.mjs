@@ -1723,8 +1723,9 @@ console.log('# K2 modules/crew-flow');
       const mobileRow = fxSlice('function mobileSettingsFiveModulesHtml() {', '\nfunction mobileSettingsFiveIdentityHtml');
       for (const [name, slice] of [['desktop settings5', desktopRow], ['mobile settings', mobileRow]]) {
         softOk(slice !== '', 'K2.1-15: the "' + name + '" modules slice is bounded');
-        softOk(/settings\.mailbox_legacy/.test(slice) && /legacy-mailbox-disconnect/.test(slice) && /openMailboxSettings\(\)/.test(slice),
-          'K2.1-15: "' + name + '" carries the one legacy-mailbox row with its disconnect control');
+        softOk(/settings\.mailbox_legacy/.test(slice) && /legacy-mailbox-disconnect/.test(slice) && /openMailboxSettings\(\)/.test(slice)
+          && /data-qa="settings\.mailbox\.legacy"/.test(slice),
+          'K2.1-15: "' + name + '" carries the one legacy-mailbox row with its disconnect control and its QA hook');
         softOk(!/mail-imap-host|mail-smtp-host|mail-password/.test(slice),
           'K2.1-15: "' + name + '" carries no mailbox connect form any more');
       }
@@ -1799,6 +1800,8 @@ console.log('# K2 modules/crew-flow');
       'K2.1-17: contact.rs carries the negative unit tests for the recipient form');
     softOk(/fn resolved_saved_path\(/.test(rust) && /#\[cfg\(test\)\]/.test(rust) && /canonicalize/.test(rust),
       'K2.1-12: the saved-copy path guard is a canonicalizing function with unit tests');
+    softOk(/fn open_saved_with<F>/.test(rust) && /open_saved_with\(&root, &path, crate::open_with_default_app\)/.test(rust),
+      'K2.1-12: the open command goes through the guard with the opener injected, so the guard can be drilled with the side effect stubbed');
     softOk(!/mailto:/.test(rust) || !/attachment/.test((rust.match(/fn crewing_intake_open_saved[\s\S]*?\n}/) || [''])[0]),
       'K2.1-12: the byte commands carry no mailto/attachment coupling');
   }

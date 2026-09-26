@@ -1143,6 +1143,24 @@ pub(crate) async fn crewing_intake_attachment_download(
     .await
 }
 
+/// The guard and the opener are separated on purpose: the guard can then be
+/// measured with the side effect STUBBED, so a drill that removes the check fails
+/// a test instead of opening a file on the machine running the drill (skipi-ops
+/// AGENTS, «Субагенты» п.6). The home already knows how to hand a file to the
+/// desktop (`lib.rs open_with_default_app`: xdg-open / open / cmd start); K2.1
+/// adds the guard in front of it, not a second opener.
+fn open_saved_with<F>(
+    root: &std::path::Path,
+    path: &str,
+    opener: F,
+) -> Result<(), PilotBridgeError>
+where
+    F: Fn(&str) -> Result<(), String>,
+{
+    let resolved = resolved_saved_path(root, path)?;
+    opener(&resolved.to_string_lossy()).map_err(|_| invalid_request("cannot_open_file"))
+}
+
 /// Opens a copy this app wrote, and nothing else: the path must resolve INSIDE
 /// `Downloads/Skipi/Crewing`. Without that check the screen would be a generic
 /// "open any file on this machine" command for whoever can reach the bridge.
@@ -1150,12 +1168,7 @@ pub(crate) async fn crewing_intake_attachment_download(
 pub(crate) async fn crewing_intake_open_saved(path: String) -> Result<(), PilotBridgeError> {
     without_blocking_ui(move || {
         let root = saved_root()?;
-        let resolved = resolved_saved_path(&root, &path)?;
-        // The home already knows how to hand a file to the desktop
-        // (`lib.rs open_with_default_app`: xdg-open / open / cmd start). K2.1 adds
-        // the guard in front of it, not a second opener.
-        crate::open_with_default_app(&resolved.to_string_lossy())
-            .map_err(|_| invalid_request("cannot_open_file"))
+        open_saved_with(&root, &path, crate::open_with_default_app)
     })
     .await
 }
@@ -1627,6 +1640,39 @@ mod tests {
                 "a symlink out of the folder must resolve and be refused"
             );
         }
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn open_saved_refuses_before_it_opens_anything() {
+        // The opener is a stub that records: the point of the test is that a path
+        // outside the folder never REACHES it, which a check "returns Err" alone
+        // would not prove.
+        let base = std::env::temp_dir().join(format!("skipi-crewing-k21-{}-open", std::process::id()));
+        let root = base.join("root");
+        std::fs::create_dir_all(root.join("intake12")).unwrap();
+        let inside = root.join("intake12").join("letter.eml");
+        std::fs::write(&inside, b"x").unwrap();
+        let outside = base.join("outside.eml");
+        std::fs::write(&outside, b"x").unwrap();
+
+        let opened = std::cell::RefCell::new(Vec::new());
+        let record = |p: &str| {
+            opened.borrow_mut().push(p.to_string());
+            Ok(())
+        };
+        assert!(open_saved_with(&root, inside.to_str().unwrap(), record).is_ok());
+        assert_eq!(opened.borrow().len(), 1);
+        assert!(opened.borrow()[0].ends_with("letter.eml"));
+
+        assert!(open_saved_with(&root, outside.to_str().unwrap(), record).is_err());
+        assert_eq!(
+            opened.borrow().len(),
+            1,
+            "a path outside the downloads folder must never reach the opener"
+        );
+        assert!(open_saved_with(&root, "/etc/passwd", record).is_err());
+        assert_eq!(opened.borrow().len(), 1, "and neither must a system path");
         let _ = std::fs::remove_dir_all(&base);
     }
 
