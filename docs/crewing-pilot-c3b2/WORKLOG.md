@@ -379,3 +379,157 @@ stand was a boundary, and this is what lies beyond it.
   module shell instead. k17 is re-targeted accordingly (no «Вакансии / Рассылки», «Рабочие данные»
   present). The legacy shell is still real as a fallback and is what the presence harness pins;
   the frame simply now shows the path a user actually takes.
+
+## K2.1 — the mailbox module is retired, the candidate card is the screen (OWNER (739), 2026-09-26)
+
+- **What left:** the `CREWING MAILBOX MODULE` block, the desktop tab, the route, the tab-highlight
+  slot and the `tr` keys whose only consumers went with them. What arrived on the candidate card:
+  «Письмо» (From/Date/Subject parsed in dist from the header part the native side returns, RFC 2047
+  best effort), «Вложения» (the S3 metadata rows; verdict and reason are codes with RU/EN captions,
+  an unknown code is shown AS the code, and eligibility is stated as «можно скачать», never as a
+  scan certificate), «Контакты» (facts as written + «Указать» into the existing operator-fact form)
+  and a draft that leaves through the operator's own mail client — Crewing sends nothing itself.
+- **One row survived the module, and it took three rounds to make it REACHABLE.** A connected
+  mailbox keeps its credentials on the fleet server and the web cabinet offers no disconnect, so
+  the row «Личный ящик (устаревший): <статус> · [Отключить]» had to stay. Round 1 put it in the
+  settings5 preview shell — behind a flag the product never sets. Round 2 added the legacy
+  renderers — which are the FALLBACK for a settings module that failed to load. Only round 3 put it
+  where the product actually goes: `_crewingSettingsSections()`, the sections handed to
+  `window.SkipiSettings.mount` (`dist/index.html:844` loads the vendored module). The lesson is the
+  one already written in this file for k17 in the K2 wave — *a stand that 404s `skipi-settings.js`
+  shows the fallback, not the product* — and it was repeated anyway: the settings frames of rounds
+  1–2 were shot in that fallback. The stand now serves the module (four `200`s in `serve.log`) and
+  the frame director refuses to shoot if `window.SkipiSettings.mount` is missing.
+- **Two more things the screen must not claim.** Copying the draft to the clipboard — the only path
+  on a phone — used to write the same review state as opening a mail client; it now writes
+  `crew_flow.state_draft_copied`. And the web shell built its `mailto:` URL out of an unchecked
+  address, so `oleh@example.test?bcc=silent@attacker.test` from a stranger's CV became a hidden Bcc;
+  `cardCheckedRecipient()` is now the same strict form as `contact.rs checked_recipient` (a leading
+  `-` refused on both sides: `xdg-email` reads it as a flag, and `Ok` from `open_mailto` only means
+  the process started).
+- **Evidence:** 16 harnesses green, none deleted (both mail harnesses rewritten — the K2 route still
+  runs `crewing_mail_cv_intake_demo`, so the file must keep exiting 0); `cargo test --lib` 25/25;
+  gate `crewing-k21-single-screen` with `errors: []`; mutations m1–m23 red on the candidate SHA,
+  each reverted; 24 headless frames RU/EN. Four of those mutations first came back GREEN and each
+  one exposed a missing test, not a safe product: m10 (the command never went through its own path
+  guard), m13/m23 (checks that read a predicate but not the rendered control), m18 (a mutation that
+  was semantically a no-op).
+
+### K2.1 fix-up 4 — the control follows the status (Супервайзор ACCEPT WITH LIMITS, 2026-09-26)
+
+- **A button that could only apologise.** The row markup was settled once, while the status was
+  still unknown, and the paint could rewrite only the text — so at `not_configured` the
+  «Отключить» button sat there for the whole first open of every session and answered with a toast.
+  The row is now an outer container plus ONE inner renderer used by the first render and by every
+  repaint, and the paint replaces the inside at all three sites (desktop, mobile, module): the
+  control appears and disappears with the answer, and where the server says plainly «не подключён»
+  there is no control at all rather than a dead one. The settings module keeps working because it
+  resolves clicks with `closest()` on its mount root, so a repainted button stays live.
+- **A status read once per session made «отозвать» impossible.** A mailbox connected in the web
+  cabinet after the app started stayed un-revocable until a restart. Every settings open (desktop
+  and mobile) now drops the cached answer and asks again; so does a refused disconnect.
+- **The previous fix had no net.** `tests/` mentioned neither `legacyMailboxPaint` nor the module
+  row id, and the supervisor's own mutation (paint one id again — the very defect he had accepted)
+  left 16/16 green. «Поймано кадром» is a pair of eyes on a PNG, not a mechanism. Checks 27/28/29
+  now measure the paint itself, the absence of a dead button on the first open, and a server that
+  changes its answer between two opens; m24/m25/m26 drill exactly those three.
+- **My own series tool truncated itself twice** — a stale anchor aborted the run and left a log that
+  read like a finished series, and an editing slip dropped three mutations out of the table with no
+  trace. Both are now visible rows («anchor not found», «no such mutation in the table»), and the
+  whole m1–m26 series is re-measured on the final SHA: all red, each reverted, tree clean.
+- **Observation for the visual acceptance, not a defect of this card:** in the module's mobile mode
+  at 390 px the row label and description wrap letter-by-letter — and so do «Контактный email» and
+  «Профиль (vault)» next to them. It is the module's own narrow-column layout (`dist/skipi-settings.js`,
+  which this card must not touch), visible in the new mobile frame.
+
+### K2.1 fix-up 5 — nothing pressable while the status is in the air, and an honest sentence after (Супервайзор ACCEPT with leftovers R1/R2 on `d0da5542`, 2026-09-27)
+
+- **A window of ~900 ms in which the screen lied.** While `get_mailbox_status` was in flight the row
+  said «статус не проверен» AND offered «Отключить», so a press in that window sent
+  `disconnect_mailbox` at a mailbox that was not connected, and the toast still said «Ящик отключён.»
+  (R2). Now the row says the status is BEING checked («статус проверяется…»), nothing is pressable
+  for exactly as long as the flight, a press in that window sends nothing and claims nothing, and the
+  sentence after the command follows what the server said BEFORE it: «Ящик отключён.» only when a
+  mailbox was connected, otherwise «Подключённого ящика нет — отключать нечего.». A cached
+  «не подключён» keeps its own rule (check 26), so this does not bring the dead-button case back.
+- **Two shapes say it differently, and not by choice.** The presence contract
+  (`tests/crewing_presence_contract_harness.mjs:390/:436`, a harness outside this route) pins the
+  `openMailboxSettings` token in the RENDERED settings section, so the fallback rows keep the control
+  and mark it `disabled` for the flight window; the module contract has no disabled button, so there
+  the control simply is not rendered until the answer is in. Either way a press is impossible, which
+  is the harm that mattered, and check 30 measures exactly that per shape.
+- **R1: the invalidation is measured by EFFECT at all three sites**, not by the presence of the call:
+  the module open, the phone's fallback navigation and the refusal branch each count live
+  `get_mailbox_status` calls (mailbox_contract «K2.1-29/site2», c3b2 «K2.1-29/site3»).
+- **Failing-first on `d0da5542`** (re-measured by the second executor at 2026-09-27T04:27Z with the
+  checks as committed — the first executor's log read 622/5 against an intermediate version of the
+  checks): c3b2 **621 passed, 9 failed** — «K2.1-30: while the status request is in the air the revoke
+  is not offered», «the fallback control in that window is rendered DISABLED, not live», «and the
+  module shape, which has no disabled button, renders no control at all», «and a press in that window
+  sends nothing to the server», «nor does it claim anything about a mailbox nobody has heard about
+  yet», «the row says the status is BEING checked, which is not the never-checked text — got "status
+  not checked" vs "status not checked"», «the same window applies when the mailbox turns out to be
+  connected»; «K2.1-31: but a mailbox that was not connected is NEVER reported as disconnected», «the
+  operator is told what actually happened instead».
+- **Mutations m27–m30** (first run 2026-09-27T01:16Z on `4768aba5`, RECORDED here; the re-measurement
+  on the final tree is the next entry): m27 control live while the answer is in the air → 30 RED
+  («the fallback control in that window is rendered DISABLED, not live»); m28 the toast always says
+  the mailbox was disconnected → 31 RED («but a mailbox that was not connected is NEVER reported as
+  disconnected», «the operator is told what actually happened instead»); m29 invalidation token kept,
+  effect killed in the phone fallback path → mailbox_contract RED («K2.1-29/site2: every phone open
+  asks again — the effect, not the token», «and the phone row follows the new answer without a
+  restart»); m30 the same in the refusal branch → 29 RED («K2.1-29/site3: a refused disconnect
+  re-asks the server for the status — the EFFECT, not the token»).
+- **Why this entry is also a route fact.** The first executor's session ended with `4768aba5`
+  committed but not pushed: the incremental delta `d0da5542..4768aba5` carried neither `contact.rs`
+  nor this file, so the guard's `--auto-task` resolved the push to `plugin-host` and the pre-push hook
+  refused it («changes outside allowed patterns»). The fix is the missing entry, not a bypass. The
+  frames of fix-up 4 were removed at 01:17Z when the stand was reset for a re-shoot that never
+  happened; all 30 frames are re-shot in ONE window on the final tree after this commit, and the
+  window (server PID, `serve.log`, per-frame verdicts) is written up in the next entry.
+
+### K2.1 fix-up 5 — evidence on the final tree (second executor, 2026-09-27T04:23Z–05:28Z)
+
+- **Product bytes are those of `4768aba5`**: `dist/`, `tests/` and `src-tauri/` did not change after it;
+  the commits that followed are this file only (`3739f329` and this entry). Every number below was
+  measured on `3739f329`, whose product tree is byte-identical to the final HEAD.
+- **Mutations, re-measured (FACT), one at a time, each reverted, `git status` clean after each:**
+  m27 control live while the answer is in the air → 30 RED, 1 line («the fallback control in that
+  window is rendered DISABLED, not live»); m28 toast always says disconnected → 31 RED, 2 lines («but
+  a mailbox that was not connected is NEVER reported as disconnected», «the operator is told what
+  actually happened instead»); m29 invalidation token kept, effect killed in the phone fallback →
+  mailbox_contract RED, 2 lines (site2: «every phone open asks again — the effect, not the token»,
+  «and the phone row follows the new answer without a restart»); m30 the same in the refusal branch
+  → 29 RED, 1 line (site3). Spot-checks from the older series: m10 → `cargo test --lib` FAILED 24/1
+  (`open_saved_refuses_before_it_opens_anything`); m21 → mailbox_contract 7 RED; m24 → c3b2 27 RED 4
+  lines + mailbox_contract 5 RED. `mutations.json` was a truncated single row (`id: None`) after the
+  first executor's session broke off; it is rebuilt from this run.
+- **16/16 harnesses green** (c3b2 630, mailbox_contract 72, mail_cv 31, crew_flow_demo 101, presence
+  188, plugin_isolation 153, c3b1 61), `cargo test --lib` 25/25 (`df` 82G before and after), gate
+  `--auto-task --base d0da5542` → `task=crewing-k21-single-screen`, `status=pass`, `errors=[]`, 13/13
+  commands; the K2 route simulated (`--task crewing-k2-modules`) runs all 14 commands green and fails
+  only on scope (`crewing_mailbox_contract` is outside K2's allowed list — the same class the first
+  executor saw with five paths on base `c55d3829`).
+- **Frames: ONE window, 2026-09-27T05:27:32Z–05:27:55Z**, stand server PID 1138611 on 127.0.0.1:43932
+  (recorded at launch, torn down by PID with exe/cgroup/cwd verified, `alive_after=no`), Chrome profile
+  wiped before every frame, `DISPLAY` stripped from the environment: **32/32 OK**, zero `PHASE-FAILED`;
+  `serve.log` has `GET /skipi-settings.js` 200 ×32, `.css` 200 ×32, `index.html` 200 ×32, and the only
+  404 is `/favicon.ico` — every settings frame was shot on the screen that mounts the vendored module.
+  The 30 scenes are the ones of fix-up 4 (the frames of that round had been deleted when the stand was
+  reset at 01:17Z and the session ended before re-shooting), plus two labelled `diag-tall-*` frames.
+- **Two findings from making the phone frame honest.** (1) The stand's `settings_mobile` scene used to
+  tap the gear and then, if the row was not there, silently call `openSettings('work_data')` — and the
+  gear alone never reaches the row: it opens the module's mobile LIST, and a person taps «Рабочие
+  данные» next. The fallback is now a failure, the scene performs both taps (recorded as
+  `data-k21-tapped="gear->home-crewing-work-data"` in the frame's DOM), and the earlier round's mobile
+  settings frames are therefore known to have been shot through the function, not the screen. (2) On a
+  390×844 phone the row sits at ~1300 px and **no ancestor scrolls**: `#settings-root` is `100dvh`
+  (dist:802), the module's `.skipi-settings--mobile` has no height of its own, so dist:803
+  `--skipi-settings-mobile-height: 100%` resolves to `auto`, the shell never gets its `100dvh`
+  (`overflow: hidden` in detail mode, module css:1292), `MAIN.skipi-settings__body` grows to 1793 px
+  and the fixed overlay clips the rest. `scrollIntoView()` is a no-op there (probed). Measured in
+  headless Chrome 147 only — a device is the boundary of this measurement — but the CSS is the same,
+  so the «Личный ящик» and «Профиль (vault)» rows are expected to be unreachable on the phone until
+  either dist:801–803 or the module changes. Not fixed here (outside this bounded tail; the module is
+  untouchable by this card). The `diag-tall-settings-mobile-{ru,en}` frames (390×1500) show the row
+  rendered in mobile module mode; they are a diagnostic viewport, not a phone screen, and are named so.

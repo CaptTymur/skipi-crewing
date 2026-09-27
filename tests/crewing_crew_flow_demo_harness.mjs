@@ -44,6 +44,17 @@ for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
   ok(!crewBlock.toLowerCase().includes(term), 'Crew Flow block avoids banned wording: ' + term);
 }
 ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'Crew Flow slice contains no Cloud API key plumbing');
+// K2.1 (OWNER (739)): the mailbox module is retired and Crew Flow is the single
+// screen. These four assertions live HERE as well as in the mailbox harness on
+// purpose: this file is also run by the plugin-host route, so a dist-only change
+// cannot slip the module back in past a route that does not run that harness.
+ok(!HTML.includes('CREWING MAILBOX MODULE START'), 'K2.1: the mailbox module block is absent');
+ok(!HTML.includes('id="mt-mail"') && !HTML.includes("showView('mail')"), 'K2.1: no desktop mail tab and no route into a mail view');
+ok(!/mobileNavButton\('mail'/.test(HTML) && !/\['mail','crew_flow'/.test(HTML), 'K2.1: no mail slot in the mobile rail or the tab-highlight list');
+ok(!crewBlock.includes('mailboxViewReady') && !crewBlock.includes('openMailCompose'),
+  'K2.1: Crew Flow no longer waits for a mailbox render or opens an in-app compose form');
+ok(/function crewFlowWriteEmail\(intakeId, kind\) \{[\s\S]{0,400}?pilotDraftOpen\(intakeId, kind\)/.test(crewBlock),
+  'K2.1: the write-email action opens the draft on the candidate card');
 ok(track1Block.includes('track1CandidateIntakeEnabled') && track1Block.includes('__demoMode'), 'Track 1 panel is gated by demo mode');
 ok(track1Block.includes('Source evidence') && track1Block.includes('Email CV') && track1Block.includes('Mail'), 'Track 1 panel renders source evidence');
 ok(track1Block.includes('Structured profile / vault draft'), 'Track 1 panel renders extracted profile/vault bridge');

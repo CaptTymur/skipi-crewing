@@ -809,9 +809,6 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
   <div class="mod-tab active" id="mt-crew_flow" onclick="showView('crew_flow')" title="Incoming candidate queue">
     <span>Crew Flow</span>
   </div>
-  <div class="mod-tab" id="mt-mail" onclick="showView('mail')" title="Personal mailbox">
-    <span>Почта</span>
-  </div>
   <div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable compliance profiles">
     <span>Профиль соответствия</span>
   </div>
@@ -1713,10 +1710,10 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.mail':'Mail','nav.intake_pilot':'Intake pilot','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
-    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.mail':'Mail','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
-    'crew_flow.mobile_subtitle':'Candidates from your inbound identifier','crew_flow.empty_demo':'No crew flow signals in this demonstration profile.','crew_flow.email_failed':'The compose form did not open — nothing was recorded for this candidate.','compliance.usage_prefix':'used in comparisons:','team.access_section':'Team','team.access_title':'Team access management','team.access_desc':'Issuing personal tokens to teammates. Available only with a team token.','team.access_open':'Open',
-    'crew_flow.local_decision':'Ignore and keep-for-later are stored on this device: on your other clients the candidate stays in the queue.','crew_flow.match_no_profiles':'There are no compliance profiles yet — create a profile, then compare.','crew_flow.matched_done':'Compared against the active compliance profiles.','crew_flow.subtitle':'Candidates that arrived through your inbound identifier. Nothing is decided for you.','crew_flow.refresh':'Refresh queue','crew_flow.open_pilot':'Upload a test document','crew_flow.loading':'Loading the candidate queue...','crew_flow.failed':'The candidate queue could not be loaded','crew_flow.empty_title':'No candidates yet','crew_flow.empty_unconnected':'Connect your company in Settings -> Access / tokens, then candidates will appear here.','crew_flow.empty_live':'Candidates appear here once documents reach your inbound identifier.','crew_flow.pick_title':'Pick a candidate','crew_flow.pick_note':'Open a row on the left to see the recorded facts, the comparisons and the operator actions.','crew_flow.facts':'facts','crew_flow.ranks':'comparisons','crew_flow.actions':'Operator actions','crew_flow.save':'Save to Seafarers DB','crew_flow.save_confirm':'Save this candidate to the seafarer database? A saved seafarer cannot be deleted afterwards — neither here nor in the seafarer database.','crew_flow.saved':'Candidate saved to the Seafarers DB.','crew_flow.save_failed':'Save failed','crew_flow.save_web_note':'Saving will come to the web version later; use the app on your computer or phone.','crew_flow.email':'Write email','crew_flow.request_docs':'Request documents','crew_flow.email_missing':'No address received: record the email fact on the card first.','crew_flow.email_desktop_only':'Mail is a desktop module; open this candidate on the desktop app.','crew_flow.subject_reply':'Re: application','crew_flow.subject_docs':'Documents for application','crew_flow.match':'Match against a profile','crew_flow.ignore':'Ignore','crew_flow.later':'Keep for later','crew_flow.later_done':'Candidate kept for later.','crew_flow.state_saved_to_db':'saved to Seafarers DB','crew_flow.state_ignored':'ignored','crew_flow.state_kept_for_later':'kept for later','crew_flow.state_emailed':'email written','crew_flow.state_requested_documents':'documents requested','crew_flow.state_matched':'compared against profiles',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.intake_pilot':'Intake pilot','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
+    'crew_flow.mobile_subtitle':'Candidates from your inbound identifier','crew_flow.empty_demo':'No crew flow signals in this demonstration profile.','compliance.usage_prefix':'used in comparisons:','team.access_section':'Team','team.access_title':'Team access management','team.access_desc':'Issuing personal tokens to teammates. Available only with a team token.','team.access_open':'Open',
+    'crew_flow.local_decision':'Ignore and keep-for-later are stored on this device: on your other clients the candidate stays in the queue.','crew_flow.match_no_profiles':'There are no compliance profiles yet — create a profile, then compare.','crew_flow.matched_done':'Compared against the active compliance profiles.','crew_flow.subtitle':'Candidates that arrived through your inbound identifier. Nothing is decided for you.','crew_flow.refresh':'Refresh queue','crew_flow.open_pilot':'Upload a test document','crew_flow.loading':'Loading the candidate queue...','crew_flow.failed':'The candidate queue could not be loaded','crew_flow.empty_title':'No candidates yet','crew_flow.empty_unconnected':'Connect your company in Settings -> Access / tokens, then candidates will appear here.','crew_flow.empty_live':'Candidates appear here once documents reach your inbound identifier.','crew_flow.pick_title':'Pick a candidate','crew_flow.pick_note':'Open a row on the left to see the recorded facts, the comparisons and the operator actions.','crew_flow.facts':'facts','crew_flow.ranks':'comparisons','crew_flow.actions':'Operator actions','crew_flow.save':'Save to Seafarers DB','crew_flow.save_confirm':'Save this candidate to the seafarer database? A saved seafarer cannot be deleted afterwards — neither here nor in the seafarer database.','crew_flow.saved':'Candidate saved to the Seafarers DB.','crew_flow.save_failed':'Save failed','crew_flow.save_web_note':'Saving will come to the web version later; use the app on your computer or phone.','crew_flow.email':'Write email','crew_flow.share':'Share the offer','crew_flow.share_note':'On the phone the draft is copied to the clipboard: paste it into your mail app or a messenger.','crew_flow.request_docs':'Request documents','crew_flow.email_missing':'No address received: record the email fact on the card first.','crew_flow.match':'Match against a profile','crew_flow.ignore':'Ignore','crew_flow.later':'Keep for later','crew_flow.later_done':'Candidate kept for later.','crew_flow.state_saved_to_db':'saved to Seafarers DB','crew_flow.state_ignored':'ignored','crew_flow.state_kept_for_later':'kept for later','crew_flow.state_draft_opened':'draft opened','crew_flow.state_draft_copied':'draft copied','crew_flow.state_requested_documents':'documents requested','crew_flow.state_matched':'compared against profiles',
     'common.new':'+ New','common.search':'Search...','common.settings':'Settings','common.vault':'Vault','common.switch_vault':'Switch vault',
     'mobile.connection':'Connection','mobile.company_token_required':'Company token required','mobile.production_connected':'Production API connected','mobile.connect_token':'Connect company token','mobile.token_required':'Token required','mobile.connect_title':'Connect Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. After validation, the first screen is Crew Flow — the candidates that arrived through your inbound identifier. Production API is used by default.','mobile.production_connection':'Production connection','mobile.production_connection_desc':'Use the company token issued by Skipi after verification. The default endpoint is production.','mobile.server_url':'Server URL','mobile.company_token':'Company token','mobile.company_token_placeholder':'Paste company token','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Filled after validation','mobile.company_display_name':'Company display name','mobile.company_placeholder':'e.g. Marlow Crewing Ltd','mobile.reply_to':'Reply-to email','mobile.save':'Save','mobile.validate':'Validate','mobile.connected':'Connected','mobile.not_connected':'Not connected','mobile.current_device':'Current device','mobile.not_set':'not set','mobile.nav.vacancies':'Vacancies','mobile.nav.mailings':'Mailings','mobile.nav.compliance':'Requirements','mobile.nav.seafarers':'Seafarers','mobile.nav.documents':'Docs','mobile.nav.draft':'Draft','mobile.nav.settings':'Settings','mobile.home':'Home','mobile.back':'Back','mobile.refresh':'Refresh','mobile.new':'New','mobile.search':'Search...','mobile.vacancies_desc':'Vacancies from production API. New applications are highlighted in the list.','mobile.loading_vacancies':'Loading vacancies...','mobile.load_failed':'Load failed','mobile.no_vacancies':'No vacancies posted yet.','mobile.create_vacancy':'Create vacancy','mobile.applications':'Applications','mobile.applications_desc':'Replies from seafarers via Skipi Package Link','mobile.loading_applications':'Loading applications...','mobile.applications_failed':'Applications failed','mobile.no_applications':'No applications yet.','mobile.apply_clicks':'Apply clicks','mobile.new_applications':'New','mobile.vessel':'Vessel','mobile.salary':'Salary','mobile.join':'Join','mobile.contract':'Contract','mobile.client':'Client','mobile.description':'Description','mobile.edit':'Edit','mobile.copy':'Copy','mobile.close':'Close','mobile.reopen':'Reopen','mobile.delete':'Delete','mobile.cancel':'Cancel','mobile.post':'Post','mobile.candidate':'Candidate','mobile.open_candidate':'Open candidate chat and documents','mobile.mailings_desc':'Standing CV mailing requests for seafarers.','mobile.no_mailings':'No mailing requests yet.','mobile.create_mailing':'Create mailing request','mobile.compliance_desc':'Reusable compliance profiles.','mobile.no_profiles':'No compliance profiles yet.','mobile.create_profile':'Create profile','mobile.seafarers_desc':'Local database saved from received document bundles.','mobile.no_seafarers':'No saved seafarers yet.','mobile.documents_desc':'Agency documents, templates, licences and checklists.','mobile.no_documents':'No documents yet.','mobile.open':'Open','mobile.archive':'Archive','mobile.restore':'Restore','mobile.details':'Details','mobile.documents':'Documents',
 	    'settings.connection':'Connection','settings.profile':'Crewing profile','settings.vaults':'Vaults','settings.interface':'Interface','settings.appearance':'Appearance','settings.help':'Help','settings.about':'About Skipi Crewing',
@@ -1727,16 +1724,16 @@ var UI_STRINGS = {
 	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.open_profile':'Open an existing profile','entry.open_profile_desc':'Connect with a token or a QR code shown on another device.','entry.create_profile':'Create a profile','entry.create_profile_desc':'A new company or team: set up the connection and the Skipi token.','entry.show_demo':'Show the demonstration','entry.show_demo_desc':'No sign-up and no token — an example on prepared data.','entry.demo_note':'The demonstration is an example with prepared data and no sign-up. Changes are not available.',
     'connect.title':'Open an existing profile','connect.lead_device':'Connect this device to an existing Skipi Crewing profile.','connect.lead_profile':'Connect to a company or team profile that already exists.','connect.close':'Close','connect.tab_token':'Token','connect.tab_qr':'QR code','connect.token_label':'Connection token','connect.token_placeholder':'Paste the token from the other device','connect.help':'The token is shown on the other device in Skipi: «Settings → Paired devices». It is not a password.','connect.clear':'Clear','connect.submit':'Connect','connect.qr_text':'Scanning a QR code needs access to the device camera.','connect.qr_note':'The camera is not wired in this build — use token entry.','connect.enter_manually':'Enter the token manually','connect.err_already':'This device is already connected to a profile.','connect.err_token':'The token is invalid or has expired. Check the code on the other device and try again.','connect.err_server':'The server is unavailable. Check your internet connection and try again.','connect.err_generic':'Could not connect. Check the token and try again.',
 	    'common.cancel':'Cancel','common.ok':'OK',
-    'confirm.team_remove':'Remove this team member?','confirm.profile_archive':'Archive this profile?','confirm.profile_archive_note':'It will not be available for new vacancies. Existing vacancy snapshots stay valid.','confirm.mailbox_disconnect':'Disconnect this mailbox and purge cached messages?','confirm.message_delete':'Delete this cached message?','confirm.mailing_close':'Close this mailing request?','confirm.mailing_close_note':'It will stop appearing in seafarer mailing lists.','confirm.mailing_delete':'Delete this mailing request permanently?','confirm.document_delete':'Delete this document?','confirm.document_delete_note':'The file will be removed from the vault.','confirm.vacancy_close':'Close this vacancy?','confirm.vacancy_close_note':'It will stop appearing on the public board. Existing applications and chats stay accessible.','confirm.vacancy_delete':'Hard-delete this vacancy?','confirm.vacancy_delete_note':'This removes the posting AND all applications + chat messages tied to it. Cannot be undone.','confirm.vacancy_delete_hint':'Use Close instead if you just want to stop accepting candidates.','confirm.vault_folder':'Skipi Crewing will use this vault folder after restart:','confirm.vault_folder_note':'The clear folder name makes it easier to find in your file manager.',
+    'confirm.team_remove':'Remove this team member?','confirm.profile_archive':'Archive this profile?','confirm.profile_archive_note':'It will not be available for new vacancies. Existing vacancy snapshots stay valid.','confirm.mailbox_disconnect':'Disconnect this mailbox and purge cached messages?','settings.mailbox_legacy':'Personal mailbox (legacy)','settings.mailbox_legacy_desc':'The Mail module is retired. One operation is left here: disconnect the mailbox so the server stops keeping its password.','settings.mailbox_legacy_none':'There is no connected mailbox to disconnect.','settings.mailbox_legacy_done':'Mailbox disconnected.','settings.mailbox_legacy_failed':'Disconnect failed','confirm.mailing_close':'Close this mailing request?','confirm.mailing_close_note':'It will stop appearing in seafarer mailing lists.','confirm.mailing_delete':'Delete this mailing request permanently?','confirm.document_delete':'Delete this document?','confirm.document_delete_note':'The file will be removed from the vault.','confirm.vacancy_close':'Close this vacancy?','confirm.vacancy_close_note':'It will stop appearing on the public board. Existing applications and chats stay accessible.','confirm.vacancy_delete':'Hard-delete this vacancy?','confirm.vacancy_delete_note':'This removes the posting AND all applications + chat messages tied to it. Cannot be undone.','confirm.vacancy_delete_hint':'Use Close instead if you just want to stop accepting candidates.','confirm.vault_folder':'Skipi Crewing will use this vault folder after restart:','confirm.vault_folder_note':'The clear folder name makes it easier to find in your file manager.',
     'confirm.remove':'Remove','confirm.archive':'Archive','confirm.disconnect':'Disconnect','confirm.delete':'Delete','confirm.delete_forever':'Delete forever','confirm.close':'Close','confirm.close_request':'Close request','confirm.close_vacancy':'Close vacancy','confirm.use_folder':'Use this folder',
 	    'about.verification_unavailable':'Stack verification unavailable','about.verification_mismatch':'Stack mismatch','mobile.apps_title':'Apps','mobile.apps_sub':'Plugins for your team','demo.toast':'This is a demonstration — changes are not available. Connect a company token for real work.','demo.banner':'DEMO — demonstration data','demo.exit':'Exit demo',
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.mail':'Почта','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профиль соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
-	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.mail':'Почта','left.compliance':'Профиль соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
-    'crew_flow.mobile_subtitle':'Кандидаты с вашего входящего идентификатора','crew_flow.empty_demo':'В демонстрационном профиле сигналов Crew Flow нет.','crew_flow.email_failed':'Форма письма не открылась — по этому кандидату ничего не записано.','compliance.usage_prefix':'использован в сравнениях:','team.access_section':'Команда','team.access_title':'Управление доступом команды','team.access_desc':'Выдача персональных токенов сотрудникам. Доступно только с командным токеном.','team.access_open':'Открыть',
-    'crew_flow.local_decision':'«Игнорировать» и «Отложить» хранятся на этом устройстве: на других ваших клиентах кандидат останется в очереди.','crew_flow.match_no_profiles':'Профилей соответствия нет — создайте профиль и повторите сопоставление.','crew_flow.matched_done':'Сопоставлено с активными профилями соответствия.','crew_flow.subtitle':'Кандидаты, пришедшие на ваш входящий идентификатор. Решение остаётся за вами.','crew_flow.refresh':'Обновить очередь','crew_flow.open_pilot':'Загрузить тестовый документ','crew_flow.loading':'Загружаю очередь кандидатов...','crew_flow.failed':'Очередь кандидатов не загружена','crew_flow.empty_title':'Кандидатов пока нет','crew_flow.empty_unconnected':'Подключите компанию в Настройках -> Доступ / токены, и кандидаты появятся здесь.','crew_flow.empty_live':'Кандидаты появятся, когда на ваш входящий идентификатор придут документы.','crew_flow.pick_title':'Выберите кандидата','crew_flow.pick_note':'Откройте строку слева, чтобы увидеть записанные сведения, оценки и действия оператора.','crew_flow.facts':'сведения','crew_flow.ranks':'оценки','crew_flow.actions':'Действия оператора','crew_flow.save':'В базу моряков','crew_flow.save_confirm':'Сохранить кандидата в базу моряков? Удалить сохранённого моряка потом нельзя — ни здесь, ни в базе моряков.','crew_flow.saved':'Кандидат сохранён в базе моряков.','crew_flow.save_failed':'Не удалось сохранить','crew_flow.save_web_note':'В веб-версии сохранение появится позже; используйте приложение на компьютере или телефоне.','crew_flow.email':'Написать email','crew_flow.request_docs':'Запросить документы','crew_flow.email_missing':'Адрес не получен: запишите факт email в карточке.','crew_flow.email_desktop_only':'Почта — десктопный модуль; откройте кандидата в десктопном приложении.','crew_flow.subject_reply':'Re: заявка','crew_flow.subject_docs':'Документы по заявке','crew_flow.match':'Сопоставить с профилем','crew_flow.ignore':'Игнорировать','crew_flow.later':'Отложить','crew_flow.later_done':'Кандидат отложен.','crew_flow.state_saved_to_db':'в базе моряков','crew_flow.state_ignored':'игнорирован','crew_flow.state_kept_for_later':'отложен','crew_flow.state_emailed':'письмо написано','crew_flow.state_requested_documents':'документы запрошены','crew_flow.state_matched':'сопоставлен с профилями',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профиль соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профиль соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
+    'crew_flow.mobile_subtitle':'Кандидаты с вашего входящего идентификатора','crew_flow.empty_demo':'В демонстрационном профиле сигналов Crew Flow нет.','compliance.usage_prefix':'использован в сравнениях:','team.access_section':'Команда','team.access_title':'Управление доступом команды','team.access_desc':'Выдача персональных токенов сотрудникам. Доступно только с командным токеном.','team.access_open':'Открыть',
+    'crew_flow.local_decision':'«Игнорировать» и «Отложить» хранятся на этом устройстве: на других ваших клиентах кандидат останется в очереди.','crew_flow.match_no_profiles':'Профилей соответствия нет — создайте профиль и повторите сопоставление.','crew_flow.matched_done':'Сопоставлено с активными профилями соответствия.','crew_flow.subtitle':'Кандидаты, пришедшие на ваш входящий идентификатор. Решение остаётся за вами.','crew_flow.refresh':'Обновить очередь','crew_flow.open_pilot':'Загрузить тестовый документ','crew_flow.loading':'Загружаю очередь кандидатов...','crew_flow.failed':'Очередь кандидатов не загружена','crew_flow.empty_title':'Кандидатов пока нет','crew_flow.empty_unconnected':'Подключите компанию в Настройках -> Доступ / токены, и кандидаты появятся здесь.','crew_flow.empty_live':'Кандидаты появятся, когда на ваш входящий идентификатор придут документы.','crew_flow.pick_title':'Выберите кандидата','crew_flow.pick_note':'Откройте строку слева, чтобы увидеть записанные сведения, оценки и действия оператора.','crew_flow.facts':'сведения','crew_flow.ranks':'оценки','crew_flow.actions':'Действия оператора','crew_flow.save':'В базу моряков','crew_flow.save_confirm':'Сохранить кандидата в базу моряков? Удалить сохранённого моряка потом нельзя — ни здесь, ни в базе моряков.','crew_flow.saved':'Кандидат сохранён в базе моряков.','crew_flow.save_failed':'Не удалось сохранить','crew_flow.save_web_note':'В веб-версии сохранение появится позже; используйте приложение на компьютере или телефоне.','crew_flow.email':'Написать email','crew_flow.share':'Поделиться предложением','crew_flow.share_note':'На телефоне черновик копируется в буфер: вставьте его в почту или мессенджер.','crew_flow.request_docs':'Запросить документы','crew_flow.email_missing':'Адрес не получен: запишите факт email в карточке.','crew_flow.match':'Сопоставить с профилем','crew_flow.ignore':'Игнорировать','crew_flow.later':'Отложить','crew_flow.later_done':'Кандидат отложен.','crew_flow.state_saved_to_db':'в базе моряков','crew_flow.state_ignored':'игнорирован','crew_flow.state_kept_for_later':'отложен','crew_flow.state_draft_opened':'черновик открыт','crew_flow.state_draft_copied':'черновик скопирован','crew_flow.state_requested_documents':'документы запрошены','crew_flow.state_matched':'сопоставлен с профилями',
 	    'common.new':'+ Новая','common.search':'Поиск...','common.settings':'Настройки','common.vault':'Профиль','common.switch_vault':'Сменить профиль',
     'mobile.connection':'Подключение','mobile.company_token_required':'Нужен токен компании','mobile.production_connected':'Подключено к production API','mobile.connect_token':'Подключите токен компании','mobile.token_required':'Нужен токен','mobile.connect_title':'Подключить Skipi Crewing','mobile.connect_desc':'Skipi - United Seafarers. После проверки первым экраном станет Crew Flow — кандидаты с вашего входящего идентификатора. По умолчанию используется production API.','mobile.production_connection':'Production-подключение','mobile.production_connection_desc':'Используйте токен компании, выданный Skipi после проверки. Endpoint по умолчанию production.','mobile.server_url':'Server URL','mobile.company_token':'Токен компании','mobile.company_token_placeholder':'Вставьте токен компании','mobile.crewing_id':'Crewing ID','mobile.crewing_id_placeholder':'Заполнится после проверки','mobile.company_display_name':'Название компании','mobile.company_placeholder':'например, Marlow Crewing Ltd','mobile.reply_to':'Email для ответов','mobile.save':'Сохранить','mobile.validate':'Проверить','mobile.connected':'Подключено','mobile.not_connected':'Не подключено','mobile.current_device':'Текущее устройство','mobile.not_set':'не задано','mobile.nav.vacancies':'Вакансии','mobile.nav.mailings':'Рассылки','mobile.nav.compliance':'Требования','mobile.nav.seafarers':'Моряки','mobile.nav.documents':'Документы','mobile.nav.draft':'Черновик','mobile.nav.settings':'Настройки','mobile.home':'Домой','mobile.back':'Назад','mobile.refresh':'Обновить','mobile.new':'Новая','mobile.search':'Поиск...','mobile.vacancies_desc':'Вакансии из production API. Новые заявки подсвечиваются в списке.','mobile.loading_vacancies':'Загружаю вакансии...','mobile.load_failed':'Не удалось загрузить','mobile.no_vacancies':'Вакансий пока нет.','mobile.create_vacancy':'Создать вакансию','mobile.applications':'Заявки','mobile.applications_desc':'Ответы моряков через Skipi Package Link','mobile.loading_applications':'Загружаю заявки...','mobile.applications_failed':'Не удалось загрузить заявки','mobile.no_applications':'Заявок пока нет.','mobile.apply_clicks':'Переходы','mobile.new_applications':'Новые','mobile.vessel':'Судно','mobile.salary':'Зарплата','mobile.join':'Посадка','mobile.contract':'Контракт','mobile.client':'Клиент','mobile.description':'Описание','mobile.edit':'Редактировать','mobile.copy':'Копировать','mobile.close':'Закрыть','mobile.reopen':'Открыть','mobile.delete':'Удалить','mobile.cancel':'Отмена','mobile.post':'Опубликовать','mobile.candidate':'Кандидат','mobile.open_candidate':'Открыть чат и документы кандидата','mobile.mailings_desc':'Постоянные запросы на получение CV от моряков.','mobile.no_mailings':'Запросов на рассылку пока нет.','mobile.create_mailing':'Создать запрос','mobile.compliance_desc':'Переиспользуемые профили соответствия.','mobile.no_profiles':'Профилей соответствия пока нет.','mobile.create_profile':'Создать профиль','mobile.seafarers_desc':'Локальная база, сохраненная из пакетов документов.','mobile.no_seafarers':'Сохраненных моряков пока нет.','mobile.documents_desc':'Документы агентства, шаблоны, лицензии и чеклисты.','mobile.no_documents':'Документов пока нет.','mobile.open':'Открыть','mobile.archive':'Архив','mobile.restore':'Восстановить','mobile.details':'Детали','mobile.documents':'Документы',
 	    'settings.connection':'Подключение','settings.profile':'Профиль крюинга','settings.vaults':'Профили','settings.interface':'Интерфейс','settings.appearance':'Внешний вид','settings.help':'Помощь','settings.about':'О Skipi Crewing',
@@ -1747,7 +1744,7 @@ var UI_STRINGS = {
 	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.open_profile':'Открыть существующий профиль','entry.open_profile_desc':'Подключитесь по токену или QR-коду, показанному на другом устройстве.','entry.create_profile':'Создать профиль','entry.create_profile_desc':'Новая компания или команда: настройте подключение и токен Skipi.','entry.show_demo':'Показать демонстрацию','entry.show_demo_desc':'Без регистрации и без токена — пример на готовых данных.','entry.demo_note':'Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.',
     'connect.title':'Открыть существующий профиль','connect.lead_device':'Подключите это устройство к существующему профилю Skipi Crewing.','connect.lead_profile':'Подключитесь к уже созданному профилю компании или команды.','connect.close':'Закрыть','connect.tab_token':'Токен','connect.tab_qr':'QR-код','connect.token_label':'Токен подключения','connect.token_placeholder':'Вставьте токен с другого устройства','connect.help':'Токен показан на другом устройстве в Skipi: «Настройки → Сопряжённые устройства». Это не пароль.','connect.clear':'Очистить','connect.submit':'Подключить','connect.qr_text':'Сканирование QR-кода требует доступа к камере устройства.','connect.qr_note':'Камера ещё не подключена в этой сборке — используйте ввод токена.','connect.enter_manually':'Ввести токен вручную','connect.err_already':'Это устройство уже подключено к профилю.','connect.err_token':'Токен недействителен или истёк. Проверьте код на другом устройстве и попробуйте снова.','connect.err_server':'Сервер недоступен. Проверьте интернет и повторите попытку.','connect.err_generic':'Не удалось подключиться. Проверьте токен и повторите попытку.',
 	    'common.cancel':'Отмена','common.ok':'Подтвердить',
-    'confirm.team_remove':'Удалить этого участника команды?','confirm.profile_archive':'Архивировать этот профиль?','confirm.profile_archive_note':'Он перестанет быть доступен для новых вакансий. Уже сделанные снимки по вакансиям останутся в силе.','confirm.mailbox_disconnect':'Отключить этот почтовый ящик и удалить кэшированные письма?','confirm.message_delete':'Удалить это кэшированное письмо?','confirm.mailing_close':'Закрыть этот запрос на рассылку?','confirm.mailing_close_note':'Он перестанет появляться в рассылках морякам.','confirm.mailing_delete':'Удалить этот запрос на рассылку навсегда?','confirm.document_delete':'Удалить этот документ?','confirm.document_delete_note':'Файл будет удалён из хранилища.','confirm.vacancy_close':'Закрыть эту вакансию?','confirm.vacancy_close_note':'Она перестанет показываться на публичной доске. Уже поданные заявки и чаты останутся доступны.','confirm.vacancy_delete':'Удалить эту вакансию безвозвратно?','confirm.vacancy_delete_note':'Будут удалены и сама вакансия, и все связанные с ней заявки и сообщения чата. Отменить это нельзя.','confirm.vacancy_delete_hint':'Если нужно просто перестать принимать кандидатов, используйте «Закрыть».','confirm.vault_folder':'После перезапуска Skipi Crewing будет использовать эту папку хранилища:','confirm.vault_folder_note':'Понятное имя папки облегчает её поиск в файловом менеджере.',
+    'confirm.team_remove':'Удалить этого участника команды?','confirm.profile_archive':'Архивировать этот профиль?','confirm.profile_archive_note':'Он перестанет быть доступен для новых вакансий. Уже сделанные снимки по вакансиям останутся в силе.','confirm.mailbox_disconnect':'Отключить этот почтовый ящик и удалить кэшированные письма?','settings.mailbox_legacy':'Личный ящик (устаревший)','settings.mailbox_legacy_desc':'Модуль «Почта» снят. Здесь осталась одна операция — отключить ящик, чтобы сервер перестал хранить его пароль.','settings.mailbox_legacy_none':'Подключённого ящика нет — отключать нечего.','settings.mailbox_legacy_done':'Ящик отключён.','settings.mailbox_legacy_failed':'Не удалось отключить','confirm.mailing_close':'Закрыть этот запрос на рассылку?','confirm.mailing_close_note':'Он перестанет появляться в рассылках морякам.','confirm.mailing_delete':'Удалить этот запрос на рассылку навсегда?','confirm.document_delete':'Удалить этот документ?','confirm.document_delete_note':'Файл будет удалён из хранилища.','confirm.vacancy_close':'Закрыть эту вакансию?','confirm.vacancy_close_note':'Она перестанет показываться на публичной доске. Уже поданные заявки и чаты останутся доступны.','confirm.vacancy_delete':'Удалить эту вакансию безвозвратно?','confirm.vacancy_delete_note':'Будут удалены и сама вакансия, и все связанные с ней заявки и сообщения чата. Отменить это нельзя.','confirm.vacancy_delete_hint':'Если нужно просто перестать принимать кандидатов, используйте «Закрыть».','confirm.vault_folder':'После перезапуска Skipi Crewing будет использовать эту папку хранилища:','confirm.vault_folder_note':'Понятное имя папки облегчает её поиск в файловом менеджере.',
     'confirm.remove':'Удалить','confirm.archive':'Архивировать','confirm.disconnect':'Отключить','confirm.delete':'Удалить','confirm.delete_forever':'Удалить навсегда','confirm.close':'Закрыть','confirm.close_request':'Закрыть запрос','confirm.close_vacancy':'Закрыть вакансию','confirm.use_folder':'Использовать эту папку',
 	    'about.verification_unavailable':'Проверка стека недоступна','about.verification_mismatch':'Несовпадение стека','mobile.apps_title':'Приложения','mobile.apps_sub':'Плагины для вашей команды','demo.toast':'Это демонстрация — изменения недоступны. Подключите токен компании для реальной работы.','demo.banner':'DEMO — демонстрационные данные','demo.exit':'Выйти из демо',
 	    'vacancy.new_title':'Новая вакансия','mailing.new_title':'Новая рассылка','mailing.empty':'Рассылок пока нет.','vacancy.empty':'Вакансии пока не опубликованы.','documents.empty':'Выберите документ слева.'
@@ -2180,11 +2177,10 @@ function languageSettingsSelectHtml() {
 }
 function applyI18nChrome() {
   document.documentElement.lang = getUiLang();
-  // K2: only the tabs that still exist. The retired ids (vacancies, mailings,
-  // team, intake_pilot) are not "harmless leftovers" — they are the list that
-  // tells a reader which modules the chrome believes it has.
+  // K2/K2.1: only the tabs that still exist. The retired ids (vacancies,
+  // mailings, team, intake_pilot, mail) are not "harmless leftovers" — they are
+  // the list that tells a reader which modules the chrome believes it has.
   var pairs = [
-    ['mt-mail','nav.mail'],
     ['mt-compliance','nav.compliance'],
     ['mt-seafarers','nav.seafarers'],
     ['mt-documents','nav.documents'],
@@ -2922,7 +2918,7 @@ function showView(v) {
   updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : (v==='intake_pilot' ? 'crew_flow' : v)));
-  ['mail','crew_flow','compliance','seafarers','documents','apps'].forEach(function(k){
+  ['crew_flow','compliance','seafarers','documents','apps'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -2946,13 +2942,6 @@ function showView(v) {
     renderMailingRequestsTree();
     if (state.selectedMailingRequest) renderMailingRequestDetail();
     else renderMailingRequestsEmptyMain();
-    return;
-  }
-  if (v==='mail') {
-    document.getElementById('left-panel').style.display = '';
-    renderMailboxTree();
-    if (state.mail && state.mail.selected) renderMailboxMessageDetail(state.mail.selected);
-    else renderMailboxEmptyMain();
     return;
   }
   if (v==='crew_flow') {
@@ -4843,382 +4832,180 @@ async function restoreComplianceProfile(profileId) {
   }
 }
 
-// CREWING MAILBOX MODULE START
-function mailboxState() {
-  if (!state.mail) {
-    state.mail = { folder:'INBOX', messages:[], selected:null, mailbox:null, loading:false, lastPoll:null };
-  }
-  return state.mail;
+// CREWING LEGACY MAILBOX ROW (K2.1) START
+// K2.1 (OWNER (739)): the personal mailbox module is retired — candidates arrive
+// on the server and are worked on ONE screen, the candidate card. Exactly one
+// thing must not disappear with the module: a mailbox that is still connected
+// keeps its credentials on the fleet server (`PUT /api/mail/mailbox`), and the
+// web cabinet offers no way to revoke them. So one row survives in company
+// settings — read the status, disconnect it — on the two commands that are left
+// untouched in src-tauri/src/lib.rs (`get_mailbox_status`, `disconnect_mailbox`).
+function legacyMailboxState() {
+  if (!state.legacyMailbox) state.legacyMailbox = { box:null, loading:false, loaded:false };
+  return state.legacyMailbox;
 }
-
-function mailboxFolderLabel(folder) {
-  return folder === 'SENT' ? 'SENT' : 'INBOX';
+var LEGACY_MAILBOX_STATUS_TEXT = {
+  not_configured:['не подключён','not connected'],
+  active:['подключён','connected'],
+  disconnected:['отключён','disconnected'],
+  error:['ошибка соединения','connection error']
+};
+// An unknown status code is shown AS THE CODE: a guess would be worse than the
+// code, and silence would be worse than both.
+function legacyMailboxStatusText() {
+  var m = legacyMailboxState();
+  var ru = getUiLang() === 'ru';
+  if (m.loading) return ru ? 'статус проверяется…' : 'checking the status…';
+  if (!m.loaded) return ru ? 'статус не проверен' : 'status not checked';
+  var box = m.box || {};
+  var code = String(box.status || (box.configured ? 'active' : 'not_configured'));
+  var row = LEGACY_MAILBOX_STATUS_TEXT[code];
+  var label = row ? row[ru ? 0 : 1] : code;
+  var masked = box.email_masked || box.address_masked || '';
+  return masked ? label + ' · ' + masked : label;
 }
-
-function mailCvCheckText(msg) {
-  msg = msg || {};
-  var parts = [msg.subject, msg.body_preview, msg.body_text];
-  (msg.attachments || []).forEach(function(a){ parts.push(a.filename || a.name || ''); });
-  return parts.join(' ').replace(/[A-Z]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) + 32); });
+function legacyMailboxConfigured() {
+  var box = legacyMailboxState().box;
+  return !!(box && box.configured);
 }
-
-function classifyMailCvMessage(msg) {
-  var text = mailCvCheckText(msg);
-  var hasReady = /(available from|ready from|readiness|can join|joining from|available)/.test(text);
-  var hasCerts = /(certificate|certificates|certs|coc|gmdss|stcw|ecdis|sso|bst)/.test(text);
-  var hasRecord = /(service record|sea service|months in rank|bulk carrier|tanker|vessel)/.test(text);
-  return {
-    is_cv: !!(hasReady && hasCerts && hasRecord),
-    reasons: [
-      hasReady ? 'readiness' : null,
-      hasCerts ? 'certificates' : null,
-      hasRecord ? 'service record' : null
-    ].filter(Boolean)
-  };
+// A status that failed to load, or an error from the server, is NOT "there is
+// nothing connected" — it is "we do not know". Locking the control then would
+// take away the only way to revoke exactly when the operator needs it most. The
+// attempt is blocked only when the server says plainly that nothing is there;
+// everywhere else the press is allowed and the server gets the last word.
+function legacyMailboxRevokeBlocked() {
+  var m = legacyMailboxState();
+  // While the answer is in the air there is nothing to act on: the row used to
+  // say «статус не проверен» AND offer the control, so a press in that window
+  // sent disconnect_mailbox at a mailbox that was not connected and the screen
+  // still said «Ящик отключён» (Супервайзор R2). This ban lasts exactly as long
+  // as the flight — a cached "not connected" is a different state, below.
+  if (m.loading) return true;
+  if (!m.loaded) return false;
+  var box = m.box || {};
+  if (box.configured) return false;
+  var code = String(box.status || 'not_configured');
+  return code === 'not_configured' || code === 'disconnected';
 }
-
-function demoExtractCandidateProfile(msg) {
-  var e = msg && msg.cv_enrichment;
-  if (e && e.extracted_profile) return e.extracted_profile;
-  var cls = classifyMailCvMessage(msg);
-  if (!cls.is_cv) return null;
-  return {
-    display_name: (msg.from_name || 'Candidate'),
-    rank: 'Captain',
-    nationality: 'Ukraine',
-    available_from: '2026-07-08',
-    certs_summary: ['coc_master','gmdss_goc','bst','ecdis','sso'],
-    service_record_summary: '84 months in rank; bulk carrier background'
-  };
-}
-
-function demoRankCandidateProfile(profile) {
-  if (!profile || profile.rank !== 'Captain') return [];
-  return [
-    { profile_name:'Captain · Client Alpha (Dry Bulk)', score_percent:93, gaps:['brm'] },
-    { profile_name:'Captain · Client Beta (Product Tanker)', score_percent:81, gaps:['brm','tanker_familiarization','advanced_tanker'] },
-    { profile_name:'Captain · Client Gamma (LNG / IGF)', score_percent:72, gaps:['brm','igf_code','hazmat'] }
-  ];
-}
-
-function mailCandidateEnrichmentForMessage(msg) {
-  msg = msg || {};
-  if (msg.cv_enrichment && msg.cv_enrichment.is_cv) return msg.cv_enrichment;
-  var cls = classifyMailCvMessage(msg);
-  if (!cls.is_cv) return null;
-  var profile = demoExtractCandidateProfile(msg);
-  return {
-    source: 'local-demo',
-    is_cv: true,
-    rank: profile && profile.rank || 'Unknown',
-    nationality: profile && profile.nationality || '',
-    available_from: profile && profile.available_from || '',
-    trust: { label:'demo-seeded', score:0.74 },
-    extracted_profile: profile,
-    rankings: demoRankCandidateProfile(profile)
-  };
-}
-
-function mailEnrichmentBadgeHtml(msg) {
-  var e = mailCandidateEnrichmentForMessage(msg);
-  if (!e || !e.rank || !(e.rankings || []).length) return '';
-  var top = (e.rankings || []).slice(0, 2).map(function(r){
-    return (r.profile_name || 'Profile').replace(/^Captain · /, '') + ' ' + (r.score_percent || 0) + '%';
-  }).join(' · ');
-  return '<div class="ti-meta mail-cv-enrichment" data-qa="mail-cv-enrichment">'+escapeHtml(e.rank)+' · '+escapeHtml(top)+'</div>';
-}
-
-function mailEnrichmentDetailHtml(msg) {
-  var e = mailCandidateEnrichmentForMessage(msg);
-  if (!e || !e.is_cv) return '';
-  var p = e.extracted_profile || {};
-  var rows = (e.rankings || []).slice(0, 3).map(function(r){
-    var gaps = (r.gaps || []).length ? ' · gaps: ' + (r.gaps || []).join(', ') : '';
-    return '<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);padding:8px 0;">'
-      + '<div><b>'+escapeHtml(r.profile_name || 'Profile')+'</b><div class="sub">'+escapeHtml(gaps.replace(/^ · /,''))+'</div></div>'
-      + '<div style="font-size:18px;font-weight:800;color:var(--accent);">'+escapeHtml(String(r.score_percent || 0))+'%</div>'
-      + '</div>';
-  }).join('');
-  return '<div class="card" data-qa="mail-cv-enrichment-detail" style="border-left:3px solid var(--accent);">'
-    + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">'
-    + '<div><label>CV intake enrichment</label><h2 style="margin:3px 0 4px;font-size:18px;">'+escapeHtml(p.display_name || 'Candidate')+' · '+escapeHtml(p.rank || e.rank || '')+'</h2>'
-    + '<div class="sub">'+escapeHtml([p.nationality, p.available_from ? ('available '+p.available_from) : '', (e.trust && e.trust.label) || ''].filter(Boolean).join(' · '))+'</div></div>'
-    + '<span class="tag ok">demo-seeded</span></div>'
-    + '<div style="margin-top:10px;"><label>Extracted fields</label><div style="font-size:12px;">Certificates: '+escapeHtml((p.certs_summary || []).join(', ') || '—')+'<br>Record: '+escapeHtml(p.service_record_summary || '—')+'</div></div>'
-    + '<div style="margin-top:10px;"><label>Profile coverage</label>'+rows+'</div>'
-    + '</div>';
-}
-
-function loadMailboxStatus(force) {
-  var mail = mailboxState();
-  if (mail.mailbox && !force) return Promise.resolve(mail.mailbox);
-  // K2/S1: two paths can ask for the status in the same tick — showView('mail')
-  // starts one mailbox render and the Crew Flow compose path waits for another.
-  // Without de-duplication that is two requests and two render chains racing for
-  // #main. One request in flight, one promise, every caller gets the same answer.
-  if (mail.statusPending) return mail.statusPending;
-  mail.statusPending = (async function(){
-    try {
-      mail.mailbox = await invoke('get_mailbox_status') || { configured:false, status:'not_configured' };
-    } catch(e) {
-      mail.mailbox = { configured:false, status:'error', last_error:String(e || '') };
-    }
-    mail.statusPending = null;
-    return mail.mailbox;
-  })();
-  return mail.statusPending;
-}
-
-// K2/S1: the render is published on mail.viewPending so a caller that must not
-// be overwritten (the Crew Flow compose path) can wait for EVERY chain in
-// flight, instead of assuming its own await resolves last.
-function renderMailboxTree(opts) {
-  var mail = mailboxState();
-  var run = renderMailboxTreeRun(opts);
-  mail.viewPending = run;
-  var clear = function(){ if (mail.viewPending === run) mail.viewPending = null; };
-  run.then(clear, clear);
-  return run;
-}
-async function renderMailboxTreeRun(opts) {
-  opts = opts || {};
-  var mail = mailboxState();
-  var lp = document.getElementById('left-panel');
-  lp.innerHTML =
-    '<div class="panel-header"><span class="title">'+tr('left.mail')+'</span>'
-    + '<span class="actions" style="display:flex;gap:4px;">'
-    + '<button class="ghost" onclick="openMailboxSettings()" style="padding:4px 8px;font-size:11px;">Connect</button>'
-    + '<button onclick="refreshMail(true)" style="padding:4px 8px;font-size:11px;">Refresh</button>'
-    + '</span></div>'
-    + '<div class="panel-search" style="display:flex;gap:6px;">'
-    + '<button class="'+(mail.folder==='INBOX'?'':'ghost')+'" onclick="selectMailboxFolder(\'INBOX\')" style="flex:1;padding:5px 8px;font-size:11px;">INBOX</button>'
-    + '<button class="'+(mail.folder==='SENT'?'':'ghost')+'" onclick="selectMailboxFolder(\'SENT\')" style="flex:1;padding:5px 8px;font-size:11px;">SENT</button>'
-    + '</div>'
-    + '<div class="panel-tree" id="mailbox-tree"><div class="tree-empty">Loading...</div></div>';
-  await loadMailboxStatus(opts.force === true);
-  renderMailboxTreeBody();
-  await refreshMail(false);
-}
-
-function renderMailboxTreeBody() {
-  var tree = document.getElementById('mailbox-tree');
-  if (!tree) return;
-  var mail = mailboxState();
-  var box = mail.mailbox || {};
-  if (!box.configured) {
-    tree.innerHTML = '<div class="tree-empty">Connect an IMAP mailbox to read and send crew mail.<br><br><button onclick="openMailboxSettings()">Connect mailbox</button></div>';
-    return;
-  }
-  var rows = mail.messages || [];
-  if (!rows.length) {
-    tree.innerHTML = '<div class="tree-empty">No '+escapeHtml(mailboxFolderLabel(mail.folder))+' messages yet.<br><br><button onclick="refreshMail(true)">Refresh</button></div>';
-    return;
-  }
-  var html = '';
-  rows.forEach(function(m){
-    var active = mail.selected && mail.selected.id === m.id;
-    var from = m.from_name || m.from || 'Unknown sender';
-    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openMailMessage(\''+escapeAttr(m.id)+'\')">'
-      + '<span style="font-size:11px;color:var(--text2);">'+(m.is_read ? '✉' : '●')+'</span>'
-      + '<div class="ti-title"><div>'+escapeHtml(m.subject || '(no subject)')+'</div>'
-      + '<div class="ti-meta">'+escapeHtml(from)+' · '+escapeHtml((m.date_received || '').slice(0,16).replace('T',' '))+'</div>'
-      + mailEnrichmentBadgeHtml(m)
-      + '</div></div>';
+// Called by the settings renderers. ONE request per session, and the answer is
+// painted into the row instead of re-rendering the settings surface: a re-render
+// started from inside a render is how the old mailbox module raced itself (K2/S1).
+function legacyMailboxEnsureStatus() {
+  var m = legacyMailboxState();
+  if (m.loaded || m.loading) return;
+  m.loading = true;
+  Promise.resolve().then(function(){
+    return invoke('get_mailbox_status');
+  }).then(function(res){
+    m.box = res || { configured:false, status:'not_configured' };
+  }, function(){
+    m.box = { configured:false, status:'error' };
+  }).then(function(){
+    m.loading = false;
+    m.loaded = true;
+    legacyMailboxPaint();
   });
-  tree.innerHTML = html;
 }
-
-async function selectMailboxFolder(folder) {
-  var mail = mailboxState();
-  mail.folder = folder === 'SENT' ? 'SENT' : 'INBOX';
-  mail.selected = null;
-  renderMailboxTree();
-  renderMailboxEmptyMain();
-}
-
-async function refreshMail(forcePoll) {
-  var mail = mailboxState();
-  var box = await loadMailboxStatus(false);
-  if (!box || !box.configured) {
-    renderMailboxTreeBody();
-    renderMailboxEmptyMain();
-    return;
-  }
-  if (forcePoll) {
-    try {
-      mail.lastPoll = await invoke('poll_mail');
-      showToast('Mailbox refreshed', 'success');
-    } catch(e) {
-      showToast('Mail refresh failed: '+e, 'error');
-    }
-  }
-  try {
-    var res = await invoke('fetch_mail_messages', { folder: mail.folder });
-    mail.messages = (res && res.messages) || [];
-  } catch(e) {
-    showToast('Mail load failed: '+e, 'error');
-    mail.messages = [];
-  }
-  renderMailboxTreeBody();
-}
-
-function renderMailboxEmptyMain() {
-  var mail = mailboxState();
-  var box = mail.mailbox || {};
-  document.getElementById('main').innerHTML =
-    '<div class="empty" style="margin-top:80px;">'
-    + '<div class="icon" style="font-size:56px;">✉</div>'
-    + '<div style="font-size:16px;margin-top:8px;">'+(box.configured ? 'Select a message or compose a reply.' : 'Connect your crewing mailbox.')+'</div>'
-    + '<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;">'
-    + '<button onclick="openMailboxSettings()">'+(box.configured ? 'Mailbox settings' : 'Connect mailbox')+'</button>'
-    + (box.configured ? '<button class="ghost" onclick="openMailCompose()">Compose</button>' : '')
-    + '</div></div>';
-}
-
-async function openMailMessage(id) {
-  var mail = mailboxState();
-  try {
-    mail.selected = await invoke('fetch_mail_message', { messageId: id });
-    renderMailboxTreeBody();
-    renderMailboxMessageDetail(mail.selected);
-  } catch(e) {
-    showToast('Open message failed: '+e, 'error');
+// Repaint the WHOLE row at every site that is on screen — the fallback desktop
+// and mobile rows and the row the settings module renders. Rewriting only the
+// status text left the control frozen at whatever the unknown-status render had
+// decided; the control has to appear and disappear with the answer.
+function legacyMailboxPaint() {
+  var shapes = ['desktop', 'mobile', 'module'];
+  for (var i = 0; i < shapes.length; i++) {
+    var node = document.getElementById('legacy-mailbox-row-' + shapes[i]);
+    if (node) node.innerHTML = legacyMailboxRowInnerHtml(shapes[i]);
   }
 }
-
-function renderMailboxMessageDetail(msg) {
-  msg = msg || {};
-  document.getElementById('main').innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 12px;">'
-    + '<div><h1 style="margin:0;">'+escapeHtml(msg.subject || '(no subject)')+'</h1>'
-    + '<div class="sub">'+escapeHtml(msg.from_name || msg.from || '')+' → '+escapeHtml(msg.to || '')+' · '+escapeHtml((msg.date_received || '').slice(0,16).replace('T',' '))+'</div></div>'
-    + '<div style="display:flex;gap:6px;"><button onclick="openMailCompose(\''+escapeAttr(msg.id || '')+'\')">Reply</button><button class="ghost" onclick="deleteMailMessage(\''+escapeAttr(msg.id || '')+'\')">Delete</button></div>'
-    + '</div>'
-    + mailEnrichmentDetailHtml(msg)
-    + '<div class="card"><pre style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.5;margin:0;">'+escapeHtml(msg.body_text || '')+'</pre>'
-    + (((msg.attachments || []).length) ? '<div style="margin-top:16px;"><label>Attachments</label><div>'+escapeHtml((msg.attachments || []).map(function(a){return a.filename || a.name || 'file';}).join(', '))+'</div></div>' : '')
+// The status is a claim about the server RIGHT NOW: a mailbox connected in the
+// web cabinet after this app started must become revocable without a restart, so
+// every settings open drops the cached answer and asks again (Супервайзор L2).
+function legacyMailboxInvalidate() {
+  legacyMailboxState().loaded = false;
+}
+// ONE row, four surfaces. Two of them are the settings screens the product
+// actually shows (`renderSettingsModal` → «Организация», `mobileSettingsOrgHtml`)
+// and two are the settings5 preview shell. The distinction is the whole point of
+// this row: the shell hides behind `skipi_crewing_settings5`, a flag the product
+// never sets, so a row that lived ONLY there could not be reached by anybody —
+// and with the module retired that would mean a connected mailbox can never be
+// revoked from the product again (Супервайзор REJECT на e05a3c4c).
+// The INSIDE of the row, rendered the same way at first paint and at every
+// repaint. The control is part of it, not a decision taken once: the markup used
+// to be settled while the status was still unknown and the paint could only
+// rewrite the text — so at `not_configured` the «Отключить» button sat there for
+// the whole first open of a session and could answer only with a toast
+// (Супервайзор L1 на dde59326).
+function legacyMailboxRowInnerHtml(shape) {
+  var label = escapeHtml(tr('settings.mailbox_legacy'));
+  var desc = escapeHtml(tr('settings.mailbox_legacy_desc'));
+  var blocked = legacyMailboxRevokeBlocked();
+  // While the answer is in the air nothing here is pressable. The two shapes
+  // say it differently for a reason that is not ours to choose: the presence
+  // contract pins the `openMailboxSettings` token in the RENDERED settings
+  // section (tests/crewing_presence_contract_harness.mjs:390/:436, a harness
+  // outside this route), so the fallback rows keep the control and mark it
+  // `disabled` for that window; the module contract has no disabled button, so
+  // there the control simply is not rendered yet. Either way a press in the
+  // flight window is impossible, which is the point.
+  var pending = !!legacyMailboxState().loading;
+  var dis = pending ? ' disabled' : '';
+  var statusId = shape === 'module' ? 'legacy-mailbox-status-module' : 'legacy-mailbox-status';
+  var status = '<span id="'+statusId+'" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
+  if (shape === 'module') {
+    // The module's own button markup with its delegated `data-settings-action`
+    // hook, written here so the first render and every repaint have ONE source
+    // (the module resolves clicks with closest() on its mount root, so a
+    // repainted control stays live).
+    return status + ((blocked || pending) ? '' : ' <button type="button" class="skipi-settings__button skipi-settings__button--secondary" data-settings-action="crewing-mailbox-disconnect">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
+  }
+  if (shape === 'mobile') {
+    return '<div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
+      + ((blocked && !pending) ? '' : '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+dis+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
+  }
+  return '<div class="setting-info"><div class="setting-label">'+label+'</div><div class="setting-desc">'+desc+'</div></div>'
+    + '<div class="setting-control">'+status
+    + ((blocked && !pending) ? '' : ' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;"'+dis+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>')
     + '</div>';
 }
-
-function openMailboxSettings() {
-  var box = (mailboxState().mailbox || {});
-  document.getElementById('main').innerHTML =
-    '<h1>Mailbox</h1><div class="sub">Personal IMAP/SMTP mailbox for this crewing token. Password is write-only and stored encrypted on the server.</div>'
-    + '<div class="card">'
-    + '<div class="row"><div><label>Email address</label><input id="mail-address" type="email" value="'+escapeAttr(box.address || box.email || '')+'" placeholder="ops@example.com"></div>'
-    + '<div><label>Display name</label><input id="mail-display-name" value="'+escapeAttr(box.display_name || '')+'" placeholder="Crewing desk"></div></div>'
-    + '<div class="row"><div><label>Username</label><input id="mail-username" value="'+escapeAttr(box.username || '')+'" placeholder="Usually the email address"></div>'
-    + '<div><label>App password</label><input id="mail-password" type="password" placeholder="'+(box.has_password ? 'Stored; leave blank to keep' : 'Required')+'"></div></div>'
-    + '<div class="row"><div><label>IMAP host</label><input id="mail-imap-host" value="'+escapeAttr(box.imap_host || '')+'" placeholder="imap.example.com"></div>'
-    + '<div><label>IMAP port</label><input id="mail-imap-port" type="number" value="'+escapeAttr(box.imap_port || 993)+'"></div></div>'
-    + '<div class="row"><div><label>SMTP host</label><input id="mail-smtp-host" value="'+escapeAttr(box.smtp_host || '')+'" placeholder="smtp.example.com"></div>'
-    + '<div><label>SMTP port</label><input id="mail-smtp-port" type="number" value="'+escapeAttr(box.smtp_port || 465)+'"></div></div>'
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="testMailboxSettings()">Test</button><button onclick="saveMailboxSettings()">Save</button>'
-    + (box.configured ? '<button class="ghost" onclick="disconnectMailbox()">Disconnect</button>' : '')
-    + '</div></div>';
+function legacyMailboxRowHtml(shape) {
+  legacyMailboxEnsureStatus();
+  var tag = shape === 'module' ? 'span' : 'div';
+  var cls = shape === 'mobile' ? ' class="mobile-setting-row"' : (shape === 'module' ? '' : ' class="setting-row"');
+  return '<'+tag+cls+' id="legacy-mailbox-row-'+shape+'" data-qa="settings.mailbox.legacy">'
+    + legacyMailboxRowInnerHtml(shape) + '</'+tag+'>';
 }
-
-function mailboxPayloadFromForm() {
-  return {
-    address: val('mail-address'),
-    display_name: val('mail-display-name') || null,
-    username: val('mail-username') || val('mail-address'),
-    password: val('mail-password') || null,
-    imap_host: val('mail-imap-host'),
-    imap_port: parseInt(val('mail-imap-port') || '993', 10),
-    smtp_host: val('mail-smtp-host'),
-    smtp_port: parseInt(val('mail-smtp-port') || '465', 10),
-    imap_security: 'ssl',
-    smtp_security: 'ssl',
-    provider: 'custom'
-  };
-}
-
-async function testMailboxSettings() {
-  try {
-    var res = await invoke('test_mailbox', { payload: mailboxPayloadFromForm() });
-    showToast(res && res.ok === false ? ('Mailbox test failed: '+(res.reason || 'check settings')) : 'Mailbox test passed', res && res.ok === false ? 'error' : 'success');
-  } catch(e) {
-    showToast('Mailbox test failed: '+e, 'error');
-  }
-}
-
-async function saveMailboxSettings() {
-  try {
-    var res = await invoke('save_mailbox_config', { payload: mailboxPayloadFromForm() });
-    mailboxState().mailbox = res || null;
-    showToast('Mailbox saved', 'success');
-    showView('mail');
-  } catch(e) {
-    showToast('Mailbox save failed: '+e, 'error');
-  }
-}
-
-async function disconnectMailbox() {
-  var ok = await inAppConfirm(tr('confirm.mailbox_disconnect'), { confirmLabel:tr('confirm.disconnect') });
+async function legacyMailboxDisconnect() {
+  var m = legacyMailboxState();
+  // In the flight window we do not know yet — saying «отключать нечего» would be
+  // as false as saying «отключён».
+  if (m.loading) { showToast(legacyMailboxStatusText(), 'warn'); return; }
+  if (legacyMailboxRevokeBlocked()) { showToast(tr('settings.mailbox_legacy_none'), 'warn'); return; }
+  var ok = await inAppConfirm(tr('confirm.mailbox_disconnect'), { confirmLabel: tr('confirm.disconnect') });
   if (!ok) return;
+  // What the server said BEFORE the command decides the sentence after it. A
+  // command that succeeded is not the same fact as a mailbox that was connected.
+  var wasConnected = legacyMailboxConfigured();
   try {
     await invoke('disconnect_mailbox');
-    mailboxState().mailbox = null;
-    mailboxState().messages = [];
-    mailboxState().selected = null;
-    showToast('Mailbox disconnected', 'success');
-    showView('mail');
-  } catch(e) {
-    showToast('Disconnect failed: '+e, 'error');
+    m.box = { configured:false, status:'disconnected' };
+    legacyMailboxPaint();
+    showToast(tr(wasConnected ? 'settings.mailbox_legacy_done' : 'settings.mailbox_legacy_none'), wasConnected ? 'success' : 'warn');
+  } catch (e) {
+    // The server refused: what we believe about the mailbox is stale as well.
+    legacyMailboxInvalidate();
+    legacyMailboxEnsureStatus();
+    showToast(tr('settings.mailbox_legacy_failed') + ': ' + e, 'error');
   }
 }
-
-function openMailCompose(replyId) {
-  var selected = mailboxState().selected || {};
-  var to = replyId ? (selected.from || '') : '';
-  var subject = replyId ? ('Re: ' + (selected.subject || '')) : '';
-  document.getElementById('main').innerHTML =
-    '<h1>Compose mail</h1><div class="card">'
-    + '<div class="row"><div><label>To</label><input id="mail-compose-to" value="'+escapeAttr(to)+'" placeholder="person@example.com"></div>'
-    + '<div><label>CC</label><input id="mail-compose-cc" placeholder="optional"></div></div>'
-    + '<div class="row full"><div><label>Subject</label><input id="mail-compose-subject" value="'+escapeAttr(subject)+'"></div></div>'
-    + '<div class="row full"><div><label>Message</label><textarea id="mail-compose-body" style="min-height:180px;"></textarea></div></div>'
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'mail\')">Cancel</button><button onclick="sendMailFromCompose(\''+escapeAttr(replyId || '')+'\')">Send</button></div>'
-    + '</div>';
-}
-
-async function sendMailFromCompose(replyId) {
-  var payload = {
-    to: val('mail-compose-to'),
-    cc: val('mail-compose-cc') || null,
-    subject: val('mail-compose-subject'),
-    body: val('mail-compose-body'),
-    in_reply_to: replyId || null
-  };
-  if (!payload.to || !payload.subject) {
-    showToast('Recipient and subject are required', 'error');
-    return;
-  }
-  try {
-    var res = await invoke('send_mail', { payload: payload });
-    if (res && res.sent === false) throw new Error(res.reason || 'send failed');
-    showToast('Message sent', 'success');
-    await selectMailboxFolder('SENT');
-  } catch(e) {
-    showToast('Send failed: '+e, 'error');
-  }
-}
-
-async function deleteMailMessage(id) {
-  if (!id) return;
-  var ok = await inAppConfirm(tr('confirm.message_delete'), { confirmLabel:tr('confirm.delete') });
-  if (!ok) return;
-  try {
-    await invoke('delete_mail_message', { messageId: id });
-    mailboxState().selected = null;
-    await refreshMail(false);
-    renderMailboxEmptyMain();
-  } catch(e) {
-    showToast('Delete failed: '+e, 'error');
-  }
-}
-// CREWING MAILBOX MODULE END
+// The historic name of this entry point. It no longer opens a settings form —
+// the form left with the module — and it is kept because the presence contract
+// pins this exact token in the rendered settings sections
+// (tests/crewing_presence_contract_harness.mjs:390/:436, a harness outside the
+// route of this change). Renaming it means changing the dist and that harness in
+// one step, which is a separate task, not a silent edit here.
+function openMailboxSettings() { return legacyMailboxDisconnect(); }
+// CREWING LEGACY MAILBOX ROW (K2.1) END
 
 // CREW FLOW MODULE START
 function crewFlowSignalFixtures() {
@@ -5481,12 +5268,16 @@ function crewFlowLiveMobileHtml(mode) {
   }).join('') + '</div>';
 }
 // D6: one operator panel above the hosted candidate card.
-function crewFlowActionsHtml(intakeId) {
+// R3 (card D1): the recorded contact fact is the ONE addressee. The pre-S2
+// `email` field is a fallback only, and the card says so where it is used.
+function crewFlowContactEmail(intakeId) {
   var facts = crewFlowFactsFor(intakeId);
-  var email = String(facts.email || '').trim();
+  return String(facts['contact:email'] || facts.email || '').trim();
+}
+function crewFlowActionsHtml(intakeId) {
+  var email = crewFlowContactEmail(intakeId);
   var native = crewFlowNativeTransport();
   var mobile = pilotHostIsMobile();
-  var mailBlocked = !email || mobile;
   var read = crewFlowReadInfo(intakeId) || {};
   var id = escapeJsString(intakeId);
   var btn = function(qa, label, disabled, onclick, primary){
@@ -5499,15 +5290,15 @@ function crewFlowActionsHtml(intakeId) {
     + '<label>' + escapeHtml(crewFlowTr('actions')) + '</label>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
     +   btn('save', crewFlowTr('save'), !native, "crewFlowSaveToSeafarers('" + id + "')", true)
-    +   btn('email', crewFlowTr('email'), mailBlocked, "crewFlowWriteEmail('" + id + "','reply')", false)
-    +   btn('request_docs', crewFlowTr('request_docs'), mailBlocked, "crewFlowWriteEmail('" + id + "','docs')", false)
+    +   btn('email', mobile ? crewFlowTr('share') : crewFlowTr('email'), false, "crewFlowWriteEmail('" + id + "','reply')", false)
+    +   btn('request_docs', crewFlowTr('request_docs'), false, "crewFlowWriteEmail('" + id + "','docs')", false)
     +   btn('match', crewFlowTr('match'), false, "crewFlowMatchToProfile('" + id + "')", false)
     +   btn('ignore', crewFlowTr('ignore'), false, "crewFlowIgnoreSignal('" + id + "')", false)
     +   btn('later', crewFlowTr('later'), false, "crewFlowKeepForLater('" + id + "')", false)
     + '</div>'
     + (native ? '' : '<div class="sub" data-qa="crew-flow-save-hint" style="margin-top:7px;">' + escapeHtml(crewFlowTr('save_web_note')) + '</div>')
     + (email ? '' : '<div class="sub" data-qa="crew-flow-email-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('email_missing')) + '</div>')
-    + ((email && mobile) ? '<div class="sub" data-qa="crew-flow-email-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('email_desktop_only')) + '</div>' : '')
+    + (mobile ? '<div class="sub" data-qa="crew-flow-share-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('share_note')) + '</div>' : '')
     + '<div class="sub" data-qa="crew-flow-local-note" style="margin-top:7px;">' + escapeHtml(crewFlowTr('local_decision')) + '</div>'
     + (read.action ? '<div class="sub" data-qa="crew-flow-review-state" style="margin-top:7px;">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</div>' : '')
     + '</div>';
@@ -5543,37 +5334,13 @@ async function crewFlowSaveToSeafarers(intakeId) {
   }
   crewFlowRerender();
 }
-// K2/S1: showView('mail') only STARTS the mailbox render, and when that render
-// settles it paints #main with the mailbox state — a compose form opened before
-// then is silently overwritten (visual-pass defect k06). Waiting on one render is
-// not enough either: more than one chain can be in flight, and "mine resolves
-// last" is ordering luck, not construction. So wait until NOTHING is in flight.
-async function mailboxViewReady(maxChains) {
-  if (typeof mailboxState !== 'function') return;
-  var mail = mailboxState();
-  var guard = Number(maxChains) > 0 ? Number(maxChains) : 8;
-  while (mail.viewPending && guard-- > 0) {
-    var pending = mail.viewPending;
-    try { await pending; } catch (e) {}
-    if (mail.viewPending === pending) { mail.viewPending = null; break; }
-  }
-}
-async function crewFlowWriteEmail(intakeId, kind) {
-  var facts = crewFlowFactsFor(intakeId);
-  var to = String(facts.email || '').trim();
-  if (!to) { showToast(crewFlowTr('email_missing'), 'warn'); return; }
-  if (pilotHostIsMobile()) { showToast(crewFlowTr('email_desktop_only'), 'warn'); return; }
-  showView('mail');
-  await mailboxViewReady();
-  openMailCompose();
-  var toEl = document.getElementById('mail-compose-to');
-  if (toEl) toEl.value = to;
-  var subjectEl = document.getElementById('mail-compose-subject');
-  if (subjectEl) subjectEl.value = (kind === 'docs' ? crewFlowTr('subject_docs') : crewFlowTr('subject_reply')) + ' ' + intakeId;
-  // The review state is a claim about what the operator did. It is written only
-  // once the form is actually on screen — a refused compose marks nothing (S1).
-  if (!toEl) { showToast(crewFlowTr('email_failed'), 'error'); return; }
-  crewFlowMarkRead(intakeId, kind === 'docs' ? 'requested_documents' : 'emailed');
+// K2.1 (OWNER (739) п.3–4): there is no mail module to route into any more. The
+// draft is written ON the candidate card and leaves through the operator's own
+// mail client (desktop) or the clipboard (phone); the review state is written
+// only after that actually happened (pilotDraftOpenClient / pilotDraftCopy).
+function crewFlowWriteEmail(intakeId, kind) {
+  if (typeof pilotDraftOpen !== 'function') return;
+  pilotDraftOpen(intakeId, kind);
 }
 async function crewFlowMatchToProfile(intakeId) {
   var p = state.intakePilot;
@@ -5879,7 +5646,11 @@ async function track1CandidateAction(action, signalId) {
 function track1CandidateIntakePanelHtml(row) {
   if (!track1CandidateIntakeEnabled(row)) return '';
   var msg = track1MailMessageForSignal(row) || {};
-  var enrichment = mailCandidateEnrichmentForMessage(msg) || {};
+  // K2.1: the demo enrichment used to be computed by the retired mailbox block.
+  // The demo fixture carries it verbatim (DEMO_READS.fetch_mail_messages →
+  // cv_enrichment), so the panel reads the fixture instead of a classifier that
+  // no longer ships. Same bytes on screen, one module less.
+  var enrichment = (msg && msg.cv_enrichment && msg.cv_enrichment.is_cv) ? msg.cv_enrichment : {};
   return '<div data-qa="track1-candidate-intake-panel" style="margin-top:14px;display:grid;gap:10px;">'
     + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">'
     +   '<div><div style="font-weight:800;">Candidate intake</div><div class="sub">Incoming candidate -> extracted profile -> local profile coverage -> manager action.</div></div>'
@@ -6418,7 +6189,22 @@ var PILOT_CARD_TEXT = {
     writes:'Write attempts', outcome_pending:'Pending', outcome_acked:'Confirmed by server', outcome_refused:'Refused', outcome_unknown:'Unknown', unknown_outcome:'Write outcome is unknown. You can check the current state', check_state:'Check current state', acked_refresh_failed:'Write confirmed; refresh failed',
     previous_may_have_completed:'The previous write may have completed. Perform a new action?', perform:'Perform', invalid_form:'The form is not valid', unknown_outcome_code:'Unknown result',
     op_fact_record:'Add fact', op_fact_correct:'Correct fact', op_rank:'Rank', op_confirm:'Add to shortlist', op_withdraw:'Withdraw decision',
-    requirement:'Requirement', wanted:'wanted', found:'entered', list_met:'Met', list_missing:'Not met', list_unconfirmed:'Unconfirmed', list_unknown:'Unknown outcome', history_id:'Decision id', by:'by', at:'at', summary:'Summary'
+    requirement:'Requirement', wanted:'wanted', found:'entered', list_met:'Met', list_missing:'Not met', list_unconfirmed:'Unconfirmed', list_unknown:'Unknown outcome', history_id:'Decision id', by:'by', at:'at', summary:'Summary',
+    section_letter:'Letter', section_attachments:'Attachments', section_contacts:'Contacts',
+    letter_none:'This card carries no original message.', letter_open:'Open the original (.eml)', letter_open_saved:'Open the saved copy', letter_saved_to:'Saved copy',
+    letter_from:'From', letter_date:'Date', letter_subject:'Subject', letter_header_missing:'not in the header', letter_head_pending:'The headers appear once the original is fetched.',
+    bytes_unavailable:'The original is not available on the server.', bytes_web_note:'In the web version file downloads arrive after the update.',
+    attach_none:'No attachments.', attach_download:'Download', attach_open_saved:'Open', attach_declared:'declared as', attach_blocked:'cannot be downloaded', attach_no_name:'without a name',
+    attach_unavailable:'The attachment is not available on the server.', attach_not_scanned:'Eligibility is not an antivirus verdict: it only says the check admits a download.',
+    contact_none:'No contact has been recorded.', contact_add:'Specify', contact_legacy:'address from the old card', contact_as_written:'as written in the document',
+    draft_title:'Draft e-mail', draft_to:'To', draft_subject:'Subject', draft_body:'Message', draft_profile:'Compliance profile', draft_close:'Close the draft',
+    draft_open_client:'Open in the mail client', draft_copy:'Copy the text', draft_copied:'Copied: paste it into your mail app or a messenger.', draft_share:'Share the offer',
+    draft_opened:'Draft opened in the mail client', draft_failed:'The mail client did not open: nothing was recorded for this candidate.', draft_copy_failed:'The text could not be copied: nothing was recorded.',
+    draft_to_invalid:'This address does not pass the check, so no letter is prepared from it:', draft_need_contact:'There is no address on this card. Type one and it is recorded as a fact you entered.', draft_contact_save:'Save the address and continue', draft_web_note:'In the web version the browser opens your mail client.',
+    draft_hello:'Good day,', draft_intro:'{company} is writing to you.', draft_company_unknown:'our crewing desk', draft_offer:'We have an opening that may fit your documents.', draft_offer_rank:'We have an opening for {rank}.',
+    draft_requirements:'What the profile states', draft_docs_ask:'Could you send the documents that are missing from your file?', draft_question:'Would you be ready to discuss it?',
+    draft_subject_reply:'Position offer', draft_subject_docs:'Documents for your application',
+    field_rank_as_written:'rank as written in the document', field_contact_email:'e-mail', field_contact_phone:'phone'
   },
   ru: {
     card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить',
@@ -6435,7 +6221,22 @@ var PILOT_CARD_TEXT = {
     writes:'Попытки записи', outcome_pending:'Выполняется', outcome_acked:'Подтверждено сервером', outcome_refused:'Отклонено', outcome_unknown:'Неизвестно', unknown_outcome:'Результат записи неизвестен. Можно проверить текущее состояние', check_state:'Проверить текущее состояние', acked_refresh_failed:'Запись подтверждена, обновление не удалось',
     previous_may_have_completed:'Предыдущая запись могла выполниться. Выполнить новое действие?', perform:'Выполнить', invalid_form:'Форма заполнена неверно', unknown_outcome_code:'Неизвестный результат',
     op_fact_record:'Добавить сведения', op_fact_correct:'Исправить сведения', op_rank:'Пересчёт', op_confirm:'Добавить в шортлист', op_withdraw:'Снять решение',
-    requirement:'Требование', wanted:'требуется', found:'внесено', list_met:'Выполнено', list_missing:'Не выполнено', list_unconfirmed:'Не подтверждено', list_unknown:'Неизвестный результат', history_id:'Решение', by:'кем', at:'когда', summary:'Сводка'
+    requirement:'Требование', wanted:'требуется', found:'внесено', list_met:'Выполнено', list_missing:'Не выполнено', list_unconfirmed:'Не подтверждено', list_unknown:'Неизвестный результат', history_id:'Решение', by:'кем', at:'когда', summary:'Сводка',
+    section_letter:'Письмо', section_attachments:'Вложения', section_contacts:'Контакты',
+    letter_none:'Оригинала письма у этой карточки нет.', letter_open:'Открыть оригинал (.eml)', letter_open_saved:'Открыть сохранённую копию', letter_saved_to:'Сохранённая копия',
+    letter_from:'Отправитель', letter_date:'Дата', letter_subject:'Тема', letter_header_missing:'в заголовке нет', letter_head_pending:'Заголовки появятся после получения оригинала.',
+    bytes_unavailable:'Оригинал на сервере недоступен.', bytes_web_note:'В веб-версии выгрузка файлов появится после обновления.',
+    attach_none:'Вложений нет.', attach_download:'Скачать', attach_open_saved:'Открыть', attach_declared:'заявлен как', attach_blocked:'скачать нельзя', attach_no_name:'без имени',
+    attach_unavailable:'Вложение на сервере недоступно.', attach_not_scanned:'Пригодность — не вердикт антивируса: она говорит только о том, что проверка допускает выгрузку.',
+    contact_none:'Контакт не записан.', contact_add:'Указать', contact_legacy:'адрес из старой карточки', contact_as_written:'как написано в документе',
+    draft_title:'Черновик письма', draft_to:'Кому', draft_subject:'Тема', draft_body:'Текст', draft_profile:'Профиль соответствия', draft_close:'Закрыть черновик',
+    draft_open_client:'Открыть в почтовом клиенте', draft_copy:'Скопировать текст', draft_copied:'Скопировано — вставьте в почту или мессенджер.', draft_share:'Поделиться предложением',
+    draft_opened:'Черновик открыт в почтовом клиенте', draft_failed:'Почтовый клиент не открылся — по этому кандидату ничего не записано.', draft_copy_failed:'Текст не скопировался — ничего не записано.',
+    draft_to_invalid:'Этот адрес не проходит проверку, письмо по нему не готовится:', draft_need_contact:'Адреса на карточке нет. Укажите его — он будет записан как сведения, внесённые вами.', draft_contact_save:'Сохранить адрес и продолжить', draft_web_note:'В веб-версии почтовый клиент откроет браузер.',
+    draft_hello:'Здравствуйте!', draft_intro:'Пишет {company}.', draft_company_unknown:'наша крюинговая компания', draft_offer:'У нас есть предложение, которое может подойти по вашим документам.', draft_offer_rank:'У нас есть предложение на позицию {rank}.',
+    draft_requirements:'Что указано в профиле', draft_docs_ask:'Пришлите, пожалуйста, документы, которых не хватает в вашем деле.', draft_question:'Готовы обсудить?',
+    draft_subject_reply:'Предложение по позиции', draft_subject_docs:'Документы по вашей заявке',
+    field_rank_as_written:'написание в документе', field_contact_email:'e-mail', field_contact_phone:'телефон'
   }
 };
 var PILOT_CARD_OUTCOME_TEXT = {
@@ -6485,6 +6286,10 @@ function cardFreshDetail(intakeId, generation) {
     ranks:null, ranksLoading:false, ranksError:null, ranksRequest:0,
     profiles:null, profilesError:null, profilesRequest:0,
     form:{ mode:'record', field:'', value:'', source_object:'', page:'', span:'' },
+    // K2.1: what the operator asked for explicitly — the saved letter, the saved
+    // attachments (by ordinal) and the open draft. Nothing here survives a card
+    // change: a new card generation means a new object (cardFreshDetail).
+    letter:null, letterLoading:false, attach:{}, draft:null,
     attempts:[], attemptSeq:0, pending:false
   };
 }
@@ -6665,7 +6470,11 @@ function pilotCardFreshnessHtml() {
   return '<div class="pilot-card-freshness" data-qa="pilot-rank-freshness">'+escapeHtml(cardT('freshness_unverified'))+'</div>';
 }
 function pilotCardFactVersionHtml(v, isCurrent) {
-  var uncertainty = v.uncertainty === 'operator_entered' ? cardT('entered_by_member') : (v.uncertainty == null ? '' : pilotT('unknown_reason')+': '+String(v.uncertainty));
+  // K2.1: an uncertainty code from the server gets a caption in both languages;
+  // an unknown code is shown as the code (cardCode), never as "reason unknown".
+  var uncertainty = v.uncertainty === 'operator_entered' ? cardT('entered_by_member')
+    : (v.uncertainty == null ? ''
+      : (CARD_UNCERTAINTY_TEXT[String(v.uncertainty)] ? cardCode(CARD_UNCERTAINTY_TEXT, v.uncertainty) : pilotT('unknown_reason')+': '+String(v.uncertainty)));
   return '<div class="pilot-fact-version'+(isCurrent?' current':'')+'" data-qa="pilot-fact-version" data-version="'+escapeAttr(String(v.version))+'">'
     + '<div class="pilot-fact-value" data-qa="pilot-fact-value">'+escapeHtml(v.value == null ? '' : String(v.value))+'</div>'
     + '<div class="pilot-note">'+escapeHtml(cardT('version'))+' '+escapeHtml(String(v.version))+' · '+escapeHtml(cardT('source_object'))+' '+escapeHtml(String(v.source_object))
@@ -6681,7 +6490,7 @@ function pilotCardFactsHtml() {
   if (!d.facts.length) return errorHtml+'<div class="pilot-status" data-qa="pilot-facts-empty">'+escapeHtml(cardT('facts_empty'))+'</div>';
   return errorHtml+d.facts.map(function(item){
     var versions = Array.isArray(item.versions) ? item.versions : [];
-    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(String(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
+    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(cardFieldLabel(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
       + versions.map(function(v, index){ return pilotCardFactVersionHtml(v, index === 0); }).join('')+'</div>';
   }).join('');
 }
@@ -6781,10 +6590,484 @@ function pilotCardHeaderHtml() {
     + '<div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(String(c.receipt_id))+' · '+escapeHtml(pilotFormatTime(c.created_at))+'</div>'+pilotSummaryHtml(c.summary)
     + '<div class="pilot-note" style="margin-top:8px;"><strong>'+escapeHtml(cardT('objects'))+'</strong></div>'+(objects || '<div class="pilot-note">—</div>');
 }
+// ===== K2.1 single screen: letter · attachments · contacts · draft ==========
+// OWNER (739) п.2–5: the candidate card IS the screen. The original letter, its
+// attachments, the contacts as written and the stored comparisons live here, and
+// the reply is written here too — as a draft that leaves through the mail client
+// the operator already uses. Bytes are never part of the card read: each press is
+// one audited request on the server and one copy under Downloads/Skipi/Crewing,
+// with no retention and no auto-cleanup (RISKS №491 — said to the owner, not hidden).
+var CARD_ATTACH_VERDICT_TEXT = {
+  accepted:['принято','accepted'],
+  needs_review:['нужна проверка','needs review'],
+  rejected:['отклонено','rejected']
+};
+var CARD_ATTACH_REASON_TEXT = {
+  scanner_unavailable:['проверка недоступна','scanner unavailable'],
+  type_mismatch:['тип не совпал с содержимым','declared type does not match the content'],
+  unsupported_type:['тип не поддерживается','unsupported type'],
+  too_large:['слишком большое','too large'],
+  encrypted:['зашифровано','encrypted'],
+  password_protected:['защищено паролем','password protected'],
+  malformed:['повреждено','malformed'],
+  empty:['пустое','empty']
+};
+var CARD_UNCERTAINTY_TEXT = {
+  rank_ambiguous:['ранг записан неоднозначно','the rank is written ambiguously'],
+  rank_unrecognised:['ранг не распознан','the rank was not recognised']
+};
+// The codes come from closed sets on the server. An unknown code is shown AS THE
+// CODE: a guess would be worse than the code, and silence would be worse than both.
+function cardCode(table, code) {
+  var row = table[String(code)];
+  if (row) return row[getUiLang() === 'ru' ? 0 : 1];
+  return String(code == null || code === '' ? '—' : code);
+}
+function cardFieldLabel(field) {
+  var key = 'field_' + String(field || '').replace(/[^a-z_]/g, '_');
+  var label = cardT(key);
+  return label === key ? String(field) : String(field) + ' · ' + label;
+}
+// The SAME strict form as `contact.rs checked_recipient`, because the web shell
+// never reaches Rust: there the address goes straight into a `mailto:` URL the
+// browser hands to a mail client, and `oleh@example.test?bcc=silent@attacker.test`
+// would add a silent recipient built out of a stranger's CV (Супервайзор,
+// e05a3c4c). A leading `-` is refused on both sides too: `xdg-email` reads such
+// an argument as a flag and fails, and "draft opened" would then be written for a
+// draft nobody ever saw. Returns the address, or null — never a "cleaned" one.
+function cardCheckedRecipient(value) {
+  var to = String(value == null ? '' : value).trim();
+  if (!to || to.length > 254) return null;
+  if (to.charAt(0) === '-') return null;
+  if (/[%?&,'"<>\s\u0000-\u001f\u007f-\uffff]/.test(to)) return null;
+  var parts = to.split('@');
+  if (parts.length !== 2) return null;
+  if (!/^[A-Za-z0-9._+-]+$/.test(parts[0])) return null;
+  var labels = parts[1].split('.');
+  if (labels.length < 2) return null;
+  for (var i = 0; i < labels.length; i++) {
+    if (!/^[A-Za-z0-9-]+$/.test(labels[i])) return null;
+  }
+  return to;
+}
+function cardWebShell() {
+  try { return (typeof window !== 'undefined') && window.__SKIPI_WEB_SHELL__ === true; }
+  catch (e) { return false; }
+}
+function cardCompanyName() {
+  var s = (typeof state !== 'undefined' && state.settings) ? state.settings : {};
+  var p = s.profile || {};
+  return String(s.company_name || p.legal_name || '').trim();
+}
+
+// ---- the original letter ---------------------------------------------------
+function cardLetterObject() {
+  var d = pilotDetail();
+  var objects = (d && d.card && Array.isArray(d.card.objects)) ? d.card.objects : [];
+  for (var i = 0; i < objects.length; i++) {
+    var o = objects[i] || {};
+    if (String(o.content_type || '').toLowerCase().indexOf('message/rfc822') === 0) return o;
+  }
+  return null;
+}
+// RFC 2047 best effort: utf-8 and ascii encoded words (B and Q) are decoded, and
+// ANYTHING else is left exactly as it arrived. A header that cannot be decoded is
+// shown raw — never replaced by a guess about what it might have said.
+function cardDecodeRfc2047(value) {
+  return String(value == null ? '' : value).replace(/=\?([A-Za-z0-9_.:-]+)\?([BbQq])\?([^?]*)\?=/g, function(whole, charset, kind, payload){
+    try {
+      var cs = String(charset).toLowerCase();
+      if (['utf-8','utf8','us-ascii','ascii'].indexOf(cs) === -1) return whole;
+      var bytes;
+      if (String(kind).toLowerCase() === 'b') {
+        var bin = atob(String(payload).replace(/\s+/g, ''));
+        bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
+      } else {
+        var raw = String(payload).replace(/_/g, ' ');
+        var out = [];
+        for (var j = 0; j < raw.length; j++) {
+          if (raw.charAt(j) === '=' && /^[0-9A-Fa-f]{2}$/.test(raw.substr(j + 1, 2))) { out.push(parseInt(raw.substr(j + 1, 2), 16)); j += 2; }
+          else out.push(raw.charCodeAt(j) & 0xff);
+        }
+        bytes = new Uint8Array(out);
+      }
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch (e) { return whole; }
+  });
+}
+// Only the header part the native side handed over is parsed, and only its first
+// From/Date/Subject: a folded line belongs to the header above it, and a
+// header-looking line in the body is not a header at all.
+function cardParseLetterHead(headText) {
+  var text = String(headText == null ? '' : headText).replace(/\r\n/g, '\n');
+  var stop = text.indexOf('\n\n');
+  if (stop !== -1) text = text.slice(0, stop);
+  var joined = [];
+  text.split('\n').forEach(function(line){
+    if (/^[ \t]/.test(line) && joined.length) joined[joined.length - 1] += ' ' + line.replace(/^[ \t]+/, '');
+    else joined.push(line);
+  });
+  var out = { from:'', date:'', subject:'' };
+  joined.forEach(function(line){
+    var m = /^([A-Za-z-]+):[ \t]*(.*)$/.exec(line);
+    if (!m) return;
+    var name = m[1].toLowerCase();
+    if (name === 'from' && !out.from) out.from = cardDecodeRfc2047(m[2]);
+    else if (name === 'date' && !out.date) out.date = cardDecodeRfc2047(m[2]);
+    else if (name === 'subject' && !out.subject) out.subject = cardDecodeRfc2047(m[2]);
+  });
+  return out;
+}
+function cardBytesError(error, unavailableKey) {
+  var err = pilotParseError(error);
+  if (err.status === 404) return cardT(unavailableKey);
+  return pilotCardErrorMessage(error);
+}
+async function pilotLetterDownload() {
+  var d = pilotDetail(), token = pilotDetailToken(), obj = cardLetterObject();
+  if (!d || !obj || d.letterLoading || cardWebShell()) return;
+  d.letterLoading = true; renderIntakePilot();
+  try {
+    var result = await invoke('crewing_intake_object_download', Object.assign(pilotExpected(token.context), {
+      intakeId:d.intakeId, objectId:String(obj.id), expectedBytes:(d.card && d.card.content_bytes) || null
+    }));
+    if (!pilotDetailStillCurrent(token)) return;
+    d.letterLoading = false;
+    d.letter = { path:(result && result.path) || '', bytes:(result && result.bytes) || 0, sha256:(result && result.sha256) || '', head:cardParseLetterHead(result && result.head_text) };
+    renderIntakePilot();
+  } catch (error) {
+    if (!pilotDetailStillCurrent(token)) return;
+    d.letterLoading = false; renderIntakePilot();
+    showToast(cardBytesError(error, 'bytes_unavailable'), 'error');
+  }
+}
+async function pilotAttachmentDownload(ordinal) {
+  var d = pilotDetail(), token = pilotDetailToken();
+  if (!d || cardWebShell()) return;
+  var key = String(Number(ordinal));
+  if (d.attach[key] && d.attach[key].loading) return;
+  d.attach[key] = { loading:true }; renderIntakePilot();
+  try {
+    var result = await invoke('crewing_intake_attachment_download', Object.assign(pilotExpected(token.context), {
+      intakeId:d.intakeId, ordinal:Number(ordinal), expectedBytes:(d.card && d.card.content_bytes) || null
+    }));
+    if (!pilotDetailStillCurrent(token)) return;
+    d.attach[key] = { loading:false, path:(result && result.path) || '', bytes:(result && result.bytes) || 0 };
+    renderIntakePilot();
+  } catch (error) {
+    if (!pilotDetailStillCurrent(token)) return;
+    delete d.attach[key]; renderIntakePilot();
+    showToast(cardBytesError(error, 'attach_unavailable'), 'error');
+  }
+}
+async function pilotOpenSavedPath(path) {
+  if (!path) return;
+  try { await invoke('crewing_intake_open_saved', { path:String(path) }); }
+  catch (error) { showToast(pilotCardErrorMessage(error), 'error'); }
+}
+function pilotLetterOpenSaved() {
+  var d = pilotDetail();
+  return pilotOpenSavedPath(d && d.letter ? d.letter.path : '');
+}
+function pilotAttachmentOpenSaved(ordinal) {
+  var d = pilotDetail(), row = d ? d.attach[String(Number(ordinal))] : null;
+  return pilotOpenSavedPath(row ? row.path : '');
+}
+function pilotCardLetterHtml() {
+  var d = pilotDetail();
+  if (!d.card) return '';
+  var obj = cardLetterObject();
+  if (!obj) return '<div class="pilot-status" data-qa="pilot-letter-none">'+escapeHtml(cardT('letter_none'))+'</div>';
+  var web = cardWebShell(), head = (d.letter && d.letter.head) ? d.letter.head : null;
+  var headRow = function(qa, key, value){
+    return '<div class="pilot-note" data-qa="'+qa+'">'+escapeHtml(cardT(key))+': '+escapeHtml(value || cardT('letter_header_missing'))+'</div>';
+  };
+  var rows = head
+    ? headRow('pilot-letter-from', 'letter_from', head.from) + headRow('pilot-letter-date', 'letter_date', head.date) + headRow('pilot-letter-subject', 'letter_subject', head.subject)
+    : '<div class="pilot-note" data-qa="pilot-letter-head-pending">'+escapeHtml(cardT('letter_head_pending'))+'</div>';
+  var saved = (d.letter && d.letter.path)
+    ? '<div class="pilot-note" data-qa="pilot-letter-saved">'+escapeHtml(cardT('letter_saved_to'))+': '+escapeHtml(String(d.letter.path))+' · '+escapeHtml(humanSize(d.letter.bytes))+'</div>'
+      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-letter-open-saved" onclick="pilotLetterOpenSaved()">'+escapeHtml(cardT('letter_open_saved'))+'</button></div>'
+    : '';
+  return '<div class="pilot-note" data-qa="pilot-letter-object">'+escapeHtml(String(obj.id))+' · '+escapeHtml(String(obj.content_type))+'</div>'
+    + rows + saved
+    + '<div class="pilot-actions"><button data-qa="pilot-letter-open" onclick="pilotLetterDownload()"'+((d.letterLoading || web) ? ' disabled' : '')+'>'+escapeHtml(cardT('letter_open'))+'</button>'
+    + (web ? '<span class="pilot-note" data-qa="pilot-bytes-web-note">'+escapeHtml(cardT('bytes_web_note'))+'</span>' : '')+'</div>';
+}
+
+// ---- attachments (the S3 metadata rows; the predicate stays on the server) --
+function cardAttachments() {
+  var d = pilotDetail();
+  var rows = (d && d.card && Array.isArray(d.card.attachments)) ? d.card.attachments.slice() : [];
+  rows.sort(function(a, b){ return Number((a || {}).ordinal || 0) - Number((b || {}).ordinal || 0); });
+  return rows;
+}
+function pilotCardAttachmentsHtml() {
+  var d = pilotDetail();
+  if (!d.card) return '';
+  var rows = cardAttachments();
+  if (!rows.length) return '<div class="pilot-status" data-qa="pilot-attachments-empty">'+escapeHtml(cardT('attach_none'))+'</div>';
+  var web = cardWebShell();
+  return rows.map(function(a){
+    a = a || {};
+    var ordinal = Number(a.ordinal || 0);
+    var key = String(ordinal);
+    var name = String(a.filename == null ? '' : a.filename).trim();
+    var declared = String(a.declared_type == null ? '' : a.declared_type);
+    var measured = String(a.measured_type == null ? '' : a.measured_type);
+    var saved = d.attach[key] || null;
+    var types = escapeHtml(measured || declared || '—')
+      + ((declared && declared !== measured) ? ' <span class="pilot-note">('+escapeHtml(cardT('attach_declared'))+' '+escapeHtml(declared)+')</span>' : '');
+    var reason = (a.reason == null || a.reason === '') ? '' : escapeHtml(cardCode(CARD_ATTACH_REASON_TEXT, a.reason));
+    var action = a.eligible
+      ? '<button class="ghost" data-qa="pilot-attachment-download" data-ordinal="'+escapeAttr(key)+'" onclick="pilotAttachmentDownload('+String(ordinal)+')"'+(((saved && saved.loading) || web) ? ' disabled' : '')+'>'+escapeHtml(cardT('attach_download'))+'</button>'
+        + ((saved && saved.path) ? '<button class="ghost" data-qa="pilot-attachment-open-saved" onclick="pilotAttachmentOpenSaved('+String(ordinal)+')">'+escapeHtml(cardT('attach_open_saved'))+'</button>' : '')
+      : '<span class="pilot-note" data-qa="pilot-attachment-blocked">'+escapeHtml(cardT('attach_blocked'))+(reason ? ': '+reason : '')+'</span>';
+    return '<div class="pilot-rank-row" data-qa="pilot-attachment" data-ordinal="'+escapeAttr(key)+'" title="'+escapeAttr(name || cardT('attach_no_name'))+'">'
+      + '<div class="pilot-queue-title">'+escapeHtml(name || cardT('attach_no_name'))+'</div>'
+      + '<div class="pilot-note">'+types+' · '+escapeHtml(humanSize(Number(a.byte_size || 0)))+' · '+escapeHtml(cardCode(CARD_ATTACH_VERDICT_TEXT, a.verdict))+(reason ? ' · '+reason : '')+'</div>'
+      + ((saved && saved.path) ? '<div class="pilot-note" data-qa="pilot-attachment-saved">'+escapeHtml(cardT('letter_saved_to'))+': '+escapeHtml(String(saved.path))+'</div>' : '')
+      + '<div class="pilot-actions">'+action+'</div></div>';
+  }).join('')
+  + '<div class="pilot-note" data-qa="pilot-attach-not-scanned">'+escapeHtml(cardT('attach_not_scanned'))+'</div>'
+  + (web ? '<div class="pilot-note" data-qa="pilot-bytes-web-note">'+escapeHtml(cardT('bytes_web_note'))+'</div>' : '');
+}
+
+// ---- contacts --------------------------------------------------------------
+// R3: the recorded contact fact is the ONE addressee. The pre-S2 `email` field is
+// a fallback, and wherever it is used the screen says where it came from.
+function cardContactFacts() {
+  var d = pilotDetail();
+  var rows = (d && Array.isArray(d.facts)) ? d.facts : [];
+  var pick = function(field){
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || {};
+      if (r.field !== field || !Array.isArray(r.versions) || !r.versions.length) continue;
+      var value = r.versions[0] ? r.versions[0].value : null;
+      if (value == null || String(value) === '') continue;
+      return String(value);
+    }
+    return '';
+  };
+  var out = { email:pick('contact:email'), emailLegacy:false, phone:pick('contact:phone') };
+  if (!out.email) { out.email = pick('email'); out.emailLegacy = !!out.email; }
+  return out;
+}
+function pilotContactStart(field) {
+  var d = pilotDetail();
+  if (!d) return;
+  var objects = (d.card && Array.isArray(d.card.objects)) ? d.card.objects : [];
+  d.form = { mode:'record', field:String(field), value:'', source_object:(objects[0] ? String(objects[0].id) : ''), page:'', span:'' };
+  d.formError = null;
+  renderIntakePilot();
+}
+function pilotCardContactsHtml() {
+  var d = pilotDetail();
+  if (!d.card) return '';
+  var c = cardContactFacts();
+  var row = function(qa, key, value, extra){
+    return '<div class="pilot-note" data-qa="'+qa+'">'+escapeHtml(cardT(key))+': '+escapeHtml(value)+' <span class="pilot-note">('+escapeHtml(cardT('contact_as_written'))+')</span>'+(extra || '')+'</div>';
+  };
+  var body = '';
+  if (c.email) body += row('pilot-contact-email', 'field_contact_email', c.email,
+    c.emailLegacy ? ' <span class="pilot-state paused" data-qa="pilot-contact-legacy">'+escapeHtml(cardT('contact_legacy'))+'</span>' : '');
+  if (c.phone) body += row('pilot-contact-phone', 'field_contact_phone', c.phone, '');
+  if (!body) body = '<div class="pilot-status" data-qa="pilot-contacts-empty">'+escapeHtml(cardT('contact_none'))+'</div>';
+  return body
+    + '<div class="pilot-actions">'
+    + '<button class="ghost" data-qa="pilot-contact-add" onclick="pilotContactStart(\'contact:email\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('contact_add'))+' '+escapeHtml(cardT('field_contact_email'))+'</button>'
+    + '<button class="ghost" data-qa="pilot-contact-add-phone" onclick="pilotContactStart(\'contact:phone\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('contact_add'))+' '+escapeHtml(cardT('field_contact_phone'))+'</button>'
+    + '</div>';
+}
+
+// ---- the draft -------------------------------------------------------------
+// The draft is text the operator can edit, addressed to the recorded contact and
+// handed to an EXTERNAL client. Crewing sends nothing itself (OWNER (739) п.3),
+// carries no attachment (mailto cannot), and writes the review state only after
+// the client or the clipboard actually took it.
+function cardDraftProfileId() {
+  var d = pilotDetail();
+  if (d.draft && d.draft.profileId) return d.draft.profileId;
+  if (d.card && d.card.primary_profile_id) return String(d.card.primary_profile_id);
+  var ranks = (d.ranks && Array.isArray(d.ranks.items)) ? d.ranks.items : [];
+  if (ranks.length && ranks[0].profile_id) return String(ranks[0].profile_id);
+  var ids = d.profiles ? Object.keys(d.profiles) : [];
+  return ids.length ? ids[0] : '';
+}
+function cardDraftRequirements(profileId) {
+  var d = pilotDetail();
+  var ranks = (d.ranks && Array.isArray(d.ranks.items)) ? d.ranks.items : [];
+  for (var i = 0; i < ranks.length; i++) {
+    if (String(ranks[i].profile_id) !== String(profileId)) continue;
+    return (Array.isArray(ranks[i].reasons) ? ranks[i].reasons : []).filter(function(r){ return r && r.wanted != null; });
+  }
+  return [];
+}
+function cardDraftText(kind, profileId) {
+  var d = pilotDetail();
+  var profile = (d.profiles || {})[profileId] || null;
+  var profileName = profile && profile.name ? String(profile.name) : '';
+  var reqs = cardDraftRequirements(profileId);
+  var rank = '';
+  reqs.forEach(function(r){ if (!rank && r.requirement === 'rank') rank = String(r.wanted); });
+  var lines = [cardT('draft_hello'), cardT('draft_intro').replace('{company}', cardCompanyName() || cardT('draft_company_unknown'))];
+  lines.push((rank ? cardT('draft_offer_rank').replace('{rank}', rank) : cardT('draft_offer')) + (profileName ? ' (' + profileName + ')' : ''));
+  if (reqs.length) lines.push(cardT('draft_requirements') + ': ' + reqs.map(function(r){ return String(r.requirement) + ' — ' + String(r.wanted); }).join('; '));
+  if (kind === 'docs') lines.push(cardT('draft_docs_ask'));
+  lines.push(cardT('draft_question'));
+  return {
+    subject:(kind === 'docs' ? cardT('draft_subject_docs') : cardT('draft_subject_reply')) + (profileName ? ' · ' + profileName : ''),
+    body:lines.join('\n\n')
+  };
+}
+function pilotDraftOpen(intakeId, kind) {
+  var d = pilotDetail();
+  if (!d || d.intakeId !== String(intakeId)) return;
+  var contact = cardContactFacts();
+  var profileId = cardDraftProfileId();
+  var text = cardDraftText(kind, profileId);
+  d.draft = {
+    kind:(kind === 'docs' ? 'docs' : 'reply'), to:contact.email, legacy:contact.emailLegacy,
+    profileId:profileId, subject:text.subject, body:text.body,
+    needContact:!contact.email, contactValue:'', state:null, pending:false
+  };
+  renderIntakePilot();
+}
+function pilotDraftClose() {
+  var d = pilotDetail();
+  if (!d) return;
+  d.draft = null;
+  renderIntakePilot();
+}
+function pilotDraftField(field, value) {
+  var d = pilotDetail();
+  if (!d || !d.draft) return;
+  d.draft[field] = String(value == null ? '' : value);
+}
+function pilotDraftProfile(profileId) {
+  var d = pilotDetail();
+  if (!d || !d.draft) return;
+  d.draft.profileId = String(profileId);
+  var text = cardDraftText(d.draft.kind, d.draft.profileId);
+  d.draft.subject = text.subject;
+  d.draft.body = text.body;
+  renderIntakePilot();
+}
+// The typed address becomes an operator fact through the SAME write path as the
+// card form — one write path, one audit trail, one place that can refuse.
+async function pilotDraftContactSave() {
+  var d = pilotDetail();
+  if (!d || !d.draft) return;
+  var value = String(d.draft.contactValue || '').trim();
+  var objects = (d.card && Array.isArray(d.card.objects)) ? d.card.objects : [];
+  if (!value || !objects.length) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
+  var attempt = await pilotCardWrite('fact_record', 'contact:email', 'crewing_intake_fact_record',
+    { intakeId:d.intakeId, fact:{ field:'contact:email', value:value, source_object:String(objects[0].id), page:null, span:null } },
+    [pilotFactsLoad, pilotCardLoad]);
+  if (!attempt || attempt.outcome !== 'acked') return;
+  var fresh = pilotDetail();
+  if (!fresh || !fresh.draft) return;
+  var contact = cardContactFacts();
+  fresh.draft.to = contact.email || value;
+  fresh.draft.legacy = contact.emailLegacy;
+  fresh.draft.needContact = false;
+  fresh.draft.contactValue = '';
+  renderIntakePilot();
+}
+async function pilotDraftOpenClient() {
+  var d = pilotDetail(), token = pilotDetailToken();
+  if (!d || !d.draft || d.draft.pending) return;
+  if (!d.draft.to) { d.draft.needContact = true; renderIntakePilot(); return; }
+  // A refused address marks nothing and opens nothing — the same rule as a
+  // refused client. Rust would refuse it too; the screen must not claim
+  // otherwise in the meantime.
+  if (!cardCheckedRecipient(d.draft.to)) { showToast(cardT('draft_to_invalid'), 'error'); renderIntakePilot(); return; }
+  if (cardWebShell()) return;
+  d.draft.pending = true; renderIntakePilot();
+  try {
+    await invoke('open_mailto', { to:d.draft.to, subject:d.draft.subject, body:d.draft.body });
+    if (!pilotDetailStillCurrent(token)) return;
+    d.draft.pending = false; d.draft.state = 'opened';
+    cardDraftMarkRead(d, 'opened');
+    renderIntakePilot();
+  } catch (error) {
+    if (!pilotDetailStillCurrent(token)) return;
+    d.draft.pending = false; renderIntakePilot();
+    showToast(cardT('draft_failed'), 'error');
+  }
+}
+// The phone has no native share in this build (the dist carries no
+// navigator.share at all — card D1 R2), so the honest mobile path is the
+// clipboard: the operator pastes the draft into whatever they use.
+async function pilotDraftCopy() {
+  var d = pilotDetail();
+  if (!d || !d.draft) return;
+  var text = [d.draft.to ? cardT('draft_to') + ': ' + d.draft.to : '', d.draft.subject, '', d.draft.body].filter(function(x){ return x !== ''; }).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    showToast(cardT('draft_copy_failed'), 'error');
+    return;
+  }
+  d.draft.state = 'copied';
+  cardDraftMarkRead(d, 'copied');
+  showToast(cardT('draft_copied'), 'success');
+  renderIntakePilot();
+}
+// The review state is a claim about what actually happened. Handing the draft to
+// a mail client and copying it to the clipboard are two different events, and on
+// a phone the clipboard is the ONLY path — printing "draft opened in the mail
+// client" there would be a sentence the product cannot back.
+function cardDraftMarkRead(d, outcome) {
+  if (typeof crewFlowMarkRead !== 'function') return;
+  if (d.draft.kind === 'docs') { crewFlowMarkRead(d.intakeId, 'requested_documents'); return; }
+  crewFlowMarkRead(d.intakeId, outcome === 'copied' ? 'draft_copied' : 'draft_opened');
+}
+function pilotDraftHtml() {
+  var d = pilotDetail();
+  if (!d || !d.draft) return '';
+  var dr = d.draft, web = cardWebShell(), mobile = pilotHostIsMobile();
+  var profiles = d.profiles || {};
+  var options = Object.keys(profiles).map(function(id){
+    return '<option value="'+escapeAttr(id)+'"'+(id === dr.profileId ? ' selected' : '')+'>'+escapeHtml(String(profiles[id].name || id))+'</option>';
+  }).join('');
+  var need = dr.needContact
+    ? '<div class="pilot-status" data-qa="pilot-draft-need-contact">'+escapeHtml(cardT('draft_need_contact'))+'</div>'
+      + '<div class="pilot-form-row"><label>'+escapeHtml(cardT('draft_to'))+'<input id="pilot-draft-contact" data-qa="pilot-draft-contact-input" maxlength="254" value="'+escapeAttr(dr.contactValue || '')+'" oninput="pilotDraftField(\'contactValue\', this.value)"></label>'
+      + '<button data-qa="pilot-draft-contact-save" onclick="pilotDraftContactSave()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('draft_contact_save'))+'</button></div>'
+    : '<div class="pilot-note" data-qa="pilot-draft-to">'+escapeHtml(cardT('draft_to'))+': '+escapeHtml(dr.to)
+      + (dr.legacy ? ' <span class="pilot-state paused" data-qa="pilot-draft-legacy">'+escapeHtml(cardT('contact_legacy'))+'</span>' : '')+'</div>';
+  var checkedTo = cardCheckedRecipient(dr.to);
+  // No checked recipient — no link, ever. The earlier guard skipped the refusal
+  // while the contact dialog was open and let `mailto:null?subject=…` through.
+  var leave = !checkedTo
+    ? (dr.needContact ? '' : '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>')
+    : web
+    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
+      + '<span class="pilot-note" data-qa="pilot-draft-web-note">'+escapeHtml(cardT('draft_web_note'))+'</span>'
+    : (mobile
+      ? '<button data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_share'))+'</button>'
+      : '<button data-qa="pilot-draft-open-client" onclick="pilotDraftOpenClient()"'+(dr.pending ? ' disabled' : '')+'>'+escapeHtml(cardT('draft_open_client'))+'</button>'
+        + '<button class="ghost" data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_copy'))+'</button>');
+  return '<section class="pilot-card" data-qa="pilot-draft"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('draft_title'))+'</h2>'
+    + '<button class="ghost" data-qa="pilot-draft-close" onclick="pilotDraftClose()">'+escapeHtml(cardT('draft_close'))+'</button></div>'
+    + need
+    + (options ? '<div class="pilot-form-row"><label>'+escapeHtml(cardT('draft_profile'))+'<select data-qa="pilot-draft-profile" onchange="pilotDraftProfile(this.value)">'+options+'</select></label></div>' : '')
+    + '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('draft_subject'))+'<input data-qa="pilot-draft-subject" maxlength="200" value="'+escapeAttr(dr.subject)+'" oninput="pilotDraftField(\'subject\', this.value)"></label></div>'
+    + '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('draft_body'))+'<textarea data-qa="pilot-draft-body" rows="8" maxlength="4096" oninput="pilotDraftField(\'body\', this.value)">'+escapeHtml(dr.body)+'</textarea></label></div>'
+    + '<div class="pilot-actions">'+leave+'</div>'
+    + (dr.state ? '<div class="pilot-status success" data-qa="pilot-draft-state">'+escapeHtml(cardT(dr.state === 'copied' ? 'draft_copied' : 'draft_opened'))+'</div>' : '')
+    + '</section>';
+}
 function pilotRenderCard(main) {
   var d = pilotDetail();
   main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'"><div class="pilot-hero"><div><h1>'+escapeHtml(cardT('card_title'))+'</h1><p data-qa="pilot-card-intake">'+escapeHtml(pilotT('intake'))+': '+escapeHtml(d.intakeId)+'</p></div><div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
     + '<section class="pilot-card" data-qa="pilot-card-header">'+pilotCardHeaderHtml()+'</section>'+pilotCardAttemptsHtml()
+    + pilotDraftHtml()
+    + '<section class="pilot-card" data-qa="pilot-section-letter"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_letter'))+'</h2></div>'+pilotCardLetterHtml()+'</section>'
+    + '<section class="pilot-card" data-qa="pilot-section-attachments"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_attachments'))+'</h2></div>'+pilotCardAttachmentsHtml()+'</section>'
+    + '<section class="pilot-card" data-qa="pilot-section-contacts"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_contacts'))+'</h2></div>'+pilotCardContactsHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-facts"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_facts'))+'</h2></div>'+pilotCardFactsHtml()+pilotCardFactFormHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-ranks"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_ranks'))+'</h2><button data-qa="pilot-rank-now" onclick="pilotRankNow()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('rank_now'))+'</button></div><div class="pilot-note">'+escapeHtml(cardT('rank_note'))+'</div>'+pilotCardRanksHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-history"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_history'))+'</h2></div>'+pilotCardHistoryHtml()+'</section></div>';
@@ -10203,6 +10486,7 @@ function _crewingSettingsSectionFor(tab){
 }
 
 async function openSettings(tab) {
+  legacyMailboxInvalidate();
   try { if (!state.settings) state.settings = await invoke('get_settings'); } catch(e){ state.settings = state.settings || {}; }
   var overlay = document.getElementById('skipi-settings-overlay');
   var target = document.getElementById('settings-root');
@@ -10333,6 +10617,7 @@ function _crewingSettingsSections(){
     { id:'home-crewing-work-data', order:450, icon:'W',
       labelKey:'settings.crewing.work_data', descriptionKey:'settings.crewing.work_data.description',
       renderHtml: function(ctx){
+        legacyMailboxEnsureStatus();
         var s = state.settings || {};
         var p = s.profile || {};
         var na = ctx.t('settings.crewing.not_set');
@@ -10356,9 +10641,19 @@ function _crewingSettingsSections(){
           + _crewSetHtmlRow(ctx, 'settings.crewing.contact_email', ctx.t('settings.crewing.contact_email.description'),
                 emailCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
-                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile')));
+                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'))
+          // K2.1 (OWNER (739), Супервайзор REJECT на ffe0573c): the ONE surviving
+          // mailbox operation lives HERE, in the sections handed to
+          // window.SkipiSettings.mount — that is the settings screen the product
+          // actually shows in both modes. The four legacy renderers carry the same
+          // row, but they are only the fallback for a module that failed to load.
+          + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
+                legacyMailboxRowHtml('module')));
       },
       handlers: {
+        // The same revoke path as every other surface: confirm, then
+        // disconnect_mailbox, then an honest toast if the server refuses.
+        'crewing-mailbox-disconnect': function(){ return legacyMailboxDisconnect(); },
         'crewing-open-profile': function(){
           // Take the operator to the real desktop connection/profile view.
           closeSettings();
@@ -10653,6 +10948,7 @@ function renderSettingsModal() {
           settingRow('Название организации', 'Отображается в рабочем пространстве Crewing. На сервер не отправляется.', inputCtrl('s-company', s.company_name, 'text', 'например, Marlow Crewing Ltd', '240px'))
         + settingRow('Контактный email', 'Для переписки по верификации и связи с организацией.', inputCtrl('p-email', p.contact_email, 'text', 'hr@company.com', '240px'))
         + settingRow('Контактный телефон', 'Необязательно. Используется на профилях после company_verified.', inputCtrl('p-phone', p.contact_phone, 'text', '+357 ...', '180px'))
+        + legacyMailboxRowHtml('desktop')
         )
       + sectionTitle('Данные для верификации')
       + grp(
@@ -10818,7 +11114,7 @@ function renderSettingsFiveShell() {
     body = '<div class="settings-section" data-qa="settings5-shell settings.modules.body">'
       + mainHeader('Modules / Apps', 'Built-in and community modules live here. Module internals stay inside the module.', 'Top-level', 'settings.modules.header')
       + previewGrid([
-          previewCard('Built-in modules', 'Apps, Mail source, VSL DB source and AI Assistant entry are shown as configuration surfaces only.', 'settings.modules.builtin'),
+          previewCard('Built-in modules', 'Apps, VSL DB source and AI Assistant entry are shown as configuration surfaces only.', 'settings.modules.builtin'),
           previewCard('Community modules', 'Community source is visible as a disabled preview until catalog policy is accepted.', 'settings.modules.community')
         ], 'settings.modules.v11-preview')
       + sectionTitle('Installed modules')
@@ -10828,7 +11124,7 @@ function renderSettingsFiveShell() {
         )
       + nestedTitle('Sources / Connections', 'settings.modules.sources')
       + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Mail source</div><div class="setting-desc">Mailbox connect/test/save/disconnect stays inside the Mail module.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openMailboxSettings()">Mailbox settings</button></div></div>'
+          legacyMailboxRowHtml('desktop')
         + settingRow('Email для ответов', 'Источник ответов моряков на вакансии. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">VSL DB source</div><div class="setting-desc">Source, permissions and local cache policy for the vessel database module. Demo-only until the module is accepted.</div></div><div class="setting-control"><span data-qa="settings.modules.sources.vsl">'+staticSwitch(false)+' source not linked</span></div></div>'
         + settingRow('Module source', 'Built-in / Community source selection lives under Modules, not as a separate top-level page.', selectCtrl('settings-mod-source', 'built-in', [['built-in','Built-in'],['community','Community (preview)', true]]))
@@ -12269,7 +12565,7 @@ function mobileOpenSettingsHome(){
   }
   mobileState.settingsPage = 'list'; mobileShow('settings');
 }
-function mobileOpenSettings(id){ mobileState.settingsPage = settingsFiveShellEnabled() ? settingsFiveSection(id) : id; mobileShow('settings'); }
+function mobileOpenSettings(id){ legacyMailboxInvalidate(); mobileState.settingsPage = settingsFiveShellEnabled() ? settingsFiveSection(id) : id; mobileShow('settings'); }
 function mobileBackToSettingsList(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
 
 function mobileRenderSettingsList() {
@@ -12313,6 +12609,7 @@ function mobileSettingsOrgHtml() {
     + '<div class="mobile-card">'
     + '<div class="mobile-row full"><div class="mobile-field"><label>Название организации</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name||'')+'" placeholder="например, Marlow Crewing Ltd"></div></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('work_role'))+'</strong>'+escapeHtml(mobileWorkRoleLabel(role))+'</div><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('change_role'))+'</button></div>'
+    + legacyMailboxRowHtml('mobile')
     + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'
     + '</div>';
 }
@@ -12390,17 +12687,17 @@ function mobileSettingsAppHtml() {
 
 function mobileSettingsFiveModulesHtml() {
   var s = state.settings || {};
-  return mobileSettingsHead('Modules / Apps', 'Installed modules, sources and Mail live here. Work content stays in home modules.')
+  return mobileSettingsHead('Modules / Apps', 'Installed modules and sources live here. Work content stays in home modules.')
     + '<div class="mobile-card" data-qa="settings.modules.root">'
     + '<div class="mobile-section-title" style="margin-top:0;">Installed modules</div>'
-    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Built-in modules</strong>Apps, Mail source, VSL DB source and AI Assistant entry are shown as configuration surfaces only.</div><span class="mobile-status">preview</span></div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Built-in modules</strong>Apps, VSL DB source and AI Assistant entry are shown as configuration surfaces only.</div><span class="mobile-status">preview</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Community modules</strong>Community source is disabled until catalog policy is accepted.</div><span class="mobile-status warn">later</span></div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Apps launcher</strong>Open Apps to manage installed modules and plugin details.</div><button class="mobile-secondary" onclick="mobileShow(\'apps\')">Open Apps</button></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Plugin internals</strong>Settings owned by plugins stay inside those plugins.</div><span class="mobile-status">module-owned</span></div>'
     + '</div>'
     + '<div class="mobile-card" data-qa="settings.modules.sources">'
     + '<div class="mobile-section-title" style="margin-top:0;">Sources / Connections</div>'
-    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Mail source</strong>Mailbox IMAP settings stay inside Mail.</div><button class="mobile-secondary" onclick="openMailboxSettings()">Mailbox settings</button></div>'
+    + legacyMailboxRowHtml('mobile')
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">VSL DB source</strong>Source, permissions and local cache policy are demo-only until the module is accepted.</div><span class="mobile-status warn">not linked</span></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to||'')+'" placeholder="hr@company.com"></div></div>'
     + '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button></div>'

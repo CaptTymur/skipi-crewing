@@ -109,7 +109,48 @@ pub(crate) struct CandidateIntakeReceipt {
     pub issued_at: String,
     #[serde(default)]
     pub objects: Vec<CandidateIntakeObject>,
+    /// S3 (2026-09-26): the attachment METADATA rows of this intake. The field is
+    /// declared BEFORE the two byte commands exist on purpose — a typed Tauri
+    /// command deserializes into this struct, so a missing field would drop the
+    /// list on the way to the webview and the card would honestly render
+    /// "no attachments" while the server had them.
+    #[serde(default)]
+    pub attachments: Vec<CandidateIntakeAttachment>,
     pub summary: Option<CandidateIntakeSummary>,
+}
+
+/// One attachment row exactly as `candidate_intake_service.public_attachments_for`
+/// serializes it (card S3 OUTCOME (1)): metadata only, никаких storage-путей.
+/// `eligible` says the verdict admits a download; the byte route stays the
+/// authority and may still answer 404.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateIntakeAttachment {
+    pub ordinal: i64,
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub declared_type: Option<String>,
+    #[serde(default)]
+    pub measured_type: Option<String>,
+    #[serde(default)]
+    pub byte_size: Option<i64>,
+    #[serde(default)]
+    pub verdict: Option<String>,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub eligible: bool,
+}
+
+/// What a byte route gives the screen: where the copy landed, how big it is, its
+/// digest, and — for the original letter only — the header part of the .eml so the
+/// card can show From/Date/Subject without ever parsing the body.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub(crate) struct CandidateIntakeDownload {
+    pub path: String,
+    pub bytes: u64,
+    pub sha256: String,
+    pub head_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -888,6 +929,250 @@ pub(crate) async fn crewing_intake_matching_profile_list(
     .await
 }
 
+// ---------------- K2.1 audited byte routes (OWNER (739) п.2) ----------------
+// The original letter and its attachments are reachable FROM THE CARD. They are
+// never part of the card read: one press, one audited request on the server, one
+// copy written under Downloads/Skipi/Crewing/<intake8>/. The copies have no
+// retention and no auto-cleanup, and an .eml carries personal data of people
+// other than the candidate (RISKS №491) — that is said to the owner, not hidden.
+
+/// Hard ceiling regardless of what the card claims; 32 MiB is far above any CV
+/// and far below anything that could exhaust the machine.
+const DOWNLOAD_CEILING_BYTES: u64 = 32 * 1024 * 1024;
+/// Only the header part of an .eml is ever handed to the screen.
+const LETTER_HEAD_MAX_BYTES: usize = 32 * 1024;
+
+fn saved_root() -> Result<std::path::PathBuf, PilotBridgeError> {
+    let base = dirs::download_dir().ok_or_else(|| invalid_request("no_downloads_dir"))?;
+    Ok(base.join("Skipi").join("Crewing"))
+}
+
+/// The server chooses the filename; the client still treats it as hostile input.
+/// Path separators, `..`, control characters and non-ASCII become `_`, so a
+/// `Content-Disposition` can never write outside the intake folder.
+fn safe_download_name(raw: &str, fallback: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    for ch in raw.chars() {
+        let ok = ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-');
+        out.push(if ok { ch } else { '_' });
+    }
+    let trimmed = out.trim_matches('_').trim_matches('.').to_string();
+    if trimmed.is_empty() || trimmed.contains("..") || trimmed.len() > 120 {
+        fallback.to_string()
+    } else {
+        trimmed
+    }
+}
+
+fn filename_from_disposition(value: &str) -> Option<String> {
+    let lower = value.to_ascii_lowercase();
+    let at = lower.find("filename=")?;
+    let tail = value[at + "filename=".len()..].trim();
+    let name = if let Some(stripped) = tail.strip_prefix('"') {
+        stripped.split('"').next().unwrap_or("")
+    } else {
+        tail.split(';').next().unwrap_or("").trim()
+    };
+    if name.is_empty() {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
+/// Byte fetch for the two audited routes. A sibling of `perform`, not a reuse of
+/// it: the JSON path insists on `Accept: application/json` and throws the
+/// response headers away, while here the server-chosen filename lives in
+/// `Content-Disposition` and the body is not JSON at all.
+fn fetch_bytes(
+    context: &PilotContext,
+    url: Url,
+    ceiling: u64,
+) -> Result<(Vec<u8>, Option<String>), PilotBridgeError> {
+    let client = client()?;
+    let response = client
+        .request(Method::GET, url)
+        .bearer_auth(&context.bearer_token)
+        .header(reqwest::header::ACCEPT, "*/*")
+        .send()
+        .map_err(|_| PilotBridgeError::new("network"))?;
+    let status = response.status();
+    let disposition = response
+        .headers()
+        .get(reqwest::header::CONTENT_DISPOSITION)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_string());
+    if !status.is_success() {
+        let mut err = PilotBridgeError::new(if status.is_redirection() {
+            "redirect_refused"
+        } else {
+            "server"
+        });
+        err.status = Some(status.as_u16());
+        return Err(err);
+    }
+    let bytes = response
+        .bytes()
+        .map_err(|_| PilotBridgeError::new("network"))?
+        .to_vec();
+    if bytes.len() as u64 > ceiling {
+        return Err(invalid_request("payload_above_ceiling"));
+    }
+    Ok((
+        bytes,
+        disposition.as_deref().and_then(filename_from_disposition),
+    ))
+}
+
+/// The card's own `content_bytes` may lower the ceiling, never raise it.
+fn download_ceiling(expected_bytes: Option<u64>) -> u64 {
+    match expected_bytes {
+        Some(bytes) if bytes > 0 => bytes.min(DOWNLOAD_CEILING_BYTES),
+        _ => DOWNLOAD_CEILING_BYTES,
+    }
+}
+
+fn write_saved_copy(
+    intake_id: &str,
+    name: &str,
+    bytes: &[u8],
+) -> Result<CandidateIntakeDownload, PilotBridgeError> {
+    use sha2::{Digest, Sha256};
+    let folder = saved_root()?.join(safe_download_name(
+        intake_id.get(..8).unwrap_or(intake_id),
+        "intake",
+    ));
+    std::fs::create_dir_all(&folder).map_err(|_| invalid_request("cannot_create_folder"))?;
+    let target = folder.join(name);
+    std::fs::write(&target, bytes).map_err(|_| invalid_request("cannot_write_file"))?;
+    let digest = Sha256::digest(bytes);
+    Ok(CandidateIntakeDownload {
+        path: target.to_string_lossy().to_string(),
+        bytes: bytes.len() as u64,
+        sha256: digest.iter().map(|b| format!("{:02x}", b)).collect(),
+        head_text: None,
+    })
+}
+
+/// The header part of an .eml: everything before the first empty line, capped at
+/// 32 KB. A header-looking line in the BODY is therefore never read as a header.
+fn letter_head_text(bytes: &[u8]) -> String {
+    let window = &bytes[..bytes.len().min(LETTER_HEAD_MAX_BYTES)];
+    let mut cut = window.len();
+    for index in 0..window.len() {
+        if window[index..].starts_with(b"\r\n\r\n") || window[index..].starts_with(b"\n\n") {
+            cut = index;
+            break;
+        }
+    }
+    String::from_utf8_lossy(&window[..cut]).to_string()
+}
+
+/// Both sides are canonicalized, so a symlink pointing out of the folder resolves
+/// to its target and is refused. A path that does not exist is an error, never a
+/// silently created file (the sqlite-on-prod lesson, 2026-09-18).
+fn resolved_saved_path(
+    root: &std::path::Path,
+    input: &str,
+) -> Result<std::path::PathBuf, PilotBridgeError> {
+    if input.trim().is_empty() {
+        return Err(invalid_request("path_required"));
+    }
+    let root = std::fs::canonicalize(root).map_err(|_| invalid_request("downloads_root_missing"))?;
+    let candidate = std::fs::canonicalize(std::path::Path::new(input))
+        .map_err(|_| invalid_request("path_not_found"))?;
+    if candidate == root || !candidate.starts_with(&root) {
+        return Err(invalid_request("path_outside_downloads"));
+    }
+    if !candidate.is_file() {
+        return Err(invalid_request("path_not_a_file"));
+    }
+    Ok(candidate)
+}
+
+#[tauri::command]
+pub(crate) async fn crewing_intake_object_download(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    object_id: String,
+    expected_bytes: Option<u64>,
+    state: tauri::State<'_, AppState>,
+) -> Result<CandidateIntakeDownload, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    without_blocking_ui(move || {
+        let object = object_id.trim();
+        if object.is_empty() {
+            return Err(invalid_request("object_id_required"));
+        }
+        let url = intake_url(&context, &intake_id, &["objects", object])?;
+        let (bytes, disposition) = fetch_bytes(&context, url, download_ceiling(expected_bytes))?;
+        let name = safe_download_name(
+            disposition.as_deref().unwrap_or("letter.eml"),
+            "letter.eml",
+        );
+        let mut saved = write_saved_copy(&intake_id, &name, &bytes)?;
+        saved.head_text = Some(letter_head_text(&bytes));
+        Ok(saved)
+    })
+    .await
+}
+
+#[tauri::command]
+pub(crate) async fn crewing_intake_attachment_download(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    ordinal: i64,
+    expected_bytes: Option<u64>,
+    state: tauri::State<'_, AppState>,
+) -> Result<CandidateIntakeDownload, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    without_blocking_ui(move || {
+        if ordinal < 1 || ordinal > 9999 {
+            return Err(invalid_request("ordinal_out_of_range"));
+        }
+        let url = intake_url(
+            &context,
+            &intake_id,
+            &["attachments", &ordinal.to_string()],
+        )?;
+        let (bytes, disposition) = fetch_bytes(&context, url, download_ceiling(expected_bytes))?;
+        let fallback = format!("attachment-{}.bin", ordinal);
+        let name = safe_download_name(disposition.as_deref().unwrap_or(&fallback), &fallback);
+        write_saved_copy(&intake_id, &name, &bytes)
+    })
+    .await
+}
+
+/// The guard and the opener are separated on purpose: the guard can then be
+/// measured with the side effect STUBBED, so a drill that removes the check fails
+/// a test instead of opening a file on the machine running the drill (skipi-ops
+/// AGENTS, «Субагенты» п.6). The home already knows how to hand a file to the
+/// desktop (`lib.rs open_with_default_app`: xdg-open / open / cmd start); K2.1
+/// adds the guard in front of it, not a second opener.
+fn open_saved_with<F>(
+    root: &std::path::Path,
+    path: &str,
+    opener: F,
+) -> Result<(), PilotBridgeError>
+where
+    F: Fn(&str) -> Result<(), String>,
+{
+    let resolved = resolved_saved_path(root, path)?;
+    opener(&resolved.to_string_lossy()).map_err(|_| invalid_request("cannot_open_file"))
+}
+
+/// Opens a copy this app wrote, and nothing else: the path must resolve INSIDE
+/// `Downloads/Skipi/Crewing`. Without that check the screen would be a generic
+/// "open any file on this machine" command for whoever can reach the bridge.
+#[tauri::command]
+pub(crate) async fn crewing_intake_open_saved(path: String) -> Result<(), PilotBridgeError> {
+    without_blocking_ui(move || {
+        let root = saved_root()?;
+        open_saved_with(&root, &path, crate::open_with_default_app)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1305,6 +1590,155 @@ mod tests {
             serde_json::to_value(&null_confidence).unwrap()["confidence"],
             Value::Null
         );
+    }
+
+    #[test]
+    fn saved_path_guard_refuses_everything_outside_the_downloads_folder() {
+        // The guard is the only thing between "open the copy I just wrote" and
+        // "open any file on this machine", so it is measured on real paths,
+        // including a symlink that points out of the folder.
+        let base = std::env::temp_dir().join(format!(
+            "skipi-crewing-k21-{}-{}",
+            std::process::id(),
+            "guard"
+        ));
+        let root = base.join("root");
+        std::fs::create_dir_all(root.join("intake12")).unwrap();
+        let inside = root.join("intake12").join("letter.eml");
+        std::fs::write(&inside, b"x").unwrap();
+        let outside = base.join("outside.eml");
+        std::fs::write(&outside, b"x").unwrap();
+
+        assert_eq!(
+            resolved_saved_path(&root, inside.to_str().unwrap()).unwrap(),
+            std::fs::canonicalize(&inside).unwrap()
+        );
+        assert!(resolved_saved_path(&root, outside.to_str().unwrap()).is_err());
+        assert!(resolved_saved_path(&root, root.to_str().unwrap()).is_err());
+        assert!(resolved_saved_path(&root, "").is_err());
+        assert!(resolved_saved_path(
+            &root,
+            root.join("intake12").join("nope.eml").to_str().unwrap()
+        )
+        .is_err());
+        assert!(resolved_saved_path(
+            &root,
+            root.join("intake12")
+                .join("..")
+                .join("..")
+                .join("outside.eml")
+                .to_str()
+                .unwrap()
+        )
+        .is_err());
+        #[cfg(unix)]
+        {
+            let link = root.join("intake12").join("escape.eml");
+            std::os::unix::fs::symlink(&outside, &link).unwrap();
+            assert!(
+                resolved_saved_path(&root, link.to_str().unwrap()).is_err(),
+                "a symlink out of the folder must resolve and be refused"
+            );
+        }
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn open_saved_refuses_before_it_opens_anything() {
+        // The opener is a stub that records: the point of the test is that a path
+        // outside the folder never REACHES it, which a check "returns Err" alone
+        // would not prove.
+        let base = std::env::temp_dir().join(format!("skipi-crewing-k21-{}-open", std::process::id()));
+        let root = base.join("root");
+        std::fs::create_dir_all(root.join("intake12")).unwrap();
+        let inside = root.join("intake12").join("letter.eml");
+        std::fs::write(&inside, b"x").unwrap();
+        let outside = base.join("outside.eml");
+        std::fs::write(&outside, b"x").unwrap();
+
+        let opened = std::cell::RefCell::new(Vec::new());
+        let record = |p: &str| {
+            opened.borrow_mut().push(p.to_string());
+            Ok(())
+        };
+        assert!(open_saved_with(&root, inside.to_str().unwrap(), record).is_ok());
+        assert_eq!(opened.borrow().len(), 1);
+        assert!(opened.borrow()[0].ends_with("letter.eml"));
+
+        assert!(open_saved_with(&root, outside.to_str().unwrap(), record).is_err());
+        assert_eq!(
+            opened.borrow().len(),
+            1,
+            "a path outside the downloads folder must never reach the opener"
+        );
+        assert!(open_saved_with(&root, "/etc/passwd", record).is_err());
+        assert_eq!(opened.borrow().len(), 1, "and neither must a system path");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn only_the_header_part_of_an_eml_reaches_the_screen() {
+        let raw = b"From: a@b.test\r\nSubject: one\r\n\r\nSubject: forged\r\nbody\r\n";
+        let head = letter_head_text(raw);
+        assert!(head.contains("Subject: one"));
+        assert!(!head.contains("forged"), "{head}");
+        let lf = b"From: a@b.test\nSubject: two\n\nbody\n";
+        assert!(!letter_head_text(lf).contains("body"));
+        assert!(letter_head_text(b"no headers at all").contains("no headers"));
+        let long = vec![b'A'; LETTER_HEAD_MAX_BYTES * 2];
+        assert_eq!(letter_head_text(&long).len(), LETTER_HEAD_MAX_BYTES);
+    }
+
+    #[test]
+    fn a_server_filename_can_never_walk_out_of_the_folder() {
+        assert_eq!(safe_download_name("letter-3a8bcae3.eml", "f"), "letter-3a8bcae3.eml");
+        assert_eq!(safe_download_name("../../etc/passwd", "f"), "f");
+        assert_eq!(safe_download_name("/etc/passwd", "f"), "etc_passwd");
+        assert_eq!(safe_download_name("", "f"), "f");
+        assert_eq!(safe_download_name("..", "f"), "f");
+        assert_eq!(safe_download_name("a\0b.pdf", "f"), "a_b.pdf");
+        assert_eq!(safe_download_name("резюме.pdf", "f"), "pdf");
+        assert_eq!(
+            filename_from_disposition("attachment; filename=\"letter-3a8bcae3.eml\""),
+            Some("letter-3a8bcae3.eml".to_string())
+        );
+        assert_eq!(
+            filename_from_disposition("attachment; filename=attachment-1.pdf"),
+            Some("attachment-1.pdf".to_string())
+        );
+        assert_eq!(filename_from_disposition("attachment"), None);
+    }
+
+    #[test]
+    fn the_card_may_lower_the_download_ceiling_never_raise_it() {
+        assert_eq!(download_ceiling(None), DOWNLOAD_CEILING_BYTES);
+        assert_eq!(download_ceiling(Some(0)), DOWNLOAD_CEILING_BYTES);
+        assert_eq!(download_ceiling(Some(512)), 512);
+        assert_eq!(
+            download_ceiling(Some(DOWNLOAD_CEILING_BYTES * 4)),
+            DOWNLOAD_CEILING_BYTES
+        );
+    }
+
+    #[test]
+    fn the_attachment_row_survives_a_receipt_without_the_field() {
+        // Old servers (before S3) answer without `attachments`; the screen must
+        // read that as "no rows", not as a broken card.
+        let receipt: CandidateIntakeReceipt = serde_json::from_str(
+            "{\"intake_id\":\"i\",\"receipt_id\":\"r\",\"crewing_id\":\"c\",\"source\":\"desktop\",\"source_id\":\"s\",\"event_id\":\"e\",\"primary_profile_id\":null,\"content_sha256\":\"x\",\"content_bytes\":1,\"content_type\":\"message/rfc822\",\"state\":\"quarantined\",\"source_trust\":\"unverified\",\"version\":1,\"created_at\":\"t\",\"issued_at\":\"t\",\"summary\":null}",
+        )
+        .unwrap();
+        assert!(receipt.attachments.is_empty());
+        let with_rows: CandidateIntakeReceipt = serde_json::from_str(
+            "{\"intake_id\":\"i\",\"receipt_id\":\"r\",\"crewing_id\":\"c\",\"source\":\"desktop\",\"source_id\":\"s\",\"event_id\":\"e\",\"primary_profile_id\":null,\"content_sha256\":\"x\",\"content_bytes\":1,\"content_type\":\"message/rfc822\",\"state\":\"quarantined\",\"source_trust\":\"unverified\",\"version\":1,\"created_at\":\"t\",\"issued_at\":\"t\",\"attachments\":[{\"ordinal\":2,\"filename\":null,\"declared_type\":\"application/pdf\",\"measured_type\":null,\"byte_size\":11,\"verdict\":\"needs_review\",\"reason\":\"scanner_unavailable\",\"eligible\":true}],\"summary\":null}",
+        )
+        .unwrap();
+        assert_eq!(with_rows.attachments.len(), 1);
+        assert_eq!(with_rows.attachments[0].ordinal, 2);
+        assert!(with_rows.attachments[0].eligible);
+        assert_eq!(with_rows.attachments[0].filename, None);
+        let back = serde_json::to_value(&with_rows).unwrap();
+        assert_eq!(back["attachments"][0]["reason"], json!("scanner_unavailable"));
     }
 
     #[test]
