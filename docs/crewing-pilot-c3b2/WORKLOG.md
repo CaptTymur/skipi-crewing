@@ -533,3 +533,31 @@ stand was a boundary, and this is what lies beyond it.
   either dist:801–803 or the module changes. Not fixed here (outside this bounded tail; the module is
   untouchable by this card). The `diag-tall-settings-mobile-{ru,en}` frames (390×1500) show the row
   rendered in mobile module mode; they are a diagnostic viewport, not a phone screen, and are named so.
+
+## 2026-09-27 — №504 / №504-b: the attachment ordinal, and why the harness never saw it
+
+- **№504 (K2.1a, PR #56):** the server counts attachments FROM ZERO (`_ordinal_or_404`: "the floor
+  is 0, not 1"; c3a-api-contract §attachments), K2.1 shipped a client floor of 1 in
+  `crewing_intake_attachment_download`, so Download on the first — often the only — attachment of a
+  letter toasted `ordinal_out_of_range` while a live `GET /attachments/0` answered 200 with the
+  bytes. Fixed by the pure bound `checked_attachment_ordinal` (0..=9999) with its unit test.
+- **Why 630 green harness checks did not catch it:** this harness stubs `window.__TAURI__.invoke`
+  (`invoke:attachment_download:<ordinal>` goes into the timeline and a fake path comes back), so
+  every JS scenario stops at the bridge and never reaches the Rust guard; the bound lived only in
+  Rust, and no Rust test held it to the server contract. A harness that stubs `invoke` measures the
+  screen, not the bridge — the bridge needs its own oracle.
+- **№504-b (Supervisor `c30d0c6b`, this branch):** the K2.1a checks pinned source tokens, not
+  behaviour: with the body inside the command closure, a `let ordinal = ordinal + 1;` after the
+  check (SVd) and the old `if ordinal < 1` guard put back after the checked call (SVg) both left
+  `cargo test --lib` 26/26 and this harness 638/0 green (measured 2026-09-27 on `3701b7e4`; the
+  regex takes the FIRST `if ordinal <` match, which is the pure function). The body is now the sync
+  function `download_attachment`, the command is a one-line pass-through, and two unit tests drive
+  the function against a `TcpListener` stand on the real request line (the stand answers 404 so
+  nothing is written under `Downloads/Skipi/Crewing`): `/attachments/0` and `/attachments/7`
+  dispatched unshifted, -1 and 10000 refused with zero connections. On `3591ed7a` SVd fails with
+  `left: …/attachments/1, right: …/attachments/0` and SVg with `left: None` +
+  `detail=ordinal_out_of_range`. Boundary of the measurement: the class is killed on
+  `download_attachment`; the pass-through wrapper (one call expression) is pinned by token only
+  (this harness, K2.1a-1) — a mutation placed in that call would still need a runtime test.
+  L2 of the same audit: the floor check here is now `=== 0`, not `<= 0` (the contract says zero, not
+  "at most zero").
