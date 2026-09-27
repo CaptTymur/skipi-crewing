@@ -441,3 +441,49 @@ stand was a boundary, and this is what lies beyond it.
   at 390 px the row label and description wrap letter-by-letter — and so do «Контактный email» and
   «Профиль (vault)» next to them. It is the module's own narrow-column layout (`dist/skipi-settings.js`,
   which this card must not touch), visible in the new mobile frame.
+
+### K2.1 fix-up 5 — nothing pressable while the status is in the air, and an honest sentence after (Супервайзор ACCEPT with leftovers R1/R2 on `d0da5542`, 2026-09-27)
+
+- **A window of ~900 ms in which the screen lied.** While `get_mailbox_status` was in flight the row
+  said «статус не проверен» AND offered «Отключить», so a press in that window sent
+  `disconnect_mailbox` at a mailbox that was not connected, and the toast still said «Ящик отключён.»
+  (R2). Now the row says the status is BEING checked («статус проверяется…»), nothing is pressable
+  for exactly as long as the flight, a press in that window sends nothing and claims nothing, and the
+  sentence after the command follows what the server said BEFORE it: «Ящик отключён.» only when a
+  mailbox was connected, otherwise «Подключённого ящика нет — отключать нечего.». A cached
+  «не подключён» keeps its own rule (check 26), so this does not bring the dead-button case back.
+- **Two shapes say it differently, and not by choice.** The presence contract
+  (`tests/crewing_presence_contract_harness.mjs:390/:436`, a harness outside this route) pins the
+  `openMailboxSettings` token in the RENDERED settings section, so the fallback rows keep the control
+  and mark it `disabled` for the flight window; the module contract has no disabled button, so there
+  the control simply is not rendered until the answer is in. Either way a press is impossible, which
+  is the harm that mattered, and check 30 measures exactly that per shape.
+- **R1: the invalidation is measured by EFFECT at all three sites**, not by the presence of the call:
+  the module open, the phone's fallback navigation and the refusal branch each count live
+  `get_mailbox_status` calls (mailbox_contract «K2.1-29/site2», c3b2 «K2.1-29/site3»).
+- **Failing-first on `d0da5542`** (re-measured by the second executor at 2026-09-27T04:27Z with the
+  checks as committed — the first executor's log read 622/5 against an intermediate version of the
+  checks): c3b2 **621 passed, 9 failed** — «K2.1-30: while the status request is in the air the revoke
+  is not offered», «the fallback control in that window is rendered DISABLED, not live», «and the
+  module shape, which has no disabled button, renders no control at all», «and a press in that window
+  sends nothing to the server», «nor does it claim anything about a mailbox nobody has heard about
+  yet», «the row says the status is BEING checked, which is not the never-checked text — got "status
+  not checked" vs "status not checked"», «the same window applies when the mailbox turns out to be
+  connected»; «K2.1-31: but a mailbox that was not connected is NEVER reported as disconnected», «the
+  operator is told what actually happened instead».
+- **Mutations m27–m30** (first run 2026-09-27T01:16Z on `4768aba5`, RECORDED here; the re-measurement
+  on the final tree is the next entry): m27 control live while the answer is in the air → 30 RED
+  («the fallback control in that window is rendered DISABLED, not live»); m28 the toast always says
+  the mailbox was disconnected → 31 RED («but a mailbox that was not connected is NEVER reported as
+  disconnected», «the operator is told what actually happened instead»); m29 invalidation token kept,
+  effect killed in the phone fallback path → mailbox_contract RED («K2.1-29/site2: every phone open
+  asks again — the effect, not the token», «and the phone row follows the new answer without a
+  restart»); m30 the same in the refusal branch → 29 RED («K2.1-29/site3: a refused disconnect
+  re-asks the server for the status — the EFFECT, not the token»).
+- **Why this entry is also a route fact.** The first executor's session ended with `4768aba5`
+  committed but not pushed: the incremental delta `d0da5542..4768aba5` carried neither `contact.rs`
+  nor this file, so the guard's `--auto-task` resolved the push to `plugin-host` and the pre-push hook
+  refused it («changes outside allowed patterns»). The fix is the missing entry, not a bypass. The
+  frames of fix-up 4 were removed at 01:17Z when the stand was reset for a re-shoot that never
+  happened; all 30 frames are re-shot in ONE window on the final tree after this commit, and the
+  window (server PID, `serve.log`, per-frame verdicts) is written up in the next entry.
