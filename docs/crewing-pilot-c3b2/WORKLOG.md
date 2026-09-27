@@ -414,3 +414,30 @@ stand was a boundary, and this is what lies beyond it.
   one exposed a missing test, not a safe product: m10 (the command never went through its own path
   guard), m13/m23 (checks that read a predicate but not the rendered control), m18 (a mutation that
   was semantically a no-op).
+
+### K2.1 fix-up 4 — the control follows the status (Супервайзор ACCEPT WITH LIMITS, 2026-09-26)
+
+- **A button that could only apologise.** The row markup was settled once, while the status was
+  still unknown, and the paint could rewrite only the text — so at `not_configured` the
+  «Отключить» button sat there for the whole first open of every session and answered with a toast.
+  The row is now an outer container plus ONE inner renderer used by the first render and by every
+  repaint, and the paint replaces the inside at all three sites (desktop, mobile, module): the
+  control appears and disappears with the answer, and where the server says plainly «не подключён»
+  there is no control at all rather than a dead one. The settings module keeps working because it
+  resolves clicks with `closest()` on its mount root, so a repainted button stays live.
+- **A status read once per session made «отозвать» impossible.** A mailbox connected in the web
+  cabinet after the app started stayed un-revocable until a restart. Every settings open (desktop
+  and mobile) now drops the cached answer and asks again; so does a refused disconnect.
+- **The previous fix had no net.** `tests/` mentioned neither `legacyMailboxPaint` nor the module
+  row id, and the supervisor's own mutation (paint one id again — the very defect he had accepted)
+  left 16/16 green. «Поймано кадром» is a pair of eyes on a PNG, not a mechanism. Checks 27/28/29
+  now measure the paint itself, the absence of a dead button on the first open, and a server that
+  changes its answer between two opens; m24/m25/m26 drill exactly those three.
+- **My own series tool truncated itself twice** — a stale anchor aborted the run and left a log that
+  read like a finished series, and an editing slip dropped three mutations out of the table with no
+  trace. Both are now visible rows («anchor not found», «no such mutation in the table»), and the
+  whole m1–m26 series is re-measured on the final SHA: all red, each reverted, tree clean.
+- **Observation for the visual acceptance, not a defect of this card:** in the module's mobile mode
+  at 390 px the row label and description wrap letter-by-letter — and so do «Контактный email» and
+  «Профиль (vault)» next to them. It is the module's own narrow-column layout (`dist/skipi-settings.js`,
+  which this card must not touch), visible in the new mobile frame.
