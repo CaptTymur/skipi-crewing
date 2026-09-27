@@ -1133,6 +1133,27 @@ fn checked_attachment_ordinal(ordinal: i64) -> Result<i64, PilotBridgeError> {
     Ok(ordinal)
 }
 
+/// The whole attachment download as ONE sync function, so a unit test can drive
+/// it against a real request line (`TcpListener`) without a Tauri runtime — the
+/// same separation as `open_saved_with`. Before №504-b the body lived inside the
+/// command's closure, and the only oracles were the pure bound above plus a regex
+/// over the source: a `+ 1` slipped in after the check, or the old `< 1` guard
+/// put back after the checked call, survived both (skipi-ops BACKLOG №504-b,
+/// 2026-09-27). The command below is a pass-through and adds nothing of its own.
+fn download_attachment(
+    context: &PilotContext,
+    intake_id: &str,
+    ordinal: i64,
+    expected_bytes: Option<u64>,
+) -> Result<CandidateIntakeDownload, PilotBridgeError> {
+    let ordinal = checked_attachment_ordinal(ordinal)?;
+    let url = intake_url(context, intake_id, &["attachments", &ordinal.to_string()])?;
+    let (bytes, disposition) = fetch_bytes(context, url, download_ceiling(expected_bytes))?;
+    let fallback = format!("attachment-{}.bin", ordinal);
+    let name = safe_download_name(disposition.as_deref().unwrap_or(&fallback), &fallback);
+    write_saved_copy(intake_id, &name, &bytes)
+}
+
 #[tauri::command]
 pub(crate) async fn crewing_intake_attachment_download(
     expected_context: PilotExpectedContext,
@@ -1143,16 +1164,7 @@ pub(crate) async fn crewing_intake_attachment_download(
 ) -> Result<CandidateIntakeDownload, PilotBridgeError> {
     let context = context_from_state(state, &expected_context)?;
     without_blocking_ui(move || {
-        let ordinal = checked_attachment_ordinal(ordinal)?;
-        let url = intake_url(
-            &context,
-            &intake_id,
-            &["attachments", &ordinal.to_string()],
-        )?;
-        let (bytes, disposition) = fetch_bytes(&context, url, download_ceiling(expected_bytes))?;
-        let fallback = format!("attachment-{}.bin", ordinal);
-        let name = safe_download_name(disposition.as_deref().unwrap_or(&fallback), &fallback);
-        write_saved_copy(&intake_id, &name, &bytes)
+        download_attachment(&context, &intake_id, ordinal, expected_bytes)
     })
     .await
 }
@@ -1793,5 +1805,99 @@ mod tests {
         };
         assert_eq!(refused(-1), Some("ordinal_out_of_range".to_string()));
         assert_eq!(refused(10000), Some("ordinal_out_of_range".to_string()));
+    }
+
+    /// Like `one_shot_server`, but the server gives up after `patience` when no
+    /// request arrives: a guard that refuses BEFORE dispatch must show up as
+    /// `None`, not hang the test on `accept`.
+    fn one_shot_server_or_silence(
+        reply: String,
+        patience: Duration,
+    ) -> (String, thread::JoinHandle<Option<Vec<u8>>>) {
+        let source = TcpListener::bind("127.0.0.1:0").unwrap();
+        source.set_nonblocking(true).unwrap();
+        let source_addr = source.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let deadline = std::time::Instant::now() + patience;
+            loop {
+                match source.accept() {
+                    Ok((mut stream, _)) => {
+                        stream.set_nonblocking(false).unwrap();
+                        let mut request = [0_u8; 4096];
+                        let read = stream.read(&mut request).unwrap_or(0);
+                        write!(stream, "{reply}").unwrap();
+                        return Some(request[..read].to_vec());
+                    }
+                    Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                        if std::time::Instant::now() >= deadline {
+                            return None;
+                        }
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(_) => return None,
+                }
+            }
+        });
+        (format!("http://{source_addr}"), server)
+    }
+
+    /// The request line the server sees for one `download_attachment` call, or
+    /// `None` when the client refused before dispatching. The stand answers 404 so
+    /// nothing is ever written under `Downloads/Skipi/Crewing` by a test.
+    fn attachment_request_line(ordinal: i64) -> (Option<String>, PilotBridgeError) {
+        let (base, server) = one_shot_server_or_silence(
+            json_reply("404 Not Found", "{\"detail\":\"Not Found\"}"),
+            Duration::from_millis(1500),
+        );
+        let context = snapshot_context(&settings(&base), &expected(&base)).unwrap();
+        let result = download_attachment(&context, "intake-1", ordinal, None);
+        let request = server
+            .join()
+            .unwrap()
+            .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
+            .map(|text| text.lines().next().unwrap_or("").to_string());
+        let err = result.expect_err("the stand answers 404, so the download must not succeed");
+        (request, err)
+    }
+
+    #[test]
+    fn attachment_download_asks_the_server_for_the_ordinal_it_issued() {
+        // Measured on the REAL request line, not on source tokens: the ordinal the
+        // screen passes is the ordinal in the path, unshifted, and the first
+        // attachment (0) is dispatched, not refused (№504: the K2.1 client turned
+        // every single-attachment letter into `ordinal_out_of_range`).
+        for ordinal in [0_i64, 7] {
+            let (request, err) = attachment_request_line(ordinal);
+            assert_eq!(
+                request.as_deref(),
+                Some(
+                    format!(
+                        "GET /api/crewings/crew-test/candidate-intake/intake-1/attachments/{ordinal} HTTP/1.1"
+                    )
+                    .as_str()
+                ),
+                "ordinal {ordinal} must reach the server as /attachments/{ordinal}: \
+                 attachments are counted from zero and the client adds nothing \
+                 (client answer was kind={} detail={:?})",
+                err.kind,
+                err.detail
+            );
+            assert_eq!(err.kind, "server", "the server's own answer comes back");
+            assert_eq!(err.status, Some(404));
+        }
+    }
+
+    #[test]
+    fn out_of_range_ordinals_are_refused_before_any_dispatch() {
+        // The same function, the same stand: -1 and 10000 never open a connection.
+        for ordinal in [-1_i64, 10000] {
+            let (request, err) = attachment_request_line(ordinal);
+            assert_eq!(
+                request, None,
+                "ordinal {ordinal} is out of range and must not be dispatched"
+            );
+            assert_eq!(err.kind, "invalid_request");
+            assert_eq!(err.detail, Some("ordinal_out_of_range".to_string()));
+        }
     }
 }

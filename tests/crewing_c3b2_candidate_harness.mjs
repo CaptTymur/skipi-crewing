@@ -2244,15 +2244,34 @@ console.log('\n# K2.1a attachment ordinal: client floor vs 0-based server contra
   // the bound, wherever it lives: `if ordinal < <floor> || ordinal > <ceiling>` → ordinal_out_of_range
   const bound = rust.match(/if ordinal < (-?\d+) \|\| ordinal > (\d+) \{\s*\n\s*return Err\(invalid_request\("ordinal_out_of_range"\)\);/);
   softOk(!!bound, 'K2.1a-1: the attachment ordinal range check exists and refuses with ordinal_out_of_range');
-  softOk(!!bound && Number(bound[1]) <= 0,
+  softOk(!!bound && Number(bound[1]) === 0,
     'K2.1a-1: the client floor admits ordinal 0 — the server counts attachments from zero (c3a-api-contract.md; _ordinal_or_404 "the floor is 0, not 1"); measured floor = ' + (bound ? bound[1] : 'none'));
   softOk(!!bound && Number(bound[2]) === 9999, 'K2.1a-1: the ceiling stays 9999');
   // the bound is a pure function with its own unit test, and the download command goes through it
   softOk(/fn checked_attachment_ordinal\(ordinal: i64\) -> Result<i64, PilotBridgeError>/.test(rust) && /fn the_first_attachment_is_ordinal_zero\(\)/.test(rust),
     'K2.1a-1: the bound is a pure function with a unit test that holds ordinal 0 to the contract');
+  // №504-b: the body is a sync function measured by unit tests on the REAL request line
+  // (`attachment_download_asks_the_server_for_the_ordinal_it_issued` — a `+ 1` after the
+  // check or the old `< 1` guard put back both turn that test red); the command is a
+  // pass-through. The token checks below only pin WHERE the behaviour lives, the
+  // behaviour itself is held by `cargo test --lib`.
+  const body = (rust.match(/\nfn download_attachment\([\s\S]*?\n\}\n/) || [''])[0];
+  softOk(/let ordinal = checked_attachment_ordinal\(ordinal\)\?;/.test(body) && /&\["attachments", &ordinal\.to_string\(\)\]/.test(body),
+    'K2.1a-1: download_attachment routes the ordinal through the checked bound before building /attachments/{ordinal}');
   const cmd = (rust.match(/pub\(crate\) async fn crewing_intake_attachment_download\([\s\S]*?\n\}\n/) || [''])[0];
-  softOk(/let ordinal = checked_attachment_ordinal\(ordinal\)\?;/.test(cmd) && /&\["attachments", &ordinal\.to_string\(\)\]/.test(cmd),
-    'K2.1a-1: the download command routes the ordinal through the checked bound before building /attachments/{ordinal}');
+  softOk(/download_attachment\(&context, &intake_id, ordinal, expected_bytes\)/.test(cmd) && !/ordinal\s*[+\-]|[+\-]\s*ordinal|ordinal <|ordinal >/.test(cmd),
+    'K2.1a-1: the download command calls download_attachment(&context, &intake_id, ordinal, expected_bytes) and carries no `+ - < >` on ordinal (this regex does NOT see method calls: a live `ordinal.max(1)` / `.abs()` in the wrapper passed it and cargo 28/28 alike — Supervisor 66c66fd9, 2026-09-27)');
+  // №504-b L1: the wrapper has no runtime test (it needs a Tauri State), so its WHOLE body is held
+  // as a literal, whitespace-normalized. Any insertion — arithmetic, a method call such as
+  // `.max(1)` / `.abs()`, a rename, a second statement — changes the literal and fails here.
+  // This is a source pin, not runtime coverage: it says the wrapper is exactly the pass-through,
+  // the behaviour itself is measured on download_attachment by `cargo test --lib`.
+  const wrapperLiteral = "pub(crate) async fn crewing_intake_attachment_download( expected_context: PilotExpectedContext, intake_id: String, ordinal: i64, expected_bytes: Option<u64>, state: tauri::State<'_, AppState>, ) -> Result<CandidateIntakeDownload, PilotBridgeError> { let context = context_from_state(state, &expected_context)?; without_blocking_ui(move || { download_attachment(&context, &intake_id, ordinal, expected_bytes) }) .await }";
+  const wrapperNormalized = cmd.replace(/\s+/g, ' ').trim();
+  softOk(wrapperNormalized === wrapperLiteral,
+    'K2.1a-1: the whole wrapper body equals the pass-through literal (whitespace-normalized) — any insertion into the command fails this line; measured RED on live `ordinal.max(1)`, `.abs()` and `+ 1`; got: ' + JSON.stringify(wrapperNormalized).slice(0, 400));
+  softOk(/fn attachment_download_asks_the_server_for_the_ordinal_it_issued\(\)/.test(rust) && /fn out_of_range_ordinals_are_refused_before_any_dispatch\(\)/.test(rust),
+    'K2.1a-1: the request line of download_attachment is measured by unit tests (ordinal 0 dispatched unshifted; -1/10000 refused before dispatch)');
   // dist: the row's ordinal reaches the bridge exactly as the server issued it — no ±1 on the client
   const dl = (c3b2Source.match(/async function pilotAttachmentDownload\(ordinal\) \{[\s\S]*?\n\}/) || [''])[0];
   softOk(dl !== '' && /ordinal:Number\(ordinal\)\s*,/.test(dl),
