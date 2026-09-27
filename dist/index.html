@@ -87,6 +87,14 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: 
 .app { display: flex; flex: 1; min-height: 0; }
 /* Left panel — tree + sort selector */
 .left-panel { width: 280px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+/* K2.2 (OWNER 27.09): the left panel is user-resizable. The handle is the .app child
+   right after #left-panel (the panel's innerHTML is rewritten by every tree render, so
+   the handle cannot live inside it). Drag: 220–560 px, remembered per home in
+   localStorage, double-click resets to the 280 px stylesheet default. */
+.lp-resizer { flex: 0 0 6px; width: 6px; margin-left: -3px; cursor: col-resize; background: transparent; position: relative; z-index: 2; }
+.lp-resizer:hover, .lp-resizer.dragging { background: var(--accent); opacity: 0.35; }
+.left-panel[style*="display: none"] + .lp-resizer { display: none; }
+body.lp-resizing { cursor: col-resize; user-select: none; }
 .panel-header { display: flex; align-items: center; justify-content: space-between;
   padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .panel-header .title { font-size: 13px; font-weight: 600; color: var(--text); }
@@ -122,6 +130,15 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: 
 .tree-item .new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); flex-shrink: 0; }
 .tree-item .st { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .tree-item .req-mark { color: #f6c453; font-size: 10px; margin-right: 2px; }
+/* K2.2 (OWNER 27.09): a Crew Flow queue row is three lines (identifier · type/date ·
+   badges). The plain .tree-item is a one-line horizontal flex for Seafarers DB and the
+   profile lists — it lined the three divs up side by side and cut them at the panel
+   edge. ti-stack is the modifier for the stacked rows only; the plain rule is untouched. */
+.tree-item.ti-stack { display: block; }
+.tree-item.ti-stack > div { min-width: 0; }
+.tree-item.ti-stack strong { overflow-wrap: anywhere; word-break: break-word; }
+.tree-item.ti-stack .meta { font-size: 11px; color: var(--text2); margin-top: 2px; overflow-wrap: anywhere; }
+#crew-flow-tree { overflow-x: hidden; }
 .tree-folder-header .dot { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; margin-right: 4px; }
 .tree-empty { text-align: center; padding: 30px 16px; color: var(--text2); font-size: 12px; }
 main { padding: 24px 32px; overflow-y: auto; min-height: 0; }
@@ -828,6 +845,7 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
 </div>
 <div class="app">
   <div class="left-panel" id="left-panel"></div>
+  <div class="lp-resizer" id="lp-resizer" data-qa="left-panel-resizer" title="Drag to resize the panel; double-click to reset"></div>
   <main id="main"></main>
 </div>
 <div id="update-banner-host"></div>
@@ -1710,7 +1728,7 @@ var UI_LANG_OPTIONS = [
 ];
 var UI_STRINGS = {
   en: {
-    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.intake_pilot':'Intake pilot','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents',
+    'nav.vacancies':'My vacancies','nav.mailings':'Mailings','nav.intake_pilot':'Intake pilot','nav.compliance':'Compliance Profile','nav.team':'Team','nav.seafarers':'Seafarers DB','nav.documents':'Documents','left_panel.resize_hint':'Drag to resize the panel; double-click to reset',
     'left.vacancies':'My vacancies','left.mailings':'Mailings','left.compliance':'Compliance Profile','left.team':'Team','left.seafarers':'Seafarers DB','left.documents':'Documents',
     'crew_flow.mobile_subtitle':'Candidates from your inbound identifier','crew_flow.empty_demo':'No crew flow signals in this demonstration profile.','compliance.usage_prefix':'used in comparisons:','team.access_section':'Team','team.access_title':'Team access management','team.access_desc':'Issuing personal tokens to teammates. Available only with a team token.','team.access_open':'Open',
     'crew_flow.local_decision':'Ignore and keep-for-later are stored on this device: on your other clients the candidate stays in the queue.','crew_flow.match_no_profiles':'There are no compliance profiles yet — create a profile, then compare.','crew_flow.matched_done':'Compared against the active compliance profiles.','crew_flow.subtitle':'Candidates that arrived through your inbound identifier. Nothing is decided for you.','crew_flow.refresh':'Refresh queue','crew_flow.open_pilot':'Upload a test document','crew_flow.loading':'Loading the candidate queue...','crew_flow.failed':'The candidate queue could not be loaded','crew_flow.empty_title':'No candidates yet','crew_flow.empty_unconnected':'Connect your company in Settings -> Access / tokens, then candidates will appear here.','crew_flow.empty_live':'Candidates appear here once documents reach your inbound identifier.','crew_flow.pick_title':'Pick a candidate','crew_flow.pick_note':'Open a row on the left to see the recorded facts, the comparisons and the operator actions.','crew_flow.facts':'facts','crew_flow.ranks':'comparisons','crew_flow.actions':'Operator actions','crew_flow.save':'Save to Seafarers DB','crew_flow.save_confirm':'Save this candidate to the seafarer database? A saved seafarer cannot be deleted afterwards — neither here nor in the seafarer database.','crew_flow.saved':'Candidate saved to the Seafarers DB.','crew_flow.save_failed':'Save failed','crew_flow.save_web_note':'Saving will come to the web version later; use the app on your computer or phone.','crew_flow.email':'Write email','crew_flow.share':'Share the offer','crew_flow.share_note':'On the phone the draft is copied to the clipboard: paste it into your mail app or a messenger.','crew_flow.request_docs':'Request documents','crew_flow.email_missing':'No address received: record the email fact on the card first.','crew_flow.match':'Match against a profile','crew_flow.ignore':'Ignore','crew_flow.later':'Keep for later','crew_flow.later_done':'Candidate kept for later.','crew_flow.state_saved_to_db':'saved to Seafarers DB','crew_flow.state_ignored':'ignored','crew_flow.state_kept_for_later':'kept for later','crew_flow.state_draft_opened':'draft opened','crew_flow.state_draft_copied':'draft copied','crew_flow.state_requested_documents':'documents requested','crew_flow.state_matched':'compared against profiles',
@@ -1730,7 +1748,7 @@ var UI_STRINGS = {
 	    'vacancy.new_title':'New vacancy','mailing.new_title':'New mailing request','mailing.empty':'No mailing requests yet.','vacancy.empty':'No vacancies posted yet.','documents.empty':'Select a document on the left.'
 	  },
 	  ru: {
-	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профиль соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы',
+	    'nav.vacancies':'Мои вакансии','nav.mailings':'Рассылки','nav.intake_pilot':'Приём кандидатов','nav.compliance':'Профиль соответствия','nav.team':'Команда','nav.seafarers':'База моряков','nav.documents':'Документы','left_panel.resize_hint':'Потяните, чтобы изменить ширину панели; двойной щелчок — вернуть',
 	    'left.vacancies':'Мои вакансии','left.mailings':'Рассылки','left.compliance':'Профиль соответствия','left.team':'Команда','left.seafarers':'База моряков','left.documents':'Документы',
     'crew_flow.mobile_subtitle':'Кандидаты с вашего входящего идентификатора','crew_flow.empty_demo':'В демонстрационном профиле сигналов Crew Flow нет.','compliance.usage_prefix':'использован в сравнениях:','team.access_section':'Команда','team.access_title':'Управление доступом команды','team.access_desc':'Выдача персональных токенов сотрудникам. Доступно только с командным токеном.','team.access_open':'Открыть',
     'crew_flow.local_decision':'«Игнорировать» и «Отложить» хранятся на этом устройстве: на других ваших клиентах кандидат останется в очереди.','crew_flow.match_no_profiles':'Профилей соответствия нет — создайте профиль и повторите сопоставление.','crew_flow.matched_done':'Сопоставлено с активными профилями соответствия.','crew_flow.subtitle':'Кандидаты, пришедшие на ваш входящий идентификатор. Решение остаётся за вами.','crew_flow.refresh':'Обновить очередь','crew_flow.open_pilot':'Загрузить тестовый документ','crew_flow.loading':'Загружаю очередь кандидатов...','crew_flow.failed':'Очередь кандидатов не загружена','crew_flow.empty_title':'Кандидатов пока нет','crew_flow.empty_unconnected':'Подключите компанию в Настройках -> Доступ / токены, и кандидаты появятся здесь.','crew_flow.empty_live':'Кандидаты появятся, когда на ваш входящий идентификатор придут документы.','crew_flow.pick_title':'Выберите кандидата','crew_flow.pick_note':'Откройте строку слева, чтобы увидеть записанные сведения, оценки и действия оператора.','crew_flow.facts':'сведения','crew_flow.ranks':'оценки','crew_flow.actions':'Действия оператора','crew_flow.save':'В базу моряков','crew_flow.save_confirm':'Сохранить кандидата в базу моряков? Удалить сохранённого моряка потом нельзя — ни здесь, ни в базе моряков.','crew_flow.saved':'Кандидат сохранён в базе моряков.','crew_flow.save_failed':'Не удалось сохранить','crew_flow.save_web_note':'В веб-версии сохранение появится позже; используйте приложение на компьютере или телефоне.','crew_flow.email':'Написать email','crew_flow.share':'Поделиться предложением','crew_flow.share_note':'На телефоне черновик копируется в буфер: вставьте его в почту или мессенджер.','crew_flow.request_docs':'Запросить документы','crew_flow.email_missing':'Адрес не получен: запишите факт email в карточке.','crew_flow.match':'Сопоставить с профилем','crew_flow.ignore':'Игнорировать','crew_flow.later':'Отложить','crew_flow.later_done':'Кандидат отложен.','crew_flow.state_saved_to_db':'в базе моряков','crew_flow.state_ignored':'игнорирован','crew_flow.state_kept_for_later':'отложен','crew_flow.state_draft_opened':'черновик открыт','crew_flow.state_draft_copied':'черновик скопирован','crew_flow.state_requested_documents':'документы запрошены','crew_flow.state_matched':'сопоставлен с профилями',
@@ -5212,7 +5230,7 @@ function crewFlowLiveTreeHtml(mode) {
   if (!rows.length) return '<div class="tree-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
   var selected = (state.intakePilot && state.intakePilot.detail) ? state.intakePilot.detail.intakeId : null;
   return rows.map(function(item){
-    return '<div class="tree-item ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
+    return '<div class="tree-item ti-stack ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
       + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
       +   '<div><strong>' + escapeHtml(crewFlowRowTitle(item)) + '</strong></div>'
       +   '<div class="meta">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
@@ -5731,7 +5749,7 @@ function renderCrewFlowTreeBody() {
   rows.forEach(function(row){
     var active = state.selectedCrewFlowSignal && state.selectedCrewFlowSignal.id === row.id;
     var top = crewFlowTopCoverage(row);
-    html += '<div class="tree-item '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+    html += '<div class="tree-item ti-stack '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
          +    '<div><strong>'+escapeHtml(row.candidate && row.candidate.name || 'Candidate')+'</strong> '
          +      (crewFlowIsRead(row.id) ? '<span class="pill">read</span>' : '<span class="pill new">new</span>')+'</div>'
          +    '<div class="meta">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+' · '+escapeHtml(row.responded_to || 'general intake')+'</div>'
@@ -14196,6 +14214,86 @@ async function trialGateApply(){
   return phase;
 }
 
+// ------------- left panel resizer (K2.2, OWNER 27.09) -------------
+// The owner could not widen the left panel: it was a fixed 280 px with no handle.
+// The handle (#lp-resizer) sits in .app right after #left-panel. Mouse events only —
+// the same events a user (or xdotool on the stand) produces. Width is clamped to
+// 220–560 px, remembered per home, and a double-click returns the stylesheet default.
+var LEFT_PANEL_WIDTH_KEY = 'skipi_crewing_left_panel_width';
+var LEFT_PANEL_WIDTH_DEFAULT = 280;
+var LEFT_PANEL_WIDTH_MIN = 220;
+var LEFT_PANEL_WIDTH_MAX = 560;
+function leftPanelClampWidth(w) {
+  var n = Number(w);
+  if (!isFinite(n)) return LEFT_PANEL_WIDTH_DEFAULT;
+  return Math.min(LEFT_PANEL_WIDTH_MAX, Math.max(LEFT_PANEL_WIDTH_MIN, Math.round(n)));
+}
+function leftPanelStoredWidth() {
+  try {
+    var raw = localStorage.getItem(LEFT_PANEL_WIDTH_KEY);
+    if (raw == null || String(raw).trim() === '') return null;
+    var n = Number(raw);
+    return isFinite(n) ? leftPanelClampWidth(n) : null;
+  } catch (e) { return null; }
+}
+function leftPanelApplyWidth(w, persist) {
+  var lp = document.getElementById('left-panel');
+  var v = leftPanelClampWidth(w);
+  if (lp) lp.style.width = v + 'px';
+  if (persist) {
+    try {
+      if (v === LEFT_PANEL_WIDTH_DEFAULT) localStorage.removeItem(LEFT_PANEL_WIDTH_KEY);
+      else localStorage.setItem(LEFT_PANEL_WIDTH_KEY, String(v));
+    } catch (e) {}
+  }
+  return v;
+}
+function initLeftPanelResizer() {
+  var lp = document.getElementById('left-panel');
+  var handle = document.getElementById('lp-resizer');
+  if (!lp || !handle) return;
+  var stored = leftPanelStoredWidth();
+  if (stored != null) leftPanelApplyWidth(stored, false);
+  handle.title = tr('left_panel.resize_hint');
+  if (handle.__lpResizerWired) return;
+  handle.__lpResizerWired = true;
+  var drag = null;
+  function currentWidth() {
+    var rect = (typeof lp.getBoundingClientRect === 'function') ? lp.getBoundingClientRect() : null;
+    var w = rect && rect.width ? rect.width : parseInt(lp.style.width, 10);
+    return isFinite(w) && w > 0 ? w : LEFT_PANEL_WIDTH_DEFAULT;
+  }
+  function onMove(e) {
+    if (!drag) return;
+    leftPanelApplyWidth(drag.width + (e.clientX - drag.x), false);
+    if (e.preventDefault) e.preventDefault();
+  }
+  function onUp() {
+    if (!drag) return;
+    var w = parseInt(lp.style.width, 10);
+    drag = null;
+    handle.classList.remove('dragging');
+    if (document.body && document.body.classList) document.body.classList.remove('lp-resizing');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    leftPanelApplyWidth(isFinite(w) ? w : LEFT_PANEL_WIDTH_DEFAULT, true);
+  }
+  handle.addEventListener('mousedown', function(e){
+    if (e.button !== 0) return;
+    if (lp.style.display === 'none') return;
+    drag = { x: e.clientX, width: currentWidth() };
+    handle.classList.add('dragging');
+    if (document.body && document.body.classList) document.body.classList.add('lp-resizing');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    if (e.preventDefault) e.preventDefault();
+  });
+  handle.addEventListener('dblclick', function(e){
+    leftPanelApplyWidth(LEFT_PANEL_WIDTH_DEFAULT, true);
+    if (e.preventDefault) e.preventDefault();
+  });
+}
+
 // ------------- boot -------------
 async function bootDesktopMain(){
   if (await trialGateApply() === 'blocked') return;
@@ -14223,6 +14321,7 @@ async function bootDesktopMain(){
   await loadBuildInfo();
   applyTheme();
   applyI18nChrome();
+  initLeftPanelResizer();
   if (await trialGateApply() === 'blocked') return;
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(bootDesktopMain); return; }

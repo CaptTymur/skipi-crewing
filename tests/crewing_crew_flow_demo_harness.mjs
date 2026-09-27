@@ -545,8 +545,11 @@ if (M && typeof M.initLeftPanelResizer === 'function') {
   ok(lp.style.width === undefined || lp.style.width === '', 'K2.2: a non-numeric stored width is ignored');
   store.delete(WIDTH_KEY);
 
-  ok(!/mousedown|lp-resizer|initLeftPanelResizer/.test(HTML.slice(HTML.indexOf('// ------------- Android / compact mobile shell -------------'), HTML.indexOf('// ------------- boot -------------'))),
+  const mobileBlockStart = HTML.indexOf('// ------------- Android / compact mobile shell -------------');
+  const resizerBlockStart = HTML.indexOf('// ------------- left panel resizer (K2.2');
+  ok(mobileBlockStart > 0 && resizerBlockStart > mobileBlockStart && !/mousedown|lp-resizer|initLeftPanelResizer/.test(HTML.slice(mobileBlockStart, resizerBlockStart)),
     'K2.2: the mobile shell block knows nothing about the resizer (mobile has no left panel: body.mobile-shell .app is display:none)');
+  ok(/body\.mobile-shell \.app \{ display: none; \}/.test(HTML), 'K2.2: body.mobile-shell hides .app entirely — the handle inside .app never shows on mobile');
 
   // The stacked row is what the operator sees: render the demo queue and read the rows.
   const treeEl = elFor('crew-flow-tree');
