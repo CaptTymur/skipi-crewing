@@ -487,3 +487,49 @@ stand was a boundary, and this is what lies beyond it.
   frames of fix-up 4 were removed at 01:17Z when the stand was reset for a re-shoot that never
   happened; all 30 frames are re-shot in ONE window on the final tree after this commit, and the
   window (server PID, `serve.log`, per-frame verdicts) is written up in the next entry.
+
+### K2.1 fix-up 5 — evidence on the final tree (second executor, 2026-09-27T04:23Z–05:28Z)
+
+- **Product bytes are those of `4768aba5`**: `dist/`, `tests/` and `src-tauri/` did not change after it;
+  the commits that followed are this file only (`3739f329` and this entry). Every number below was
+  measured on `3739f329`, whose product tree is byte-identical to the final HEAD.
+- **Mutations, re-measured (FACT), one at a time, each reverted, `git status` clean after each:**
+  m27 control live while the answer is in the air → 30 RED, 1 line («the fallback control in that
+  window is rendered DISABLED, not live»); m28 toast always says disconnected → 31 RED, 2 lines («but
+  a mailbox that was not connected is NEVER reported as disconnected», «the operator is told what
+  actually happened instead»); m29 invalidation token kept, effect killed in the phone fallback →
+  mailbox_contract RED, 2 lines (site2: «every phone open asks again — the effect, not the token»,
+  «and the phone row follows the new answer without a restart»); m30 the same in the refusal branch
+  → 29 RED, 1 line (site3). Spot-checks from the older series: m10 → `cargo test --lib` FAILED 24/1
+  (`open_saved_refuses_before_it_opens_anything`); m21 → mailbox_contract 7 RED; m24 → c3b2 27 RED 4
+  lines + mailbox_contract 5 RED. `mutations.json` was a truncated single row (`id: None`) after the
+  first executor's session broke off; it is rebuilt from this run.
+- **16/16 harnesses green** (c3b2 630, mailbox_contract 72, mail_cv 31, crew_flow_demo 101, presence
+  188, plugin_isolation 153, c3b1 61), `cargo test --lib` 25/25 (`df` 82G before and after), gate
+  `--auto-task --base d0da5542` → `task=crewing-k21-single-screen`, `status=pass`, `errors=[]`, 13/13
+  commands; the K2 route simulated (`--task crewing-k2-modules`) runs all 14 commands green and fails
+  only on scope (`crewing_mailbox_contract` is outside K2's allowed list — the same class the first
+  executor saw with five paths on base `c55d3829`).
+- **Frames: ONE window, 2026-09-27T05:27:32Z–05:27:55Z**, stand server PID 1138611 on 127.0.0.1:43932
+  (recorded at launch, torn down by PID with exe/cgroup/cwd verified, `alive_after=no`), Chrome profile
+  wiped before every frame, `DISPLAY` stripped from the environment: **32/32 OK**, zero `PHASE-FAILED`;
+  `serve.log` has `GET /skipi-settings.js` 200 ×32, `.css` 200 ×32, `index.html` 200 ×32, and the only
+  404 is `/favicon.ico` — every settings frame was shot on the screen that mounts the vendored module.
+  The 30 scenes are the ones of fix-up 4 (the frames of that round had been deleted when the stand was
+  reset at 01:17Z and the session ended before re-shooting), plus two labelled `diag-tall-*` frames.
+- **Two findings from making the phone frame honest.** (1) The stand's `settings_mobile` scene used to
+  tap the gear and then, if the row was not there, silently call `openSettings('work_data')` — and the
+  gear alone never reaches the row: it opens the module's mobile LIST, and a person taps «Рабочие
+  данные» next. The fallback is now a failure, the scene performs both taps (recorded as
+  `data-k21-tapped="gear->home-crewing-work-data"` in the frame's DOM), and the earlier round's mobile
+  settings frames are therefore known to have been shot through the function, not the screen. (2) On a
+  390×844 phone the row sits at ~1300 px and **no ancestor scrolls**: `#settings-root` is `100dvh`
+  (dist:802), the module's `.skipi-settings--mobile` has no height of its own, so dist:803
+  `--skipi-settings-mobile-height: 100%` resolves to `auto`, the shell never gets its `100dvh`
+  (`overflow: hidden` in detail mode, module css:1292), `MAIN.skipi-settings__body` grows to 1793 px
+  and the fixed overlay clips the rest. `scrollIntoView()` is a no-op there (probed). Measured in
+  headless Chrome 147 only — a device is the boundary of this measurement — but the CSS is the same,
+  so the «Личный ящик» and «Профиль (vault)» rows are expected to be unreachable on the phone until
+  either dist:801–803 or the module changes. Not fixed here (outside this bounded tail; the module is
+  untouchable by this card). The `diag-tall-settings-mobile-{ru,en}` frames (390×1500) show the row
+  rendered in mobile module mode; they are a diagnostic viewport, not a phone screen, and are named so.
