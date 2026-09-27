@@ -92,8 +92,9 @@ ok(MAILBOX_COMMANDS.filter((c) => c !== 'get_mailbox_status' && c !== 'disconnec
 ok(/inAppConfirm\(tr\('confirm\.mailbox_disconnect'\)/.test(legacyBlock), 'disconnecting is confirmed first');
 ok((HTML.match(/legacyMailboxRowHtml\('(desktop|mobile)'\)/g) || []).length === 4,
   'the row is rendered by four settings surfaces from ONE function');
-ok(/function legacyMailboxRowHtml\(/.test(legacyBlock) && (legacyBlock.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 2,
-  'and its markup lives in that one function (desktop and mobile shapes)');
+ok(/function legacyMailboxRowHtml\(/.test(legacyBlock) && /function legacyMailboxRowInnerHtml\(/.test(legacyBlock)
+  && (legacyBlock.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 1,
+  'and its markup lives in that one pair of functions (container + inner, one hook)');
 ok((HTML.match(/'settings\.mailbox_legacy':'[^']*'/g) || []).length === 2,
   'the row label is in both dictionaries');
 
@@ -205,8 +206,8 @@ ok(!settingsHtml.includes('Mailbox settings') && !settingsHtml.includes('id="mai
   'the settings section offers no connect form any more');
 ok(calls.some(([cmd]) => cmd === 'get_mailbox_status'), 'rendering the row asks the server for the status');
 ok(calls.filter(([cmd]) => cmd === 'get_mailbox_status').length === 1, 'the status is asked once, not once per render');
-ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-status').textContent), 'the painted status carries the masked address');
-ok(elFor('legacy-mailbox-disconnect').getAttribute('disabled') === null, 'with a connected mailbox the control is enabled');
+ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-row-desktop').innerHTML), 'the painted row carries the masked address');
+ok(/legacy-mailbox-disconnect/.test(elFor('legacy-mailbox-row-desktop').innerHTML), 'with a connected mailbox the painted row carries the control');
 
 globalThis.__CONFIRM_ANSWER = false;
 await M.openMailboxSettings();
@@ -216,7 +217,7 @@ globalThis.__CONFIRM_ANSWER = true;
 await M.openMailboxSettings();
 ok(calls.some(([cmd]) => cmd === 'disconnect_mailbox'), 'a confirmed disconnect calls disconnect_mailbox');
 ok(M.legacyMailboxConfigured() === false, 'after the disconnect the row stops claiming a connected mailbox');
-ok(elFor('legacy-mailbox-disconnect').getAttribute('disabled') === 'disabled', 'and the control goes back to disabled');
+ok(!/legacy-mailbox-disconnect/.test(elFor('legacy-mailbox-row-desktop').innerHTML), 'and the control disappears from the painted row — no dead button');
 const before = calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length;
 await M.openMailboxSettings();
 ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === before,
@@ -246,6 +247,14 @@ for (let i = 0; i < 10; i += 1) await Promise.resolve();
 ok(!!mounted, 'the product mounted the vendored settings module (this is the real entry)');
 const appSections = (mounted && mounted.host && mounted.host.appSpecificSections) || [];
 ok(Array.isArray(appSections) && appSections.length >= 1, 'the module is handed the app-specific sections');
+function moduleCtxFor(m) {
+  return {
+    t: (key) => m.host.t(key),
+    escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
+    escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
+    saveSettings: (next) => m.host.saveSettings(next),
+  };
+}
 const moduleCtx = {
   t: (key) => mounted.host.t(key),
   escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
@@ -271,6 +280,44 @@ ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === beforeModule
 ok(calls.some(([cmd]) => cmd === 'get_mailbox_status'), 'K2.1-23: and the row reads the status through the same command');
 delete globalThis.window.SkipiSettings;
 
+section('runtime: the status is re-read on every open, and the control follows it');
+// Supervisor L2 on dde59326: the status was read ONCE per session, so a mailbox
+// connected in the web cabinet after start stayed un-revocable until restart —
+// and at not_configured the control was on screen for the whole first open.
+{
+  mailbox = { configured: false, status: 'not_configured' };
+  Object.assign(M.legacyMailboxState(), { box: null, loading: false, loaded: false });
+  let mountedA = null;
+  globalThis.window.SkipiSettings = {
+    mount(target, host, opts) { mountedA = { host, opts }; return { ready: Promise.resolve(), open() {}, unmount() {} }; },
+  };
+  const renderSections = (m) => (m.host.appSpecificSections || [])
+    .map((sec) => (typeof sec.renderHtml === 'function' ? sec.renderHtml(moduleCtxFor(m)) : '')).join('\n');
+  const before = calls.filter(([cmd]) => cmd === 'get_mailbox_status').length;
+  await M.openSettings('work_data');
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  renderSections(mountedA);
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  const firstOpen = elFor('legacy-mailbox-row-module').innerHTML;
+  ok(firstOpen !== '', 'K2.1-27: the first open repaints the module row once the status is in');
+  ok(!firstOpen.includes('crewing-mailbox-disconnect'),
+    'K2.1-28: at not_configured the FIRST open leaves no dead disconnect button');
+  ok(calls.filter(([cmd]) => cmd === 'get_mailbox_status').length === before + 1,
+    'K2.1-29: opening the settings asks the server for the status');
+  // the mailbox is connected elsewhere (web cabinet) while the app keeps running
+  mailbox = { configured: true, status: 'active', email_masked: 'o***@example.com', has_password: true };
+  await M.openSettings('work_data');
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  renderSections(mountedA);
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  const secondOpen = elFor('legacy-mailbox-row-module').innerHTML;
+  ok(calls.filter(([cmd]) => cmd === 'get_mailbox_status').length === before + 2,
+    'K2.1-29: every open asks again — the answer is not cached for the session');
+  ok(secondOpen.includes('o***@example.com') && secondOpen.includes('crewing-mailbox-disconnect'),
+    'K2.1-29: a mailbox connected after start becomes revocable without restarting the app');
+  delete globalThis.window.SkipiSettings;
+}
+
 section('runtime smoke: the screen the product actually shows (no settings5 flag)');
 // Супервайзор REJECT на e05a3c4c: the row had existed only in the settings5
 // preview shell, behind a flag the product never sets — i.e. nowhere a user could
@@ -289,7 +336,7 @@ ok(unflagged.includes('data-qa="settings.mailbox.legacy"') && unflagged.includes
   'K2.1-24: the fallback settings screen (module not loaded) carries the legacy-mailbox row too');
 ok(unflagged.includes('data-qa="settings.mailbox.legacy-disconnect"') && unflagged.includes('onclick="openMailboxSettings()"'),
   'and its disconnect control, on the screen the owner will actually open');
-ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-status').textContent),
+ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-row-desktop').innerHTML),
   'the unflagged row asks the server and paints the status');
 M.mobileOpenSettings('org');
 const unflaggedMobile = elFor('mobile-main').innerHTML;

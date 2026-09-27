@@ -4899,21 +4899,22 @@ function legacyMailboxEnsureStatus() {
     legacyMailboxPaint();
   });
 }
+// Repaint the WHOLE row at every site that is on screen — the fallback desktop
+// and mobile rows and the row the settings module renders. Rewriting only the
+// status text left the control frozen at whatever the unknown-status render had
+// decided; the control has to appear and disappear with the answer.
 function legacyMailboxPaint() {
-  // Both ids: the fallback renderers use `legacy-mailbox-status`, and the row
-  // rendered by the settings module uses `…-module`. Painting only the first one
-  // left the real screen reading «статус не проверен» for good — caught by the
-  // frame, which is what a frame is for.
-  var ids = ['legacy-mailbox-status', 'legacy-mailbox-status-module'];
-  for (var i = 0; i < ids.length; i++) {
-    var node = document.getElementById(ids[i]);
-    if (node) node.textContent = legacyMailboxStatusText();
+  var shapes = ['desktop', 'mobile', 'module'];
+  for (var i = 0; i < shapes.length; i++) {
+    var node = document.getElementById('legacy-mailbox-row-' + shapes[i]);
+    if (node) node.innerHTML = legacyMailboxRowInnerHtml(shapes[i]);
   }
-  var el = document.getElementById('legacy-mailbox-status');
-  var btn = document.getElementById('legacy-mailbox-disconnect');
-  if (!btn) return;
-  if (legacyMailboxRevokeBlocked()) btn.setAttribute('disabled', 'disabled');
-  else btn.removeAttribute('disabled');
+}
+// The status is a claim about the server RIGHT NOW: a mailbox connected in the
+// web cabinet after this app started must become revocable without a restart, so
+// every settings open drops the cached answer and asks again (Супервайзор L2).
+function legacyMailboxInvalidate() {
+  legacyMailboxState().loaded = false;
 }
 // ONE row, four surfaces. Two of them are the settings screens the product
 // actually shows (`renderSettingsModal` → «Организация», `mobileSettingsOrgHtml`)
@@ -4922,18 +4923,40 @@ function legacyMailboxPaint() {
 // never sets, so a row that lived ONLY there could not be reached by anybody —
 // and with the module retired that would mean a connected mailbox can never be
 // revoked from the product again (Супервайзор REJECT на e05a3c4c).
-function legacyMailboxRowHtml(shape) {
-  legacyMailboxEnsureStatus();
+// The INSIDE of the row, rendered the same way at first paint and at every
+// repaint. The control is part of it, not a decision taken once: the markup used
+// to be settled while the status was still unknown and the paint could only
+// rewrite the text — so at `not_configured` the «Отключить» button sat there for
+// the whole first open of a session and could answer only with a toast
+// (Супервайзор L1 на dde59326).
+function legacyMailboxRowInnerHtml(shape) {
   var label = escapeHtml(tr('settings.mailbox_legacy'));
   var desc = escapeHtml(tr('settings.mailbox_legacy_desc'));
-  var off = legacyMailboxRevokeBlocked() ? ' disabled' : '';
-  var status = '<span id="legacy-mailbox-status" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
-  if (shape === 'mobile') {
-    return '<div class="mobile-setting-row" data-qa="settings.mailbox.legacy"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
-      + '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+off+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div>';
+  var blocked = legacyMailboxRevokeBlocked();
+  var statusId = shape === 'module' ? 'legacy-mailbox-status-module' : 'legacy-mailbox-status';
+  var status = '<span id="'+statusId+'" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
+  if (shape === 'module') {
+    // The module's own button markup with its delegated `data-settings-action`
+    // hook, written here so the first render and every repaint have ONE source
+    // (the module resolves clicks with closest() on its mount root, so a
+    // repainted control stays live).
+    return status + (blocked ? '' : ' <button type="button" class="skipi-settings__button skipi-settings__button--secondary" data-settings-action="crewing-mailbox-disconnect">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
   }
-  return '<div class="setting-row" data-qa="settings.mailbox.legacy"><div class="setting-info"><div class="setting-label">'+label+'</div><div class="setting-desc">'+desc+'</div></div>'
-    + '<div class="setting-control">'+status+' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;"'+off+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button></div></div>';
+  if (shape === 'mobile') {
+    return '<div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
+      + (blocked ? '' : '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
+  }
+  return '<div class="setting-info"><div class="setting-label">'+label+'</div><div class="setting-desc">'+desc+'</div></div>'
+    + '<div class="setting-control">'+status
+    + (blocked ? '' : ' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;" onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>')
+    + '</div>';
+}
+function legacyMailboxRowHtml(shape) {
+  legacyMailboxEnsureStatus();
+  var tag = shape === 'module' ? 'span' : 'div';
+  var cls = shape === 'mobile' ? ' class="mobile-setting-row"' : (shape === 'module' ? '' : ' class="setting-row"');
+  return '<'+tag+cls+' id="legacy-mailbox-row-'+shape+'" data-qa="settings.mailbox.legacy">'
+    + legacyMailboxRowInnerHtml(shape) + '</'+tag+'>';
 }
 async function legacyMailboxDisconnect() {
   var m = legacyMailboxState();
@@ -4946,6 +4969,9 @@ async function legacyMailboxDisconnect() {
     legacyMailboxPaint();
     showToast(tr('settings.mailbox_legacy_done'), 'success');
   } catch (e) {
+    // The server refused: what we believe about the mailbox is stale as well.
+    legacyMailboxInvalidate();
+    legacyMailboxEnsureStatus();
     showToast(tr('settings.mailbox_legacy_failed') + ': ' + e, 'error');
   }
 }
@@ -10437,6 +10463,7 @@ function _crewingSettingsSectionFor(tab){
 }
 
 async function openSettings(tab) {
+  legacyMailboxInvalidate();
   try { if (!state.settings) state.settings = await invoke('get_settings'); } catch(e){ state.settings = state.settings || {}; }
   var overlay = document.getElementById('skipi-settings-overlay');
   var target = document.getElementById('settings-root');
@@ -10598,9 +10625,7 @@ function _crewingSettingsSections(){
           // actually shows in both modes. The four legacy renderers carry the same
           // row, but they are only the fallback for a module that failed to load.
           + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
-                '<span data-qa="settings.mailbox.legacy" id="legacy-mailbox-status-module">'
-              + ctx.escapeHtml(legacyMailboxStatusText())+'</span> '
-              + (legacyMailboxRevokeBlocked() ? '' : _crewSetHtmlButton(ctx, 'crewing-mailbox-disconnect', 'confirm.disconnect'))));
+                legacyMailboxRowHtml('module')));
       },
       handlers: {
         // The same revoke path as every other surface: confirm, then
@@ -12517,7 +12542,7 @@ function mobileOpenSettingsHome(){
   }
   mobileState.settingsPage = 'list'; mobileShow('settings');
 }
-function mobileOpenSettings(id){ mobileState.settingsPage = settingsFiveShellEnabled() ? settingsFiveSection(id) : id; mobileShow('settings'); }
+function mobileOpenSettings(id){ legacyMailboxInvalidate(); mobileState.settingsPage = settingsFiveShellEnabled() ? settingsFiveSection(id) : id; mobileShow('settings'); }
 function mobileBackToSettingsList(){ mobileState.settingsPage = 'list'; mobileShow('settings'); }
 
 function mobileRenderSettingsList() {

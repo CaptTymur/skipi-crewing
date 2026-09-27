@@ -1840,10 +1840,12 @@ console.log('# K2 modules/crew-flow');
       }
       softOk(!/setItem\(\s*SETTINGS5_FLAG_KEY|setItem\('skipi_crewing_settings5'/.test(html),
         'K2.1-20: the product still never sets the settings5 flag — which is exactly why a row only in that shell is unreachable');
-      const rowFn = fxSlice('function legacyMailboxRowHtml(', '\nasync function legacyMailboxDisconnect');
-      softOk(rowFn !== '' && /data-qa="settings\.mailbox\.legacy-disconnect"/.test(rowFn) && /onclick="openMailboxSettings\(\)"/.test(rowFn)
-        && (rowFn.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 2,
-        'K2.1-20: the row carries its QA hook (both shapes) and the disconnect control wired to the entry point');
+      const rowFn = fxSlice('function legacyMailboxRowInnerHtml(', '\nasync function legacyMailboxDisconnect');
+      softOk(rowFn !== '' && (rowFn.match(/data-qa="settings\.mailbox\.legacy"/g) || []).length === 1
+        && (rowFn.match(/data-qa="settings\.mailbox\.legacy-disconnect"/g) || []).length === 2
+        && /data-settings-action="crewing-mailbox-disconnect"/.test(rowFn)
+        && /onclick="openMailboxSettings\(\)"/.test(rowFn),
+        'K2.1-20: the row carries its QA hook and a disconnect control in all three shapes (two fallback, one module)');
       const disconnectFn = fxSlice('async function legacyMailboxDisconnect', '\n// The historic name');
       softOk(/function openMailboxSettings\(\) \{ return legacyMailboxDisconnect\(\); \}/.test(html)
         && /invoke\('disconnect_mailbox'\)/.test(disconnectFn) && /inAppConfirm/.test(disconnectFn),
@@ -1929,11 +1931,10 @@ console.log('# K2 modules/crew-flow');
     {
       const sections = fxSlice('function _crewingSettingsSections(){', '\n// Role helper');
       softOk(sections !== '', 'K2.1-23: the app-specific settings sections slice is bounded');
-      softOk(/data-qa="settings\.mailbox\.legacy"/.test(sections),
-        'K2.1-23: the sections handed to SkipiSettings.mount carry the legacy-mailbox row');
-      softOk(/_crewSetHtmlButton\(ctx, 'crewing-mailbox-disconnect'/.test(sections)
-        && /'crewing-mailbox-disconnect': function/.test(sections),
-        'K2.1-23: the row has a module-contract control with a handler behind it');
+      softOk(/legacyMailboxRowHtml\('module'\)/.test(sections),
+        'K2.1-23: the sections handed to SkipiSettings.mount render the legacy-mailbox row (same source as every other surface)');
+      softOk(/'crewing-mailbox-disconnect': function/.test(sections),
+        'K2.1-23: with a handler behind the module-contract action (the rendered control is measured at runtime in the mailbox harness)');
       softOk(/legacyMailboxDisconnect\(\)/.test(sections) && /legacyMailboxEnsureStatus\(\)/.test(sections),
         'K2.1-23: the handler goes to the same revoke path, and the row reads the status');
       // 25: without a checked recipient there must be NO link at all — the old
@@ -1974,9 +1975,10 @@ console.log('# K2 modules/crew-flow');
           const probe = await runRow26(box, true);
           softOk(probe.ctx.__mb.legacyMailboxRevokeBlocked() === false,
             'K2.1-26: the revoke attempt stays available with ' + label);
-          softOk(!/disabled/.test(probe.ctx.__mb.legacyMailboxRowHtml('desktop'))
-            && !/disabled/.test(probe.ctx.__mb.legacyMailboxRowHtml('mobile')),
-            'K2.1-26: and the rendered control is not disabled with ' + label);
+          softOk(/legacy-mailbox-disconnect/.test(probe.ctx.__mb.legacyMailboxRowHtml('desktop'))
+            && /legacy-mailbox-disconnect/.test(probe.ctx.__mb.legacyMailboxRowHtml('mobile'))
+            && /crewing-mailbox-disconnect/.test(probe.ctx.__mb.legacyMailboxRowHtml('module')),
+            'K2.1-26: and the control is rendered, in all three shapes, with ' + label);
           await probe.ctx.__mb.legacyMailboxDisconnect();
           await flush(8);
           softOk(probe.calls.includes('disconnect_mailbox'),
@@ -1984,18 +1986,88 @@ console.log('# K2 modules/crew-flow');
         }
         const plain = await runRow26({ configured: false, status: 'not_configured' }, true);
         softOk(plain.ctx.__mb.legacyMailboxRevokeBlocked() === true
-          && /disabled/.test(plain.ctx.__mb.legacyMailboxRowHtml('desktop')),
-          'K2.1-26: only a server that says plainly "not connected" disables the attempt, in the predicate AND in the markup');
+          && !/legacy-mailbox-disconnect/.test(plain.ctx.__mb.legacyMailboxRowHtml('desktop'))
+          && !/crewing-mailbox-disconnect/.test(plain.ctx.__mb.legacyMailboxRowHtml('module')),
+          'K2.1-26: a server that says plainly "not connected" leaves NO control at all — not even a disabled one');
         await plain.ctx.__mb.legacyMailboxDisconnect();
         await flush(8);
         softOk(!plain.calls.includes('disconnect_mailbox'),
           'K2.1-26: and then nothing is asked of the server');
         const live = await runRow26({ configured: true, status: 'active' }, true);
-        softOk(live.ctx.__mb.legacyMailboxRevokeBlocked() === false && /disabled/.test(live.ctx.__mb.legacyMailboxRowHtml('desktop')) === false,
-          'K2.1-26: a connected mailbox is of course revocable, and its control is not disabled');
+        softOk(live.ctx.__mb.legacyMailboxRevokeBlocked() === false && /legacy-mailbox-disconnect/.test(live.ctx.__mb.legacyMailboxRowHtml('desktop')),
+          'K2.1-26: a connected mailbox is of course revocable, and its control is there');
       } catch (e) {
         softOk(false, 'K2.1-26: the legacy-mailbox row runs in isolation — ' + (e && (e.message || e)));
       }
+    }
+
+    // ---- 27/28. the paint must move the CONTROL, not just the text --------
+    // Supervisor L1/L3 on dde59326: the row markup was decided once, at
+    // !loaded, and the paint could only rewrite the status text — so at
+    // not_configured the «Отключить» button was on screen for the first open of
+    // every session and answered with a toast. And nothing in tests/ mentioned
+    // legacyMailboxPaint at all, so his SV-M10 (paint one id again) stayed green.
+    {
+      const mbSlice27 = fxSlice('function legacyMailboxState() {', '// CREWING LEGACY MAILBOX ROW (K2.1) END');
+      const paintProbe = async (box) => {
+        const nodes = new Map();
+        for (const id of ['legacy-mailbox-row-desktop', 'legacy-mailbox-row-mobile', 'legacy-mailbox-row-module']) {
+          nodes.set(id, { id, innerHTML: '', textContent: '', setAttribute() {}, removeAttribute() {}, getAttribute: () => null });
+        }
+        const calls = [];
+        const ctx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {}, getUiLang: () => 'en', tr: (k) => k,
+          escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
+          escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
+          showToast: () => {}, inAppConfirm: async () => true,
+          document: { getElementById: (id) => nodes.get(id) || null },
+          async invoke(cmd) { calls.push(cmd); if (cmd === 'get_mailbox_status') return box; return null; },
+        });
+        vm.runInContext(mbSlice27 + '\nthis.__mb = { legacyMailboxEnsureStatus, legacyMailboxPaint, legacyMailboxRowHtml, legacyMailboxInvalidate, legacyMailboxState };', ctx);
+        ctx.__mb.legacyMailboxEnsureStatus();
+        await flush(8);
+        return { ctx, nodes, calls };
+      };
+      const CONTROL = 'crewing-mailbox-disconnect';
+      try {
+        const live = await paintProbe({ configured: true, status: 'active', email_masked: 'o***@example.com' });
+        const ids = ['legacy-mailbox-row-desktop', 'legacy-mailbox-row-mobile', 'legacy-mailbox-row-module'];
+        softOk(ids.every((id) => live.nodes.get(id).innerHTML !== ''),
+          'K2.1-27: the paint repaints every row site, not one of them');
+        softOk(ids.every((id) => live.nodes.get(id).innerHTML.includes('o***@example.com')),
+          'K2.1-27: each site shows the status that came back');
+        softOk(ids.every((id) => live.nodes.get(id).innerHTML.includes(CONTROL) || /legacy-mailbox-disconnect/.test(live.nodes.get(id).innerHTML)),
+          'K2.1-27: and each site carries the control while a mailbox is connected');
+        const gone = await paintProbe({ configured: false, status: 'not_configured' });
+        softOk(ids.every((id) => gone.nodes.get(id).innerHTML !== ''),
+          'K2.1-28: the row itself stays when the server says nothing is connected');
+        softOk(ids.every((id) => !gone.nodes.get(id).innerHTML.includes(CONTROL) && !/legacy-mailbox-disconnect/.test(gone.nodes.get(id).innerHTML)),
+          'K2.1-28: and the control is GONE from every site — the paint moves the control, not only the text');
+        // first open of a session: the markup is decided before the answer, so
+        // what matters is the state the operator is left looking at.
+        softOk(!/disabled/.test(gone.ctx.__mb.legacyMailboxRowHtml('desktop')) === false
+          || !gone.nodes.get('legacy-mailbox-row-desktop').innerHTML.includes(CONTROL),
+          'K2.1-28: after the first open settles there is no dead button at not_configured');
+      } catch (e) {
+        softOk(false, 'K2.1-27: the paint runs in isolation — ' + (e && (e.message || e)));
+      }
+    }
+    // ---- 29. the status is re-read on every open --------------------------
+    // A mailbox connected in the web cabinet after the app started must become
+    // revocable without restarting the app: one live call per settings open.
+    softOk(/function legacyMailboxInvalidate\(/.test(html),
+      'K2.1-29: there is an explicit status invalidation');
+    {
+      const openFn = fxSlice('async function openSettings(tab) {', '\nfunction closeSettings');
+      softOk(openFn !== '' && /legacyMailboxInvalidate\(\)/.test(openFn),
+        'K2.1-29: opening the settings invalidates the cached mailbox status (both the module and the fallback path go through here)');
+      const mobileOpen = fxSlice('function mobileOpenSettings(id){', '\nfunction mobileBackToSettingsList');
+      softOk(mobileOpen !== '' && /legacyMailboxInvalidate\(\)/.test(mobileOpen),
+        'K2.1-29: and so does opening them on the phone');
+      const disconnectFn29 = fxSlice('async function legacyMailboxDisconnect', '\n// The historic name');
+      softOk(/catch \(e\) \{[\s\S]{0,200}legacyMailboxInvalidate\(\)/.test(disconnectFn29),
+        'K2.1-29: a refused disconnect drops the cached status too — the next look asks the server');
     }
 
     // ---- 12/14/17. the native side the screen depends on -------------------
