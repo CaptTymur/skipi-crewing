@@ -1127,7 +1127,7 @@ pub(crate) async fn crewing_intake_object_download(
 /// refused as `ordinal_out_of_range` while `GET /attachments/0` answered 200
 /// with the bytes (BACKLOG №504, 2026-09-27).
 fn checked_attachment_ordinal(ordinal: i64) -> Result<i64, PilotBridgeError> {
-    if ordinal < 1 || ordinal > 9999 {
+    if ordinal < 0 || ordinal > 9999 {
         return Err(invalid_request("ordinal_out_of_range"));
     }
     Ok(ordinal)
