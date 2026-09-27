@@ -1203,6 +1203,9 @@ console.log('# K2 modules/crew-flow');
     const mainHtml = liveCtx.nodes.get('main').innerHTML + '\n' + liveCtx.nodes.get('crew-flow-tree').innerHTML;
     const rows = (mainHtml.match(/data-qa="crew-flow-row"/g) || []).length;
     softOk(rows === 3, 'K2-4: Crew Flow renders one row per live intake candidate — got ' + rows);
+    // K2.2 (OWNER 27.09): the row is a column (identifier · type/date · badges), never the one-line flex that cut the text at 280 px.
+    const stackedRows = (liveCtx.nodes.get('crew-flow-tree').innerHTML.match(/<div class="tree-item ti-stack[^"]*" data-qa="crew-flow-row"/g) || []).length;
+    softOk(stackedRows === 3, 'K2.2: every live queue row carries ti-stack (stacked layout) — got ' + stackedRows);
     softOk(liveCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'), 'K2-4: the live source is crewing_intake_candidate_list');
     softOk(!liveCtx.calls.some((c) => c.command === 'fetch_my_vacancies'), 'K2-4: Crew Flow never asks for vacancies');
     softOk(mainHtml.includes('data-qa="crew-flow-live"'), 'K2-4: the live Crew Flow surface is marked');
