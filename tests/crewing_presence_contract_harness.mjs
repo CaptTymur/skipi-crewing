@@ -481,6 +481,37 @@ if (M) {
   // PR-K22a: the dist follows the manifest — bar, rail and Apps-grid tile lose Documents/Apps.
   ok(!HTML.includes('id="mt-documents"') && !HTML.includes('id="mt-apps"'), 'K2.2: the desktop bar has no Documents/Apps tab');
   ok(!/mobileNavButton\('documents'|mobileNavButton\('apps'/.test(HTML), 'K2.2: the mobile rail builds no Documents/Apps slot');
+
+  // K2.2 B1 (Supervisor, 2026-09-27): a retired module must not stay reachable through "Back".
+  // The mobile shell has two return tables — the mobileParentView map and the explicit branches of
+  // mobileBack() — plus detail-screen fallbacks that jump to a list. The property, not a pin: every
+  // return target is a module the manifest still lists, or one of the two onboarding hubs
+  // (connection, work_role) that are screens, not modules. A module retired tomorrow drops out of
+  // the manifest and its return entries turn red here on their own.
+  const RETURN_HUBS = ['connection', 'work_role'];
+  const allowedReturnTargets = new Set([...modIds, ...RETURN_HUBS]);
+  const parentMapSrc = (HTML.match(/function mobileParentView\(view\) \{\s*var map = \{([\s\S]*?)\};/) || [])[1] || '';
+  ok(parentMapSrc.length > 0, 'B1: the mobileParentView map is found');
+  const parentEntries = [...parentMapSrc.matchAll(/([a-z_]+):\s*'([a-z_]+)'/g)].map((m) => ({ view: m[1], parent: m[2] }));
+  ok(parentEntries.length >= 6, 'B1: the mobileParentView map has entries — got ' + parentEntries.length);
+  for (const e of parentEntries) {
+    ok(allowedReturnTargets.has(e.parent), 'B1: Back from "' + e.view + '" returns to a listed module or hub, not to a retired one — parent is "' + e.parent + '"');
+  }
+  const backSrc = (HTML.match(/function mobileBack\(\) \{([\s\S]*?)\n\}/) || [])[1] || '';
+  ok(backSrc.length > 0, 'B1: mobileBack() is found');
+  const backTargets = [...backSrc.matchAll(/mobileShow\('([a-z_]+)'\)/g)].map((m) => m[1]);
+  ok(backTargets.length >= 1, 'B1: mobileBack() has explicit branches — got ' + backTargets.length);
+  for (const t of [...new Set(backTargets)]) {
+    ok(allowedReturnTargets.has(t), 'B1: an explicit mobileBack() branch returns to a listed module or hub — target is "' + t + '"');
+  }
+  // Retired modules (K2: vacancies, mailings; K2.1: mail; K2.2: documents, apps) must have NO navigation
+  // call site left anywhere in the dist — not a Back branch, not a detail-screen fallback, not a link.
+  const RETIRED_MODULES = ['vacancies', 'mailings', 'mail', 'documents', 'apps'];
+  for (const id of RETIRED_MODULES) {
+    ok(!modIds.includes(id), 'B1: retired module is not in the manifest (list kept in sync): ' + id);
+    const sites = HTML.match(new RegExp("mobileShow\\('" + id + "'\\)", 'g')) || [];
+    ok(sites.length === 0, 'B1: no mobileShow(\'' + id + '\') call site remains in the dist — got ' + sites.length);
+  }
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
