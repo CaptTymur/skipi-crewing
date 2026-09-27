@@ -527,15 +527,36 @@ if (M) {
     ok(sites.length === 0, 'B1: no ' + drivers + '(\'' + id + '\') call site in any quote form remains in the dist — got ' + sites.length);
   }
 
-  // ===== B2 (Supervisor 2026-09-27): BEHAVIOURAL, not textual =====
-  // (a) call the real mobileBack() on every mobile view and read where it actually lands;
-  // (b) render every live screen (mobile + desktop + settings in both flag states) and scan the
-  //     RENDERED html for any navigation into a retired module. Calibrated on a known fact (see WORKLOG):
-  //     main ff9a3866 lands 6 Backs on retired modules and renders the documents/apps rail on every
-  //     screen; the candidate must land 0 and render 0.
-  section('B2 behavioural — Back landings and rendered screens never reach a retired module');
+  // ===== B2/B3 (Supervisor audits 2d5632db, 605b14b7; 2026-09-27): BEHAVIOURAL, not textual =====
+  // WHAT THIS BLOCK HOLDS — and what it does not.
+  // (a) the real mobileBack() is called on every mobile view (every `if (view === 'X') return mobileRender…`
+  //     branch of mobileShow, the mobileParentView keys and the two hubs) and the landing mobileState.view
+  //     is read after TWO microtask turns, so a navigation deferred through Promise.resolve().then() is
+  //     seen too; the landing must be a module the presence manifest still lists, one of the two
+  //     onboarding hubs (connection, work_role) or the view itself.
+  // (b) every screen the mobile shell can render (the same enumeration, minus the retired modules' own
+  //     screens), the desktop routes of the manifest and the settings pages of both shells in both flag
+  //     states are rendered in the fake DOM, and the RENDERED html is scanned for the identifiers of the
+  //     retired modules as VALUES — in onclick arguments, data-* attributes and any quoted literal —
+  //     regardless of what the function that performs the jump is called (mobileShow, showView, an alias,
+  //     a delegated handler reading data-*).
+  // Calibrated on a known fact: main ff9a3866 lands 6 Backs on retired modules and renders the
+  // documents/apps rail on every mobile screen; the candidate must land 0 and render 0 (see WORKLOG).
+  // LIMIT — read before relying on this block: a harness on a fake DOM has a ceiling. This block protects
+  // against an ACCIDENTAL regression (a leftover parent, branch, rail slot or button) and against the
+  // deliberate forms enumerated in the audits (variable/join('') targets, double quotes, escaped literals,
+  // a hub forward, an alias, a data-* delegated button, a navigation deferred by a microtask, a screen
+  // outside a hand-written list). It does NOT prove a retired module is unreachable in general. Forms it
+  // does not cover (audit 605b14b7): a target assembled with join() and jumped to after more than two
+  // microtasks or through a real timer; navigation through CustomEvent / event listeners whose target
+  // never appears in the rendered html; a hash/location router; screens whose entry depends on data the
+  // fake DOM never has; desktop screens outside the manifest routes (the pilot); a real browser click or
+  // Android tap. Wording like "never reachable" is deliberately absent here.
+  section('B2/B3 behavioural — Back landings and rendered screens never reach a retired module (within the limit above)');
   if (M && typeof M.mobileBack === 'function' && M.mobileState) {
-    const RETIRED_NAV = /(mobileShow|showView)\(\s*["']?(vacancies|mailings|mail|documents|apps)["']?\s*\)/g;
+    // B3: the retired ids as VALUES — preceded by a quote, an opening paren or '=' (onclick args, data-*
+    // attributes, string literals) and followed by a quote/paren/space/'>'/';'/',' — not by function name.
+    const RETIRED_NAV = /(['"(=])(vacancies|mailings|mail|documents|apps)(?=['")\s>;,])/g;
     const b2 = { badBack: [], rendered: [], errors: [] };
     M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
     const mobileShowSrc = (HTML.match(/function mobileShow\(view\) \{([\s\S]*?)\nfunction mobileBack\(\)/) || [])[1] || '';
@@ -544,18 +565,21 @@ if (M) {
     const backViews = [...new Set([...renderViews, ...parentEntries.map((e) => e.view), ...RETURN_HUBS])];
     for (const v of backViews) {
       let landed = null, err = null;
-      try { M.mobileState.view = v; M.state.view = 'mobile-' + v; M.mobileBack(); landed = M.mobileState.view; } catch (e) { err = e; }
+      try { M.mobileState.view = v; M.state.view = 'mobile-' + v; M.mobileBack(); await Promise.resolve(); await Promise.resolve(); landed = M.mobileState.view; } catch (e) { err = e; }
       if (err) b2.errors.push(v + ': ' + err);
       const fine = !err && (allowedReturnTargets.has(landed) || landed === v);
       if (!fine && !err) b2.badBack.push(v + ' -> ' + landed);
       ok(fine, 'B2: Back from "' + v + '" lands on a listed module or hub (or stays) — landed on "' + landed + '"' + (err ? ' — threw ' + err : ''));
     }
     const scan = (label, html) => {
-      const hits = [...String(html).matchAll(RETIRED_NAV)].map((m) => m[1] + '(' + m[2] + ')');
+      const hits = [...String(html).matchAll(RETIRED_NAV)].map((m) => m[1] + m[2]);
       if (hits.length) b2.rendered.push(label + ': ' + hits.join(', '));
       ok(hits.length === 0, 'B2: rendered "' + label + '" carries no navigation into a retired module — ' + (hits.length ? hits.join(', ') : 'none'));
     };
-    const MOBILE_SCREENS = ['crew_flow', 'compliance', 'seafarers', 'connection', 'work_role', 'settings', 'intake_pilot', 'crew_flow_signal', 'seafarer', 'compliance_profile'];
+    // B3: every screen the shell can render, from the source enumeration — not a hand-written list. The
+    // retired modules' own screens are excluded (they are the thing that must be unreachable, not a path).
+    const MOBILE_SCREENS = renderViews.filter((v) => !RETIRED_MODULES.includes(v));
+    ok(MOBILE_SCREENS.length >= 14, 'B3: screens under scan come from the mobileShow enumeration — ' + MOBILE_SCREENS.length + ' screens: ' + MOBILE_SCREENS.join(','));
     for (const v of MOBILE_SCREENS) {
       try { elFor('mobile-root').innerHTML = ''; elFor('mobile-main').innerHTML = ''; M.mobileShow(v); } catch (e) { b2.errors.push('render ' + v + ': ' + e); }
       scan('mobile ' + v, elFor('mobile-root').innerHTML + '\n' + elFor('mobile-main').innerHTML);
