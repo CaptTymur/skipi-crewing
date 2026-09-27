@@ -2230,6 +2230,39 @@ console.log('# K2 modules/crew-flow');
   }
 }
 
+// # K2.1a — attachment ordinal: the client floor against the 0-based server contract
+// (BACKLOG №504, 2026-09-27). The server counts attachments FROM ZERO — skipi-server
+// `docs/crewing-baseline/c3a-api-contract.md` §attachments (rows "ordered by
+// `ordinal`"; a one-attachment letter carries `ordinal: 0`) and
+// `routers/candidate_intake.py _ordinal_or_404`: "the floor is 0, not 1". K2.1
+// shipped a client floor of 1: pressing Download on the first — often the only —
+// attachment toasted ordinal_out_of_range while a live GET /attachments/0 answered
+// 200 with 898 bytes. The static checks below read the shipped bytes on both sides
+// of the bridge so the two contracts cannot drift apart silently again.
+console.log('\n# K2.1a attachment ordinal: client floor vs 0-based server contract');
+{
+  // the bound, wherever it lives: `if ordinal < <floor> || ordinal > <ceiling>` → ordinal_out_of_range
+  const bound = rust.match(/if ordinal < (-?\d+) \|\| ordinal > (\d+) \{\s*\n\s*return Err\(invalid_request\("ordinal_out_of_range"\)\);/);
+  softOk(!!bound, 'K2.1a-1: the attachment ordinal range check exists and refuses with ordinal_out_of_range');
+  softOk(!!bound && Number(bound[1]) <= 0,
+    'K2.1a-1: the client floor admits ordinal 0 — the server counts attachments from zero (c3a-api-contract.md; _ordinal_or_404 "the floor is 0, not 1"); measured floor = ' + (bound ? bound[1] : 'none'));
+  softOk(!!bound && Number(bound[2]) === 9999, 'K2.1a-1: the ceiling stays 9999');
+  // the bound is a pure function with its own unit test, and the download command goes through it
+  softOk(/fn checked_attachment_ordinal\(ordinal: i64\) -> Result<i64, PilotBridgeError>/.test(rust) && /fn the_first_attachment_is_ordinal_zero\(\)/.test(rust),
+    'K2.1a-1: the bound is a pure function with a unit test that holds ordinal 0 to the contract');
+  const cmd = (rust.match(/pub\(crate\) async fn crewing_intake_attachment_download\([\s\S]*?\n\}\n/) || [''])[0];
+  softOk(/let ordinal = checked_attachment_ordinal\(ordinal\)\?;/.test(cmd) && /&\["attachments", &ordinal\.to_string\(\)\]/.test(cmd),
+    'K2.1a-1: the download command routes the ordinal through the checked bound before building /attachments/{ordinal}');
+  // dist: the row's ordinal reaches the bridge exactly as the server issued it — no ±1 on the client
+  const dl = (c3b2Source.match(/async function pilotAttachmentDownload\(ordinal\) \{[\s\S]*?\n\}/) || [''])[0];
+  softOk(dl !== '' && /ordinal:Number\(ordinal\)\s*,/.test(dl),
+    'K2.1a-2: dist hands the row ordinal to the bridge as Number(ordinal) — unshifted');
+  softOk(dl !== '' && !/[+\-]\s*\d|\d\s*[+\-]|\+\+|--/.test(dl),
+    'K2.1a-2: no arithmetic anywhere in the download path — a client-side shift would re-create the off-by-one');
+  softOk(/var ordinal = Number\(a\.ordinal \|\| 0\);/.test(c3b2Source) && /onclick="pilotAttachmentDownload\('\+String\(ordinal\)\+'\)"/.test(c3b2Source),
+    'K2.1a-2: the attachment row passes its server ordinal to the download as-is');
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);
