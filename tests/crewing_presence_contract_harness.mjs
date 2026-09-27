@@ -15,7 +15,7 @@ const ROOT = path.join(__dirname, '..');
 
 const HARNESS_SOURCE = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
 
-const REQUIRED_FLOOR = ['crew_flow', 'compliance', 'seafarers', 'documents', 'apps', 'settings'];
+const REQUIRED_FLOOR = ['crew_flow', 'compliance', 'seafarers', 'settings'];
 const GLOBAL_CSS_TOKENS = ['.mod-tab', '.modules-bar', '.mobile-nav-btn', '.mobile-bottom-nav', '.mobile-module-rail'];
 const ALLOWED_HIDING_SCOPES = ['body.launching', 'body.mobile-shell'];
 
@@ -469,6 +469,15 @@ if (M) {
   // K2.1 (owner739, 2026-09-26): the personal mailbox module (mail) is retired as well — intake lives on the
   // server and letters surface in Crew Flow; its floor entry leaves together with the manifest entry (PR-P2).
   ok(!modIds.includes('mail'), 'retired mailbox module is no longer listed in the presence manifest (K2.1): mail');
+
+  // K2.2 (OWNER 2026-09-27, "Apps и Documents тоже пока убираем из сборки"): Documents and Apps leave the
+  // build — their floor entries leave with the manifest entries (presence-only PR-P3); the dist follows in
+  // PR-K22a on the crewing-k2-modules route, where the bar, the rail and the Apps-grid tile are removed.
+  for (const id of ['documents', 'apps']) {
+    ok(!modIds.includes(id), 'retired module is no longer listed in the presence manifest (K2.2): ' + id);
+  }
+  ok(modIds.join(',') === 'crew_flow,compliance,seafarers,settings',
+    'the presence floor after K2.2 is exactly crew_flow,compliance,seafarers,settings — got [' + modIds.join(',') + ']');
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====

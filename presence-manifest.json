@@ -22,8 +22,14 @@
         "nav_selector": "[data-mview=\"crew_flow\"]",
         "route_driver": "mobileShow"
       },
-      "surface_markers": ["Crew Flow", "data-qa=\"crew-flow-view\""],
-      "css_tokens": ["mt-crew_flow", "data-mview=\"crew_flow\""]
+      "surface_markers": [
+        "Crew Flow",
+        "data-qa=\"crew-flow-view\""
+      ],
+      "css_tokens": [
+        "mt-crew_flow",
+        "data-mview=\"crew_flow\""
+      ]
     },
     {
       "id": "compliance",
@@ -38,8 +44,14 @@
         "nav_selector": "[data-mview=\"compliance\"]",
         "route_driver": "mobileShow"
       },
-      "surface_markers": ["Compliance Profiles", "Профили соответствия"],
-      "css_tokens": ["mt-compliance", "data-mview=\"compliance\""]
+      "surface_markers": [
+        "Compliance Profiles",
+        "Профили соответствия"
+      ],
+      "css_tokens": [
+        "mt-compliance",
+        "data-mview=\"compliance\""
+      ]
     },
     {
       "id": "seafarers",
@@ -54,40 +66,14 @@
         "nav_selector": "[data-mview=\"seafarers\"]",
         "route_driver": "mobileShow"
       },
-      "surface_markers": ["Seafarers DB", "Seafarers"],
-      "css_tokens": ["mt-seafarers", "data-mview=\"seafarers\""]
-    },
-    {
-      "id": "documents",
-      "name": "Documents",
-      "desktop_navigation": {
-        "route": "documents",
-        "nav_selector": "#mt-documents",
-        "route_driver": "showView"
-      },
-      "mobile_navigation": {
-        "route": "documents",
-        "nav_selector": "[data-mview=\"documents\"]",
-        "route_driver": "mobileShow"
-      },
-      "surface_markers": ["Documents", "Документы"],
-      "css_tokens": ["mt-documents", "data-mview=\"documents\""]
-    },
-    {
-      "id": "apps",
-      "name": "Apps",
-      "desktop_navigation": {
-        "route": "apps",
-        "nav_selector": "#mt-apps",
-        "route_driver": "showView"
-      },
-      "mobile_navigation": {
-        "route": "apps",
-        "nav_selector": "[data-mview=\"apps\"]",
-        "route_driver": "mobileShow"
-      },
-      "surface_markers": ["data-qa=\"apps-search-input\"", "data-qa=\"plugins-settings-open\""],
-      "css_tokens": ["mt-apps", "crewing-module-apps", "data-mview=\"apps\""]
+      "surface_markers": [
+        "Seafarers DB",
+        "Seafarers"
+      ],
+      "css_tokens": [
+        "mt-seafarers",
+        "data-mview=\"seafarers\""
+      ]
     },
     {
       "id": "settings",
@@ -102,8 +88,15 @@
         "nav_selector": "[data-mview=\"settings\"]",
         "route_driver": "mobileOpenSettingsHome"
       },
-      "surface_markers": ["Settings", "Настройки"],
-      "css_tokens": ["mb-gear", "data-mview=\"settings\"", "bottom-nav-more"]
+      "surface_markers": [
+        "Settings",
+        "Настройки"
+      ],
+      "css_tokens": [
+        "mb-gear",
+        "data-mview=\"settings\"",
+        "bottom-nav-more"
+      ]
     }
   ]
 }
