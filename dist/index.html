@@ -12284,18 +12284,22 @@ function mobileRenderChrome(view) {
     + '</div>';
 }
 
+// K2.2 B1 (Supervisor, 2026-09-27): "Back" never lands on a retired module. The
+// detail screens of the retired modules (vacancy/draft, mailing/mailing_new,
+// document) and the pilot (was: Apps grid) return to Crew Flow, the home module.
+// The presence harness checks the property over this table and mobileBack().
 function mobileParentView(view) {
   var map = {
-    vacancy: 'vacancies',
-    mailing: 'mailings',
-    mailing_new: 'mailings',
+    vacancy: 'crew_flow',
+    mailing: 'crew_flow',
+    mailing_new: 'crew_flow',
     compliance_profile: 'compliance',
     compliance_form: 'compliance',
     seafarer: 'seafarers',
-    document: 'documents',
+    document: 'crew_flow',
     crew_flow_signal: 'crew_flow',
-    draft: 'vacancies',
-    intake_pilot: 'apps',
+    draft: 'crew_flow',
+    intake_pilot: 'crew_flow',
     member_join: 'work_role',
     work_role: 'connection',
   };
@@ -12372,19 +12376,20 @@ function mobileShow(view) {
 function mobileBack() {
   if (mobileState.view === 'member_join') return mobileShow('work_role');
   if (mobileState.view === 'work_role') return mobileShow('connection');
+  // K2.2 B1: the retired modules' detail screens return to Crew Flow (home), never to the retired list.
   if (mobileState.view === 'draft') {
     state.editingVacancyId = null;
     state.newVacancyPrefill = null;
-    return mobileShow('vacancies');
+    return mobileShow('crew_flow');
   }
-  if (mobileState.view === 'mailing') return mobileShow('mailings');
-  if (mobileState.view === 'mailing_new') return mobileShow('mailings');
+  if (mobileState.view === 'mailing') return mobileShow('crew_flow');
+  if (mobileState.view === 'mailing_new') return mobileShow('crew_flow');
   if (mobileState.view === 'compliance_profile') return mobileShow('compliance');
   if (mobileState.view === 'compliance_form') return mobileShow('compliance');
   if (mobileState.view === 'seafarer') return mobileShow('seafarers');
-  if (mobileState.view === 'document') return mobileShow('documents');
+  if (mobileState.view === 'document') return mobileShow('crew_flow');
   if (mobileState.view === 'crew_flow_signal') return mobileShow('crew_flow');
-  if (mobileState.view === 'vacancy') return mobileShow('vacancies');
+  if (mobileState.view === 'vacancy') return mobileShow('crew_flow');
   mobileShow(mobileParentView(mobileState.view || 'crew_flow'));
 }
 
@@ -12904,7 +12909,7 @@ async function mobileValidateConnection() {
     try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
     showToast('Connected to '+(activation.display_name || 'Skipi Crewing'), 'success');
     state.vacancies = [];
-    mobileShow('vacancies');
+    mobileShow('crew_flow'); // K2.2 B1: land on the home module, not the retired vacancies list
   } catch (e) {
     showToast('Token validation failed: '+e, 'error');
   }
@@ -12939,7 +12944,7 @@ async function mobileStartTrialAccess() {
     try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
     showToast('Access is active for 14 days', 'success');
     state.vacancies = [];
-    mobileShow('vacancies');
+    mobileShow('crew_flow'); // K2.2 B1: land on the home module, not the retired vacancies list
   } catch (e) {
     showToast('Access failed: '+e, 'error');
   }
@@ -13014,7 +13019,7 @@ function mobileOpenVacancy(id) {
 
 function mobileRenderVacancyDetail() {
   var v = state.selectedVacancy;
-  if (!v) return mobileShow('vacancies');
+  if (!v) return mobileShow('crew_flow'); // K2.2 B1: retired module list is not a landing
   var salary = v.salary_min ? (v.salary_currency || 'USD') + ' ' + v.salary_min + (v.salary_max && v.salary_max !== v.salary_min ? '-' + v.salary_max : '') + '/mo' : '—';
   mobileMain(
     '<div class="mobile-card">'
@@ -13297,7 +13302,7 @@ function mobileOpenMailing(id) {
 
 function mobileRenderMailingDetail() {
   var r = state.selectedMailingRequest;
-  if (!r) return mobileShow('mailings');
+  if (!r) return mobileShow('crew_flow'); // K2.2 B1
   mobileMain(
     '<div class="mobile-card">'
     + '<div class="mobile-detail-head"><h1>'+escapeHtml(r.title || '?')+'</h1><span class="mobile-status '+(r.status === 'active' ? 'ok' : 'warn')+'">'+escapeHtml(r.status || '')+'</span></div>'
@@ -13405,7 +13410,7 @@ async function mobileDeleteMailing() {
     await invoke('delete_mailing_request_remote', { requestId: r.id });
     state.selectedMailingRequest = null;
     state.mailingRequests = await invoke('fetch_my_mailing_requests');
-    mobileShow('mailings');
+    mobileShow('crew_flow'); // K2.2 B1
   } catch(e) { showToast('Delete failed: '+e, 'error'); }
 }
 
@@ -13898,7 +13903,7 @@ function mobileOpenDocument(id) {
 
 function mobileRenderDocumentDetail() {
   var d = state.selectedDocument;
-  if (!d) return mobileShow('documents');
+  if (!d) return mobileShow('crew_flow'); // K2.2 B1
   var cls = classifyDoc(d);
   var col = docStatusColor(d);
   var status = {missing:'Missing file',expired:'Expired',critical:'Expiring soon',warning:'Attention',valid:'Valid',none:'No expiry'}[cls] || 'Status';

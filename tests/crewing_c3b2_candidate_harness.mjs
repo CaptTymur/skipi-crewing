@@ -439,7 +439,7 @@ console.log('# C3c-1 mobile shell: view intake_pilot reachable and renders the c
   ok(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' \};/.test(html), 'rail QA map is the three K2.2 slots (K2 composition minus documents/apps, owner 2026-09-27)');
   const chrome = slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
   ok((chrome.match(/mobileNavButton\('/g) || []).length === 3 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail renders exactly 3 slots (K2.2), none for intake_pilot');
-  ok(/intake_pilot: 'apps',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to the Apps grid');
+  ok(/intake_pilot: 'crew_flow',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to Crew Flow (K2.2 B1: Apps is retired, Back must not reach it)');
   ok(/intake_pilot: 'nav\.intake_pilot',/.test(slice('function mobileModuleLabel(view) {', '\n}')), 'tile label uses the localized nav.intake_pilot string (RU/EN)');
   ok(html.includes("if (view === 'intake_pilot') return [tr('nav.intake_pilot'), mobileApiHostLabel()];"), 'mobile header title is nav.intake_pilot with the API host as subtitle');
   ok(/@media \(max-width: 980px\) \{ \.pilot-grid \{ grid-template-columns:1fr; \} \}/.test(html), 'narrow layout: pilot grid collapses to one column');
