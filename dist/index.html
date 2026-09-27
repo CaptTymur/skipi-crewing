@@ -833,12 +833,8 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
   <div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
     <span>Seafarers DB</span>
   </div>
-  <div class="mod-tab" id="mt-documents" onclick="showView('documents')" title="Crewing documents (templates, checklists, license, MLC cert)">
-    <span>Documents</span>
-  </div>
-  <div class="mod-tab" id="mt-apps" data-qa="crewing-module-apps" onclick="showView('apps')" title="Apps & plugins">
-    <span>Apps</span>
-  </div>
+  <!-- K2.2 (OWNER 2026-09-27): Documents and Apps left the bar ("Apps и Documents тоже пока убираем из
+       сборки"); their view code stays in the dist, the entry points do not. -->
   <div class="mb-spacer"></div>
   <div class="mb-vault" id="mb-vault" onclick="openSettings('vaults')" title="Switch vault"><span>📁</span><span class="mb-vault-name" id="mb-vault-name">Vault</span></div>
   <div class="mb-gear" onclick="openSettings()" title="Settings">⚙</div>
@@ -2195,13 +2191,13 @@ function languageSettingsSelectHtml() {
 }
 function applyI18nChrome() {
   document.documentElement.lang = getUiLang();
-  // K2/K2.1: only the tabs that still exist. The retired ids (vacancies,
-  // mailings, team, intake_pilot, mail) are not "harmless leftovers" — they are
-  // the list that tells a reader which modules the chrome believes it has.
+  // K2/K2.1/K2.2: only the tabs that still exist. The retired ids (vacancies,
+  // mailings, team, intake_pilot, mail, documents, apps) are not "harmless
+  // leftovers" — they are the list that tells a reader which modules the chrome
+  // believes it has.
   var pairs = [
     ['mt-compliance','nav.compliance'],
     ['mt-seafarers','nav.seafarers'],
-    ['mt-documents','nav.documents'],
   ];
   pairs.forEach(function(p){
     var el = document.getElementById(p[0]);
@@ -2936,7 +2932,7 @@ function showView(v) {
   updateTeamNavVisibility();
   // 'new' is a sub-view of 'vacancies' — it inherits the My vacancies tab highlight.
   var topTab = (v==='new') ? 'vacancies' : (v==='new_mailing' ? 'mailings' : ((v==='new_profile'||v==='edit_profile') ? 'compliance' : (v==='intake_pilot' ? 'crew_flow' : v)));
-  ['crew_flow','compliance','seafarers','documents','apps'].forEach(function(k){
+  ['crew_flow','compliance','seafarers'].forEach(function(k){
     var el = document.getElementById('mt-'+k);
     if (el) el.classList.toggle('active', k===topTab);
   });
@@ -11965,13 +11961,13 @@ function appsLauncherBodyHtml(){
 // Mobile Apps grid: module tiles first, then plugins. Desktop launcher is
 // unchanged (isMobileShellActive() gate). K2: the retired work modules and the
 // intake pilot lost their tiles — the pilot is entered from Crew Flow only.
+// K2.2 (OWNER 2026-09-27): Documents left the build and lost its tile too.
 function appsMobileModuleTilesHtml(){
   if (!isMobileShellActive()) return '';
   var tiles = [
     { view:'seafarers', icon:'👤', qa:'data-qa="apps-module-tile-seafarers"' },
     { view:'crew_flow', icon:'📥', qa:'data-qa="apps-module-tile-crew_flow"' },
-    { view:'compliance', icon:'▣', qa:'data-qa="apps-module-tile-compliance"' },
-    { view:'documents', icon:'📄', qa:'data-qa="apps-module-tile-documents"' }
+    { view:'compliance', icon:'▣', qa:'data-qa="apps-module-tile-compliance"' }
   ];
   var h = '<div class="apps-sec-title">Modules</div>'
     + '<div class="apps-launch-grid" data-qa="apps-modules-grid">';
@@ -12283,8 +12279,6 @@ function mobileRenderChrome(view) {
     + mobileNavButton('crew_flow', navView, '📥', mobileModuleLabel('crew_flow'))
     + mobileNavButton('compliance', navView, '▣', mobileModuleLabel('compliance'))
     + mobileNavButton('seafarers', navView, '👤', mobileModuleLabel('seafarers'))
-    + mobileNavButton('documents', navView, '📄', mobileModuleLabel('documents'))
-    + mobileNavButton('apps', navView, '🧩', 'Apps')
     + '</div>'
     + '</nav>' : '')
     + '</div>';
@@ -12310,10 +12304,11 @@ function mobileParentView(view) {
 
 // Canonical cross-home rail hooks (CANON-mobile-unified-standard-v1; existing
 // data-mview hooks stay): every rail slot carries bottom-nav-<view> with the
-// module's own slug. The rail is 5 fixed slots (K2, OWNER (654)/(658): the
-// retired work modules left the rail and Crew Flow took the first slot as the
-// home module; Apps stays last); Settings enters only via the header gear.
-var MOBILE_RAIL_QA = { crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' };
+// module's own slug. K2 (OWNER (654)/(658)): the retired work modules left the
+// rail and Crew Flow took the first slot as the home module. K2.2 (OWNER
+// 2026-09-27): Documents and Apps left the build, so the rail is the three
+// remaining modules; Settings enters only via the header gear.
+var MOBILE_RAIL_QA = { crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' };
 function mobileNavButton(view, active, icon, label) {
   var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
   return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
