@@ -478,6 +478,9 @@ if (M) {
   }
   ok(modIds.join(',') === 'crew_flow,compliance,seafarers,settings',
     'the presence floor after K2.2 is exactly crew_flow,compliance,seafarers,settings — got [' + modIds.join(',') + ']');
+  // PR-K22a: the dist follows the manifest — bar, rail and Apps-grid tile lose Documents/Apps.
+  ok(!HTML.includes('id="mt-documents"') && !HTML.includes('id="mt-apps"'), 'K2.2: the desktop bar has no Documents/Apps tab');
+  ok(!/mobileNavButton\('documents'|mobileNavButton\('apps'/.test(HTML), 'K2.2: the mobile rail builds no Documents/Apps slot');
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
@@ -495,6 +498,12 @@ if (M) {
 //     to Compliance and Documents:
 //       crew_flow · compliance · seafarers · documents · apps.
 //     №101's guarantee is unchanged: Crew Flow still holds a reserved slot.
+//   from K2.2 (OWNER 2026-09-27 "Apps и Documents тоже пока убираем из сборки"):
+//     Documents and Apps leave the build; the rail keeps the three remaining
+//     modules in the same order and Settings still enters only via the gear:
+//       crew_flow · compliance · seafarers.
+//     The "5 fixed slots" figure of CANON-mobile-unified-standard-v1 is thus not
+//     met by Crewing since K2.2 — by the owner's word, recorded here, not by drift.
 // S4: the comment block above is the only record of WHY the rail is what it is;
 // a canon change that leaves it untouched silently rewrites history. Scoped to
 // the CONSECUTIVE comment lines of that block only — a looser match would read
@@ -514,8 +523,10 @@ ok(/crew_flow[\s\S]*compliance[\s\S]*seafarers[\s\S]*documents[\s\S]*apps/.test(
   'the provenance comment states the rail composition it is protecting');
 ok(/23\.07/.test(RAIL_PROVENANCE) && /07\.08/.test(RAIL_PROVENANCE) && /\u2116101/.test(RAIL_PROVENANCE),
   'the older rail provenance (OWNER 23.07 / 07.08 / \u2116101) is kept, not replaced');
+ok(/K2\.2/.test(RAIL_PROVENANCE) && /2026-09-27/.test(RAIL_PROVENANCE) && /crew_flow · compliance · seafarers\./.test(RAIL_PROVENANCE),
+  'the rail provenance comment records the K2.2 decision (owner 2026-09-27) and the three-slot composition');
 
-section('mobile rail canon — 5 fixed slots, canonical QA, no scroll');
+section('mobile rail canon — 3 slots since K2.2 (was 5), canonical QA, no scroll');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
@@ -529,13 +540,13 @@ if (M) {
   ok(!!railHtml, 'mobile chrome renders the bottom rail');
   const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
   const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
-    'rail renders exactly 5 buttons in canonical order crew_flow,compliance,seafarers,documents,apps — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'crew_flow,compliance,seafarers',
+    'rail renders exactly 3 buttons in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railViews.join(',') + ']');
   const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
-  ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers,bottom-nav-documents,bottom-nav-apps',
+  ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers',
     'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
-  ok(railViews[railViews.length - 1] === 'apps' && railQa[railQa.length - 1] === 'bottom-nav-apps',
-    'last rail slot is Apps');
+  ok(!railHtml.includes('data-mview="apps"') && !railHtml.includes('data-mview="documents"') && !railHtml.includes('bottom-nav-apps') && !railHtml.includes('bottom-nav-documents'),
+    'K2.2: the rail has no Apps or Documents slot');
   ok(!railHtml.includes('bottom-nav-more') && !railHtml.includes('data-mview="settings"') && !railHtml.includes('mobileOpenSettingsHome'),
     'rail has no "More"/Settings slot (settings enters only via header gear)');
   ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
@@ -555,7 +566,7 @@ if (M) {
   ok(!HTML.includes('.mobile-module-rail-wrap::before') && !HTML.includes('.mobile-module-rail-wrap::after'),
     'rail scroll hint arrows (::before/::after) removed');
 
-  // Mobile Apps grid: module tiles (incl. Requirements/Documents off the rail) precede plugins.
+  // Mobile Apps grid: module tiles precede plugins. K2.2: Documents lost its tile with the module.
   const bodyEl = elFor('body');
   const origContains = bodyEl.classList.contains;
   bodyEl.classList.contains = (c) => c === 'mobile-shell';
@@ -563,8 +574,8 @@ if (M) {
   bodyEl.classList.contains = origContains;
   const appsHtml = elFor('mobile-main').innerHTML;
   const tileOrder = [...appsHtml.matchAll(/data-qa="apps-module-tile-([a-z_]+)"/g)].map((m) => m[1]);
-  ok(tileOrder.join(',') === 'seafarers,crew_flow,compliance,documents',
-    'mobile Apps grid shows module tiles seafarers,crew_flow,compliance,documents — got [' + tileOrder.join(',') + ']');
+  ok(tileOrder.join(',') === 'seafarers,crew_flow,compliance',
+    'mobile Apps grid shows module tiles seafarers,crew_flow,compliance (K2.2) — got [' + tileOrder.join(',') + ']');
   const firstModuleTile = appsHtml.indexOf('data-qa="apps-module-tile-');
   const pluginRegion = appsHtml.indexOf('id="apps-launch-body"');
   ok(firstModuleTile !== -1 && pluginRegion !== -1 && firstModuleTile < pluginRegion,
@@ -572,7 +583,7 @@ if (M) {
   const complianceTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-compliance"[^>]*>/) || [''])[0];
   const documentsTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-documents"[^>]*>/) || [''])[0];
   ok(complianceTile.includes("mobileShow('compliance')"), 'Requirements tile routes via mobileShow(compliance)');
-  ok(documentsTile.includes("mobileShow('documents')"), 'Documents tile routes via mobileShow(documents)');
+  ok(documentsTile === '' && !appsHtml.includes('apps-module-tile-documents'), 'K2.2: no Documents tile in the mobile Apps grid');
 } else {
   ok(false, 'mobile rail canon checks require runtime module (script failed to load)');
 }

@@ -436,9 +436,9 @@ console.log('# C3c-1 mobile shell: view intake_pilot reachable and renders the c
   ok(!/view:'intake_pilot'/.test(tiles), 'the mobile Apps grid no longer carries an intake_pilot tile');
   ok(/data-qa="crew-flow-open-pilot"/.test(html), 'the pilot is entered from Crew Flow (crew-flow-open-pilot)');
   ok(!html.includes('bottom-nav-intake_pilot') && !html.includes('apps-module-tile-intake_pilot') && !html.includes('apps-pilot-tile-intake_pilot'), 'the pilot claims no canonical rail slot or module-tile hook');
-  ok(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' \};/.test(html), 'rail QA map stays five canonical slots (K2 composition)');
+  ok(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' \};/.test(html), 'rail QA map is the three K2.2 slots (K2 composition minus documents/apps, owner 2026-09-27)');
   const chrome = slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
-  ok((chrome.match(/mobileNavButton\('/g) || []).length === 5 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail still renders exactly 5 slots, none for intake_pilot');
+  ok((chrome.match(/mobileNavButton\('/g) || []).length === 3 && !chrome.includes("mobileNavButton('intake_pilot'"), 'rail renders exactly 3 slots (K2.2), none for intake_pilot');
   ok(/intake_pilot: 'apps',/.test(slice('function mobileParentView(view) {', '\n}')), 'mobile Back from the pilot returns to the Apps grid');
   ok(/intake_pilot: 'nav\.intake_pilot',/.test(slice('function mobileModuleLabel(view) {', '\n}')), 'tile label uses the localized nav.intake_pilot string (RU/EN)');
   ok(html.includes("if (view === 'intake_pilot') return [tr('nav.intake_pilot'), mobileApiHostLabel()];"), 'mobile header title is nav.intake_pilot with the API host as subtitle');
@@ -860,7 +860,7 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
   //    isolation and presence harnesses — №433 stays open on them).
   ok(enBlock.includes("'mobile.apps_sub':'Plugins for your team'"), '6 (A8): mobile.apps_sub is an en dictionary value');
   ok(/if \(view === 'apps'\) return \[mobileTr\('apps_title'\), mobileTr\('apps_sub'\)\];/.test(html), '6 (A8): the mobile Apps header reads both strings through mobileTr()');
-  ok(/mobileNavButton\('apps', navView, '[^']+', 'Apps'\)/.test(html), '6 (A8): the mobile rail label stays the pinned literal (out of this route)');
+  ok(!/mobileNavButton\('apps'/.test(html), '6 (A8, K2.2): the Apps rail slot is retired — its pinned label literal left with it');
 
   // 7. Key parity: every new key exists in both en and ru.
   for (const key of NEW_KEYS) {
@@ -949,12 +949,12 @@ console.log('# K2 modules/crew-flow');
   softOk(!html.includes('apps-pilot-tile-intake_pilot'), 'K2-1: the mobile Apps grid carries no intake-pilot tile');
 
   // --- 2. the new canonical rail and the pilot entry inside Crew Flow --------
-  softOk(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers', documents: 'bottom-nav-documents', apps: 'bottom-nav-apps' \};/.test(html),
-    'K2-2: MOBILE_RAIL_QA is the five D3 slots crew_flow·compliance·seafarers·documents·apps');
+  softOk(/var MOBILE_RAIL_QA = \{ crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' \};/.test(html),
+    'K2-2/K2.2: MOBILE_RAIL_QA is the three remaining D3 slots crew_flow·compliance·seafarers (documents/apps retired 2026-09-27)');
   const k2chrome = k2slice('function mobileRenderChrome(view) {', '\nfunction mobileParentView');
   const k2railOrder = [...k2chrome.matchAll(/mobileNavButton\('([a-z_]+)'/g)].map((m) => m[1]);
-  softOk(k2railOrder.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
-    'K2-2: mobileRenderChrome renders exactly the five D3 slots in order — got [' + k2railOrder.join(',') + ']');
+  softOk(k2railOrder.join(',') === 'crew_flow,compliance,seafarers',
+    'K2-2/K2.2: mobileRenderChrome renders exactly the three remaining D3 slots in order — got [' + k2railOrder.join(',') + ']');
   softOk(count(/data-qa="crew-flow-open-pilot"/g) >= 2,
     'K2-2: the pilot entry data-qa="crew-flow-open-pilot" exists in both the desktop and the mobile Crew Flow render');
   // must-keep tokens introduced by PR-P (presence contract for crew_flow)
