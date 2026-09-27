@@ -557,7 +557,18 @@ stand was a boundary, and this is what lies beyond it.
   dispatched unshifted, -1 and 10000 refused with zero connections. On `3591ed7a` SVd fails with
   `left: …/attachments/1, right: …/attachments/0` and SVg with `left: None` +
   `detail=ordinal_out_of_range`. Boundary of the measurement: the class is killed on
-  `download_attachment`; the pass-through wrapper (one call expression) is pinned by token only
-  (this harness, K2.1a-1) — a mutation placed in that call would still need a runtime test.
+  `download_attachment`; the pass-through wrapper (one call expression) has NO runtime test — it
+  needs a Tauri `State` — and is held by source pins in this harness (K2.1a-1) only.
+- **L1 of the Supervisor's acceptance (`66c66fd9`, ACCEPT WITH LIMITS):** the first wrapper pin was
+  claimed wider than it held. Its regex refuses `+ - < >` on `ordinal` and does NOT see method calls:
+  a live `let ordinal = ordinal.max(1);` (and `.abs()`) inserted before `without_blocking_ui` passed
+  cargo 28/28 AND the harness 640/0 — №504 back in an unmeasured wrapper. Fix-up: the WHOLE wrapper
+  body is now compared, whitespace-normalized, against a literal of the pass-through; measured on
+  `f629751`: head 641/0, `.max(1)` RED 640/1, `.abs()` RED 640/1, `+ 1` RED 639/2 (both the old
+  regex and the literal). Any insertion into the command fails that line; it remains a source pin,
+  not runtime coverage. Named boundary (manager's ledger): the success path — 200 + file written —
+  is not measured at runtime, so a shift in the fallback name `attachment-{}.bin` (M5) and the
+  ceiling passed to `fetch_bytes` (M9) survive; `saved_root()` is not parametrized and the stand
+  answers 404 on purpose.
   L2 of the same audit: the floor check here is now `=== 0`, not `<= 0` (the contract says zero, not
   "at most zero").
