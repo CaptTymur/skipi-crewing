@@ -255,6 +255,8 @@ const exportsNeeded = [
   'mobileSaveConnection',
   'mobileSetTheme',
   'mobileSetLanguage',
+  'mobileBack',
+  'mobileState',
 ];
 let M = null;
 try {
@@ -387,7 +389,7 @@ if (M) {
   const desktopSections = {
     modules: {
       ids: ['s-reply'],
-      tokens: ['openMailboxSettings', "showView('apps')", 'settings.modules.sources'],
+      tokens: ['openMailboxSettings', 'settings.modules.sources'],
     },
     identity: {
       ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc', 's-url', 's-token', 's-crewing-id'],
@@ -409,6 +411,8 @@ if (M) {
   for (const [sectionId, spec] of Object.entries(desktopSections)) {
     await M.openSettings(sectionId);
     const html = elFor('modal-host').innerHTML;
+    // K2.2 L1: the settings5 "Open Apps" row left with the module — no route into Apps from Settings.
+    if (sectionId === 'modules') ok(!/showView\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 desktop modules has no Open Apps entry (K2.2 L1)');
     for (const id of spec.ids) ok(html.includes('id="' + id + '"'), 'settings5 desktop ' + sectionId + ' mounts #' + id);
     for (const token of spec.tokens) ok(html.includes(token), 'settings5 desktop ' + sectionId + ' contains ' + token);
     ok(html.includes('data-qa="app-build-sha"'), 'settings5 desktop ' + sectionId + ' keeps app-build-sha in footer');
@@ -442,6 +446,7 @@ if (M) {
   for (const [sectionId, tokens] of Object.entries(mobileSections)) {
     M.mobileOpenSettings(sectionId);
     const html = elFor('mobile-main').innerHTML;
+    if (sectionId === 'modules') ok(!/mobileShow\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 mobile modules has no Open Apps entry (K2.2 L1)');
     for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
   }
 
@@ -493,7 +498,10 @@ if (M) {
   const parentMapSrc = (HTML.match(/function mobileParentView\(view\) \{\s*var map = \{([\s\S]*?)\};/) || [])[1] || '';
   ok(parentMapSrc.length > 0, 'B1: the mobileParentView map is found');
   const parentEntries = [...parentMapSrc.matchAll(/([a-z_]+):\s*'([a-z_]+)'/g)].map((m) => ({ view: m[1], parent: m[2] }));
-  ok(parentEntries.length >= 6, 'B1: the mobileParentView map has entries — got ' + parentEntries.length);
+  // L2 (Supervisor): an exact key list, not a floor — a vanished entry must turn red, not shrink the count.
+  const EXPECTED_PARENT_KEYS = ['vacancy', 'mailing', 'mailing_new', 'compliance_profile', 'compliance_form', 'seafarer', 'document', 'crew_flow_signal', 'draft', 'intake_pilot', 'member_join', 'work_role'];
+  ok(parentEntries.map((e) => e.view).join(',') === EXPECTED_PARENT_KEYS.join(','),
+    'B1/L2: the mobileParentView map has exactly the expected keys in order — got [' + parentEntries.map((e) => e.view).join(',') + ']');
   for (const e of parentEntries) {
     ok(allowedReturnTargets.has(e.parent), 'B1: Back from "' + e.view + '" returns to a listed module or hub, not to a retired one — parent is "' + e.parent + '"');
   }
@@ -509,8 +517,70 @@ if (M) {
   const RETIRED_MODULES = ['vacancies', 'mailings', 'mail', 'documents', 'apps'];
   for (const id of RETIRED_MODULES) {
     ok(!modIds.includes(id), 'B1: retired module is not in the manifest (list kept in sync): ' + id);
-    const sites = HTML.match(new RegExp("mobileShow\\('" + id + "'\\)", 'g')) || [];
-    ok(sites.length === 0, 'B1: no mobileShow(\'' + id + '\') call site remains in the dist — got ' + sites.length);
+    // Textual, quote-form tolerant ('x', "x", \'x\' inside JS strings) — a supplement to the behavioural
+    // probe below, never the proof on its own (Supervisor B2: a variable, join('') or a wrapper slips past text).
+    // Mobile driver: every retired module. Desktop driver: the K2.2 modules; the desktop showView('vacancies'/
+    // 'mailings') sites inside the retired K2 screens themselves are the L3 sanitary debt (Supervisor audit
+    // 2026-09-27 §4), not a live entry — the behavioural scan below renders the live desktop screens instead.
+    const drivers = (id === 'documents' || id === 'apps') ? '(mobileShow|showView)' : 'mobileShow';
+    const sites = HTML.match(new RegExp(drivers + "\\(\\\\?[\"']" + id + "\\\\?[\"']\\)", 'g')) || [];
+    ok(sites.length === 0, 'B1: no ' + drivers + '(\'' + id + '\') call site in any quote form remains in the dist — got ' + sites.length);
+  }
+
+  // ===== B2 (Supervisor 2026-09-27): BEHAVIOURAL, not textual =====
+  // (a) call the real mobileBack() on every mobile view and read where it actually lands;
+  // (b) render every live screen (mobile + desktop + settings in both flag states) and scan the
+  //     RENDERED html for any navigation into a retired module. Calibrated on a known fact (see WORKLOG):
+  //     main ff9a3866 lands 6 Backs on retired modules and renders the documents/apps rail on every
+  //     screen; the candidate must land 0 and render 0.
+  section('B2 behavioural — Back landings and rendered screens never reach a retired module');
+  if (M && typeof M.mobileBack === 'function' && M.mobileState) {
+    const RETIRED_NAV = /(mobileShow|showView)\(\s*["']?(vacancies|mailings|mail|documents|apps)["']?\s*\)/g;
+    const b2 = { badBack: [], rendered: [], errors: [] };
+    M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
+    const mobileShowSrc = (HTML.match(/function mobileShow\(view\) \{([\s\S]*?)\nfunction mobileBack\(\)/) || [])[1] || '';
+    const renderViews = [...new Set([...mobileShowSrc.matchAll(/if \(view === '([a-z_]+)'\) return mobileRender/g)].map((m) => m[1]))];
+    ok(renderViews.length >= 18, 'B2: the mobileShow render branches are enumerated from the source — got ' + renderViews.length);
+    const backViews = [...new Set([...renderViews, ...parentEntries.map((e) => e.view), ...RETURN_HUBS])];
+    for (const v of backViews) {
+      let landed = null, err = null;
+      try { M.mobileState.view = v; M.state.view = 'mobile-' + v; M.mobileBack(); landed = M.mobileState.view; } catch (e) { err = e; }
+      if (err) b2.errors.push(v + ': ' + err);
+      const fine = !err && (allowedReturnTargets.has(landed) || landed === v);
+      if (!fine && !err) b2.badBack.push(v + ' -> ' + landed);
+      ok(fine, 'B2: Back from "' + v + '" lands on a listed module or hub (or stays) — landed on "' + landed + '"' + (err ? ' — threw ' + err : ''));
+    }
+    const scan = (label, html) => {
+      const hits = [...String(html).matchAll(RETIRED_NAV)].map((m) => m[1] + '(' + m[2] + ')');
+      if (hits.length) b2.rendered.push(label + ': ' + hits.join(', '));
+      ok(hits.length === 0, 'B2: rendered "' + label + '" carries no navigation into a retired module — ' + (hits.length ? hits.join(', ') : 'none'));
+    };
+    const MOBILE_SCREENS = ['crew_flow', 'compliance', 'seafarers', 'connection', 'work_role', 'settings', 'intake_pilot', 'crew_flow_signal', 'seafarer', 'compliance_profile'];
+    for (const v of MOBILE_SCREENS) {
+      try { elFor('mobile-root').innerHTML = ''; elFor('mobile-main').innerHTML = ''; M.mobileShow(v); } catch (e) { b2.errors.push('render ' + v + ': ' + e); }
+      scan('mobile ' + v, elFor('mobile-root').innerHTML + '\n' + elFor('mobile-main').innerHTML);
+    }
+    for (const flag of ['0', '1']) {
+      if (flag === '1') store.set('skipi_crewing_settings5', '1'); else store.delete('skipi_crewing_settings5');
+      for (const page of ['modules', 'identity', 'storage', 'appearance', 'paid', 'org', 'work_data']) {
+        try { elFor('mobile-main').innerHTML = ''; M.mobileOpenSettings(page); } catch (e) { b2.errors.push('mobile settings ' + page + ': ' + e); }
+        scan('mobile settings/' + page + ' flag=' + flag, elFor('mobile-main').innerHTML);
+        try { elFor('modal-host').innerHTML = ''; await M.openSettings(page); } catch (e) { b2.errors.push('desktop settings ' + page + ': ' + e); }
+        scan('desktop settings/' + page + ' flag=' + flag, elFor('modal-host').innerHTML);
+      }
+    }
+    store.delete('skipi_crewing_settings5');
+    for (const m of manifest.required_modules || []) {
+      const d = m.desktop_navigation || {};
+      if (d.route_driver !== 'showView') continue;
+      try { elFor('main').innerHTML = ''; elFor('left-panel').innerHTML = ''; M.showView(d.route); } catch (e) { b2.errors.push('desktop ' + d.route + ': ' + e); }
+      scan('desktop ' + d.route, elFor('main').innerHTML + '\n' + elFor('left-panel').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML);
+    }
+    ok(b2.errors.length === 0, 'B2: no screen or Back threw in the fake DOM' + (b2.errors.length ? ' — ' + b2.errors.join(' | ') : ''));
+    console.log('  B2 findings: badBack=' + b2.badBack.length + ' renderedScreensWithRetiredNav=' + b2.rendered.length + ' total=' + (b2.badBack.length + b2.rendered.length)
+      + (b2.badBack.length ? '\n    ' + b2.badBack.join('\n    ') : '') + (b2.rendered.length ? '\n    ' + b2.rendered.join('\n    ') : ''));
+  } else {
+    ok(false, 'B2 behavioural checks require mobileBack/mobileState in the inline module');
   }
 }
 
