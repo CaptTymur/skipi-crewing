@@ -2059,6 +2059,33 @@ console.log('# K2 modules/crew-flow');
     softOk(/function legacyMailboxInvalidate\(/.test(html),
       'K2.1-29: there is an explicit status invalidation');
     {
+      // …and it does something: an invalidation that only exists as a call site
+      // is the same session-long cache with a nicer name (this is what m25 does).
+      const nodes = new Map();
+      const calls = [];
+      const mbSlice29 = fxSlice('function legacyMailboxState() {', '// CREWING LEGACY MAILBOX ROW (K2.1) END');
+      const ctx29 = vm.createContext({
+        console, Promise, String, Object, Array, JSON, Number, setTimeout,
+        state: {}, getUiLang: () => 'en', tr: (k) => k,
+        escapeHtml: (v) => String(v == null ? '' : v), escapeAttr: (v) => String(v == null ? '' : v),
+        showToast: () => {}, inAppConfirm: async () => true,
+        document: { getElementById: (id) => nodes.get(id) || null },
+        async invoke(cmd) { calls.push(cmd); if (cmd === 'get_mailbox_status') return { configured: true, status: 'active' }; return null; },
+      });
+      try {
+        vm.runInContext(mbSlice29 + '\nthis.__mb = { legacyMailboxEnsureStatus, legacyMailboxInvalidate, legacyMailboxState };', ctx29);
+        ctx29.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        ctx29.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        softOk(calls.filter((c) => c === 'get_mailbox_status').length === 1, 'K2.1-29: without an invalidation the answer is reused');
+        ctx29.__mb.legacyMailboxInvalidate();
+        softOk(ctx29.__mb.legacyMailboxState().loaded === false, 'K2.1-29: the invalidation actually clears the cached answer');
+        ctx29.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        softOk(calls.filter((c) => c === 'get_mailbox_status').length === 2, 'K2.1-29: and the next look asks the server again');
+      } catch (e) {
+        softOk(false, 'K2.1-29: the invalidation runs in isolation — ' + (e && (e.message || e)));
+      }
+    }
+    {
       const openFn = fxSlice('async function openSettings(tab) {', '\nfunction closeSettings');
       softOk(openFn !== '' && /legacyMailboxInvalidate\(\)/.test(openFn),
         'K2.1-29: opening the settings invalidates the cached mailbox status (both the module and the fallback path go through here)');
