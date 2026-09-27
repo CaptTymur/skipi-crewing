@@ -109,8 +109,10 @@ pass += shared.pass;
 fail += shared.fail;
 
 section('static Crewing host glue');
-ok(HTML.includes('id="mt-apps"') && /showView\('apps'\)/.test(HTML), 'desktop Apps tab remains reachable');
-ok(/mobileNavButton\('apps', navView, '[^']+', 'Apps'\)/.test(HTML), 'mobile bottom Apps rail item remains reachable');
+// K2.2 (OWNER 2026-09-27, "Apps и Documents тоже пока убираем из сборки"): the Apps entry points leave
+// the bar and the rail; the host runtime, launcher and plugin code below stay in the dist untouched.
+ok(!HTML.includes('id="mt-apps"') && !/onclick="showView\('apps'\)"/.test(HTML), 'K2.2: the desktop Apps tab is retired from the bar (host code stays, the entry point does not)');
+ok(!/mobileNavButton\('apps'/.test(HTML), 'K2.2: the mobile rail has no Apps slot');
 ok(HTML.includes('BEGIN skipi-host-runtime v' + EXPECTED_RUNTIME_VERSION + ' sha256:' + EXPECTED_RUNTIME_SHA), 'embedded runtime records shared version/hash');
 ok(RUNTIME_VERSION === EXPECTED_RUNTIME_VERSION + '\nsha256:' + EXPECTED_RUNTIME_SHA, 'shared RUNTIME_VERSION matches embedded runtime hash');
 ok(/SkipiPluginRuntime\.create/.test(appsBlock) && /rt\.open\(id, c\)/.test(appsBlock), 'Crewing mount path uses shared runtime open()');
@@ -208,7 +210,7 @@ function escapeAttr(s) {
 const settle = async (n = 12) => { for (let i = 0; i < n; i++) await tick(); };
 
 section('launcher static: canonical QA hooks present, existing hooks intact');
-ok(/id="mt-apps" data-qa="crewing-module-apps"/.test(HTML), 'desktop Apps tab carries canonical crewing-module-apps hook additively (id="mt-apps" kept)');
+ok(!/crewing-module-apps/.test(HTML), 'K2.2: the crewing-module-apps hook left with the tab (no orphan hook in the dist)');
 ok(HTML.includes('data-qa="apps-search-input"'), 'launcher search input hook apps-search-input present');
 ok(HTML.includes('data-qa="plugins-settings-open"'), 'launcher gear hook plugins-settings-open present');
 ok(HTML.includes("data-qa=\"plugin-tile-'+escapeHtml(p.id)+'\""), 'launcher tiles carry plugin-tile-<id> hook');
@@ -225,21 +227,22 @@ ok(/navigator\.onLine===false/.test(HTML), 'offline state is driven by real navi
 
 section('launcher mobile rail hooks (rendered via mobileNavButton)');
 {
-  // Canonical 4-slot rail: every slot carries bottom-nav-<view> with the
-  // module's own slug (legacy bottom-nav-home/workspace mapping retired).
+  // Every rail slot carries bottom-nav-<view> with the module's own slug
+  // (legacy bottom-nav-home/workspace mapping retired).
   const start = HTML.indexOf('var MOBILE_RAIL_QA');
   const end = HTML.indexOf('async function bootMobile', start);
   ok(start > 0 && end > start, 'MOBILE_RAIL_QA + mobileNavButton block found');
   const navBtn = new Function('escapeAttr', 'escapeHtml', HTML.slice(start, end) + '\nreturn mobileNavButton;')(escapeAttr, escapeHtml);
-  // K2 (OWNER (654)/(658)): the rail composition is crew_flow · compliance ·
-  // seafarers · documents · apps; the retired work modules left it entirely.
+  // K2 (OWNER (654)/(658)): the rail composition was crew_flow · compliance ·
+  // seafarers · documents · apps; K2.2 (OWNER 2026-09-27) retired documents and
+  // apps, so the rail is crew_flow · compliance · seafarers.
   const home = navBtn('crew_flow', 'crew_flow', '📥', 'Crew Flow');
   ok(home.includes('data-qa="bottom-nav-crew_flow"'), 'crew_flow rail button carries bottom-nav-crew_flow');
   ok(home.includes('data-mview="crew_flow"') && home.includes('active'), 'crew_flow rail button keeps data-mview hook and active state');
   ok(navBtn('compliance', 'crew_flow', '▣', 'Compliance').includes('data-qa="bottom-nav-compliance"'), 'compliance rail button carries bottom-nav-compliance');
   ok(navBtn('seafarers', 'crew_flow', '👤', 'Seafarers').includes('data-qa="bottom-nav-seafarers"'), 'seafarers rail button carries bottom-nav-seafarers');
-  ok(navBtn('documents', 'crew_flow', '📄', 'Docs').includes('data-qa="bottom-nav-documents"'), 'documents rail button carries bottom-nav-documents');
-  ok(navBtn('apps', 'crew_flow', '🧩', 'Apps').includes('data-qa="bottom-nav-apps"'), 'apps rail button carries bottom-nav-apps');
+  ok(!/bottom-nav-/.test(navBtn('documents', 'crew_flow', '📄', 'Docs')), 'K2.2: documents is off the rail — no bottom-nav hook');
+  ok(!/bottom-nav-/.test(navBtn('apps', 'crew_flow', '🧩', 'Apps')), 'K2.2: apps is off the rail — no bottom-nav hook');
   ok(!HTML.includes('bottom-nav-home') && !HTML.includes('bottom-nav-workspace'), 'legacy bottom-nav-home/workspace slugs are gone');
   const offRail = navBtn('mail', 'crew_flow', '✉', 'Mail');
   ok(!/bottom-nav-/.test(offRail) && offRail.includes('data-mview="mail"'), 'off-rail views get no bottom-nav hook and keep data-mview');

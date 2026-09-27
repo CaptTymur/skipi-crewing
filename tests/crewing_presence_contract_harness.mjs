@@ -255,6 +255,8 @@ const exportsNeeded = [
   'mobileSaveConnection',
   'mobileSetTheme',
   'mobileSetLanguage',
+  'mobileBack',
+  'mobileState',
 ];
 let M = null;
 try {
@@ -387,7 +389,7 @@ if (M) {
   const desktopSections = {
     modules: {
       ids: ['s-reply'],
-      tokens: ['openMailboxSettings', "showView('apps')", 'settings.modules.sources'],
+      tokens: ['openMailboxSettings', 'settings.modules.sources'],
     },
     identity: {
       ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc', 's-url', 's-token', 's-crewing-id'],
@@ -409,6 +411,8 @@ if (M) {
   for (const [sectionId, spec] of Object.entries(desktopSections)) {
     await M.openSettings(sectionId);
     const html = elFor('modal-host').innerHTML;
+    // K2.2 L1: the settings5 "Open Apps" row left with the module — no route into Apps from Settings.
+    if (sectionId === 'modules') ok(!/showView\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 desktop modules has no Open Apps entry (K2.2 L1)');
     for (const id of spec.ids) ok(html.includes('id="' + id + '"'), 'settings5 desktop ' + sectionId + ' mounts #' + id);
     for (const token of spec.tokens) ok(html.includes(token), 'settings5 desktop ' + sectionId + ' contains ' + token);
     ok(html.includes('data-qa="app-build-sha"'), 'settings5 desktop ' + sectionId + ' keeps app-build-sha in footer');
@@ -442,6 +446,7 @@ if (M) {
   for (const [sectionId, tokens] of Object.entries(mobileSections)) {
     M.mobileOpenSettings(sectionId);
     const html = elFor('mobile-main').innerHTML;
+    if (sectionId === 'modules') ok(!/mobileShow\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 mobile modules has no Open Apps entry (K2.2 L1)');
     for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
   }
 
@@ -478,6 +483,129 @@ if (M) {
   }
   ok(modIds.join(',') === 'crew_flow,compliance,seafarers,settings',
     'the presence floor after K2.2 is exactly crew_flow,compliance,seafarers,settings — got [' + modIds.join(',') + ']');
+  // PR-K22a: the dist follows the manifest — bar, rail and Apps-grid tile lose Documents/Apps.
+  ok(!HTML.includes('id="mt-documents"') && !HTML.includes('id="mt-apps"'), 'K2.2: the desktop bar has no Documents/Apps tab');
+  ok(!/mobileNavButton\('documents'|mobileNavButton\('apps'/.test(HTML), 'K2.2: the mobile rail builds no Documents/Apps slot');
+
+  // K2.2 B1 (Supervisor, 2026-09-27): a retired module must not stay reachable through "Back".
+  // The mobile shell has two return tables — the mobileParentView map and the explicit branches of
+  // mobileBack() — plus detail-screen fallbacks that jump to a list. The property, not a pin: every
+  // return target is a module the manifest still lists, or one of the two onboarding hubs
+  // (connection, work_role) that are screens, not modules. A module retired tomorrow drops out of
+  // the manifest and its return entries turn red here on their own.
+  const RETURN_HUBS = ['connection', 'work_role'];
+  const allowedReturnTargets = new Set([...modIds, ...RETURN_HUBS]);
+  const parentMapSrc = (HTML.match(/function mobileParentView\(view\) \{\s*var map = \{([\s\S]*?)\};/) || [])[1] || '';
+  ok(parentMapSrc.length > 0, 'B1: the mobileParentView map is found');
+  const parentEntries = [...parentMapSrc.matchAll(/([a-z_]+):\s*'([a-z_]+)'/g)].map((m) => ({ view: m[1], parent: m[2] }));
+  // L2 (Supervisor): an exact key list, not a floor — a vanished entry must turn red, not shrink the count.
+  const EXPECTED_PARENT_KEYS = ['vacancy', 'mailing', 'mailing_new', 'compliance_profile', 'compliance_form', 'seafarer', 'document', 'crew_flow_signal', 'draft', 'intake_pilot', 'member_join', 'work_role'];
+  ok(parentEntries.map((e) => e.view).join(',') === EXPECTED_PARENT_KEYS.join(','),
+    'B1/L2: the mobileParentView map has exactly the expected keys in order — got [' + parentEntries.map((e) => e.view).join(',') + ']');
+  for (const e of parentEntries) {
+    ok(allowedReturnTargets.has(e.parent), 'B1: Back from "' + e.view + '" returns to a listed module or hub, not to a retired one — parent is "' + e.parent + '"');
+  }
+  const backSrc = (HTML.match(/function mobileBack\(\) \{([\s\S]*?)\n\}/) || [])[1] || '';
+  ok(backSrc.length > 0, 'B1: mobileBack() is found');
+  const backTargets = [...backSrc.matchAll(/mobileShow\('([a-z_]+)'\)/g)].map((m) => m[1]);
+  ok(backTargets.length >= 1, 'B1: mobileBack() has explicit branches — got ' + backTargets.length);
+  for (const t of [...new Set(backTargets)]) {
+    ok(allowedReturnTargets.has(t), 'B1: an explicit mobileBack() branch returns to a listed module or hub — target is "' + t + '"');
+  }
+  // Retired modules (K2: vacancies, mailings; K2.1: mail; K2.2: documents, apps) must have NO navigation
+  // call site left anywhere in the dist — not a Back branch, not a detail-screen fallback, not a link.
+  const RETIRED_MODULES = ['vacancies', 'mailings', 'mail', 'documents', 'apps'];
+  for (const id of RETIRED_MODULES) {
+    ok(!modIds.includes(id), 'B1: retired module is not in the manifest (list kept in sync): ' + id);
+    // Textual, quote-form tolerant ('x', "x", \'x\' inside JS strings) — a supplement to the behavioural
+    // probe below, never the proof on its own (Supervisor B2: a variable, join('') or a wrapper slips past text).
+    // Mobile driver: every retired module. Desktop driver: the K2.2 modules; the desktop showView('vacancies'/
+    // 'mailings') sites inside the retired K2 screens themselves are the L3 sanitary debt (Supervisor audit
+    // 2026-09-27 §4), not a live entry — the behavioural scan below renders the live desktop screens instead.
+    const drivers = (id === 'documents' || id === 'apps') ? '(mobileShow|showView)' : 'mobileShow';
+    const sites = HTML.match(new RegExp(drivers + "\\(\\\\?[\"']" + id + "\\\\?[\"']\\)", 'g')) || [];
+    ok(sites.length === 0, 'B1: no ' + drivers + '(\'' + id + '\') call site in any quote form remains in the dist — got ' + sites.length);
+  }
+
+  // ===== B2/B3 (Supervisor audits 2d5632db, 605b14b7; 2026-09-27): BEHAVIOURAL, not textual =====
+  // WHAT THIS BLOCK HOLDS — and what it does not.
+  // (a) the real mobileBack() is called on every mobile view (every `if (view === 'X') return mobileRender…`
+  //     branch of mobileShow, the mobileParentView keys and the two hubs) and the landing mobileState.view
+  //     is read after TWO microtask turns, so a navigation deferred through Promise.resolve().then() is
+  //     seen too; the landing must be a module the presence manifest still lists, one of the two
+  //     onboarding hubs (connection, work_role) or the view itself.
+  // (b) every screen the mobile shell can render (the same enumeration, minus the retired modules' own
+  //     screens), the desktop routes of the manifest and the settings pages of both shells in both flag
+  //     states are rendered in the fake DOM, and the RENDERED html is scanned for the identifiers of the
+  //     retired modules as VALUES — in onclick arguments, data-* attributes and any quoted literal —
+  //     regardless of what the function that performs the jump is called (mobileShow, showView, an alias,
+  //     a delegated handler reading data-*).
+  // Calibrated on a known fact: main ff9a3866 lands 6 Backs on retired modules and renders the
+  // documents/apps rail on every mobile screen; the candidate must land 0 and render 0 (see WORKLOG).
+  // LIMIT — read before relying on this block: a harness on a fake DOM has a ceiling. This block protects
+  // against an ACCIDENTAL regression (a leftover parent, branch, rail slot or button) and against the
+  // deliberate forms enumerated in the audits (variable/join('') targets, double quotes, escaped literals,
+  // a hub forward, an alias, a data-* delegated button, a navigation deferred by a microtask, a screen
+  // outside a hand-written list). It does NOT prove a retired module is unreachable in general. Forms it
+  // does not cover (audit 605b14b7): a target assembled with join() and jumped to after more than two
+  // microtasks or through a real timer; navigation through CustomEvent / event listeners whose target
+  // never appears in the rendered html; a hash/location router; screens whose entry depends on data the
+  // fake DOM never has; desktop screens outside the manifest routes (the pilot); a real browser click or
+  // Android tap. Wording like "never reachable" is deliberately absent here.
+  section('B2/B3 behavioural — Back landings and rendered screens never reach a retired module (within the limit above)');
+  if (M && typeof M.mobileBack === 'function' && M.mobileState) {
+    // B3: the retired ids as VALUES — preceded by a quote, an opening paren or '=' (onclick args, data-*
+    // attributes, string literals) and followed by a quote/paren/space/'>'/';'/',' — not by function name.
+    const RETIRED_NAV = /(['"(=])(vacancies|mailings|mail|documents|apps)(?=['")\s>;,])/g;
+    const b2 = { badBack: [], rendered: [], errors: [] };
+    M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
+    const mobileShowSrc = (HTML.match(/function mobileShow\(view\) \{([\s\S]*?)\nfunction mobileBack\(\)/) || [])[1] || '';
+    const renderViews = [...new Set([...mobileShowSrc.matchAll(/if \(view === '([a-z_]+)'\) return mobileRender/g)].map((m) => m[1]))];
+    ok(renderViews.length >= 18, 'B2: the mobileShow render branches are enumerated from the source — got ' + renderViews.length);
+    const backViews = [...new Set([...renderViews, ...parentEntries.map((e) => e.view), ...RETURN_HUBS])];
+    for (const v of backViews) {
+      let landed = null, err = null;
+      try { M.mobileState.view = v; M.state.view = 'mobile-' + v; M.mobileBack(); await Promise.resolve(); await Promise.resolve(); landed = M.mobileState.view; } catch (e) { err = e; }
+      if (err) b2.errors.push(v + ': ' + err);
+      const fine = !err && (allowedReturnTargets.has(landed) || landed === v);
+      if (!fine && !err) b2.badBack.push(v + ' -> ' + landed);
+      ok(fine, 'B2: Back from "' + v + '" lands on a listed module or hub (or stays) — landed on "' + landed + '"' + (err ? ' — threw ' + err : ''));
+    }
+    const scan = (label, html) => {
+      const hits = [...String(html).matchAll(RETIRED_NAV)].map((m) => m[1] + m[2]);
+      if (hits.length) b2.rendered.push(label + ': ' + hits.join(', '));
+      ok(hits.length === 0, 'B2: rendered "' + label + '" carries no navigation into a retired module — ' + (hits.length ? hits.join(', ') : 'none'));
+    };
+    // B3: every screen the shell can render, from the source enumeration — not a hand-written list. The
+    // retired modules' own screens are excluded (they are the thing that must be unreachable, not a path).
+    const MOBILE_SCREENS = renderViews.filter((v) => !RETIRED_MODULES.includes(v));
+    ok(MOBILE_SCREENS.length >= 14, 'B3: screens under scan come from the mobileShow enumeration — ' + MOBILE_SCREENS.length + ' screens: ' + MOBILE_SCREENS.join(','));
+    for (const v of MOBILE_SCREENS) {
+      try { elFor('mobile-root').innerHTML = ''; elFor('mobile-main').innerHTML = ''; M.mobileShow(v); } catch (e) { b2.errors.push('render ' + v + ': ' + e); }
+      scan('mobile ' + v, elFor('mobile-root').innerHTML + '\n' + elFor('mobile-main').innerHTML);
+    }
+    for (const flag of ['0', '1']) {
+      if (flag === '1') store.set('skipi_crewing_settings5', '1'); else store.delete('skipi_crewing_settings5');
+      for (const page of ['modules', 'identity', 'storage', 'appearance', 'paid', 'org', 'work_data']) {
+        try { elFor('mobile-main').innerHTML = ''; M.mobileOpenSettings(page); } catch (e) { b2.errors.push('mobile settings ' + page + ': ' + e); }
+        scan('mobile settings/' + page + ' flag=' + flag, elFor('mobile-main').innerHTML);
+        try { elFor('modal-host').innerHTML = ''; await M.openSettings(page); } catch (e) { b2.errors.push('desktop settings ' + page + ': ' + e); }
+        scan('desktop settings/' + page + ' flag=' + flag, elFor('modal-host').innerHTML);
+      }
+    }
+    store.delete('skipi_crewing_settings5');
+    for (const m of manifest.required_modules || []) {
+      const d = m.desktop_navigation || {};
+      if (d.route_driver !== 'showView') continue;
+      try { elFor('main').innerHTML = ''; elFor('left-panel').innerHTML = ''; M.showView(d.route); } catch (e) { b2.errors.push('desktop ' + d.route + ': ' + e); }
+      scan('desktop ' + d.route, elFor('main').innerHTML + '\n' + elFor('left-panel').innerHTML + '\n' + elFor('crew-flow-tree').innerHTML);
+    }
+    ok(b2.errors.length === 0, 'B2: no screen or Back threw in the fake DOM' + (b2.errors.length ? ' — ' + b2.errors.join(' | ') : ''));
+    console.log('  B2 findings: badBack=' + b2.badBack.length + ' renderedScreensWithRetiredNav=' + b2.rendered.length + ' total=' + (b2.badBack.length + b2.rendered.length)
+      + (b2.badBack.length ? '\n    ' + b2.badBack.join('\n    ') : '') + (b2.rendered.length ? '\n    ' + b2.rendered.join('\n    ') : ''));
+  } else {
+    ok(false, 'B2 behavioural checks require mobileBack/mobileState in the inline module');
+  }
 }
 
 // ===== mobile rail canon (CANON-mobile-unified-standard-v1; Crewing layout =====
@@ -495,6 +623,12 @@ if (M) {
 //     to Compliance and Documents:
 //       crew_flow · compliance · seafarers · documents · apps.
 //     №101's guarantee is unchanged: Crew Flow still holds a reserved slot.
+//   from K2.2 (OWNER 2026-09-27 "Apps и Documents тоже пока убираем из сборки"):
+//     Documents and Apps leave the build; the rail keeps the three remaining
+//     modules in the same order and Settings still enters only via the gear:
+//       crew_flow · compliance · seafarers.
+//     The "5 fixed slots" figure of CANON-mobile-unified-standard-v1 is thus not
+//     met by Crewing since K2.2 — by the owner's word, recorded here, not by drift.
 // S4: the comment block above is the only record of WHY the rail is what it is;
 // a canon change that leaves it untouched silently rewrites history. Scoped to
 // the CONSECUTIVE comment lines of that block only — a looser match would read
@@ -514,8 +648,10 @@ ok(/crew_flow[\s\S]*compliance[\s\S]*seafarers[\s\S]*documents[\s\S]*apps/.test(
   'the provenance comment states the rail composition it is protecting');
 ok(/23\.07/.test(RAIL_PROVENANCE) && /07\.08/.test(RAIL_PROVENANCE) && /\u2116101/.test(RAIL_PROVENANCE),
   'the older rail provenance (OWNER 23.07 / 07.08 / \u2116101) is kept, not replaced');
+ok(/K2\.2/.test(RAIL_PROVENANCE) && /2026-09-27/.test(RAIL_PROVENANCE) && /crew_flow · compliance · seafarers\./.test(RAIL_PROVENANCE),
+  'the rail provenance comment records the K2.2 decision (owner 2026-09-27) and the three-slot composition');
 
-section('mobile rail canon — 5 fixed slots, canonical QA, no scroll');
+section('mobile rail canon — 3 slots since K2.2 (was 5), canonical QA, no scroll');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
@@ -529,13 +665,13 @@ if (M) {
   ok(!!railHtml, 'mobile chrome renders the bottom rail');
   const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
   const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
-    'rail renders exactly 5 buttons in canonical order crew_flow,compliance,seafarers,documents,apps — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'crew_flow,compliance,seafarers',
+    'rail renders exactly 3 buttons in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railViews.join(',') + ']');
   const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
-  ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers,bottom-nav-documents,bottom-nav-apps',
+  ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers',
     'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
-  ok(railViews[railViews.length - 1] === 'apps' && railQa[railQa.length - 1] === 'bottom-nav-apps',
-    'last rail slot is Apps');
+  ok(!railHtml.includes('data-mview="apps"') && !railHtml.includes('data-mview="documents"') && !railHtml.includes('bottom-nav-apps') && !railHtml.includes('bottom-nav-documents'),
+    'K2.2: the rail has no Apps or Documents slot');
   ok(!railHtml.includes('bottom-nav-more') && !railHtml.includes('data-mview="settings"') && !railHtml.includes('mobileOpenSettingsHome'),
     'rail has no "More"/Settings slot (settings enters only via header gear)');
   ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
@@ -555,7 +691,7 @@ if (M) {
   ok(!HTML.includes('.mobile-module-rail-wrap::before') && !HTML.includes('.mobile-module-rail-wrap::after'),
     'rail scroll hint arrows (::before/::after) removed');
 
-  // Mobile Apps grid: module tiles (incl. Requirements/Documents off the rail) precede plugins.
+  // Mobile Apps grid: module tiles precede plugins. K2.2: Documents lost its tile with the module.
   const bodyEl = elFor('body');
   const origContains = bodyEl.classList.contains;
   bodyEl.classList.contains = (c) => c === 'mobile-shell';
@@ -563,8 +699,8 @@ if (M) {
   bodyEl.classList.contains = origContains;
   const appsHtml = elFor('mobile-main').innerHTML;
   const tileOrder = [...appsHtml.matchAll(/data-qa="apps-module-tile-([a-z_]+)"/g)].map((m) => m[1]);
-  ok(tileOrder.join(',') === 'seafarers,crew_flow,compliance,documents',
-    'mobile Apps grid shows module tiles seafarers,crew_flow,compliance,documents — got [' + tileOrder.join(',') + ']');
+  ok(tileOrder.join(',') === 'seafarers,crew_flow,compliance',
+    'mobile Apps grid shows module tiles seafarers,crew_flow,compliance (K2.2) — got [' + tileOrder.join(',') + ']');
   const firstModuleTile = appsHtml.indexOf('data-qa="apps-module-tile-');
   const pluginRegion = appsHtml.indexOf('id="apps-launch-body"');
   ok(firstModuleTile !== -1 && pluginRegion !== -1 && firstModuleTile < pluginRegion,
@@ -572,7 +708,7 @@ if (M) {
   const complianceTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-compliance"[^>]*>/) || [''])[0];
   const documentsTile = (appsHtml.match(/<button[^>]*data-qa="apps-module-tile-documents"[^>]*>/) || [''])[0];
   ok(complianceTile.includes("mobileShow('compliance')"), 'Requirements tile routes via mobileShow(compliance)');
-  ok(documentsTile.includes("mobileShow('documents')"), 'Documents tile routes via mobileShow(documents)');
+  ok(documentsTile === '' && !appsHtml.includes('apps-module-tile-documents'), 'K2.2: no Documents tile in the mobile Apps grid');
 } else {
   ok(false, 'mobile rail canon checks require runtime module (script failed to load)');
 }

@@ -55,6 +55,14 @@ ok(!crewBlock.includes('mailboxViewReady') && !crewBlock.includes('openMailCompo
   'K2.1: Crew Flow no longer waits for a mailbox render or opens an in-app compose form');
 ok(/function crewFlowWriteEmail\(intakeId, kind\) \{[\s\S]{0,400}?pilotDraftOpen\(intakeId, kind\)/.test(crewBlock),
   'K2.1: the write-email action opens the draft on the candidate card');
+// K2.2 (OWNER 2026-09-27, "Apps и Documents тоже пока убираем из сборки"): same reasoning as K2.1 —
+// this file runs on both the plugin-host and the crewing-k2-modules routes, so a dist-only change
+// cannot bring the two entry points back past a route that does not run the presence harness.
+ok(!HTML.includes('id="mt-documents"') && !HTML.includes('id="mt-apps"'), 'K2.2: no desktop Documents/Apps tab');
+ok(!/mobileNavButton\('documents'|mobileNavButton\('apps'/.test(HTML), 'K2.2: no Documents/Apps slot in the mobile rail');
+ok(/\['crew_flow','compliance','seafarers'\]\.forEach\(function\(k\)\{/.test(HTML), 'K2.2: the tab-highlight list is exactly crew_flow,compliance,seafarers');
+ok(!HTML.includes("['mt-documents','nav.documents']"), 'K2.2: applyI18nChrome no longer relabels a Documents tab');
+ok(!HTML.includes('apps-module-tile-documents'), 'K2.2: no Documents tile in the mobile Apps grid');
 ok(track1Block.includes('track1CandidateIntakeEnabled') && track1Block.includes('__demoMode'), 'Track 1 panel is gated by demo mode');
 ok(track1Block.includes('Source evidence') && track1Block.includes('Email CV') && track1Block.includes('Mail'), 'Track 1 panel renders source evidence');
 ok(track1Block.includes('Structured profile / vault draft'), 'Track 1 panel renders extracted profile/vault bridge');
@@ -383,13 +391,13 @@ if (M) {
   ok(!calls.some(([cmd]) => String(cmd).toLowerCase().includes('mail') && cmd !== 'fetch_mail_messages'), 'Crew Flow does not start real mailbox operations');
   ok(fetchCalls.length === 0, 'Crew Flow / Track 1 render performs no network fetches');
 
-  section('mobile crew flow surface — rail slot + screen (canon 5 fixed slots, no scroll)');
+  section('mobile crew flow surface — rail slot + screen (3 slots since K2.2, was canon 5; no scroll)');
   M.mobileShow('crew_flow');
   ok(M.mobileState.view === 'crew_flow', 'mobileShow(crew_flow) opens the crew_flow mobile view');
   const railHtml = (elFor('mobile-root').innerHTML.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
   const railViews = [...railHtml.matchAll(/data-mview="([^"]+)"/g)].map((m) => m[1]);
-  ok(railViews.join(',') === 'crew_flow,compliance,seafarers,documents,apps',
-    'rail renders canon 5 fixed slots with Crew Flow first and Apps last (K2) — got [' + railViews.join(',') + ']');
+  ok(railViews.join(',') === 'crew_flow,compliance,seafarers',
+    'rail renders the three remaining slots with Crew Flow first (K2.2: documents/apps retired 2026-09-27) — got [' + railViews.join(',') + ']');
   ok(railHtml.includes('data-qa="bottom-nav-crew_flow"'), 'crew_flow rail slot carries the canonical bottom-nav-crew_flow QA hook');
   const railCssBody = (HTML.match(/\.mobile-module-rail\s*\{([^}]*)\}/) || ['', ''])[1];
   ok(railCssBody !== '' && !/overflow-x\s*:\s*(auto|scroll)/i.test(railCssBody), 'rail CSS keeps fixed slots without scroll mechanics');
