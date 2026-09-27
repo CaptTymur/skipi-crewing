@@ -4855,6 +4855,7 @@ var LEGACY_MAILBOX_STATUS_TEXT = {
 function legacyMailboxStatusText() {
   var m = legacyMailboxState();
   var ru = getUiLang() === 'ru';
+  if (m.loading) return ru ? 'статус проверяется…' : 'checking the status…';
   if (!m.loaded) return ru ? 'статус не проверен' : 'status not checked';
   var box = m.box || {};
   var code = String(box.status || (box.configured ? 'active' : 'not_configured'));
@@ -4874,6 +4875,12 @@ function legacyMailboxConfigured() {
 // everywhere else the press is allowed and the server gets the last word.
 function legacyMailboxRevokeBlocked() {
   var m = legacyMailboxState();
+  // While the answer is in the air there is nothing to act on: the row used to
+  // say «статус не проверен» AND offer the control, so a press in that window
+  // sent disconnect_mailbox at a mailbox that was not connected and the screen
+  // still said «Ящик отключён» (Супервайзор R2). This ban lasts exactly as long
+  // as the flight — a cached "not connected" is a different state, below.
+  if (m.loading) return true;
   if (!m.loaded) return false;
   var box = m.box || {};
   if (box.configured) return false;
@@ -4933,6 +4940,16 @@ function legacyMailboxRowInnerHtml(shape) {
   var label = escapeHtml(tr('settings.mailbox_legacy'));
   var desc = escapeHtml(tr('settings.mailbox_legacy_desc'));
   var blocked = legacyMailboxRevokeBlocked();
+  // While the answer is in the air nothing here is pressable. The two shapes
+  // say it differently for a reason that is not ours to choose: the presence
+  // contract pins the `openMailboxSettings` token in the RENDERED settings
+  // section (tests/crewing_presence_contract_harness.mjs:390/:436, a harness
+  // outside this route), so the fallback rows keep the control and mark it
+  // `disabled` for that window; the module contract has no disabled button, so
+  // there the control simply is not rendered yet. Either way a press in the
+  // flight window is impossible, which is the point.
+  var pending = !!legacyMailboxState().loading;
+  var dis = pending ? ' disabled' : '';
   var statusId = shape === 'module' ? 'legacy-mailbox-status-module' : 'legacy-mailbox-status';
   var status = '<span id="'+statusId+'" data-qa="settings.mailbox.legacy-status">'+escapeHtml(legacyMailboxStatusText())+'</span>';
   if (shape === 'module') {
@@ -4940,15 +4957,15 @@ function legacyMailboxRowInnerHtml(shape) {
     // hook, written here so the first render and every repaint have ONE source
     // (the module resolves clicks with closest() on its mount root, so a
     // repainted control stays live).
-    return status + (blocked ? '' : ' <button type="button" class="skipi-settings__button skipi-settings__button--secondary" data-settings-action="crewing-mailbox-disconnect">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
+    return status + ((blocked || pending) ? '' : ' <button type="button" class="skipi-settings__button skipi-settings__button--secondary" data-settings-action="crewing-mailbox-disconnect">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
   }
   if (shape === 'mobile') {
     return '<div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+label+'</strong>'+desc+' '+status+'</div>'
-      + (blocked ? '' : '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
+      + ((blocked && !pending) ? '' : '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+dis+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>');
   }
   return '<div class="setting-info"><div class="setting-label">'+label+'</div><div class="setting-desc">'+desc+'</div></div>'
     + '<div class="setting-control">'+status
-    + (blocked ? '' : ' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;" onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>')
+    + ((blocked && !pending) ? '' : ' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px 12px;font-size:12px;"'+dis+' onclick="openMailboxSettings()">'+escapeHtml(tr('confirm.disconnect'))+'</button>')
     + '</div>';
 }
 function legacyMailboxRowHtml(shape) {
@@ -4960,14 +4977,20 @@ function legacyMailboxRowHtml(shape) {
 }
 async function legacyMailboxDisconnect() {
   var m = legacyMailboxState();
+  // In the flight window we do not know yet — saying «отключать нечего» would be
+  // as false as saying «отключён».
+  if (m.loading) { showToast(legacyMailboxStatusText(), 'warn'); return; }
   if (legacyMailboxRevokeBlocked()) { showToast(tr('settings.mailbox_legacy_none'), 'warn'); return; }
   var ok = await inAppConfirm(tr('confirm.mailbox_disconnect'), { confirmLabel: tr('confirm.disconnect') });
   if (!ok) return;
+  // What the server said BEFORE the command decides the sentence after it. A
+  // command that succeeded is not the same fact as a mailbox that was connected.
+  var wasConnected = legacyMailboxConfigured();
   try {
     await invoke('disconnect_mailbox');
     m.box = { configured:false, status:'disconnected' };
     legacyMailboxPaint();
-    showToast(tr('settings.mailbox_legacy_done'), 'success');
+    showToast(tr(wasConnected ? 'settings.mailbox_legacy_done' : 'settings.mailbox_legacy_none'), wasConnected ? 'success' : 'warn');
   } catch (e) {
     // The server refused: what we believe about the mailbox is stale as well.
     legacyMailboxInvalidate();

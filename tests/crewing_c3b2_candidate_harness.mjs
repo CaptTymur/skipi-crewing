@@ -2097,6 +2097,113 @@ console.log('# K2 modules/crew-flow');
         'K2.1-29: a refused disconnect drops the cached status too — the next look asks the server');
     }
 
+    // ---- 30/31. the window while the answer is in flight ------------------
+    // Supervisor R2 on d0da5542: for the ~900 ms the status request is in the
+    // air the row said «статус не проверен» AND offered the control, so a press
+    // sent disconnect_mailbox at a mailbox that was not connected and the toast
+    // still said «Ящик отключён.» — a false sentence on screen. The ban lasts
+    // exactly as long as the flight; a cached "not connected" is a different
+    // state and keeps its own rule (check 26).
+    {
+      const mbSlice30 = fxSlice('function legacyMailboxState() {', '// CREWING LEGACY MAILBOX ROW (K2.1) END');
+      const inFlightProbe = async (box, opts) => {
+        opts = opts || {};
+        const calls = [];
+        const toasts = [];
+        let release = null;
+        const nodes = new Map();
+        for (const id of ['legacy-mailbox-row-desktop', 'legacy-mailbox-row-mobile', 'legacy-mailbox-row-module']) {
+          nodes.set(id, { id, innerHTML: '', textContent: '' });
+        }
+        const ctx = vm.createContext({
+          console, Promise, String, Object, Array, JSON, Number, setTimeout,
+          state: {}, getUiLang: () => (opts.lang || 'en'), tr: (k) => k,
+          escapeHtml: (v) => String(v == null ? '' : v), escapeAttr: (v) => String(v == null ? '' : v),
+          showToast: (m, kind) => toasts.push([String(m), kind]),
+          inAppConfirm: async () => true,
+          document: { getElementById: (id) => nodes.get(id) || null },
+          async invoke(cmd) {
+            calls.push(cmd);
+            if (cmd === 'get_mailbox_status') {
+              if (opts.hold) { await new Promise((r) => { release = r; }); }
+              return box;
+            }
+            if (cmd === 'disconnect_mailbox' && opts.disconnectThrows) throw new Error('refused');
+            return null;
+          },
+        });
+        vm.runInContext(mbSlice30 + '\nthis.__mb = { legacyMailboxEnsureStatus, legacyMailboxDisconnect, legacyMailboxRevokeBlocked, legacyMailboxRowHtml, legacyMailboxStatusText, legacyMailboxInvalidate, legacyMailboxState };', ctx);
+        return { ctx, calls, toasts, nodes, release: () => release && release() };
+      };
+      try {
+        // 30: the answer is held in the air; the row must offer nothing yet.
+        const flight = await inFlightProbe({ configured: false, status: 'not_configured' }, { hold: true });
+        const rowDuringFlight = flight.ctx.__mb.legacyMailboxRowHtml('desktop');
+        await flush(4);
+        softOk(flight.ctx.__mb.legacyMailboxRevokeBlocked() === true,
+          'K2.1-30: while the status request is in the air the revoke is not offered');
+        // Not pressable in either shape — said differently only because the
+        // presence contract pins the token in the rendered fallback section.
+        softOk(/data-qa="settings\.mailbox\.legacy-disconnect"[^>]* disabled/.test(rowDuringFlight),
+          'K2.1-30: the fallback control in that window is rendered DISABLED, not live');
+        softOk(!/crewing-mailbox-disconnect/.test(flight.ctx.__mb.legacyMailboxRowHtml('module')),
+          'K2.1-30: and the module shape, which has no disabled button, renders no control at all');
+        const pressed = flight.calls.filter((c) => c === 'disconnect_mailbox').length;
+        await flight.ctx.__mb.legacyMailboxDisconnect();
+        await flush(6);
+        softOk(flight.calls.filter((c) => c === 'disconnect_mailbox').length === pressed,
+          'K2.1-30: and a press in that window sends nothing to the server');
+        softOk(!flight.toasts.some(([m]) => m === 'settings.mailbox_legacy_done' || m === 'settings.mailbox_legacy_none'),
+          'K2.1-30: nor does it claim anything about a mailbox nobody has heard about yet');
+        // `/check/i` would also match "status not checked" — the never-asked
+        // text — so the two are compared against each other, not against a word.
+        const neverProbe = await inFlightProbe({ configured: false, status: 'not_configured' });
+        const neverText = neverProbe.ctx.__mb.legacyMailboxStatusText();
+        const flightText = flight.ctx.__mb.legacyMailboxStatusText();
+        softOk(flightText !== neverText && /checking/i.test(flightText),
+          'K2.1-30: the row says the status is BEING checked, which is not the never-checked text — got "' + flightText + '" vs "' + neverText + '"');
+        flight.release();
+        await flush(8);
+        softOk(flight.ctx.__mb.legacyMailboxRevokeBlocked() === true && !/legacy-mailbox-disconnect/.test(flight.nodes.get('legacy-mailbox-row-desktop').innerHTML),
+          'K2.1-30: once the answer says "not connected" the control stays away');
+        const flight2 = await inFlightProbe({ configured: true, status: 'active' }, { hold: true });
+        flight2.ctx.__mb.legacyMailboxRowHtml('desktop');
+        await flush(4);
+        softOk(flight2.ctx.__mb.legacyMailboxRevokeBlocked() === true, 'K2.1-30: the same window applies when the mailbox turns out to be connected');
+        flight2.release();
+        await flush(8);
+        softOk(/legacy-mailbox-disconnect/.test(flight2.nodes.get('legacy-mailbox-row-desktop').innerHTML),
+          'K2.1-30: and after the answer the control appears');
+        // 31: the sentence after the command must match what the server said.
+        const wasConnected = await inFlightProbe({ configured: true, status: 'active' });
+        wasConnected.ctx.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        await wasConnected.ctx.__mb.legacyMailboxDisconnect(); await flush(8);
+        softOk(wasConnected.calls.includes('disconnect_mailbox')
+          && wasConnected.toasts.some(([m]) => m === 'settings.mailbox_legacy_done'),
+          'K2.1-31: disconnecting a CONNECTED mailbox says it was disconnected');
+        const wasNot = await inFlightProbe({ configured: false, status: 'error' });
+        wasNot.ctx.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        await wasNot.ctx.__mb.legacyMailboxDisconnect(); await flush(8);
+        softOk(wasNot.calls.includes('disconnect_mailbox'),
+          'K2.1-31: an unknown status still lets the operator try (check 26 holds)');
+        softOk(!wasNot.toasts.some(([m]) => m === 'settings.mailbox_legacy_done'),
+          'K2.1-31: but a mailbox that was not connected is NEVER reported as disconnected');
+        softOk(wasNot.toasts.some(([m]) => m === 'settings.mailbox_legacy_none'),
+          'K2.1-31: the operator is told what actually happened instead');
+        // the invalidation effect, measured at the refusal branch (site 3 of 3)
+        const refused = await inFlightProbe({ configured: true, status: 'active' }, { disconnectThrows: true });
+        refused.ctx.__mb.legacyMailboxEnsureStatus(); await flush(8);
+        const statusBefore = refused.calls.filter((c) => c === 'get_mailbox_status').length;
+        await refused.ctx.__mb.legacyMailboxDisconnect(); await flush(10);
+        softOk(refused.calls.filter((c) => c === 'get_mailbox_status').length === statusBefore + 1,
+          'K2.1-29/site3: a refused disconnect re-asks the server for the status — the EFFECT, not the token');
+        softOk(refused.toasts.some(([m]) => /mailbox_legacy_failed/.test(String(m))),
+          'K2.1-31: and the refusal is reported as a refusal');
+      } catch (e) {
+        softOk(false, 'K2.1-30: the in-flight window runs in isolation — ' + (e && (e.message || e)));
+      }
+    }
+
     // ---- 12/14/17. the native side the screen depends on -------------------
     softOk(/#\[serde\(default\)\]\s*\n\s*pub attachments: Vec<CandidateIntakeAttachment>/.test(rust),
       'K2.1-12: the receipt struct carries the attachments list (without it the typed command drops it silently)');

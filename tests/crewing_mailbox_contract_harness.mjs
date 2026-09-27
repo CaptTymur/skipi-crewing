@@ -200,8 +200,9 @@ for (let i = 0; i < 10; i += 1) await Promise.resolve();
 const settingsHtml = elFor('modal-host').innerHTML;
 ok(settingsHtml.includes('data-qa="settings.mailbox.legacy"'), 'the settings modules section renders the legacy-mailbox row');
 ok(settingsHtml.includes('Личный ящик (устаревший)'), 'the row carries the RU label the owner will read');
-ok(settingsHtml.includes('data-qa="settings.mailbox.legacy-disconnect"') && settingsHtml.includes('onclick="openMailboxSettings()"'),
-  'the row carries exactly one control, wired to the surviving entry point');
+ok(/data-qa="settings\.mailbox\.legacy-disconnect"/.test(elFor('legacy-mailbox-row-desktop').innerHTML)
+  && /onclick="openMailboxSettings\(\)"/.test(elFor('legacy-mailbox-row-desktop').innerHTML),
+  'the painted row carries exactly one control, wired to the surviving entry point');
 ok(!settingsHtml.includes('Mailbox settings') && !settingsHtml.includes('id="mail-imap-host"'),
   'the settings section offers no connect form any more');
 ok(calls.some(([cmd]) => cmd === 'get_mailbox_status'), 'rendering the row asks the server for the status');
@@ -262,12 +263,16 @@ const moduleCtx = {
   saveSettings: (next) => mounted.host.saveSettings(next),
 };
 const sectionHtml = appSections.map((sec) => (typeof sec.renderHtml === 'function' ? sec.renderHtml(moduleCtx) : '')).join('\n');
+// That first render is what starts the status request; what the module ends up
+// showing is the painted row (legacyMailboxPaint writes into the container).
+for (let i = 0; i < 12; i += 1) await Promise.resolve();
+const modulePainted = elFor('legacy-mailbox-row-module').innerHTML;
 ok(sectionHtml.includes('data-qa="settings.mailbox.legacy"'),
   'K2.1-23: the sections that reach the module carry the legacy-mailbox row');
 ok(sectionHtml.includes('Личный ящик (устаревший)') || sectionHtml.includes('Personal mailbox (legacy)'),
   'K2.1-23: with the label the owner will read');
-ok(/data-settings-action="crewing-mailbox-disconnect"/.test(sectionHtml),
-  'K2.1-23: and a control built to the module contract (data-settings-action)');
+ok(/data-settings-action="crewing-mailbox-disconnect"/.test(modulePainted),
+  'K2.1-23: and a control built to the module contract (data-settings-action), once the status is in');
 const mailboxHandler = appSections.map((sec) => (sec.handlers || {})['crewing-mailbox-disconnect']).find(Boolean);
 ok(typeof mailboxHandler === 'function', 'K2.1-23: the module contract carries a handler for that control');
 for (let i = 0; i < 10; i += 1) await Promise.resolve();
@@ -334,19 +339,49 @@ const unflagged = elFor('modal-host').innerHTML;
 ok(!unflagged.includes('settings5-shell'), 'the unflagged desktop settings screen is the legacy renderer');
 ok(unflagged.includes('data-qa="settings.mailbox.legacy"') && unflagged.includes('Личный ящик (устаревший)'),
   'K2.1-24: the fallback settings screen (module not loaded) carries the legacy-mailbox row too');
-ok(unflagged.includes('data-qa="settings.mailbox.legacy-disconnect"') && unflagged.includes('onclick="openMailboxSettings()"'),
-  'and its disconnect control, on the screen the owner will actually open');
+ok(/data-qa="settings\.mailbox\.legacy-disconnect"/.test(elFor('legacy-mailbox-row-desktop').innerHTML)
+  && /onclick="openMailboxSettings\(\)"/.test(elFor('legacy-mailbox-row-desktop').innerHTML),
+  'and its disconnect control, on the screen the owner will actually open (after the status lands)');
 ok(/o\*\*\*@example\.com/.test(elFor('legacy-mailbox-row-desktop').innerHTML),
   'the unflagged row asks the server and paints the status');
 M.mobileOpenSettings('org');
-const unflaggedMobile = elFor('mobile-main').innerHTML;
-ok(unflaggedMobile.includes('data-qa="settings.mailbox.legacy"') && unflaggedMobile.includes('data-qa="settings.mailbox.legacy-disconnect"'),
-  'the unflagged MOBILE settings screen carries the same row');
+for (let i = 0; i < 12; i += 1) await Promise.resolve();
+ok(elFor('mobile-main').innerHTML.includes('data-qa="settings.mailbox.legacy"')
+  && /data-qa="settings\.mailbox\.legacy-disconnect"/.test(elFor('legacy-mailbox-row-mobile').innerHTML),
+  'the unflagged MOBILE settings screen carries the same row, with its control once the status is in');
 const beforeUnflagged = calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length;
 await M.openMailboxSettings();
 ok(calls.filter(([cmd]) => cmd === 'disconnect_mailbox').length === beforeUnflagged + 1,
   'the control reaches disconnect_mailbox from the unflagged screen');
 ok(M.legacyMailboxConfigured() === false, 'and the unflagged row stops claiming a connected mailbox');
+
+section('the invalidation EFFECT at the mobile fallback site (R1: token != effect)');
+// Supervisor R1 on d0da5542: a mutation that keeps the CALL and kills the effect
+// (`if (0) …`) stayed green in two of the three sites, because only openSettings
+// had a runtime check. This measures the phone's fallback navigation by effect:
+// the live status call must happen again, and the row must follow the server.
+{
+  delete globalThis.window.SkipiSettings; // fallback navigation: no module
+  mailbox = { configured: false, status: 'not_configured' };
+  Object.assign(M.legacyMailboxState(), { box: null, loading: false, loaded: false });
+  els.delete('legacy-mailbox-row-mobile');
+  const before = calls.filter(([cmd]) => cmd === 'get_mailbox_status').length;
+  M.mobileOpenSettings('org');
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  ok(calls.filter(([cmd]) => cmd === 'get_mailbox_status').length === before + 1,
+    'K2.1-29/site2: opening the phone settings asks the server for the status');
+  ok(!/legacy-mailbox-disconnect/.test(elFor('legacy-mailbox-row-mobile').innerHTML),
+    'K2.1-29/site2: with nothing connected the phone row offers no control');
+  // the mailbox is connected elsewhere while the app keeps running
+  mailbox = { configured: true, status: 'active', email_masked: 'o***@example.com', has_password: true };
+  M.mobileOpenSettings('org');
+  for (let i = 0; i < 12; i += 1) await Promise.resolve();
+  ok(calls.filter(([cmd]) => cmd === 'get_mailbox_status').length === before + 2,
+    'K2.1-29/site2: every phone open asks again — the effect, not the token');
+  ok(/legacy-mailbox-disconnect/.test(elFor('legacy-mailbox-row-mobile').innerHTML)
+    && /o\*\*\*@example\.com/.test(elFor('legacy-mailbox-row-mobile').innerHTML),
+    'K2.1-29/site2: and the phone row follows the new answer without a restart');
+}
 
 console.log('\ncrewing_mailbox_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
