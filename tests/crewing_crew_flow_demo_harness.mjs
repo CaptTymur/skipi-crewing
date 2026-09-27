@@ -264,7 +264,7 @@ function loadInlineModuleForCurrentStore() {
     scriptNoBoot
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal };'
+      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal, renderCrewFlowTreeBody, crewFlowLiveTreeHtml, initLeftPanelResizer: (typeof initLeftPanelResizer === "function" ? initLeftPanelResizer : null) };'
   )();
 }
 
@@ -445,6 +445,119 @@ if (M) {
     ok(!elFor('main').innerHTML.includes('data-qa="track1-candidate-intake-panel"'), 'Track 1 panel is default-off outside demo mode');
   }
   store.set('skipi_crewing_demo', '1');
+}
+
+
+// ===== K2.2 (OWNER 2026-09-27): the left panel is resizable and the queue row stacks =====
+// Owner: "trying to widen the left panel and it does not work" with a frame of
+// 0.4.136 where the Crew Flow row text is cut by the panel edge. Two causes,
+// both measured on main fa97760b: (1) .left-panel was a fixed 280 px with no
+// handle at all; (2) .tree-item is a horizontal flex made for one-line items,
+// while the Crew Flow row puts three block divs inside it, so they lined up
+// side by side and overflowed. The fix is scoped: a handle next to the panel
+// and a .ti-stack modifier on the Crew Flow rows only — the one-line lists
+// (Seafarers DB, profiles) keep the plain .tree-item layout.
+section('K2.2 static: left-panel resizer handle and stacked queue rows');
+const cssText = [...HTML.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+const cssRule = (selector) => {
+  const re = new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}');
+  const m = cssText.match(re);
+  return m ? m[1] : null;
+};
+ok(/<div class="left-panel" id="left-panel"><\/div>\s*<div class="lp-resizer" id="lp-resizer" data-qa="left-panel-resizer"[^>]*><\/div>\s*<main id="main">/.test(HTML),
+  'K2.2: the resizer handle is the .app child between #left-panel and #main (id="lp-resizer", data-qa="left-panel-resizer")');
+const resizerCss = cssRule('.lp-resizer');
+ok(!!resizerCss && /cursor\s*:\s*col-resize/.test(resizerCss), 'K2.2: .lp-resizer shows the col-resize cursor');
+ok(!!cssRule('.left-panel[style*="display: none"] + .lp-resizer') && /display\s*:\s*none/.test(cssRule('.left-panel[style*="display: none"] + .lp-resizer') || ''),
+  'K2.2: the handle disappears together with a hidden left panel (pilot/team views)');
+ok(/\.left-panel \{[^}]*width: 280px;/.test(cssText), 'K2.2: the stylesheet default width stays 280 px (the double-click reset target)');
+const stackCss = cssRule('.tree-item.ti-stack');
+ok(!!stackCss && /display\s*:\s*block/.test(stackCss), 'K2.2: .tree-item.ti-stack lays the row out as a column (display: block), not the one-line flex');
+ok(!!cssRule('.tree-item.ti-stack strong') && /overflow-wrap\s*:\s*anywhere/.test(cssRule('.tree-item.ti-stack strong') || ''),
+  'K2.2: a long identifier in a stacked row wraps instead of overflowing');
+ok(!!cssRule('#crew-flow-tree') && /overflow-x\s*:\s*hidden/.test(cssRule('#crew-flow-tree') || ''), 'K2.2: the Crew Flow tree never grows a horizontal scrollbar');
+ok(/\.tree-item \{ padding: 6px 12px 6px 28px; font-size: 13px; cursor: pointer; color: var\(--text\);\n\s*display: flex; align-items: center;/.test(cssText),
+  'K2.2: the plain .tree-item rule (one-line lists) is untouched');
+ok(/class="tree-item ti-stack ' \+ \(selected === item\.intake_id \? 'active' : ''\) \+ '" data-qa="crew-flow-row"/.test(crewBlock),
+  'K2.2: the live Crew Flow row carries ti-stack');
+ok(/class="tree-item ti-stack '\+\(active\?'active':''\)\+'" data-qa="crew-flow-signal-row"/.test(crewBlock),
+  'K2.2: the demo Crew Flow row carries ti-stack');
+ok((HTML.match(/class="tree-item ti-stack/g) || []).length === 2, 'K2.2: ti-stack is used by exactly the two Crew Flow row renderers — got ' + (HTML.match(/class="tree-item ti-stack/g) || []).length);
+ok(HTML.includes("'left_panel.resize_hint':") && (HTML.match(/'left_panel\.resize_hint':'([^']*)'/g) || []).length >= 2,
+  'K2.2: the handle tooltip has en and ru dictionary values');
+ok(/initLeftPanelResizer\(\);/.test(HTML.slice(HTML.indexOf('// ------------- boot -------------'))), 'K2.2: the desktop boot installs the resizer');
+
+section('K2.2 runtime: drag clamps to 220–560, remembers the width, double-click resets to 280');
+if (M && typeof M.initLeftPanelResizer === 'function') {
+  const listeners = new Map();
+  const on = (target) => (type, fn) => { listeners.set(target + ':' + type, fn); };
+  const off = (target) => (type) => { listeners.delete(target + ':' + type); };
+  const fire = (target, type, ev) => { const fn = listeners.get(target + ':' + type); if (fn) fn(Object.assign({ preventDefault() {}, button: 0 }, ev || {})); return !!fn; };
+  const lp = makeElement('left-panel');
+  lp.getBoundingClientRect = () => ({ width: parseInt(lp.style.width, 10) || 280 });
+  const handle = makeElement('lp-resizer');
+  const classes = new Set();
+  handle.classList = { add: (c) => classes.add(c), remove: (c) => classes.delete(c), toggle() {}, contains: (c) => classes.has(c) };
+  lp.addEventListener = on('lp'); handle.addEventListener = on('handle');
+  elements.set('left-panel', lp); elements.set('lp-resizer', handle);
+  globalThis.document.addEventListener = on('doc');
+  globalThis.document.removeEventListener = off('doc');
+  const WIDTH_KEY = 'skipi_crewing_left_panel_width';
+  store.delete(WIDTH_KEY);
+
+  M.initLeftPanelResizer();
+  ok(listeners.has('handle:mousedown') && listeners.has('handle:dblclick'), 'K2.2: init wires mousedown and dblclick on the handle');
+  ok(lp.style.width === undefined || lp.style.width === '', 'K2.2: without a stored width the panel keeps the stylesheet 280 px (no inline width)');
+  ok(typeof handle.title === 'string' && handle.title.length > 0, 'K2.2: the handle gets a localized tooltip');
+
+  fire('handle', 'mousedown', { clientX: 300 });
+  ok(listeners.has('doc:mousemove') && listeners.has('doc:mouseup'), 'K2.2: mousedown arms document mousemove/mouseup');
+  ok(classes.has('dragging'), 'K2.2: the handle is marked dragging while the mouse is down');
+  fire('doc', 'mousemove', { clientX: 420 });
+  ok(lp.style.width === '400px', 'K2.2: dragging +120 px from 280 gives 400 px — got ' + lp.style.width);
+  fire('doc', 'mousemove', { clientX: 1300 });
+  ok(lp.style.width === '560px', 'K2.2: dragging far right clamps at 560 px — got ' + lp.style.width);
+  fire('doc', 'mouseup', {});
+  ok(!listeners.has('doc:mousemove') && !listeners.has('doc:mouseup'), 'K2.2: mouseup disarms the document listeners');
+  ok(!classes.has('dragging'), 'K2.2: the dragging mark is removed on mouseup');
+  ok(store.get(WIDTH_KEY) === '560', 'K2.2: the width is remembered under skipi_crewing_left_panel_width — got ' + store.get(WIDTH_KEY));
+
+  fire('handle', 'mousedown', { clientX: 580 });
+  fire('doc', 'mousemove', { clientX: 100 });
+  ok(lp.style.width === '220px', 'K2.2: dragging far left clamps at 220 px — got ' + lp.style.width);
+  fire('doc', 'mouseup', {});
+  ok(store.get(WIDTH_KEY) === '220', 'K2.2: the clamped minimum is what gets remembered');
+
+  fire('handle', 'dblclick', {});
+  ok(lp.style.width === '280px', 'K2.2: double-click resets the panel to 280 px — got ' + lp.style.width);
+  ok(!store.has(WIDTH_KEY), 'K2.2: the reset forgets the stored width (fresh start = stylesheet default)');
+
+  store.set(WIDTH_KEY, '333');
+  lp.style.width = '';
+  M.initLeftPanelResizer();
+  ok(lp.style.width === '333px', 'K2.2: a remembered width is applied on init — got ' + lp.style.width);
+  store.set(WIDTH_KEY, '9999');
+  M.initLeftPanelResizer();
+  ok(lp.style.width === '560px', 'K2.2: a corrupt stored width is clamped on init, not trusted — got ' + lp.style.width);
+  store.set(WIDTH_KEY, 'garbage');
+  lp.style.width = '';
+  M.initLeftPanelResizer();
+  ok(lp.style.width === undefined || lp.style.width === '', 'K2.2: a non-numeric stored width is ignored');
+  store.delete(WIDTH_KEY);
+
+  ok(!/mousedown|lp-resizer|initLeftPanelResizer/.test(HTML.slice(HTML.indexOf('// ------------- Android / compact mobile shell -------------'), HTML.indexOf('// ------------- boot -------------'))),
+    'K2.2: the mobile shell block knows nothing about the resizer (mobile has no left panel: body.mobile-shell .app is display:none)');
+
+  // The stacked row is what the operator sees: render the demo queue and read the rows.
+  const treeEl = elFor('crew-flow-tree');
+  M.state.view = 'crew_flow';
+  M.renderCrewFlowTreeBody();
+  const rowsHtml = treeEl.innerHTML;
+  const rowTags = rowsHtml.match(/<div class="tree-item ti-stack[^"]*" data-qa="crew-flow-signal-row"/g) || [];
+  ok(rowTags.length > 0 && rowTags.length === (rowsHtml.match(/data-qa="crew-flow-signal-row"/g) || []).length,
+    'K2.2: every rendered demo row is a stacked tree-item — ' + rowTags.length + ' rows');
+} else {
+  ok(false, 'K2.2 runtime checks require initLeftPanelResizer in the inline module' + (M ? ' (function missing)' : ' (script failed to load)'));
 }
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
