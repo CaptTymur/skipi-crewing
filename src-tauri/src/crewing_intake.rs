@@ -1117,6 +1117,22 @@ pub(crate) async fn crewing_intake_object_download(
     .await
 }
 
+/// The attachment ordinal as the server counts it: FROM ZERO. Server
+/// `_ordinal_or_404`: "the floor is 0, not 1 - attachments are counted from
+/// zero"; `docs/crewing-baseline/c3a-api-contract.md` §attachments (rows
+/// "ordered by `ordinal`", the receipt of a one-attachment letter carries
+/// `ordinal: 0`). The bound is a pure function so a unit test can hold it
+/// against that contract without a Tauri runtime: K2.1 shipped with a floor
+/// of 1, and the first — often the only — attachment of every letter was
+/// refused as `ordinal_out_of_range` while `GET /attachments/0` answered 200
+/// with the bytes (BACKLOG №504, 2026-09-27).
+fn checked_attachment_ordinal(ordinal: i64) -> Result<i64, PilotBridgeError> {
+    if ordinal < 0 || ordinal > 9999 {
+        return Err(invalid_request("ordinal_out_of_range"));
+    }
+    Ok(ordinal)
+}
+
 #[tauri::command]
 pub(crate) async fn crewing_intake_attachment_download(
     expected_context: PilotExpectedContext,
@@ -1127,9 +1143,7 @@ pub(crate) async fn crewing_intake_attachment_download(
 ) -> Result<CandidateIntakeDownload, PilotBridgeError> {
     let context = context_from_state(state, &expected_context)?;
     without_blocking_ui(move || {
-        if ordinal < 1 || ordinal > 9999 {
-            return Err(invalid_request("ordinal_out_of_range"));
-        }
+        let ordinal = checked_attachment_ordinal(ordinal)?;
         let url = intake_url(
             &context,
             &intake_id,
@@ -1756,5 +1770,28 @@ mod tests {
             None,
             "unknown detail never leaves the safe allowlist"
         );
+    }
+
+    #[test]
+    fn the_first_attachment_is_ordinal_zero() {
+        // Server contract: attachments are counted from zero (`_ordinal_or_404`,
+        // c3a-api-contract.md). Live 2026-09-27: GET /attachments/0 answered 200
+        // with 898 bytes while this client refused ordinal 0 as out of range
+        // (BACKLOG №504) — so every single-attachment letter had nothing to
+        // download.
+        assert_eq!(
+            checked_attachment_ordinal(0),
+            Ok(0),
+            "ordinal 0 is the FIRST attachment and must pass the bound"
+        );
+        assert_eq!(checked_attachment_ordinal(1), Ok(1));
+        assert_eq!(checked_attachment_ordinal(9999), Ok(9999));
+        let refused = |ordinal: i64| {
+            checked_attachment_ordinal(ordinal)
+                .expect_err("an out-of-range ordinal must be refused")
+                .detail
+        };
+        assert_eq!(refused(-1), Some("ordinal_out_of_range".to_string()));
+        assert_eq!(refused(10000), Some("ordinal_out_of_range".to_string()));
     }
 }
