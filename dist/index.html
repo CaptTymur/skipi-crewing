@@ -11133,8 +11133,7 @@ function renderSettingsFiveShell() {
         ], 'settings.modules.v11-preview')
       + sectionTitle('Installed modules')
       + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Apps launcher</div><div class="setting-desc">Open installed first-party modules and plugin details. Runtime and sandbox are unchanged.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'apps\');">Open Apps</button></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Module permissions</div><div class="setting-desc">Permissions are shown in each plugin detail. Generic plugin settings stay with the plugin.</div></div><div class="setting-control"><span class="apps-badge installed">module-owned</span></div></div>'
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Module permissions</div><div class="setting-desc">Permissions are shown in each plugin detail. Generic plugin settings stay with the plugin.</div></div><div class="setting-control"><span class="apps-badge installed">module-owned</span></div></div>'
         )
       + nestedTitle('Sources / Connections', 'settings.modules.sources')
       + grp(
@@ -12703,6 +12702,8 @@ function mobileSettingsAppHtml() {
     + '</div>';
 }
 
+// K2.2 L1 (OWNER 2026-09-27 "Apps … убираем из сборки"): the "Open Apps" rows of the settings5
+// preview (desktop renderSettingsFiveShell, mobile below) left with the module — no route into Apps.
 function mobileSettingsFiveModulesHtml() {
   var s = state.settings || {};
   return mobileSettingsHead('Modules / Apps', 'Installed modules and sources live here. Work content stays in home modules.')
@@ -12710,8 +12711,7 @@ function mobileSettingsFiveModulesHtml() {
     + '<div class="mobile-section-title" style="margin-top:0;">Installed modules</div>'
     + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Built-in modules</strong>Apps, VSL DB source and AI Assistant entry are shown as configuration surfaces only.</div><span class="mobile-status">preview</span></div>'
     + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Community modules</strong>Community source is disabled until catalog policy is accepted.</div><span class="mobile-status warn">later</span></div>'
-    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Apps launcher</strong>Open Apps to manage installed modules and plugin details.</div><button class="mobile-secondary" onclick="mobileShow(\'apps\')">Open Apps</button></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Plugin internals</strong>Settings owned by plugins stay inside those plugins.</div><span class="mobile-status">module-owned</span></div>'
+    + '<div class="mobile-setting-row" style="border-top:0;padding-top:0;"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Plugin internals</strong>Settings owned by plugins stay inside those plugins.</div><span class="mobile-status">module-owned</span></div>'
     + '</div>'
     + '<div class="mobile-card" data-qa="settings.modules.sources">'
     + '<div class="mobile-section-title" style="margin-top:0;">Sources / Connections</div>'
