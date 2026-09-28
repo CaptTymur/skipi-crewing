@@ -1024,6 +1024,10 @@ pub struct ComplianceProfileDraft {
     pub name: Option<String>,
     #[serde(default)]
     pub rank: Option<String>,
+    /// P2/S1. The second thing a crewing matches on, and a profile cannot be
+    /// published without it.
+    #[serde(default)]
+    pub vessel_type: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
@@ -1042,14 +1046,31 @@ pub struct ServerComplianceProfile {
     #[serde(default)]
     pub rank: Option<String>,
     #[serde(default)]
+    pub vessel_type: Option<String>,
+    #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
     pub mandatory_certs: Option<Vec<String>>,
     #[serde(default)]
     pub extra_requirements: Option<Vec<ComplianceExtraRequirement>>,
     pub status: String,
+    /// P2/S1, READ-ONLY on this surface: "unpublished" | "published".
+    /// Publication is only ever CHANGED through the matching-profile route,
+    /// which is the one that owns the version and the frozen snapshot. It is
+    /// read here so the profile card can draw the button in the right state
+    /// without a second round-trip. `serde(default)` because an older server
+    /// does not send it, and a crewing on an older pilot must still be able
+    /// to open its own profiles.
+    #[serde(default = "unpublished_state")]
+    pub publication_state: String,
+    #[serde(default)]
+    pub published_snapshot: Option<serde_json::Value>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+fn unpublished_state() -> String {
+    "unpublished".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1114,6 +1135,7 @@ fn create_compliance_profile(
         "crewing_id": settings.crewing_id,
         "name": name,
         "rank": draft.rank.as_deref().map(str::trim).filter(|s| !s.is_empty()),
+        "vessel_type": draft.vessel_type.as_deref().map(str::trim).filter(|s| !s.is_empty()),
         "description": description,
         "mandatory_certs": draft.mandatory_certs.unwrap_or_default(),
         "extra_requirements": draft.extra_requirements.unwrap_or_default(),
@@ -1158,6 +1180,17 @@ fn update_compliance_profile(
         let trimmed = rank.trim().to_string();
         body.insert(
             "rank".into(),
+            if trimmed.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::Value::String(trimmed)
+            },
+        );
+    }
+    if let Some(vessel_type) = draft.vessel_type {
+        let trimmed = vessel_type.trim().to_string();
+        body.insert(
+            "vessel_type".into(),
             if trimmed.is_empty() {
                 serde_json::Value::Null
             } else {
@@ -2230,6 +2263,7 @@ pub fn run() {
             crewing_intake::crewing_intake_shortlist_confirm,
             crewing_intake::crewing_intake_shortlist_withdraw,
             crewing_intake::crewing_intake_matching_profile_list,
+            crewing_intake::crewing_intake_matching_profile_publication,
             crewing_intake::crewing_intake_object_download,
             crewing_intake::crewing_intake_attachment_download,
             crewing_intake::crewing_intake_open_saved,
