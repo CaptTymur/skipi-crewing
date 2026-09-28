@@ -316,6 +316,29 @@ pub(crate) struct MatchingProfileListResponse {
     pub items: Vec<MatchingProfileMetadata>,
 }
 
+/// What the publication route hands back (P2/S1).
+///
+/// A separate type from `MatchingProfileMetadata` on purpose: that one is the
+/// thin row the candidate card needs in order to name a profile, and widening
+/// it would put the frozen snapshot into every rank read. Unknown fields are
+/// ignored by serde, so the server may carry more than this without breaking
+/// the client.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct MatchingProfilePublication {
+    pub id: String,
+    pub crewing_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
+    pub vessel_type: Option<String>,
+    pub version: i64,
+    pub state: String,
+    pub publication_state: String,
+    #[serde(default)]
+    pub published_snapshot: Option<Value>,
+}
+
 fn snapshot_context(
     settings: &Settings,
     expected: &PilotExpectedContext,
@@ -431,6 +454,11 @@ fn safe_detail(value: &Value) -> Option<String> {
         "not_confirmed",
         "already_withdrawn",
         "withdraw_not_permitted",
+        // P2/S1 publication. Two refusals that share a 422 and differ only by
+        // their words, so the card can tell the operator WHICH field is
+        // missing instead of "something is wrong".
+        "publication needs a rank on the profile",
+        "publication needs a vessel type on the profile",
     ];
     SAFE.contains(&detail).then(|| detail.to_string())
 }
@@ -924,6 +952,39 @@ pub(crate) async fn crewing_intake_matching_profile_list(
         url.query_pairs_mut()
             .append_pair("include_archived", "true");
         let (_, response) = send(&context, Method::GET, url, None, false)?;
+        Ok(response)
+    })
+    .await
+}
+
+/// P2/S1: publish the profile, or take it off publication. ONE button.
+///
+/// `published` is the whole payload: the server owns the two words and the
+/// frozen snapshot, and a client that posted a state string would be a second
+/// place where the vocabulary lives.
+///
+/// `ambiguous_on_network = true` for the same reason every other write here
+/// sets it: a request that died on the wire may or may not have been applied,
+/// and the card has to say UNKNOWN rather than pick an answer.
+#[tauri::command]
+pub(crate) async fn crewing_intake_matching_profile_publication(
+    expected_context: PilotExpectedContext,
+    profile_id: String,
+    published: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<MatchingProfilePublication, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let profile_id = profile_id.trim().to_string();
+    if profile_id.is_empty() {
+        return Err(invalid_request("profile_id_missing"));
+    }
+    let body = json!({ "published": published });
+    without_blocking_ui(move || {
+        let url = fixed_url(
+            &context,
+            &["matching-profiles", profile_id.as_str(), "publication"],
+        )?;
+        let (_, response) = send(&context, Method::POST, url, Some(body), true)?;
         Ok(response)
     })
     .await

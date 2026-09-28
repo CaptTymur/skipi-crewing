@@ -61,6 +61,41 @@ ok(!c3b2Source.includes('localStorage'), 'card block never persists card state')
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
 
+// --------- P2/S1: the profile card gets a vessel type and ONE publish button
+//
+// Static, and deliberately so: the compliance screen lives OUTSIDE the two
+// bounded C3b blocks this harness runs in a vm, and the publication route it
+// calls is a pilot bridge command, which is what this section of the file is
+// about. What is asserted is the wiring — the command exists, it is
+// registered, its two refusal words are on the safe allowlist, the vessel
+// type reaches the server on the legacy draft as well, and the card actually
+// carries the control. Behaviour on the server side is drilled by
+// tests/test_crewing_p2_s1_profile_publication.py in skipi-server.
+console.log('# P2/S1 profile publication wiring');
+ok(rust.includes('pub(crate) async fn crewing_intake_matching_profile_publication('),
+  'publication is a fixed native command');
+ok(lib.includes('crewing_intake::crewing_intake_matching_profile_publication,'),
+  'publication is registered in Tauri');
+ok(/fn crewing_intake_matching_profile_publication[\s\S]*?json!\(\{ "published": published \}\)/.test(rust),
+  'the client posts only the boolean: the server owns the vocabulary');
+ok(/fn crewing_intake_matching_profile_publication[\s\S]*?&\["matching-profiles", profile_id\.as_str\(\), "publication"\]/.test(rust),
+  'publication goes to the matching-profile surface, which owns the version');
+for (const word of ['publication needs a rank on the profile', 'publication needs a vessel type on the profile']) {
+  ok(rust.includes(`"${word}",`), `safe allowlist carries the refusal word: ${word}`);
+}
+ok(/pub vessel_type: Option<String>,/.test(lib), 'the legacy draft/profile carry vessel_type');
+ok(/"vessel_type": draft\.vessel_type/.test(lib), 'create sends vessel_type');
+ok(/body\.insert\(\s*"vessel_type"\.into\(\)/.test(lib), 'update sends vessel_type');
+ok(/id="cp-vessel-type"/.test(html), 'the profile editor has a vessel-type control');
+ok(/data-qa="profile-publish-button"/.test(html), 'the profile card has the publish button');
+ok(/data-qa="profile-publication-state"/.test(html), 'the profile card shows the publication state separately from active/archived');
+ok(/'profile.publish':'Publish'/.test(html) && /'profile.publish':'Опубликовать'/.test(html),
+  'the button is translated in both shipped languages');
+ok(/PROFILE_PUBLISH_REFUSALS/.test(html) && /publication needs a vessel type on the profile/.test(html),
+  'the card reads the refusal WORD, not just the status');
+ok(!/publication_state[^\n]*(paused|'archived')/.test(html),
+  'publication is never expressed through the matching state or the legacy status');
+
 // ---------------------------------------------------------------------------
 // Isolated runtime: both UI blocks in a vm context with recording stubs.
 // ---------------------------------------------------------------------------
