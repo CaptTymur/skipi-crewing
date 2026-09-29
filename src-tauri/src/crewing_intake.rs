@@ -1475,15 +1475,32 @@ mod tests {
         let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
             "active_confirmations":0,"needs_review_reason":null,
             "profile_ranks":[{"profile_id":"p-main","profile_version":2,"met":2,
-              "missing":1,"unconfirmed":3,"unknown":0,"stale":true}]}"#;
+              "missing":1,"unconfirmed":3,"total":6,"stale":true}]}"#;
         let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
         let rows = summary.profile_ranks.expect("present");
         assert_eq!(rows.len(), 1);
         let row = &rows[0];
         assert_eq!(row.profile_id, "p-main");
         assert_eq!(row.profile_version, 2);
-        assert_eq!((row.met, row.missing, row.unconfirmed, row.unknown), (2, 1, 3, 0));
+        assert_eq!((row.met, row.missing, row.unconfirmed, row.total), (2, 1, 3, 6));
         assert!(row.stale, "stale travels as a bool, exactly as the contract says");
+    }
+
+    // `total` is not symmetry. The card keeps an `unknown` bucket so an outcome
+    // code this build does not know is never silently counted as met; the row
+    // carries numbers, not codes, so `total` is the only thing that can carry
+    // that protection across. A row where the three counts do not add up to
+    // `total` must survive parsing intact so the UI can say so out loud.
+    #[test]
+    fn summary_profile_rank_row_keeps_an_unrecognised_remainder_visible() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":1,"met":2,
+              "missing":0,"unconfirmed":0,"total":5,"stale":false}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let row = &summary.profile_ranks.expect("present")[0];
+        assert_eq!(row.met + row.missing + row.unconfirmed, 2);
+        assert_eq!(row.total, 5, "the remainder stays measurable: 3 outcomes are unaccounted for");
     }
 
     #[test]

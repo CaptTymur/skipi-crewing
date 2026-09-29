@@ -883,8 +883,10 @@ ok(r3Ready, 'R2/L: the Crew Flow list-load path is reachable from the harness');
 if (r3Ready) {
   // A summary exactly as the frozen contract describes it. Counts only: the
   // server holds no locales, so no text and no score crosses this boundary.
-  const pr = (profileId, met, missing, unconfirmed, unknown, stale) => ({
-    profile_id: profileId, profile_version: 1, met, missing, unconfirmed, unknown, stale: !!stale,
+  // The frozen contract, final form: counts + total + stale. `total` is what lets
+  // the row say "not fully recognised" instead of under-counting in silence.
+  const pr = (profileId, met, missing, unconfirmed, total, stale) => ({
+    profile_id: profileId, profile_version: 1, met, missing, unconfirmed, total, stale: !!stale,
   });
   const listItem = (id, profileRanks) => {
     const summary = { state: 'ranked', facts: 3, ranks: (profileRanks || []).length, ranks_stale: 0,
@@ -899,14 +901,18 @@ if (r3Ready) {
   };
   R2_FIXTURES.list = {
     items: [
-      listItem('L-met', [pr('p-main', 2, 0, 0, 0, false)]),
-      listItem('L-gap', [pr('p-main', 1, 1, 1, 0, false)]),
-      listItem('L-other', [pr('p-side', 1, 0, 0, 0, false)]),
+      listItem('L-met', [pr('p-main', 2, 0, 0, 2, false)]),
+      listItem('L-gap', [pr('p-main', 1, 1, 1, 3, false)]),
+      listItem('L-other', [pr('p-side', 1, 0, 0, 1, false)]),
       listItem('L-none', []),        // the server says: no stored evaluation at all
       listItem('L-nofield', undefined), // an older server: the field is simply absent
-      listItem('L-stale', [pr('p-main', 2, 0, 0, 0, true)]),
+      listItem('L-stale', [pr('p-main', 2, 0, 0, 2, true)]),
+      // three outcomes the three counts do not account for — a future outcome code
+      listItem('L-partial', [pr('p-main', 2, 0, 0, 5, false)]),
+      // total missing altogether: coverage cannot be proven, so it is not claimed
+      listItem('L-nototal', [{ profile_id: 'p-main', profile_version: 1, met: 2, missing: 0, unconfirmed: 0, stale: false }]),
     ],
-    limit: 50, offset: 0, total: 6,
+    limit: 50, offset: 0, total: 8,
   };
   R2_FIXTURES.profiles = { items: [
     { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
@@ -972,6 +978,21 @@ if (r3Ready) {
   ok(/data-stale="1"/.test(r3Row('L-stale')) && /data-match="ranked"/.test(r3Row('L-stale')),
     'R2/L: a stale stored evaluation says so instead of reading as current');
 
+  // ---- 3b. the remainder the three counts do not explain ------------------
+  // The card refuses to count an unknown outcome code as met; the row carries
+  // numbers, so `total` is the only way that refusal survives. A row that does
+  // not add up must LOOK different, not be rounded into a match.
+  ok(/data-match="partial"/.test(r3Row('L-partial')),
+    'R2/L: met+missing+unconfirmed != total is its own visible state, not a match');
+  ok(/data-total="5"/.test(r3Row('L-partial')) && /data-met="2"/.test(r3Row('L-partial')),
+    'R2/L: the partial row still carries the true numbers it does have');
+  ok(r3Text(r3Row('L-partial')).indexOf('outcomes not fully recognised') !== -1,
+    'R2/L: and it says so in words — got "' + r3Text(r3Row('L-partial')) + '"');
+  ok(/data-match="partial"/.test(r3Row('L-nototal')),
+    'R2/L: a row without total cannot prove full coverage, so it does not claim it');
+  ok(/data-match="ranked"/.test(r3Row('L-met')) && !/data-match="partial"/.test(r3Row('L-met')),
+    'R2/L (control): a row that does add up is NOT flagged — the check is not vacuous');
+
   // ---- 4. both locales, on the list-loaded rows ---------------------------
   store.set('skipi-crewing-ui-language', 'ru');
   const r3Ru = String(MR3.crewFlowLiveTreeHtml('live'));
@@ -979,10 +1000,12 @@ if (r3Ready) {
     'R2/L: the Russian row prints the three counts separately after a list load');
   ok(/оценки против этого профиля нет/.test(r3Ru) && /оценка ещё не загружена/.test(r3Ru),
     'R2/L: Russian keeps absent and not-loaded as two different sentences');
+  ok(/исходы распознаны не полностью/.test(r3Ru), 'R2/L: the partial state is named in Russian too');
   store.set('skipi-crewing-ui-language', 'en');
   const r3En = String(MR3.crewFlowLiveTreeHtml('live'));
   ok(/no stored comparison against this profile/.test(r3En) && /comparison not loaded yet/.test(r3En) && !/[Ѐ-ӿ]/.test(r3En),
     'R2/L: English keeps them as two different sentences and leaves no Cyrillic');
+  ok(/outcomes not fully recognised/.test(r3En), 'R2/L: the partial state is named in English too');
 
   // ---- 5. a second render costs nothing ----------------------------------
   const r3Before = calls.length;
