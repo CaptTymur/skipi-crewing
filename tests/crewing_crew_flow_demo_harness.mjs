@@ -283,6 +283,7 @@ function loadInlineModuleForCurrentStore() {
       + 'crewFlowCacheProfiles: (typeof crewFlowCacheProfiles === "function" ? crewFlowCacheProfiles : null), '
       + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
       + 'crewFlowCacheRankSummary: (typeof crewFlowCacheRankSummary === "function" ? crewFlowCacheRankSummary : null), '
+      + 'crewFlowRankCache: (typeof crewFlowRankCache === "function" ? crewFlowRankCache : null), '
       + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
       + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
       + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '
@@ -922,8 +923,15 @@ if (r3Ready) {
       listItem('L-partial', [pr('p-main', 2, 0, 0, 5, false)]),
       // total missing altogether: coverage cannot be proven, so it is not claimed
       listItem('L-nototal', [{ profile_id: 'p-main', profile_version: 1, met: 2, missing: 0, unconfirmed: 0, stale: false }]),
+      // the profile was republished: two stored evaluations, one per version.
+      // The row must speak for the NEWEST, or it reports against requirements
+      // that are no longer the published ones.
+      listItem('L-versions', [
+        { profile_id: 'p-main', profile_version: 1, met: 9, missing: 0, unconfirmed: 0, total: 9, stale: false },
+        { profile_id: 'p-main', profile_version: 2, met: 1, missing: 2, unconfirmed: 0, total: 3, stale: false },
+      ]),
     ],
-    limit: 50, offset: 0, total: 8,
+    limit: 50, offset: 0, total: 9,
   };
   R2_FIXTURES.profiles = { items: [
     { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
@@ -1003,6 +1011,29 @@ if (r3Ready) {
     'R2/L: a row without total cannot prove full coverage, so it does not claim it');
   ok(/data-match="ranked"/.test(r3Row('L-met')) && !/data-match="partial"/.test(r3Row('L-met')),
     'R2/L (control): a row that does add up is NOT flagged — the check is not vacuous');
+
+  // ---- 3c. two stored versions of one profile -----------------------------
+  ok(/data-met="1"/.test(r3Row('L-versions')) && /data-missing="2"/.test(r3Row('L-versions'))
+    && /data-total="3"/.test(r3Row('L-versions')),
+    'R2/L: with two stored versions the row speaks for the NEWEST, not the first in the array — got "'
+    + r3Text(r3Row('L-versions')) + '"');
+
+  // ---- 3d. "the field was not sent" is pinned at the guard itself ----------
+  // Two independent guards keep an absent field out of the cache (the list hook
+  // checks Array.isArray, and so does the normalizer). Each is pinned here, so
+  // neither can be removed on the quiet reasoning that the other still holds.
+  const r3Cache = MR3.crewFlowRankCache();
+  ok(!Object.prototype.hasOwnProperty.call(r3Cache, 'L-nofield'),
+    'R2/L: a summary without the field leaves NO cache entry — not an empty one');
+  MR3.crewFlowCacheRankSummary('probe-undefined', undefined);
+  MR3.crewFlowCacheRankSummary('probe-null', null);
+  ok(!Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-undefined')
+    && !Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-null'),
+    'R2/L: the normalizer refuses a non-array outright instead of storing it as "none"');
+  MR3.crewFlowCacheRankSummary('probe-empty', []);
+  ok(Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-empty'),
+    'R2/L (control): an explicit empty list IS stored — the refusal above is about absence, not emptiness');
+  delete MR3.crewFlowRankCache()['probe-empty'];
 
   // ---- 4. both locales, on the list-loaded rows ---------------------------
   store.set('skipi-crewing-ui-language', 'ru');
