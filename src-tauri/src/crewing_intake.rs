@@ -80,6 +80,18 @@ pub(crate) struct CandidateIntakeObject {
     pub content_type: String,
 }
 
+/// Distinguishes "the field was not sent" from "the field was sent as null".
+/// With `#[serde(default)]` the absent field yields the outer `None`, while an
+/// explicit `null` deserializes into `Some(None)` — the only way a three-state
+/// answer survives a two-state type.
+fn double_option<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
+
 /// R2 (OWNER 2026-09-29): one stored evaluation, reduced to what a queue row can
 /// state — counts, never text and never a score. The server holds no locales, so
 /// every word on the row is produced client-side from these numbers.
@@ -111,6 +123,23 @@ pub(crate) struct CandidateIntakeSummary {
     pub ranks_stale: i64,
     pub active_confirmations: i64,
     pub needs_review_reason: Option<String>,
+    /// R2: who the candidate is, rendered by the server from the SAME recorded
+    /// fact the card loads, so the queue row can say whom to open without a card.
+    ///
+    /// Three states, deliberately, and `Option<Option<String>>` is what keeps them
+    /// apart: the outer `None` means this server build does not carry the field
+    /// and nothing can be claimed; `Some(None)` means the server answered that the
+    /// recorded facts hold no name; `Some(Some(s))` is the name. A plain
+    /// `Option<String>` collapses the first two, and the row would then announce
+    /// "no name recorded" about a server that was never asked. `skip_serializing_if`
+    /// carries the same three states across to the webview: absent stays absent
+    /// there instead of arriving as `null`.
+    #[serde(
+        default,
+        deserialize_with = "double_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub candidate_name: Option<Option<String>>,
     /// R2: the stored per-profile outcome, riding along with the list so the queue
     /// row is filled the moment Crew Flow opens — no card opened and no request
     /// per row.

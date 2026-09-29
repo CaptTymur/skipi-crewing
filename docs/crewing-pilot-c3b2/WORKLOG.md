@@ -651,3 +651,43 @@ so nothing ran) and silently emptied those words from the message. That is the
 SKI-INC-2026-09-25 class. The commit was not yet pushed, so it was amended with `-F` from
 a file. Every commit message from here is written with a quoted heredoc and passed with
 `-F`.
+
+### R2 round 3: the row title (OWNER 2026-09-29, decision (a))
+
+The round-2 frames made a second gap of the same class visible: the outcome column
+was filled at list load but the TITLE was still the raw `intake_id`, because the
+candidate's name is a recorded fact and facts load per candidate with the card. The
+live list response carried no name field at all. Reported while the server half was
+still being written; the owner-side decision was to put the name in the same summary,
+so it costs the same request.
+
+Contract addition, at summary level (not inside `profile_ranks`):
+`CandidateIntakeSummary.candidate_name: str | None`.
+
+Client type: `Option<Option<String>>` with `double_option` + `skip_serializing_if`.
+Three states, and the type is what keeps them apart:
+
+- outer `None` — this server build does not carry the field: nothing is claimed;
+- `Some(None)` — the server answered that the recorded facts hold no name: said out
+  loud on the row, next to the `intake_id`, which stays as the fallback identifier;
+- `Some(Some(s))` — the name.
+
+A plain `Option<String>` collapses the first two and the row would announce "no name
+recorded" about a server that was never asked. `skip_serializing_if` carries the same
+distinction across to the webview: an absent field stays absent there instead of
+arriving as `null`, which is what the JS side keys on. Both the parse and the
+serialization are covered by unit tests, because the distinction is consumed in the
+webview, not in Rust.
+
+**Two transports, one source of truth — the explicit decision the owner asked for.**
+`summary.candidate_name` is the server's rendering of the SAME recorded fact `name`
+that the card loads. They are not two sources; they are one fact on two routes. The
+card additionally lets an operator CORRECT that fact, so the card value is the same
+fact one edit later and therefore wins wherever it is in hand
+(`crewFlowRowNameState`: fact → list → none → unknown). The superseded value is never
+shown beside it: one candidate, one name. No second name store was introduced, and
+`facts.name` is unchanged.
+
+Nothing is ever substituted for a missing name — not the source id, not a contact,
+not a blank that would read as an unnamed person; asserted, including that the title
+is not empty.
