@@ -80,6 +80,41 @@ pub(crate) struct CandidateIntakeObject {
     pub content_type: String,
 }
 
+/// Distinguishes "the field was not sent" from "the field was sent as null".
+/// With `#[serde(default)]` the absent field yields the outer `None`, while an
+/// explicit `null` deserializes into `Some(None)` — the only way a three-state
+/// answer survives a two-state type.
+fn double_option<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
+
+/// R2 (OWNER 2026-09-29): one stored evaluation, reduced to what a queue row can
+/// state — counts, never text and never a score. The server holds no locales, so
+/// every word on the row is produced client-side from these numbers.
+///
+/// `total` is not symmetry with the other three. The candidate card keeps an
+/// `unknown` bucket (dist/index.html:6816) precisely so an outcome CODE this build
+/// does not recognise is never silently counted as met. A row carries numbers
+/// rather than codes, so `total` is the only thing that can carry that refusal
+/// across: when `met + missing + unconfirmed` differs from `total`, the row says
+/// the outcomes are not fully recognised instead of under-counting in silence.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateProfileRankSummary {
+    pub profile_id: String,
+    pub profile_version: i64,
+    pub met: i64,
+    pub missing: i64,
+    /// Both `unconfirmed_requirement` and `unconfirmed_fact`, grouped exactly as
+    /// the card groups them. Never folded into `met`.
+    pub unconfirmed: i64,
+    pub total: i64,
+    pub stale: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateIntakeSummary {
     pub state: String,
@@ -88,6 +123,35 @@ pub(crate) struct CandidateIntakeSummary {
     pub ranks_stale: i64,
     pub active_confirmations: i64,
     pub needs_review_reason: Option<String>,
+    /// R2: who the candidate is, rendered by the server from the SAME recorded
+    /// fact the card loads, so the queue row can say whom to open without a card.
+    ///
+    /// Three states, deliberately, and `Option<Option<String>>` is what keeps them
+    /// apart: the outer `None` means this server build does not carry the field
+    /// and nothing can be claimed; `Some(None)` means the server answered that the
+    /// recorded facts hold no name; `Some(Some(s))` is the name. A plain
+    /// `Option<String>` collapses the first two, and the row would then announce
+    /// "no name recorded" about a server that was never asked. `skip_serializing_if`
+    /// carries the same three states across to the webview: absent stays absent
+    /// there instead of arriving as `null`.
+    #[serde(
+        default,
+        deserialize_with = "double_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub candidate_name: Option<Option<String>>,
+    /// R2: the stored per-profile outcome, riding along with the list so the queue
+    /// row is filled the moment Crew Flow opens — no card opened and no request
+    /// per row.
+    ///
+    /// Deliberately `Option`, not a defaulted `Vec`: `None` means this server build
+    /// does not carry the field and the question is UNANSWERED (the row says "not
+    /// loaded"); `Some([])` means the server answered that there are no stored
+    /// evaluations (the row says "no comparison"). Collapsing the two into `[]`
+    /// would make an unanswered question look like an answer on the operator's
+    /// screen. A missing field never fails the parse.
+    #[serde(default)]
+    pub profile_ranks: Option<Vec<CandidateProfileRankSummary>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -1439,6 +1503,123 @@ mod tests {
             profile_id: "profile-a".to_string(),
             profile_version: version,
         }
+    }
+
+    // ---- R2 (OWNER 2026-09-29): the queue row reads the stored outcome from the
+    // list response, so CandidateIntakeSummary must carry it — and must keep
+    // "the server did not send the field" distinguishable from "the server says
+    // there are none". Collapsing those two makes an unanswered question look
+    // like an answer on the operator's screen.
+    // R2 (OWNER 2026-09-29): the row title. Three states must survive BOTH the
+    // parse and the hand-off to the webview, because they are three different
+    // things to show an operator:
+    //   field absent      -> this server build does not carry it: we cannot say
+    //   field present null-> the server says the recorded facts hold no name
+    //   field present str -> the name
+    // A plain Option<String> collapses the first two into None, and then a row
+    // would announce "no name recorded" on a server that was never asked.
+    #[test]
+    fn candidate_name_absent_present_null_and_present_value_stay_three_states() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Oleksandr K.\"}}")).unwrap();
+        assert_eq!(absent.candidate_name, None, "absent field: unanswered");
+        assert_eq!(null.candidate_name, Some(None), "explicit null: answered, no name");
+        assert_eq!(
+            named.candidate_name,
+            Some(Some("Oleksandr K.".to_string())),
+            "a value is the name itself"
+        );
+    }
+
+    // The webview is where the distinction is actually consumed, so it has to
+    // survive serialization too: absent must not arrive looking like null.
+    #[test]
+    fn candidate_name_three_states_survive_the_hand_off_to_the_webview() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Ivan M.\"}}")).unwrap();
+        let out = |v: &CandidateIntakeSummary| serde_json::to_string(v).unwrap();
+        assert!(
+            !out(&absent).contains("candidate_name"),
+            "an absent field is omitted, so the screen sees no key at all: {}",
+            out(&absent)
+        );
+        assert!(
+            out(&null).contains("\"candidate_name\":null"),
+            "an explicit null keeps its key: {}",
+            out(&null)
+        );
+        assert!(
+            out(&named).contains("\"candidate_name\":\"Ivan M.\""),
+            "a name travels as itself: {}",
+            out(&named)
+        );
+    }
+
+    #[test]
+    fn summary_without_profile_ranks_parses_and_stays_unanswered() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null}"#;
+        let summary: CandidateIntakeSummary =
+            serde_json::from_str(json).expect("a server build without the field must still parse");
+        assert!(
+            summary.profile_ranks.is_none(),
+            "a missing field is None (unanswered), never an empty list (answered)"
+        );
+    }
+
+    #[test]
+    fn summary_with_empty_profile_ranks_is_an_answer() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,"profile_ranks":[]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            summary.profile_ranks,
+            Some(Vec::new()),
+            "an empty list is the server saying there are no stored evaluations"
+        );
+    }
+
+    #[test]
+    fn summary_profile_rank_row_carries_the_frozen_contract() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":2,"met":2,
+              "missing":1,"unconfirmed":3,"total":6,"stale":true}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let rows = summary.profile_ranks.expect("present");
+        assert_eq!(rows.len(), 1);
+        let row = &rows[0];
+        assert_eq!(row.profile_id, "p-main");
+        assert_eq!(row.profile_version, 2);
+        assert_eq!((row.met, row.missing, row.unconfirmed, row.total), (2, 1, 3, 6));
+        assert!(row.stale, "stale travels as a bool, exactly as the contract says");
+    }
+
+    // `total` is not symmetry. The card keeps an `unknown` bucket so an outcome
+    // code this build does not know is never silently counted as met; the row
+    // carries numbers, not codes, so `total` is the only thing that can carry
+    // that protection across. A row where the three counts do not add up to
+    // `total` must survive parsing intact so the UI can say so out loud.
+    #[test]
+    fn summary_profile_rank_row_keeps_an_unrecognised_remainder_visible() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":1,"met":2,
+              "missing":0,"unconfirmed":0,"total":5,"stale":false}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let row = &summary.profile_ranks.expect("present")[0];
+        assert_eq!(row.met + row.missing + row.unconfirmed, 2);
+        assert_eq!(row.total, 5, "the remainder stays measurable: 3 outcomes are unaccounted for");
     }
 
     #[test]

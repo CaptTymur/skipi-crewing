@@ -1329,14 +1329,23 @@ console.log('# K2 modules/crew-flow');
     softOk(/if \(view === 'crew_flow'\) return mobileRenderCrewFlow\(\);/.test(k2mobileShow), 'K2-4: mobileShow routes crew_flow to the mobile Crew Flow renderer');
 
     // 6. honest empty state without a connection
-    for (const [lang, needle, absent] of [['ru', 'Доступ / токены', 'Vacancies -> Applications'], ['en', 'Access / tokens', 'Vacancies -> Applications']]) {
+    // R2 (OWNER 2026-09-29): the needle changed because the screen it named
+    // changed. Until R2 the hint sent the operator to «Настройки → Доступ /
+    // токены», a tab that the unified settings shell no longer renders — the
+    // operator followed the instruction and arrived at a screen with no Server
+    // URL and no token field. The hint now names the Crewing-owned connection
+    // section (home-crewing-connection) that openSettings('connection') opens,
+    // and the retired wording is asserted absent so it cannot come back.
+    for (const [lang, needle, retired] of [['ru', 'Подключение', 'Доступ / токены'], ['en', 'Connection', 'Access / tokens']]) {
       const emptyCtx = makeCrewContext({ language: lang, settings: {} });
       emptyCtx.__crew.renderCrewFlowView();
       await flush();
       const emptyHtml = emptyCtx.nodes.get('main').innerHTML + '\n' + emptyCtx.nodes.get('crew-flow-tree').innerHTML;
       softOk(emptyHtml.includes(needle) && emptyHtml.includes('data-qa="crew-flow-empty"'),
         `K2-6: without a connection the ${lang} empty state points at Settings (${needle})`);
-      softOk(!emptyHtml.includes(absent), `K2-6: the ${lang} empty state no longer mentions the retired vacancies direction`);
+      softOk(!emptyHtml.includes(retired),
+        `K2-6/R2: the ${lang} empty state no longer names the retired «${retired}» tab`);
+      softOk(!emptyHtml.includes('Vacancies -> Applications'), `K2-6: the ${lang} empty state no longer mentions the retired vacancies direction`);
       softOk(!emptyCtx.calls.some((c) => c.command === 'crewing_intake_candidate_list'), `K2-6: no queue request is made without a connection (${lang})`);
     }
   const fxSlice = (from, to) => {

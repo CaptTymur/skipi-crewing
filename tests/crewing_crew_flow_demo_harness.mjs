@@ -122,6 +122,8 @@ function elFor(id) {
 
 const store = new Map();
 store.set('skipi_crewing_demo', '1');
+// R2: what the two list-load commands answer; set by the list-load section.
+const R2_FIXTURES = { list: null, profiles: null };
 const toasts = [];
 const calls = [];
 const fetchCalls = [];
@@ -251,7 +253,9 @@ async function invoke(cmd, args = {}) {
     };
   }
   // K2/S3: the everyday state of the pilot until K1 is "connected, queue empty".
-  if (cmd === 'crewing_intake_candidate_list') return { items: [], limit: 50, offset: 0, total: 0 };
+  // R2: the list-load section below swaps in its own fixtures; unset means the old empty queue.
+  if (cmd === 'crewing_intake_candidate_list') return R2_FIXTURES.list || { items: [], limit: 50, offset: 0, total: 0 };
+  if (cmd === 'crewing_intake_matching_profile_list') return R2_FIXTURES.profiles || { items: [] };
   if (cmd === 'save_seafarer_from_bundle') return { seafarer: { id: 'demo-sf1', display_name: 'Oleksandr K.' }, saved_documents: 1 };
   if (cmd === 'list_saved_seafarers') return [];
   if (cmd === 'register_my_pubkey') return null;
@@ -272,7 +276,18 @@ function loadInlineModuleForCurrentStore() {
     scriptNoBoot
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal, renderCrewFlowTreeBody, crewFlowLiveTreeHtml, initLeftPanelResizer: (typeof initLeftPanelResizer === "function" ? initLeftPanelResizer : null) };'
+      + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal, renderCrewFlowTreeBody, crewFlowLiveTreeHtml, tr, escapeHtml, escapeAttr, '
+      + 'crewingSettingsSections: (typeof _crewingSettingsSections === "function" ? _crewingSettingsSections : null), '
+      + 'crewingSettingsSectionFor: (typeof _crewingSettingsSectionFor === "function" ? _crewingSettingsSectionFor : null), '
+      + 'crewFlowCacheRanks: (typeof crewFlowCacheRanks === "function" ? crewFlowCacheRanks : null), '
+      + 'crewFlowCacheProfiles: (typeof crewFlowCacheProfiles === "function" ? crewFlowCacheProfiles : null), '
+      + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
+      + 'crewFlowCacheRankSummary: (typeof crewFlowCacheRankSummary === "function" ? crewFlowCacheRankSummary : null), '
+      + 'crewFlowRankCache: (typeof crewFlowRankCache === "function" ? crewFlowRankCache : null), '
+      + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
+      + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
+      + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '
+      + 'initLeftPanelResizer: (typeof initLeftPanelResizer === "function" ? initLeftPanelResizer : null) };'
   )();
 }
 
@@ -570,6 +585,537 @@ if (M && typeof M.initLeftPanelResizer === 'function') {
 } else {
   ok(false, 'K2.2 runtime checks require initLeftPanelResizer in the inline module' + (M ? ' (function missing)' : ' (script failed to load)'));
 }
+
+// ============================================================================
+// R2 (OWNER 2026-09-29), task 1: a fresh install must be able to reach a
+// connection screen from the SHELL IT ACTUALLY RUNS.
+//
+// Measured on the owner's 0.4.136 candidate: openSettings() mounts
+// @skipi/settings, _crewingSettingsSectionFor sent every legacy tab id except
+// 'access' — 'connection' included — to 'profile', and the Server URL / company
+// token fields existed ONLY in the fail-closed legacy renderer (!window.SkipiSettings)
+// and in the mobile shell, which shouldUseMobileShell() never selects at the
+// fixed 1100x750 desktop window. The module's «Open profile» button closed the
+// overlay instead of going anywhere. Net effect: no path to a server at all,
+// while the empty Crew Flow told the operator to go to a screen that no longer
+// exists.
+// ============================================================================
+section('R2 task 1: the connection path is reachable in the unified settings shell');
+if (M) {
+  ok(typeof M.crewingSettingsSectionFor === 'function' && typeof M.crewingSettingsSections === 'function',
+    'R2/1: the Crewing settings adapter is reachable from the inline module');
+  ok(M.crewingSettingsSectionFor && M.crewingSettingsSectionFor('connection') === 'home-crewing-connection',
+    "R2/1: openSettings('connection') resolves to the connection section, not to 'profile' — got "
+    + (M.crewingSettingsSectionFor ? M.crewingSettingsSectionFor('connection') : 'n/a'));
+
+  const r2Sections = M.crewingSettingsSections ? M.crewingSettingsSections() : [];
+  const r2Conn = r2Sections.filter((s) => s && s.id === 'home-crewing-connection')[0] || null;
+  const r2Work = r2Sections.filter((s) => s && s.id === 'home-crewing-work-data')[0] || null;
+  ok(!!r2Conn, 'R2/1: the unified shell carries a Crewing-owned connection section');
+
+  const r2Opened = [];
+  const r2Saved = [];
+  const r2Ctx = {
+    t: M.tr,
+    escapeHtml: M.escapeHtml,
+    escapeAttr: M.escapeAttr,
+    saveSettings: (next) => { r2Saved.push(next); return Promise.resolve(next); },
+    refresh: () => Promise.resolve(),
+    open: (id) => { r2Opened.push(String(id)); return true; },
+  };
+
+  const r2ConnHtml = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
+  ok(/id="s-url"/.test(r2ConnHtml),
+    'R2/1: the connection section renders the Server URL field under the SAME id the connect code reads (s-url)');
+  ok(/id="s-token"/.test(r2ConnHtml),
+    'R2/1: the connection section renders the company-token field (s-token)');
+  ok(/type="password"/.test(r2ConnHtml), 'R2/1: the company token field is masked');
+  ok(/data-settings-action="crewing-activate-token"/.test(r2ConnHtml)
+    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-activate-token']) === 'function',
+    'R2/1: the section offers the validate action and wires a handler for it');
+  ok(/data-settings-action="crewing-start-trial"/.test(r2ConnHtml)
+    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-start-trial']) === 'function',
+    'R2/1: the section offers the trial action and wires a handler for it');
+  ok(typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-save-connection']) === 'function',
+    'R2/1: the Server URL can be stored without a token (the stand case) — a save handler exists');
+
+  // the fail-closed legacy renderer is NOT the only place the fields live
+  const legacyOnly = (HTML.match(/function renderSettingsModal\(\)[\s\S]*?\n\}/) || [''])[0];
+  const modulePart = (HTML.match(/function _crewingSettingsSections\(\)\{([\s\S]*?)\n\}\n/) || ['', ''])[1];
+  ok(/id="s-url"/.test(modulePart) || /'s-url'/.test(modulePart),
+    'R2/1: the Server URL field exists in the module-owned sections, not only in the fail-closed renderer');
+  ok(/id=.s-url/.test(legacyOnly) || /'s-url'/.test(legacyOnly),
+    'R2/1 (control): the legacy fail-closed renderer still has its own field — this test would be vacuous otherwise');
+
+  // RU and EN both render
+  store.set('skipi-crewing-ui-language', 'ru');
+  const r2ConnRu = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
+  ok(/[Ѐ-ӿ]/.test(r2ConnRu), 'R2/1: the connection section renders in Russian');
+  store.set('skipi-crewing-ui-language', 'en');
+  const r2ConnEn = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
+  ok(!/[Ѐ-ӿ]/.test(r2ConnEn) && /Server URL/.test(r2ConnEn),
+    'R2/1: the connection section renders in English with no Cyrillic left behind');
+
+  // the «Open profile» button used to close the overlay and land nowhere
+  if (r2Work && r2Work.handlers && typeof r2Work.handlers['crewing-open-profile'] === 'function') {
+    r2Opened.length = 0;
+    try { r2Work.handlers['crewing-open-profile'](r2Ctx); } catch (e) { /* recorded by the assertion below */ }
+    ok(r2Opened.length === 1 && r2Opened[0] === 'profile',
+      'R2/1: «Open profile» opens a real section through the module instead of closing the overlay — got ['
+      + r2Opened.join(',') + ']');
+  } else {
+    ok(false, 'R2/1: the work-data section still needs its open-profile handler');
+  }
+
+  // the empty-queue hint must name a screen that exists
+  const emptyUnconnected = [...HTML.matchAll(/'crew_flow\.empty_unconnected':'([^']*)'/g)].map((m) => m[1]);
+  ok(emptyUnconnected.length === 2, 'R2/1: crew_flow.empty_unconnected is defined in both dictionaries — got '
+    + emptyUnconnected.length);
+  ok(!emptyUnconnected.some((v) => /Доступ \/ токены|Access \/ tokens/i.test(v)),
+    'R2/1: the empty-queue hint no longer sends the operator to the retired «Access / tokens» tab');
+  ok(/Connection/i.test(emptyUnconnected[0] || '') && /Подключени/i.test(emptyUnconnected[1] || ''),
+    'R2/1: the hint names the connection screen that actually exists, EN and RU');
+}
+
+// ============================================================================
+// R2 task 2: the queue row states the candidate's outcome AGAINST THE SELECTED
+// profile, taken from evaluations already in hand.
+//
+// Owner, verbatim: «показывай соответствие выбранному профилю по существующим
+// оценкам, без новой системы рейтингов и дополнительных вызовов API».
+// Hard boundaries held by the assertions below: no new network call, no score /
+// percentage / quality ordering, `unconfirmed` never folded into `met`, and a
+// missing evaluation said out loud instead of rendering as a match.
+// ============================================================================
+section('R2 task 2: the queue row states the outcome against the selected profile');
+
+// static: the set of commands the Crew Flow block may call is frozen. A new
+// network call added to this screen changes this list and fails here.
+// Round 1 froze this list at two and asserted "no new call". The owner lifted that
+// boundary on 2026-09-29 and replaced it with a narrower one, so the list is
+// re-frozen at its new, named contents rather than deleted: exactly ONE command
+// was added, crewing_intake_matching_profile_list — an existing, unpaid, O(1)
+// lookup that turns a profile_id into a name. Anything beyond these three is a
+// call nobody authorised.
+const r2CrewInvokes = [...crewBlock.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]);
+const r2CrewInvokeSet = [...new Set(r2CrewInvokes)].sort().join(',');
+ok(r2CrewInvokeSet === 'crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
+  'R2/2: the Crew Flow block calls exactly [crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
+  + r2CrewInvokeSet + ']');
+// The two commands that cost money or mutate state must never appear in this block.
+for (const forbidden of ['crewing_intake_candidate_rank', 'parse_cv', 'reprocess']) {
+  ok(!crewBlock.includes(forbidden),
+    'R2/2: the Crew Flow block never calls ' + forbidden + ' — the list reads stored work, it does not create it');
+}
+ok(!/fetch\(/.test(crewBlock), 'R2/2: the Crew Flow block performs no fetch()');
+for (const banned of ['score_percent', '%', 'sort(']) {
+  ok(!new RegExp('crewFlowRowMatchHtml[\\s\\S]{0,1200}?' + banned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(crewBlock)
+     || banned === 'sort(',
+    'R2/2: the row-match renderer introduces no rating arithmetic: ' + banned);
+}
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let MR2 = null;
+try {
+  MR2 = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('R2 runtime load failed:', e);
+}
+ok(!!MR2, 'R2/2: the non-demo inline script loads');
+const r2RuntimeReady = !!MR2 && typeof MR2.crewFlowCacheRanks === 'function'
+  && typeof MR2.crewFlowCacheProfiles === 'function' && typeof MR2.crewFlowSelectProfile === 'function';
+ok(r2RuntimeReady, 'R2/2: the screen keeps the already-loaded evaluations and the operator choice');
+if (r2RuntimeReady) {
+  MR2.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-demo-harness',
+    interface: { theme: 'light', language: 'en' },
+  };
+  const qRow = (id) => ({
+    intake_id: id, content_type: 'application/pdf', created_at: '2026-09-29T10:00:00Z', state: 'ranked',
+    summary: { state: 'ranked', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null },
+  });
+  MR2.state.intakePilot.queue = {
+    items: [qRow('i-met'), qRow('i-gap'), qRow('i-other'), qRow('i-cold')], limit: 50, offset: 0, total: 4,
+  };
+  MR2.state.intakePilot.queueLastUpdated = '2026-09-29T10:00:00Z';
+
+  MR2.crewFlowCacheProfiles({
+    'p-main': { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
+    'p-side': { id: 'p-side', name: 'Second Engineer · Product Tanker', version: 1, state: 'active' },
+  });
+  MR2.crewFlowCacheRanks('i-met', [{
+    profile_id: 'p-main', profile_version: 1, primary: true, stale: false, decided: false,
+    reasons: [
+      { requirement: 'rank', outcome: 'met', wanted: 'Master', found: 'Master' },
+      { requirement: 'certificate:coc_master', outcome: 'met', wanted: 'held', found: 'held' },
+    ],
+  }]);
+  MR2.crewFlowCacheRanks('i-gap', [{
+    profile_id: 'p-main', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [
+      { requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Able Seafarer' },
+      { requirement: 'certificate:gmdss', outcome: 'unconfirmed_fact' },
+      { requirement: 'certificate:coc_master', outcome: 'met', wanted: 'held', found: 'held' },
+    ],
+  }]);
+  MR2.crewFlowCacheRanks('i-other', [{
+    profile_id: 'p-side', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [{ requirement: 'rank', outcome: 'met', wanted: 'Second Engineer', found: 'Second Engineer' }],
+  }]);
+  // i-cold: nothing loaded for this candidate at all.
+  MR2.crewFlowSelectProfile('p-main');
+
+  const r2CallsBefore = calls.length;
+  const r2FetchBefore = fetchCalls.length;
+  const r2Tree = String(MR2.crewFlowLiveTreeHtml('live'));
+  const r2CallsAfter = calls.length;
+  const r2FetchAfter = fetchCalls.length;
+
+  ok(r2CallsAfter === r2CallsBefore && r2FetchAfter === r2FetchBefore,
+    'R2/2: rendering the queue with the match column issues NO command and NO fetch — invoke '
+    + r2CallsBefore + '->' + r2CallsAfter + ', fetch ' + r2FetchBefore + '->' + r2FetchAfter);
+
+  const rowOf = (id) => {
+    const m = r2Tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    return m ? m[0] : '';
+  };
+  const metRow = rowOf('i-met');
+  const gapRow = rowOf('i-gap');
+  const otherRow = rowOf('i-other');
+  const coldRow = rowOf('i-cold');
+
+  ok(/data-qa="crew-flow-profile-select"/.test(r2Tree),
+    'R2/2: the operator picks which profile the column compares against');
+  ok(/value="p-main"/.test(r2Tree) && /value="p-side"/.test(r2Tree),
+    'R2/2: the picker offers exactly the profiles the screen already knows about');
+
+  ok(/data-match="ranked"/.test(metRow) && /data-met="2"/.test(metRow)
+    && /data-missing="0"/.test(metRow) && /data-unconfirmed="0"/.test(metRow),
+    'R2/2: a fully met candidate states met=2, missing=0, unconfirmed=0 against the selected profile');
+  ok(/Master · Bulk Carrier/.test(metRow), 'R2/2: the row names the profile it is comparing against');
+  // The chips inside a tree row are unstyled text, so a long outcome sentence
+  // placed among them reads as one run-on line (seen on the first frame).
+  ok(/data-qa="crew-flow-row-match-line"[\s\S]{0,120}?data-qa="crew-flow-row-match"/.test(metRow),
+    'R2/2: the outcome gets its own line of the row, not a chip slot next to the counters');
+  ok(!/crew_flow\.ranks|comparisons: /.test(metRow), 'R2/2: the bare comparison counter is gone from the row');
+
+  ok(/data-match="ranked"/.test(gapRow) && /data-met="1"/.test(gapRow)
+    && /data-missing="1"/.test(gapRow) && /data-unconfirmed="1"/.test(gapRow),
+    'R2/2: unconfirmed stays its own count and is NOT folded into met — met=1, missing=1, unconfirmed=1');
+
+  // The machine-readable attributes are not what the operator reads. Pin the
+  // PRINTED sentence too: mutation M10 folded unconfirmed into the visible met
+  // number while leaving data-met alone, and survived every assertion above.
+  const r2MatchText = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-match"[^>]*>([^<]*)</);
+    return m ? m[1] : '';
+  };
+  ok(r2MatchText(metRow) === 'Master · Bulk Carrier — Met 2 · Not met 0 · Unconfirmed 0',
+    'R2/2: the fully met row prints exactly "Met 2 · Not met 0 · Unconfirmed 0" — got "' + r2MatchText(metRow) + '"');
+  ok(r2MatchText(gapRow) === 'Master · Bulk Carrier — Met 1 · Not met 1 · Unconfirmed 1',
+    'R2/2: the mixed row prints exactly "Met 1 · Not met 1 · Unconfirmed 1" — got "' + r2MatchText(gapRow) + '"');
+  for (const [rowId, row] of [['i-met', metRow], ['i-gap', gapRow]]) {
+    const attrs = String(row).match(/data-met="(\d+)" data-missing="(\d+)" data-unconfirmed="(\d+)"/);
+    const txt = r2MatchText(row);
+    ok(!!attrs && txt.indexOf('Met ' + attrs[1] + ' · Not met ' + attrs[2] + ' · Unconfirmed ' + attrs[3]) !== -1,
+      'R2/2: the printed counts are the same three numbers as the machine-readable ones (' + rowId + ') — "' + txt + '"');
+  }
+
+  ok(/data-match="absent"/.test(otherRow),
+    'R2/2: a candidate with no evaluation against the SELECTED profile says so instead of showing emptiness as a match');
+  ok(!/data-met=/.test(otherRow), 'R2/2: the absent case carries no counts that could read as a match');
+
+  ok(/data-match="not-loaded"/.test(coldRow),
+    'R2/2: a candidate whose evaluation is not loaded is distinguishable from one that has no evaluation');
+
+  ok(!/%/.test(metRow + gapRow + otherRow + coldRow),
+    'R2/2: no percentage, score or rating is introduced in the row');
+
+  // the two states must be readable, in both interface languages
+  store.set('skipi-crewing-ui-language', 'ru');
+  const r2TreeRu = String(MR2.crewFlowLiveTreeHtml('live'));
+  ok(/[Ѐ-ӿ]/.test(r2TreeRu) && /Выполнено/.test(r2TreeRu) && /Не подтверждено/.test(r2TreeRu),
+    'R2/2: the Russian row names Выполнено / Не выполнено / Не подтверждено');
+  ok(/Master · Bulk Carrier — Выполнено 1 · Не выполнено 1 · Не подтверждено 1/.test(r2TreeRu),
+    'R2/2: the Russian mixed row prints the three counts separately, word for word');
+  ok(/оценки против этого профиля нет/.test(r2TreeRu),
+    'R2/2: the Russian row states the missing-evaluation case in Russian, word for word');
+  ok(/Сравнивать с профилем/.test(r2TreeRu), 'R2/2: the Russian picker is labelled in Russian');
+  store.set('skipi-crewing-ui-language', 'en');
+  const r2TreeEn = String(MR2.crewFlowLiveTreeHtml('live'));
+  ok(/Met/.test(r2TreeEn) && /Not met/.test(r2TreeEn) && /Unconfirmed/.test(r2TreeEn) && !/[Ѐ-ӿ]/.test(r2TreeEn),
+    'R2/2: the English row names Met / Not met / Unconfirmed and leaves no Cyrillic');
+  ok(/no stored comparison against this profile/.test(r2TreeEn),
+    'R2/2: the English row states the missing-evaluation case, word for word');
+
+  // the same column on the mobile list
+  const r2Mobile = String(MR2.crewFlowLiveMobileHtml('live'));
+  ok(/data-qa="crew-flow-row-match"/.test(r2Mobile), 'R2/2: the phone list carries the same match column');
+
+  // switching the selection changes what the rows say — without a call
+  const r2CallsBeforeSwitch = calls.length;
+  MR2.crewFlowSelectProfile('p-side');
+  const r2TreeSide = String(MR2.crewFlowLiveTreeHtml('live'));
+  ok(calls.length === r2CallsBeforeSwitch, 'R2/2: switching the compared profile issues no command');
+  ok(/data-intake="i-other"[\s\S]*?data-match="ranked"/.test(r2TreeSide)
+    && /data-intake="i-met"[\s\S]*?data-match="absent"/.test(r2TreeSide),
+    'R2/2: switching the profile re-reads the SAME loaded evaluations and the rows swap accordingly');
+  MR2.crewFlowSelectProfile('p-main');
+}
+store.set('skipi_crewing_demo', '1');
+
+
+// ============================================================================
+// R2 round 2 (OWNER 2026-09-29, clarification): the stored outcome must be on
+// the row THE MOMENT THE LIST LOADS — no card opened, and no request per row.
+//
+// The owner lifted the earlier "no new API call" boundary and replaced it with a
+// narrower one: fetching stored evaluations from the server is allowed; paid CV
+// processing and recomputation for the sake of the list are not. The outcome now
+// rides inside the list response itself (CandidateIntakeSummary.profile_ranks),
+// so the ranks themselves cost zero extra requests; the only new call on this
+// path is ONE matching-profile lookup per context, for the human-readable name.
+// ============================================================================
+section('R2 round 2: the list arrives with the outcome already on every row');
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let MR3 = null;
+try {
+  MR3 = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('R2 round-2 runtime load failed:', e);
+}
+ok(!!MR3, 'R2/L: the non-demo inline script loads');
+const r3Ready = !!MR3 && typeof MR3.crewFlowEnsureLiveQueue === 'function' && typeof MR3.pilotLoadQueue === 'function';
+ok(r3Ready, 'R2/L: the Crew Flow list-load path is reachable from the harness');
+if (r3Ready) {
+  // A summary exactly as the frozen contract describes it. Counts only: the
+  // server holds no locales, so no text and no score crosses this boundary.
+  // The frozen contract, final form: counts + total + stale. `total` is what lets
+  // the row say "not fully recognised" instead of under-counting in silence.
+  const pr = (profileId, met, missing, unconfirmed, total, stale) => ({
+    profile_id: profileId, profile_version: 1, met, missing, unconfirmed, total, stale: !!stale,
+  });
+  const listItem = (id, profileRanks, candidateName) => {
+    const summary = { state: 'ranked', facts: 3, ranks: (profileRanks || []).length, ranks_stale: 0,
+      active_confirmations: 0, needs_review_reason: null };
+    // profileRanks === undefined models a server build WITHOUT the field.
+    if (profileRanks !== undefined) summary.profile_ranks = profileRanks;
+    // candidateName === undefined models a build without candidate_name at all;
+    // null is the server answering that the recorded facts hold no name.
+    if (candidateName !== undefined) summary.candidate_name = candidateName;
+    // Every neighbouring field is deliberately DISTINCT from intake_id: a fixture
+    // where source_id equals the id makes a substitution mutation invisible
+    // (drill P1 survived exactly that way).
+    return { intake_id: id, receipt_id: 'receipt-' + id, crewing_id: 'crew-flow-demo-harness', source: 'mail',
+      source_id: 'msg-' + id, event_id: 'event-' + id, primary_profile_id: 'p-main', content_sha256: '0'.repeat(64),
+      content_bytes: 14412, content_type: 'application/pdf', state: 'ranked', source_trust: 'inbound_alias',
+      version: 1, created_at: '2026-09-29T01:10:00Z', issued_at: '2026-09-29T01:10:00Z',
+      objects: [], attachments: [], summary };
+  };
+  R2_FIXTURES.list = {
+    items: [
+      listItem('L-met', [pr('p-main', 2, 0, 0, 2, false)], 'Oleksandr K.'),
+      listItem('L-gap', [pr('p-main', 1, 1, 1, 3, false)], 'Ivan M. (from the list)'),
+      // the server answered: the recorded facts hold no name
+      listItem('L-noname', [pr('p-main', 1, 0, 0, 1, false)], null),
+      // an older build: no candidate_name key at all, so nothing can be claimed
+      listItem('L-noname-field', [pr('p-main', 1, 0, 0, 1, false)]),
+      listItem('L-other', [pr('p-side', 1, 0, 0, 1, false)]),
+      listItem('L-none', []),        // the server says: no stored evaluation at all
+      listItem('L-nofield', undefined), // an older server: the field is simply absent
+      listItem('L-stale', [pr('p-main', 2, 0, 0, 2, true)]),
+      // three outcomes the three counts do not account for — a future outcome code
+      listItem('L-partial', [pr('p-main', 2, 0, 0, 5, false)]),
+      // total missing altogether: coverage cannot be proven, so it is not claimed
+      listItem('L-nototal', [{ profile_id: 'p-main', profile_version: 1, met: 2, missing: 0, unconfirmed: 0, stale: false }]),
+      // the profile was republished: two stored evaluations, one per version.
+      // The row must speak for the NEWEST, or it reports against requirements
+      // that are no longer the published ones.
+      listItem('L-versions', [
+        { profile_id: 'p-main', profile_version: 1, met: 9, missing: 0, unconfirmed: 0, total: 9, stale: false },
+        { profile_id: 'p-main', profile_version: 2, met: 1, missing: 2, unconfirmed: 0, total: 3, stale: false },
+      ]),
+    ],
+    limit: 50, offset: 0, total: 11,
+  };
+  R2_FIXTURES.profiles = { items: [
+    { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
+    { id: 'p-side', name: 'Second Engineer · Product Tanker', version: 1, state: 'active' },
+  ] };
+
+  MR3.state.settings = {
+    server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' },
+  };
+  store.set('skipi-crewing-ui-language', 'en');
+
+  // Drive the product path only: opening Crew Flow is what an operator does.
+  const r3From = calls.length;
+  MR3.showView('crew_flow');
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  const r3Cmds = calls.slice(r3From).map(([c]) => String(c));
+
+  // ---- 1. exactly what the list load costs, named ------------------------
+  const countOf = (c) => r3Cmds.filter((x) => x === c).length;
+  ok(countOf('crewing_intake_candidate_list') === 1,
+    'R2/L: the list itself is fetched once — got ' + countOf('crewing_intake_candidate_list'));
+  ok(countOf('crewing_intake_matching_profile_list') === 1,
+    'R2/L: the profile names cost ONE lookup per context, not one per row — got '
+    + countOf('crewing_intake_matching_profile_list'));
+  ok(countOf('crewing_intake_rank_list') === 0,
+    'R2/L: no per-candidate ranks request — the outcome rides inside the list response (N+1 refused)');
+  // The owner's boundary, mechanically: loading the list must not process or recompute.
+  ok(countOf('crewing_intake_candidate_rank') === 0,
+    'R2/L: loading the list never recomputes an evaluation');
+  ok(!r3Cmds.some((c) => /parse_cv|reprocess|rank_compliance_candidate/.test(c)),
+    'R2/L: loading the list starts no paid CV processing — commands were [' + [...new Set(r3Cmds)].join(', ') + ']');
+  ok(fetchCalls.length === 0, 'R2/L: still no fetch() anywhere on this path');
+
+  // ---- 2. the row is filled WITHOUT opening a card ------------------------
+  ok(!MR3.state.intakePilot.detail, 'R2/L: no candidate card was opened during the load');
+  MR3.crewFlowSelectProfile('p-main');
+  const r3Tree = String(MR3.crewFlowLiveTreeHtml('live'));
+  const r3Row = (id) => {
+    const m = r3Tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    return m ? m[0] : '';
+  };
+  const r3Text = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-match"[^>]*>([^<]*)</);
+    return m ? m[1] : '';
+  };
+  ok(r3Text(r3Row('L-met')) === 'Master · Bulk Carrier — Met 2 · Not met 0 · Unconfirmed 0',
+    'R2/L: a met candidate states its outcome straight from the list — got "' + r3Text(r3Row('L-met')) + '"');
+  ok(r3Text(r3Row('L-gap')) === 'Master · Bulk Carrier — Met 1 · Not met 1 · Unconfirmed 1',
+    'R2/L: unconfirmed is still its own count, straight from the list — got "' + r3Text(r3Row('L-gap')) + '"');
+  ok(/data-profile="p-main"/.test(r3Row('L-met')) && /Master · Bulk Carrier/.test(r3Row('L-met')),
+    'R2/L: the row shows the profile NAME, not a raw id');
+
+  // ---- 3. the states the owner asked about explicitly ---------------------
+  ok(/data-match="absent"/.test(r3Row('L-other')),
+    'R2/L: evaluated against another profile only -> absent, never a match');
+  ok(/data-match="absent"/.test(r3Row('L-none')),
+    'R2/L: the server said "no stored evaluations" ([]) -> absent, never a match');
+  ok(/data-match="not-loaded"/.test(r3Row('L-nofield')),
+    'R2/L: a server build WITHOUT the field leaves the candidate "not loaded" — an unanswered question is not an answer');
+  ok(!/data-met=/.test(r3Row('L-none')) && !/data-met=/.test(r3Row('L-nofield')),
+    'R2/L: neither of those two carries counts that could read as a match');
+  ok(/data-stale="1"/.test(r3Row('L-stale')) && /data-match="ranked"/.test(r3Row('L-stale')),
+    'R2/L: a stale stored evaluation says so instead of reading as current');
+
+  // ---- 3b. the remainder the three counts do not explain ------------------
+  // The card refuses to count an unknown outcome code as met; the row carries
+  // numbers, so `total` is the only way that refusal survives. A row that does
+  // not add up must LOOK different, not be rounded into a match.
+  ok(/data-match="partial"/.test(r3Row('L-partial')),
+    'R2/L: met+missing+unconfirmed != total is its own visible state, not a match');
+  ok(/data-total="5"/.test(r3Row('L-partial')) && /data-met="2"/.test(r3Row('L-partial')),
+    'R2/L: the partial row still carries the true numbers it does have');
+  ok(r3Text(r3Row('L-partial')).indexOf('outcomes not fully recognised') !== -1,
+    'R2/L: and it says so in words — got "' + r3Text(r3Row('L-partial')) + '"');
+  ok(/data-match="partial"/.test(r3Row('L-nototal')),
+    'R2/L: a row without total cannot prove full coverage, so it does not claim it');
+  ok(/data-match="ranked"/.test(r3Row('L-met')) && !/data-match="partial"/.test(r3Row('L-met')),
+    'R2/L (control): a row that does add up is NOT flagged — the check is not vacuous');
+
+  // ---- 3c. two stored versions of one profile -----------------------------
+  ok(/data-met="1"/.test(r3Row('L-versions')) && /data-missing="2"/.test(r3Row('L-versions'))
+    && /data-total="3"/.test(r3Row('L-versions')),
+    'R2/L: with two stored versions the row speaks for the NEWEST, not the first in the array — got "'
+    + r3Text(r3Row('L-versions')) + '"');
+
+  // ---- 3d. "the field was not sent" is pinned at the guard itself ----------
+  // Two independent guards keep an absent field out of the cache (the list hook
+  // checks Array.isArray, and so does the normalizer). Each is pinned here, so
+  // neither can be removed on the quiet reasoning that the other still holds.
+  const r3Cache = MR3.crewFlowRankCache();
+  ok(!Object.prototype.hasOwnProperty.call(r3Cache, 'L-nofield'),
+    'R2/L: a summary without the field leaves NO cache entry — not an empty one');
+  MR3.crewFlowCacheRankSummary('probe-undefined', undefined);
+  MR3.crewFlowCacheRankSummary('probe-null', null);
+  ok(!Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-undefined')
+    && !Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-null'),
+    'R2/L: the normalizer refuses a non-array outright instead of storing it as "none"');
+  MR3.crewFlowCacheRankSummary('probe-empty', []);
+  ok(Object.prototype.hasOwnProperty.call(MR3.crewFlowRankCache(), 'probe-empty'),
+    'R2/L (control): an explicit empty list IS stored — the refusal above is about absence, not emptiness');
+  delete MR3.crewFlowRankCache()['probe-empty'];
+
+  // ---- 3e. the row title: who the candidate is, without inventing anyone ---
+  // The owner's point of the whole change is "choose whom to open", so a row
+  // whose title is a raw intake_id does not do the job. The name now rides in
+  // the same summary. Three states, for the same reason the outcome has three.
+  ok(/data-name="list"/.test(r3Row('L-met')) && /Oleksandr K\./.test(r3Row('L-met')),
+    'R2/N: the title shows the name the list carried, straight from the load');
+  ok(/data-name="none"/.test(r3Row('L-noname')),
+    'R2/N: an explicit null is shown AS "no name", never masked');
+  ok(/data-qa="crew-flow-row-noname"/.test(r3Row('L-noname')),
+    'R2/N: and the absence is spelled out next to the fallback identifier');
+  ok(r3Row('L-noname').indexOf('L-noname') !== -1,
+    'R2/N: the intake_id stays as the fallback identifier rather than disappearing');
+  ok(!/data-qa="crew-flow-row-noname"/.test(r3Row('L-noname-field')) && /data-name="unknown"/.test(r3Row('L-noname-field')),
+    'R2/N: a build that never sent the field claims nothing — "we cannot say" is not "there is none"');
+  // Nothing may be substituted for a missing name: not the source id, not the
+  // content type, not a blank that reads as an unnamed person.
+  const r3NoNameTitle = (r3Row('L-noname').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['', ''])[1];
+  ok(r3NoNameTitle === 'L-noname',
+    'R2/N: the title is the intake_id and nothing else when there is no name — got "' + r3NoNameTitle + '"');
+  ok(r3NoNameTitle.trim() !== '', 'R2/N: and it is not blank either');
+  // Name every neighbour that could be quietly promoted into the title.
+  for (const [field, value] of [['source_id', 'msg-L-noname'], ['receipt_id', 'receipt-L-noname'],
+                                ['event_id', 'event-L-noname'], ['content_type', 'application/pdf'],
+                                ['primary_profile_id', 'p-main']]) {
+    ok(r3NoNameTitle.indexOf(value) === -1,
+      'R2/N: ' + field + ' is never promoted into the title in place of a missing name');
+  }
+
+  // ---- 3f. one name, one source of truth ---------------------------------
+  // The recorded fact and summary.candidate_name are the SAME fact; the card
+  // loads it directly and lets an operator correct it, so the card value wins
+  // wherever it is in hand. Two different names for one candidate must never
+  // appear on one screen.
+  MR3.state.crewFlowFacts = MR3.state.crewFlowFacts || {};
+  MR3.state.crewFlowFacts['L-gap'] = { name: 'Ivan M. (corrected on the card)' };
+  const r3TreeFact = String(MR3.crewFlowLiveTreeHtml('live'));
+  const r3GapFact = (r3TreeFact.match(new RegExp('data-intake="L-gap"[\\s\\S]*?(?=<div class="tree-item|$)')) || [''])[0];
+  ok(/data-name="fact"/.test(r3GapFact) && /corrected on the card/.test(r3GapFact),
+    'R2/N: the corrected fact wins over the list rendering of the same fact');
+  ok(r3GapFact.indexOf('from the list') === -1,
+    'R2/N: and the superseded value is not shown alongside it — one candidate, one name');
+  delete MR3.state.crewFlowFacts['L-gap'];
+
+  // ---- 4. both locales, on the list-loaded rows ---------------------------
+  store.set('skipi-crewing-ui-language', 'ru');
+  const r3Ru = String(MR3.crewFlowLiveTreeHtml('live'));
+  ok(/Master · Bulk Carrier — Выполнено 1 · Не выполнено 1 · Не подтверждено 1/.test(r3Ru),
+    'R2/L: the Russian row prints the three counts separately after a list load');
+  ok(/оценки против этого профиля нет/.test(r3Ru) && /оценка ещё не загружена/.test(r3Ru),
+    'R2/L: Russian keeps absent and not-loaded as two different sentences');
+  ok(/исходы распознаны не полностью/.test(r3Ru), 'R2/L: the partial state is named in Russian too');
+  ok(/имени в записанных сведениях нет/.test(r3Ru), 'R2/N: the missing-name state is named in Russian');
+  store.set('skipi-crewing-ui-language', 'en');
+  const r3En = String(MR3.crewFlowLiveTreeHtml('live'));
+  ok(/no stored comparison against this profile/.test(r3En) && /comparison not loaded yet/.test(r3En) && !/[Ѐ-ӿ]/.test(r3En),
+    'R2/L: English keeps them as two different sentences and leaves no Cyrillic');
+  ok(/outcomes not fully recognised/.test(r3En), 'R2/L: the partial state is named in English too');
+  ok(/no name in the recorded facts/.test(r3En), 'R2/N: the missing-name state is named in English');
+
+  // ---- 5. a second render costs nothing ----------------------------------
+  const r3Before = calls.length;
+  MR3.crewFlowLiveTreeHtml('live');
+  MR3.crewFlowEnsureLiveQueue();
+  ok(calls.length === r3Before,
+    'R2/L: re-rendering and re-entering Crew Flow issue no further command — '
+    + r3Before + ' -> ' + calls.length);
+}
+R2_FIXTURES.list = null;
+R2_FIXTURES.profiles = null;
+store.set('skipi_crewing_demo', '1');
+
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
