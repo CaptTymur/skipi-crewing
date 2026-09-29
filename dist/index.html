@@ -5476,9 +5476,11 @@ function crewFlowRowBadges(item) {
   var read = crewFlowReadInfo(item.intake_id);
   var out = '<span class="badge">' + escapeHtml(pilotStateLabel(item.state)) + '</span>';
   // R2: the «оценки: M» counter said how many comparisons existed, which is not
-  // something an operator can choose a candidate by. The outcome against the
-  // chosen profile takes its place; the facts counter stays.
-  out += crewFlowRowMatchHtml(item);
+  // something an operator can choose a candidate by. It is gone; the outcome
+  // against the chosen profile takes its place on its own line of the row
+  // (crewFlowRowMatchHtml), because these chips are unstyled text in the tree
+  // and a long sentence next to them reads as one run-on line. The facts
+  // counter stays.
   if (summary) {
     out += '<span class="badge">' + escapeHtml(crewFlowTr('facts')) + ': ' + escapeHtml(String(summary.facts)) + '</span>';
     if (summary.needs_review_reason) out += '<span class="badge">' + escapeHtml(pilotReason(summary.needs_review_reason)) + '</span>';
@@ -5506,6 +5508,7 @@ function crewFlowLiveTreeHtml(mode) {
       + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
       +   '<div><strong>' + escapeHtml(crewFlowRowTitle(item)) + '</strong></div>'
       +   '<div class="meta">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
+      +   '<div class="meta" data-qa="crew-flow-row-match-line" style="margin-top:4px;">' + crewFlowRowMatchHtml(item) + '</div>'
       +   '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">' + crewFlowRowBadges(item) + '</div>'
       + '</div>';
   }).join('');
@@ -5553,6 +5556,7 @@ function crewFlowLiveMobileHtml(mode) {
       + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
       +   '<div class="mobile-list-title"><span>' + escapeHtml(crewFlowRowTitle(item)) + '</span></div>'
       +   '<div class="mobile-list-meta">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
+      +   '<div class="mobile-list-meta" data-qa="crew-flow-row-match-line">' + crewFlowRowMatchHtml(item) + '</div>'
       +   '<div class="mobile-chip-row">' + crewFlowRowBadges(item) + '</div>'
       + '</button>';
   }).join('') + '</div>';

@@ -777,6 +777,11 @@ if (r2RuntimeReady) {
     && /data-missing="0"/.test(metRow) && /data-unconfirmed="0"/.test(metRow),
     'R2/2: a fully met candidate states met=2, missing=0, unconfirmed=0 against the selected profile');
   ok(/Master · Bulk Carrier/.test(metRow), 'R2/2: the row names the profile it is comparing against');
+  // The chips inside a tree row are unstyled text, so a long outcome sentence
+  // placed among them reads as one run-on line (seen on the first frame).
+  ok(/data-qa="crew-flow-row-match-line"[\s\S]{0,120}?data-qa="crew-flow-row-match"/.test(metRow),
+    'R2/2: the outcome gets its own line of the row, not a chip slot next to the counters');
+  ok(!/crew_flow\.ranks|comparisons: /.test(metRow), 'R2/2: the bare comparison counter is gone from the row');
 
   ok(/data-match="ranked"/.test(gapRow) && /data-met="1"/.test(gapRow)
     && /data-missing="1"/.test(gapRow) && /data-unconfirmed="1"/.test(gapRow),
