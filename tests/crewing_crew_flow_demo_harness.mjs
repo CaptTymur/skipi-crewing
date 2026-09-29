@@ -782,6 +782,24 @@ if (r2RuntimeReady) {
     && /data-missing="1"/.test(gapRow) && /data-unconfirmed="1"/.test(gapRow),
     'R2/2: unconfirmed stays its own count and is NOT folded into met — met=1, missing=1, unconfirmed=1');
 
+  // The machine-readable attributes are not what the operator reads. Pin the
+  // PRINTED sentence too: mutation M10 folded unconfirmed into the visible met
+  // number while leaving data-met alone, and survived every assertion above.
+  const r2MatchText = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-match"[^>]*>([^<]*)</);
+    return m ? m[1] : '';
+  };
+  ok(r2MatchText(metRow) === 'Master · Bulk Carrier — Met 2 · Not met 0 · Unconfirmed 0',
+    'R2/2: the fully met row prints exactly "Met 2 · Not met 0 · Unconfirmed 0" — got "' + r2MatchText(metRow) + '"');
+  ok(r2MatchText(gapRow) === 'Master · Bulk Carrier — Met 1 · Not met 1 · Unconfirmed 1',
+    'R2/2: the mixed row prints exactly "Met 1 · Not met 1 · Unconfirmed 1" — got "' + r2MatchText(gapRow) + '"');
+  for (const [rowId, row] of [['i-met', metRow], ['i-gap', gapRow]]) {
+    const attrs = String(row).match(/data-met="(\d+)" data-missing="(\d+)" data-unconfirmed="(\d+)"/);
+    const txt = r2MatchText(row);
+    ok(!!attrs && txt.indexOf('Met ' + attrs[1] + ' · Not met ' + attrs[2] + ' · Unconfirmed ' + attrs[3]) !== -1,
+      'R2/2: the printed counts are the same three numbers as the machine-readable ones (' + rowId + ') — "' + txt + '"');
+  }
+
   ok(/data-match="absent"/.test(otherRow),
     'R2/2: a candidate with no evaluation against the SELECTED profile says so instead of showing emptiness as a match');
   ok(!/data-met=/.test(otherRow), 'R2/2: the absent case carries no counts that could read as a match');
@@ -797,6 +815,8 @@ if (r2RuntimeReady) {
   const r2TreeRu = String(MR2.crewFlowLiveTreeHtml('live'));
   ok(/[Ѐ-ӿ]/.test(r2TreeRu) && /Выполнено/.test(r2TreeRu) && /Не подтверждено/.test(r2TreeRu),
     'R2/2: the Russian row names Выполнено / Не выполнено / Не подтверждено');
+  ok(/Master · Bulk Carrier — Выполнено 1 · Не выполнено 1 · Не подтверждено 1/.test(r2TreeRu),
+    'R2/2: the Russian mixed row prints the three counts separately, word for word');
   ok(/оценки против этого профиля нет/.test(r2TreeRu),
     'R2/2: the Russian row states the missing-evaluation case in Russian, word for word');
   ok(/Сравнивать с профилем/.test(r2TreeRu), 'R2/2: the Russian picker is labelled in Russian');
