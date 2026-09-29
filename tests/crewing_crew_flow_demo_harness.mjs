@@ -797,11 +797,15 @@ if (r2RuntimeReady) {
   const r2TreeRu = String(MR2.crewFlowLiveTreeHtml('live'));
   ok(/[Ѐ-ӿ]/.test(r2TreeRu) && /Выполнено/.test(r2TreeRu) && /Не подтверждено/.test(r2TreeRu),
     'R2/2: the Russian row names Выполнено / Не выполнено / Не подтверждено');
-  ok(/оценки против этого профиля нет|оценк/i.test(r2TreeRu), 'R2/2: the Russian row states the missing-evaluation case');
+  ok(/оценки против этого профиля нет/.test(r2TreeRu),
+    'R2/2: the Russian row states the missing-evaluation case in Russian, word for word');
+  ok(/Сравнивать с профилем/.test(r2TreeRu), 'R2/2: the Russian picker is labelled in Russian');
   store.set('skipi-crewing-ui-language', 'en');
   const r2TreeEn = String(MR2.crewFlowLiveTreeHtml('live'));
-  ok(/Met/.test(r2TreeEn) && /Unconfirmed/.test(r2TreeEn) && !/[Ѐ-ӿ]/.test(r2TreeEn),
+  ok(/Met/.test(r2TreeEn) && /Not met/.test(r2TreeEn) && /Unconfirmed/.test(r2TreeEn) && !/[Ѐ-ӿ]/.test(r2TreeEn),
     'R2/2: the English row names Met / Not met / Unconfirmed and leaves no Cyrillic');
+  ok(/no stored comparison against this profile/.test(r2TreeEn),
+    'R2/2: the English row states the missing-evaluation case, word for word');
 
   // the same column on the mobile list
   const r2Mobile = String(MR2.crewFlowLiveMobileHtml('live'));
