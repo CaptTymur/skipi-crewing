@@ -908,8 +908,11 @@ if (r3Ready) {
     // candidateName === undefined models a build without candidate_name at all;
     // null is the server answering that the recorded facts hold no name.
     if (candidateName !== undefined) summary.candidate_name = candidateName;
-    return { intake_id: id, receipt_id: 'r-' + id, crewing_id: 'crew-flow-demo-harness', source: 'mail',
-      source_id: id, event_id: 'e-' + id, primary_profile_id: 'p-main', content_sha256: '0'.repeat(64),
+    // Every neighbouring field is deliberately DISTINCT from intake_id: a fixture
+    // where source_id equals the id makes a substitution mutation invisible
+    // (drill P1 survived exactly that way).
+    return { intake_id: id, receipt_id: 'receipt-' + id, crewing_id: 'crew-flow-demo-harness', source: 'mail',
+      source_id: 'msg-' + id, event_id: 'event-' + id, primary_profile_id: 'p-main', content_sha256: '0'.repeat(64),
       content_bytes: 14412, content_type: 'application/pdf', state: 'ranked', source_trust: 'inbound_alias',
       version: 1, created_at: '2026-09-29T01:10:00Z', issued_at: '2026-09-29T01:10:00Z',
       objects: [], attachments: [], summary };
@@ -1060,8 +1063,15 @@ if (r3Ready) {
   // content type, not a blank that reads as an unnamed person.
   const r3NoNameTitle = (r3Row('L-noname').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['', ''])[1];
   ok(r3NoNameTitle === 'L-noname',
-    'R2/N: the title invents nothing when there is no name — got "' + r3NoNameTitle + '"');
+    'R2/N: the title is the intake_id and nothing else when there is no name — got "' + r3NoNameTitle + '"');
   ok(r3NoNameTitle.trim() !== '', 'R2/N: and it is not blank either');
+  // Name every neighbour that could be quietly promoted into the title.
+  for (const [field, value] of [['source_id', 'msg-L-noname'], ['receipt_id', 'receipt-L-noname'],
+                                ['event_id', 'event-L-noname'], ['content_type', 'application/pdf'],
+                                ['primary_profile_id', 'p-main']]) {
+    ok(r3NoNameTitle.indexOf(value) === -1,
+      'R2/N: ' + field + ' is never promoted into the title in place of a missing name');
+  }
 
   // ---- 3f. one name, one source of truth ---------------------------------
   // The recorded fact and summary.candidate_name are the SAME fact; the card
