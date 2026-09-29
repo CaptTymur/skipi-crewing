@@ -1441,6 +1441,51 @@ mod tests {
         }
     }
 
+    // ---- R2 (OWNER 2026-09-29): the queue row reads the stored outcome from the
+    // list response, so CandidateIntakeSummary must carry it — and must keep
+    // "the server did not send the field" distinguishable from "the server says
+    // there are none". Collapsing those two makes an unanswered question look
+    // like an answer on the operator's screen.
+    #[test]
+    fn summary_without_profile_ranks_parses_and_stays_unanswered() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null}"#;
+        let summary: CandidateIntakeSummary =
+            serde_json::from_str(json).expect("a server build without the field must still parse");
+        assert!(
+            summary.profile_ranks.is_none(),
+            "a missing field is None (unanswered), never an empty list (answered)"
+        );
+    }
+
+    #[test]
+    fn summary_with_empty_profile_ranks_is_an_answer() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,"profile_ranks":[]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            summary.profile_ranks,
+            Some(Vec::new()),
+            "an empty list is the server saying there are no stored evaluations"
+        );
+    }
+
+    #[test]
+    fn summary_profile_rank_row_carries_the_frozen_contract() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":2,"met":2,
+              "missing":1,"unconfirmed":3,"unknown":0,"stale":true}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let rows = summary.profile_ranks.expect("present");
+        assert_eq!(rows.len(), 1);
+        let row = &rows[0];
+        assert_eq!(row.profile_id, "p-main");
+        assert_eq!(row.profile_version, 2);
+        assert_eq!((row.met, row.missing, row.unconfirmed, row.unknown), (2, 1, 3, 0));
+        assert!(row.stale, "stale travels as a bool, exactly as the contract says");
+    }
+
     #[test]
     fn withdraw_expected_empty_204_is_ack() {
         let (base, server) =
