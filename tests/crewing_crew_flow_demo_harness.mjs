@@ -690,11 +690,22 @@ section('R2 task 2: the queue row states the outcome against the selected profil
 
 // static: the set of commands the Crew Flow block may call is frozen. A new
 // network call added to this screen changes this list and fails here.
+// Round 1 froze this list at two and asserted "no new call". The owner lifted that
+// boundary on 2026-09-29 and replaced it with a narrower one, so the list is
+// re-frozen at its new, named contents rather than deleted: exactly ONE command
+// was added, crewing_intake_matching_profile_list — an existing, unpaid, O(1)
+// lookup that turns a profile_id into a name. Anything beyond these three is a
+// call nobody authorised.
 const r2CrewInvokes = [...crewBlock.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]);
 const r2CrewInvokeSet = [...new Set(r2CrewInvokes)].sort().join(',');
-ok(r2CrewInvokeSet === 'rank_compliance_candidate,save_seafarer_from_bundle',
-  'R2/2: the Crew Flow block calls exactly [rank_compliance_candidate, save_seafarer_from_bundle] — got ['
+ok(r2CrewInvokeSet === 'crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
+  'R2/2: the Crew Flow block calls exactly [crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
   + r2CrewInvokeSet + ']');
+// The two commands that cost money or mutate state must never appear in this block.
+for (const forbidden of ['crewing_intake_candidate_rank', 'parse_cv', 'reprocess']) {
+  ok(!crewBlock.includes(forbidden),
+    'R2/2: the Crew Flow block never calls ' + forbidden + ' — the list reads stored work, it does not create it');
+}
 ok(!/fetch\(/.test(crewBlock), 'R2/2: the Crew Flow block performs no fetch()');
 for (const banned of ['score_percent', '%', 'sort(']) {
   ok(!new RegExp('crewFlowRowMatchHtml[\\s\\S]{0,1200}?' + banned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(crewBlock)

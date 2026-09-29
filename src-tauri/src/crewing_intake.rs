@@ -80,6 +80,29 @@ pub(crate) struct CandidateIntakeObject {
     pub content_type: String,
 }
 
+/// R2 (OWNER 2026-09-29): one stored evaluation, reduced to what a queue row can
+/// state — counts, never text and never a score. The server holds no locales, so
+/// every word on the row is produced client-side from these numbers.
+///
+/// `total` is not symmetry with the other three. The candidate card keeps an
+/// `unknown` bucket (dist/index.html:6816) precisely so an outcome CODE this build
+/// does not recognise is never silently counted as met. A row carries numbers
+/// rather than codes, so `total` is the only thing that can carry that refusal
+/// across: when `met + missing + unconfirmed` differs from `total`, the row says
+/// the outcomes are not fully recognised instead of under-counting in silence.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateProfileRankSummary {
+    pub profile_id: String,
+    pub profile_version: i64,
+    pub met: i64,
+    pub missing: i64,
+    /// Both `unconfirmed_requirement` and `unconfirmed_fact`, grouped exactly as
+    /// the card groups them. Never folded into `met`.
+    pub unconfirmed: i64,
+    pub total: i64,
+    pub stale: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateIntakeSummary {
     pub state: String,
@@ -88,6 +111,18 @@ pub(crate) struct CandidateIntakeSummary {
     pub ranks_stale: i64,
     pub active_confirmations: i64,
     pub needs_review_reason: Option<String>,
+    /// R2: the stored per-profile outcome, riding along with the list so the queue
+    /// row is filled the moment Crew Flow opens — no card opened and no request
+    /// per row.
+    ///
+    /// Deliberately `Option`, not a defaulted `Vec`: `None` means this server build
+    /// does not carry the field and the question is UNANSWERED (the row says "not
+    /// loaded"); `Some([])` means the server answered that there are no stored
+    /// evaluations (the row says "no comparison"). Collapsing the two into `[]`
+    /// would make an unanswered question look like an answer on the operator's
+    /// screen. A missing field never fails the parse.
+    #[serde(default)]
+    pub profile_ranks: Option<Vec<CandidateProfileRankSummary>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
