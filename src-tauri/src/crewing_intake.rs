@@ -1481,6 +1481,61 @@ mod tests {
     // "the server did not send the field" distinguishable from "the server says
     // there are none". Collapsing those two makes an unanswered question look
     // like an answer on the operator's screen.
+    // R2 (OWNER 2026-09-29): the row title. Three states must survive BOTH the
+    // parse and the hand-off to the webview, because they are three different
+    // things to show an operator:
+    //   field absent      -> this server build does not carry it: we cannot say
+    //   field present null-> the server says the recorded facts hold no name
+    //   field present str -> the name
+    // A plain Option<String> collapses the first two into None, and then a row
+    // would announce "no name recorded" on a server that was never asked.
+    #[test]
+    fn candidate_name_absent_present_null_and_present_value_stay_three_states() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Oleksandr K.\"}}")).unwrap();
+        assert_eq!(absent.candidate_name, None, "absent field: unanswered");
+        assert_eq!(null.candidate_name, Some(None), "explicit null: answered, no name");
+        assert_eq!(
+            named.candidate_name,
+            Some(Some("Oleksandr K.".to_string())),
+            "a value is the name itself"
+        );
+    }
+
+    // The webview is where the distinction is actually consumed, so it has to
+    // survive serialization too: absent must not arrive looking like null.
+    #[test]
+    fn candidate_name_three_states_survive_the_hand_off_to_the_webview() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Ivan M.\"}}")).unwrap();
+        let out = |v: &CandidateIntakeSummary| serde_json::to_string(v).unwrap();
+        assert!(
+            !out(&absent).contains("candidate_name"),
+            "an absent field is omitted, so the screen sees no key at all: {}",
+            out(&absent)
+        );
+        assert!(
+            out(&null).contains("\"candidate_name\":null"),
+            "an explicit null keeps its key: {}",
+            out(&null)
+        );
+        assert!(
+            out(&named).contains("\"candidate_name\":\"Ivan M.\""),
+            "a name travels as itself: {}",
+            out(&named)
+        );
+    }
+
     #[test]
     fn summary_without_profile_ranks_parses_and_stays_unanswered() {
         let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,

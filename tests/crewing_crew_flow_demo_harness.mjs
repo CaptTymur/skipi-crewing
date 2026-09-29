@@ -900,11 +900,14 @@ if (r3Ready) {
   const pr = (profileId, met, missing, unconfirmed, total, stale) => ({
     profile_id: profileId, profile_version: 1, met, missing, unconfirmed, total, stale: !!stale,
   });
-  const listItem = (id, profileRanks) => {
+  const listItem = (id, profileRanks, candidateName) => {
     const summary = { state: 'ranked', facts: 3, ranks: (profileRanks || []).length, ranks_stale: 0,
       active_confirmations: 0, needs_review_reason: null };
     // profileRanks === undefined models a server build WITHOUT the field.
     if (profileRanks !== undefined) summary.profile_ranks = profileRanks;
+    // candidateName === undefined models a build without candidate_name at all;
+    // null is the server answering that the recorded facts hold no name.
+    if (candidateName !== undefined) summary.candidate_name = candidateName;
     return { intake_id: id, receipt_id: 'r-' + id, crewing_id: 'crew-flow-demo-harness', source: 'mail',
       source_id: id, event_id: 'e-' + id, primary_profile_id: 'p-main', content_sha256: '0'.repeat(64),
       content_bytes: 14412, content_type: 'application/pdf', state: 'ranked', source_trust: 'inbound_alias',
@@ -913,8 +916,12 @@ if (r3Ready) {
   };
   R2_FIXTURES.list = {
     items: [
-      listItem('L-met', [pr('p-main', 2, 0, 0, 2, false)]),
-      listItem('L-gap', [pr('p-main', 1, 1, 1, 3, false)]),
+      listItem('L-met', [pr('p-main', 2, 0, 0, 2, false)], 'Oleksandr K.'),
+      listItem('L-gap', [pr('p-main', 1, 1, 1, 3, false)], 'Ivan M. (from the list)'),
+      // the server answered: the recorded facts hold no name
+      listItem('L-noname', [pr('p-main', 1, 0, 0, 1, false)], null),
+      // an older build: no candidate_name key at all, so nothing can be claimed
+      listItem('L-noname-field', [pr('p-main', 1, 0, 0, 1, false)]),
       listItem('L-other', [pr('p-side', 1, 0, 0, 1, false)]),
       listItem('L-none', []),        // the server says: no stored evaluation at all
       listItem('L-nofield', undefined), // an older server: the field is simply absent
@@ -931,7 +938,7 @@ if (r3Ready) {
         { profile_id: 'p-main', profile_version: 2, met: 1, missing: 2, unconfirmed: 0, total: 3, stale: false },
       ]),
     ],
-    limit: 50, offset: 0, total: 9,
+    limit: 50, offset: 0, total: 11,
   };
   R2_FIXTURES.profiles = { items: [
     { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
@@ -1035,6 +1042,42 @@ if (r3Ready) {
     'R2/L (control): an explicit empty list IS stored — the refusal above is about absence, not emptiness');
   delete MR3.crewFlowRankCache()['probe-empty'];
 
+  // ---- 3e. the row title: who the candidate is, without inventing anyone ---
+  // The owner's point of the whole change is "choose whom to open", so a row
+  // whose title is a raw intake_id does not do the job. The name now rides in
+  // the same summary. Three states, for the same reason the outcome has three.
+  ok(/data-name="list"/.test(r3Row('L-met')) && /Oleksandr K\./.test(r3Row('L-met')),
+    'R2/N: the title shows the name the list carried, straight from the load');
+  ok(/data-name="none"/.test(r3Row('L-noname')),
+    'R2/N: an explicit null is shown AS "no name", never masked');
+  ok(/data-qa="crew-flow-row-noname"/.test(r3Row('L-noname')),
+    'R2/N: and the absence is spelled out next to the fallback identifier');
+  ok(r3Row('L-noname').indexOf('L-noname') !== -1,
+    'R2/N: the intake_id stays as the fallback identifier rather than disappearing');
+  ok(!/data-qa="crew-flow-row-noname"/.test(r3Row('L-noname-field')) && /data-name="unknown"/.test(r3Row('L-noname-field')),
+    'R2/N: a build that never sent the field claims nothing — "we cannot say" is not "there is none"');
+  // Nothing may be substituted for a missing name: not the source id, not the
+  // content type, not a blank that reads as an unnamed person.
+  const r3NoNameTitle = (r3Row('L-noname').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['', ''])[1];
+  ok(r3NoNameTitle === 'L-noname',
+    'R2/N: the title invents nothing when there is no name — got "' + r3NoNameTitle + '"');
+  ok(r3NoNameTitle.trim() !== '', 'R2/N: and it is not blank either');
+
+  // ---- 3f. one name, one source of truth ---------------------------------
+  // The recorded fact and summary.candidate_name are the SAME fact; the card
+  // loads it directly and lets an operator correct it, so the card value wins
+  // wherever it is in hand. Two different names for one candidate must never
+  // appear on one screen.
+  MR3.state.crewFlowFacts = MR3.state.crewFlowFacts || {};
+  MR3.state.crewFlowFacts['L-gap'] = { name: 'Ivan M. (corrected on the card)' };
+  const r3TreeFact = String(MR3.crewFlowLiveTreeHtml('live'));
+  const r3GapFact = (r3TreeFact.match(new RegExp('data-intake="L-gap"[\\s\\S]*?(?=<div class="tree-item|$)')) || [''])[0];
+  ok(/data-name="fact"/.test(r3GapFact) && /corrected on the card/.test(r3GapFact),
+    'R2/N: the corrected fact wins over the list rendering of the same fact');
+  ok(r3GapFact.indexOf('from the list') === -1,
+    'R2/N: and the superseded value is not shown alongside it — one candidate, one name');
+  delete MR3.state.crewFlowFacts['L-gap'];
+
   // ---- 4. both locales, on the list-loaded rows ---------------------------
   store.set('skipi-crewing-ui-language', 'ru');
   const r3Ru = String(MR3.crewFlowLiveTreeHtml('live'));
@@ -1043,11 +1086,13 @@ if (r3Ready) {
   ok(/оценки против этого профиля нет/.test(r3Ru) && /оценка ещё не загружена/.test(r3Ru),
     'R2/L: Russian keeps absent and not-loaded as two different sentences');
   ok(/исходы распознаны не полностью/.test(r3Ru), 'R2/L: the partial state is named in Russian too');
+  ok(/имени в записанных сведениях нет/.test(r3Ru), 'R2/N: the missing-name state is named in Russian');
   store.set('skipi-crewing-ui-language', 'en');
   const r3En = String(MR3.crewFlowLiveTreeHtml('live'));
   ok(/no stored comparison against this profile/.test(r3En) && /comparison not loaded yet/.test(r3En) && !/[Ѐ-ӿ]/.test(r3En),
     'R2/L: English keeps them as two different sentences and leaves no Cyrillic');
   ok(/outcomes not fully recognised/.test(r3En), 'R2/L: the partial state is named in English too');
+  ok(/no name in the recorded facts/.test(r3En), 'R2/N: the missing-name state is named in English');
 
   // ---- 5. a second render costs nothing ----------------------------------
   const r3Before = calls.length;
