@@ -2487,6 +2487,16 @@ console.log('# K2 modules/crew-flow');
     const absent = await rcOpen({ contactMode: 'none', responseContact: undefined });
     softOk(rcMain(absent).includes('data-qa="crew-flow-email-hint"'),
       'No.621 R7/N11: and the hint is still there when nothing was delivered — the check is not vacuous');
+    // R7b — the GAP. An answered absence and an unasked question are different
+    // things, and the hint belongs only to the first. Folded together, the panel
+    // says "no address received" for one frame before the address arrives: an
+    // unknown wearing the clothes of an absence, which (930) п.1 forbids. Measured
+    // on an intake whose contact was never asked about.
+    const gap = vm.runInContext("crewFlowActionsHtml('intake-2')", absent);
+    softOk(!/data-qa="crew-flow-email-(hint|not-usable|unknown)"/.test(String(gap)),
+      'No.621 R7b: an intake whose contact has not been asked about yet gets NO address sentence at all');
+    softOk(/data-qa="crew-flow-actions"/.test(String(gap)),
+      'No.621 R7b: and the panel itself still renders — the check is about the sentence, not the panel');
   }
   {
     // R8 — N17, the back door. Three places the value must NOT be, measured after

@@ -5967,9 +5967,15 @@ function crewFlowResponseContactCache() {
   return state.crewFlowResponseContact;
 }
 function crewFlowCacheResponseContact(intakeId, row) {
+  // 'none' is an ANSWER ("this letter carries no binding"), and it is a different
+  // thing from the key being absent, which means nobody has asked yet. Folding the
+  // two into one empty string is how a screen says "no address received" one frame
+  // before the address arrives - an unknown wearing the clothes of an absence,
+  // which is exactly what CANON (930) п.1 forbids.
   var code = '';
   if (row && row.state === 'have') code = row.offerEmail ? 'addressable' : 'refused';
   else if (row && row.state === 'failed') code = 'failed';
+  else if (row && row.state === 'none') code = 'none';
   try { crewFlowResponseContactCache()[String(intakeId)] = code; } catch(_) {}
 }
 function crewFlowResponseContactState(intakeId) {
@@ -5984,6 +5990,9 @@ function crewFlowAddressHintKey(intakeId) {
   if (code === 'addressable') return '';
   if (code === 'refused') return 'email_not_usable';
   if (code === 'failed') return 'email_unknown';
+  // Unasked and unanswered: say NOTHING. The hint appears when there is an answer
+  // to report, never in the gap before one.
+  if (code !== 'none') return '';
   return 'email_missing';
 }
 function crewFlowActionsHtml(intakeId) {
