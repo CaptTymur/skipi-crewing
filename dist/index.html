@@ -7245,12 +7245,31 @@ function pilotCardFactVersionHtml(v, isCurrent) {
   var uncertainty = v.uncertainty === 'operator_entered' ? cardT('entered_by_member')
     : (v.uncertainty == null ? ''
       : (CARD_UNCERTAINTY_TEXT[String(v.uncertainty)] ? cardCode(CARD_UNCERTAINTY_TEXT, v.uncertainty) : pilotT('unknown_reason')+': '+String(v.uncertainty)));
-  return '<div class="pilot-fact-version'+(isCurrent?' current':'')+'" data-qa="pilot-fact-version" data-version="'+escapeAttr(String(v.version))+'">'
-    + '<div class="pilot-fact-value" data-qa="pilot-fact-value">'+escapeHtml(v.value == null ? '' : String(v.value))+'</div>'
-    + '<div class="pilot-note">'+escapeHtml(cardT('version'))+' '+escapeHtml(String(v.version))+' · '+escapeHtml(cardT('source_object'))+' '+escapeHtml(String(v.source_object))
+  // CANON (930) principle 1: the FACT is the answer and stays in plain sight —
+  // "certificate:able_seafarer_deck — held" is what a decision is made on. Its
+  // machine wrapping is not: the version number, the source-object UUID, the
+  // page, the span offsets, the confidence figure, who typed it and the exact
+  // timestamp are diagnostics, and on the stand they filled the main screen as
+  // an unbroken run of identifiers.
+  //
+  // What does NOT fold away is the uncertainty: an ambiguous or unrecognised
+  // reading is the one thing on this line that changes whether the fact can be
+  // relied on, and the canon puts that beside the decision, never behind a
+  // disclosure. It is therefore printed twice on the current version — once
+  // plainly, once inside the technical line it belongs to — and that repetition
+  // is deliberate.
+  var technical = '<div class="pilot-note">'+escapeHtml(cardT('version'))+' '+escapeHtml(String(v.version))+' · '+escapeHtml(cardT('source_object'))+' '+escapeHtml(String(v.source_object))
     + (v.page != null ? ' · '+escapeHtml(cardT('page'))+' '+escapeHtml(String(v.page)) : '')+(v.span != null && v.span !== '' ? ' · '+escapeHtml(cardT('span'))+' '+escapeHtml(String(v.span)) : '')
     + ' · <span data-qa="pilot-fact-confidence">'+pilotCardConfidenceHtml(v.confidence)+'</span>'+(uncertainty ? ' · '+escapeHtml(uncertainty) : '')
-    + (v.corrected_by ? ' · '+escapeHtml(cardMember(v.corrected_by)) : '')+' · '+escapeHtml(pilotFormatTime(v.created_at))+'</div></div>';
+    + (v.corrected_by ? ' · '+escapeHtml(cardMember(v.corrected_by)) : '')+' · '+escapeHtml(pilotFormatTime(v.created_at))+'</div>';
+  // `operator_entered` is provenance ("a colleague typed this"), not doubt about
+  // the reading, so it is not raised to the surface with the other two.
+  var doubt = (uncertainty && v.uncertainty !== 'operator_entered' && isCurrent)
+    ? '<div class="pilot-note" data-qa="pilot-fact-uncertainty">'+escapeHtml(uncertainty)+'</div>' : '';
+  return '<div class="pilot-fact-version'+(isCurrent?' current':'')+'" data-qa="pilot-fact-version" data-version="'+escapeAttr(String(v.version))+'">'
+    + '<div class="pilot-fact-value" data-qa="pilot-fact-value">'+escapeHtml(v.value == null ? '' : String(v.value))+'</div>'
+    + doubt
+    + '<details class="cf-brk" data-qa="pilot-fact-technical"><summary>'+escapeHtml(cardT('section_source'))+'</summary>'+technical+'</details></div>';
 }
 function pilotCardFactsHtml() {
   var d = pilotDetail();
@@ -7269,7 +7288,18 @@ function pilotCardFactFormHtml() {
   if (!d.card) return '';
   if (!objects.length) return '<div class="pilot-status error" data-qa="pilot-no-objects">'+escapeHtml(cardT('no_objects'))+'</div>';
   var f = d.form, correcting = f.mode === 'correct';
-  var options = objects.map(function(o){ return '<option value="'+escapeAttr(String(o.id))+'" '+(f.source_object === o.id ? 'selected' : '')+'>'+escapeHtml(String(o.id))+' · '+escapeHtml(String(o.content_type))+'</option>'; }).join('');
+  // The operator picks WHICH document a fact cites, so this control cannot move
+  // behind a disclosure — but the option does not have to read as a UUID. The
+  // full id stays in `value` (that is what gets submitted, and the server checks
+  // it against this candidate's objects); the LABEL is the document in words,
+  // with a short id only to tell two of the same kind apart.
+  var options = objects.map(function(o){
+    var kind = (typeof crewFlowChannelLabel === 'function')
+      ? crewFlowChannelLabel(o.content_type) : String(o.content_type);
+    var short = String(o.id || '').slice(0, 8);
+    return '<option value="'+escapeAttr(String(o.id))+'" '+(f.source_object === o.id ? 'selected' : '')
+      +'>'+escapeHtml(kind)+(short ? ' · '+escapeHtml(short) : '')+'</option>';
+  }).join('');
   return '<div class="pilot-fact-form" data-qa="pilot-fact-form">'
     + (correcting ? '<div class="pilot-status" data-qa="pilot-correcting">'+escapeHtml(cardT('correcting'))+': <strong>'+escapeHtml(f.field)+'</strong> <button class="ghost" onclick="pilotFactCancelCorrection()">'+escapeHtml(cardT('cancel_correction'))+'</button></div>' : '')
     + '<div class="pilot-form-row"><label>'+escapeHtml(cardT('field'))+'<input id="pilot-fact-field" maxlength="120" value="'+escapeAttr(f.field)+'" '+(correcting?'readonly':'')+' oninput="state.intakePilot.detail.form.field=this.value"></label>'
@@ -7620,8 +7650,14 @@ function pilotCardLetterHtml() {
     ? '<div class="pilot-note" data-qa="pilot-letter-saved">'+escapeHtml(cardT('letter_saved_to'))+': '+escapeHtml(String(d.letter.path))+' · '+escapeHtml(humanSize(d.letter.bytes))+'</div>'
       + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-letter-open-saved" onclick="pilotLetterOpenSaved()">'+escapeHtml(cardT('letter_open_saved'))+'</button></div>'
     : '';
-  return '<div class="pilot-note" data-qa="pilot-letter-object">'+escapeHtml(String(obj.id))+' · '+escapeHtml(String(obj.content_type))+'</div>'
-    + rows + saved
+  // The letter's own object id is an identifier, and it was the first line of
+  // this block. The headers, the saved copy and the button that opens the
+  // original are what the operator acts on; the id moves in with the rest of the
+  // provenance. Nothing is removed — the same text, one disclosure down.
+  return rows
+    + '<details class="cf-brk" data-qa="pilot-letter-provenance"><summary>'+escapeHtml(cardT('section_source'))+'</summary>'
+    + '<div class="pilot-note" data-qa="pilot-letter-object">'+escapeHtml(String(obj.id))+' · '+escapeHtml(String(obj.content_type))+'</div></details>'
+    + saved
     + '<div class="pilot-actions"><button data-qa="pilot-letter-open" onclick="pilotLetterDownload()"'+((d.letterLoading || web) ? ' disabled' : '')+'>'+escapeHtml(cardT('letter_open'))+'</button>'
     + (web ? '<span class="pilot-note" data-qa="pilot-bytes-web-note">'+escapeHtml(cardT('bytes_web_note'))+'</span>' : '')+'</div>';
 }

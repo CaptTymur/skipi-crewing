@@ -44,6 +44,30 @@ for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
   ok(!crewBlock.toLowerCase().includes(term), 'Crew Flow block avoids banned wording: ' + term);
 }
 ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'Crew Flow slice contains no Cloud API key plumbing');
+
+// CANON (930) principle 1, checked on the card source: the machine wrapping of a
+// fact, and the letter's object id, sit INSIDE a named disclosure -- while the
+// things a decision is made on do not. Both were on the main screen on the stand:
+// "be89d69c-... - message/rfc822" headed the Letter block, and the facts printed
+// version / source object / page / span / confidence / timestamp as running text.
+{
+  const factFn = HTML.slice(HTML.indexOf('function pilotCardFactVersionHtml'), HTML.indexOf('function pilotCardFactsHtml'));
+  ok(/data-qa="pilot-fact-technical"><summary>/.test(factFn),
+    '930: the fact version/source-object/page/span/confidence/timestamp line is behind a named disclosure');
+  ok(factFn.indexOf('pilot-fact-value') < factFn.indexOf('pilot-fact-technical'),
+    '930: and the fact VALUE itself is printed before it, in plain sight');
+  ok(/data-qa="pilot-fact-uncertainty"/.test(factFn),
+    '930: an ambiguous or unrecognised reading stays beside the decision, not only inside the disclosure');
+  const letterFn = HTML.slice(HTML.indexOf('function pilotCardLetterHtml'), HTML.indexOf('function cardAttachments'));
+  ok(/data-qa="pilot-letter-provenance"><summary>/.test(letterFn)
+    && letterFn.indexOf('pilot-letter-provenance') < letterFn.indexOf('pilot-letter-object'),
+    '930: the letter object id is inside the provenance disclosure, not the first line of the block');
+  // Note the closing quote: without it this matches `pilot-letter-open-saved`,
+  // which is built earlier in the function, and the check passes vacuously.
+  ok(letterFn.indexOf('data-qa="pilot-letter-open"') > letterFn.lastIndexOf('</details>'),
+    '930 (control): the button that opens the original is NOT swallowed by that disclosure');
+}
+
 // K2.1 (OWNER (739)): the mailbox module is retired and Crew Flow is the single
 // screen. These four assertions live HERE as well as in the mailbox harness on
 // purpose: this file is also run by the plugin-host route, so a dist-only change
