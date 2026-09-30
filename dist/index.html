@@ -813,13 +813,16 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 .cf-row-name { font-size:14px; font-weight:650; overflow-wrap:anywhere; min-width:0; }
 .cf-row-time { font-size:11px; color:var(--text2); white-space:nowrap; flex:0 0 auto; }
 .cf-row-sub { font-size:11.5px; color:var(--text2); margin-top:2px; overflow-wrap:anywhere; }
-.cf-fit { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-top:6px; }
+.cf-fitwrap { margin-top:6px; }
+.cf-fit { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.cf-cap { font-size:11px; color:var(--text2); margin-top:1px; overflow-wrap:anywhere; }
 .cf-word { font-size:11.5px; overflow-wrap:anywhere; min-width:0; color:var(--text2); }
 .cf-pct { font-size:13px; font-weight:700; white-space:nowrap; flex:0 0 auto; color:var(--text2); }
 .cf-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px;
   vertical-align:middle; background:var(--text2); }
 .cf-fit-complete .cf-dot { background:#2e9e5b; }
 .cf-fit-complete .cf-word, .cf-fit-complete .cf-pct { color:#1f7a45; }
+.cf-fit-complete .cf-word { font-weight:650; }
 .cf-fit-stale .cf-dot { background:var(--warn); }
 .cf-fit-none .cf-dot, .cf-fit-absent .cf-dot, .cf-fit-notloaded .cf-dot {
   background:transparent; border:1px solid var(--text2); }
@@ -830,7 +833,11 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 .cf-brk > summary:before { content:"+ "; }
 .cf-brk[open] > summary:before { content:"\2212 "; }
 .cf-brk > summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-.cf-chips { margin-top:5px; display:flex; gap:4px; flex-wrap:wrap; }
+.cf-chips { margin-top:6px; display:flex; gap:4px; flex-wrap:wrap; }
+/* Scoped to the Crew Flow row: the generic .badge is only styled inside
+   .panel-header, so in the tree these read as loose words run together. */
+.cf-chips .badge { font-size:10.5px; line-height:1.7; padding:0 7px; border-radius:99px;
+  background:var(--panel2); color:var(--text2); white-space:nowrap; }
 .cf-panel-note { padding:4px 12px 6px 16px; font-size:11px; color:var(--text2); overflow-wrap:anywhere; }
 .cf-panel-note.err { color:var(--err); }
 /* The candidate card: who this is, then what was compared, then what to do. */
@@ -5543,12 +5550,13 @@ function crewFlowRowFitHtml(item) {
   } else {
     pctHtml = '<span class="cf-pct" data-qa="crew-flow-row-pct" data-pct="none">\u2014</span>';
   }
-  // The caption rides with the number wherever the number goes (928).
-  var word = escapeHtml(crewFlowShareWord(share));
-  if (share.pct !== null) word += ' \u00b7 ' + escapeHtml(crewFlowShareCaption(share));
-  return '<div class="cf-fit cf-fit-' + cls + '" data-qa="crew-flow-row-fit" data-fit="'
-    + escapeAttr(share.reason) + '"><span class="cf-word"><span class="cf-dot" aria-hidden="true"></span>'
-    + word + '</span>' + pctHtml + '</div>';
+  // The caption rides with the number wherever the number goes (928) — directly
+  // beneath it, not crushed onto the same line where it stops being read.
+  var caption = share.pct !== null
+    ? '<div class="cf-cap">' + escapeHtml(crewFlowShareCaption(share)) + '</div>' : '';
+  return '<div data-qa="crew-flow-row-fit" data-fit="' + escapeAttr(share.reason) + '" class="cf-fitwrap cf-fit-' + cls + '">'
+    + '<div class="cf-fit"><span class="cf-word"><span class="cf-dot" aria-hidden="true"></span>'
+    + escapeHtml(crewFlowShareWord(share)) + '</span>' + pctHtml + '</div>' + caption + '</div>';
 }
 // The channel a document arrived by, in words. The raw media type is a machine
 // string; it stays available in the card, not in the line an operator scans.
@@ -5743,9 +5751,13 @@ function crewFlowRowBadges(item) {
   // (crewFlowRowMatchHtml), because these chips are unstyled text in the tree
   // and a long sentence next to them reads as one run-on line. The facts
   // counter stays.
-  if (summary) {
-    out += '<span class="badge">' + escapeHtml(crewFlowTr('facts')) + ': ' + escapeHtml(String(summary.facts)) + '</span>';
-    if (summary.needs_review_reason) out += '<span class="badge">' + escapeHtml(pilotReason(summary.needs_review_reason)) + '</span>';
+  // R2 removed the comparison counter from this line for the same reason the
+  // facts counter goes now: "7 facts" is not something an operator can choose a
+  // candidate by, and next to the outcome it reads as part of it. The facts
+  // themselves are on the card. What stays is what changes a decision: the
+  // processing state, and any reason the record needs a human look.
+  if (summary && summary.needs_review_reason) {
+    out += '<span class="badge">' + escapeHtml(pilotReason(summary.needs_review_reason)) + '</span>';
   }
   if (read && read.action) out += '<span class="badge">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</span>';
   return out;
@@ -6402,8 +6414,7 @@ function renderCrewFlowDetail() {
   if (crewMode !== 'demo') {
     var pilotState = state.intakePilot;
     if (crewMode === 'live' && pilotState && pilotState.detail) {
-      pilotRenderCard(main);
-      main.innerHTML = crewFlowActionsHtml(pilotState.detail.intakeId) + main.innerHTML;
+      pilotRenderCard(main, crewFlowActionsHtml(pilotState.detail.intakeId));
       return;
     }
     main.innerHTML = crewFlowLiveMainHtml(crewMode);
@@ -7946,12 +7957,15 @@ function pilotCardFitSummaryHtml() {
     + '<div class="pilot-note">' + escapeHtml(cardT('freshness_unverified')) + '</div></details>';
   return explain + '<div class="cf-fitcards">' + items.map(pilotCardFitCardHtml).join('') + '</div>';
 }
-function pilotRenderCard(main) {
+function pilotRenderCard(main, afterHeroHtml) {
   var d = pilotDetail();
   main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'">'
     // 1. WHO. The card used to open with its own name ("Candidate card") and the
     //    intake id; the person's name was somewhere further down among the facts.
     + '<div class="pilot-hero">'+pilotCardIdentityHtml()+'<div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
+    // The host (Crew Flow) puts its operator actions here: directly under the
+    // name, above the fold, and after the answer to "whose card is this".
+    + (afterHeroHtml || '')
     // 2. WHAT WAS COMPARED. Several profiles at once, each with its own figure and
     //    its own unmet/unconfirmed counts, above the source material.
     + '<section class="pilot-card" data-qa="pilot-section-fit"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('fit_title'))+'</h2></div>'+pilotCardFitSummaryHtml()+'</section>'

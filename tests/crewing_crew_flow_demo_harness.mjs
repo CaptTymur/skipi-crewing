@@ -857,9 +857,13 @@ if (r2RuntimeReady) {
   ok(r2Fit(gapRow) !== 'complete',
     'R2/928: a row with unmet and unconfirmed checks never reads as all-met, whatever its figure');
   // The caption is mandatory: the bare number is exactly what gets read as a score.
+  // The headline word, the figure and the caption are three elements inside the
+  // fit block; read the whole block and strip the markup rather than pinning a
+  // particular nesting, so the requirement survives a layout change and only a
+  // MISSING caption fails it.
   const r2FitText = (row) => {
-    const m = String(row).match(/data-qa="crew-flow-row-fit"[^>]*>([\s\S]*?)<\/div>/);
-    return m ? m[1].replace(/<[^>]*>/g, '') : '';
+    const m = String(row).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+    return m ? m[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
   };
   ok(/2 of 2 checks met, by the stored evaluation/.test(r2FitText(metRow)),
     'R2/928: the figure never appears without "M of N checks met, by the stored evaluation" — got "' + r2FitText(metRow) + '"');
