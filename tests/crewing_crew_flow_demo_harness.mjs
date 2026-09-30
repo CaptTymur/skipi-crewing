@@ -45,6 +45,26 @@ for (const term of ['compliant', 'approved', 'legal', 'verdict']) {
 }
 ok(!crewBlock.includes('ANTHROPIC') && !crewBlock.includes('CLAUDE_API_KEY'), 'Crew Flow slice contains no Cloud API key plumbing');
 
+// CANON (930): the "all stored checks met" signal must be legible in BOTH themes.
+// It was one fixed #1f7a45 for both, which measured 2.74:1 on the selected dark
+// queue row and 3.10:1 on the dark card. A single value serving both themes is
+// the defect itself, so what is pinned here is that the pair EXISTS -- a dark
+// default plus a light override -- not one particular hex.
+{
+  const css = HTML.slice(0, HTML.indexOf('</style>'));
+  for (const sel of ['.cf-fit-complete .cf-pct', '.cf-fitcard.complete .cf-fitcard-pct']) {
+    const light = css.indexOf(':root[data-theme="light"] ' + sel) !== -1
+      || css.indexOf(sel.replace('.cf-', ':root[data-theme="light"] .cf-')) !== -1;
+    ok(light, '930: ' + sel + ' has a light-theme override, so one value does not serve both themes');
+  }
+  ok(/:root\[data-theme="light"\][^{]*\.cf-fit-complete[^{]*\{[^}]*#1f7a45/.test(css),
+    '930: the LIGHT theme keeps the green it was measured with — this change did not touch it');
+  const darkRule = css.match(/\n\.cf-fit-complete \.cf-word, \.cf-fit-complete \.cf-pct \{ color:(#[0-9a-f]{6}); \}/);
+  ok(!!darkRule && darkRule[1].toLowerCase() !== '#1f7a45',
+    '930: and the dark default is NOT the low-contrast value — got ' + (darkRule ? darkRule[1] : 'no rule'));
+}
+
+
 // CANON (930) principle 1, checked on the card source: the machine wrapping of a
 // fact, and the letter's object id, sit INSIDE a named disclosure -- while the
 // things a decision is made on do not. Both were on the main screen on the stand:
