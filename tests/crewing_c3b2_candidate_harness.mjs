@@ -2657,6 +2657,214 @@ console.log('\n# K2.1a attachment ordinal: client floor vs 0-based server contra
 
 }
 
+// ====== No.622: professional applicability of a RANK, as the SCREEN says it ======
+// Written as a standalone harness and living HERE because skipi-guard's allowlists
+// are exact file NAMES: a new test file cannot be pushed at all, while the subject
+// - the stored evaluations of a candidate card - is exactly what this harness
+// already measures. The section is ONE block, so its bindings cannot collide with
+// the 2600 lines above it, and it reuses the file's `html` and its counters.
+console.log('\n# No.622 - applicability: one answer, said the same way in all three places');
+{
+  const ok622 = softOk;
+  const START = '// ================= No.622 RANK APPLICABILITY (client) START =================';
+  const END = '// ================== No.622 RANK APPLICABILITY (client) END ==================';
+  const a = html.indexOf(START), b = html.indexOf(END, a + 1);
+  ok622(a > 0 && b > a, 'the applicability block exists, once, and is bounded by its markers');
+  ok622(html.indexOf(START, a + 1) === -1, 'exactly one START marker');
+  const block = (a > 0 && b > a) ? html.slice(a, b) : '';
+
+  // ---------------------------------------------------------------- the adapter
+  // ONE function reads the server's contract. Three renderers plus the shortlist
+  // plus the draft branch on it, and five expressions of the same field is how
+  // they drift apart.
+  console.log('# the adapter that reads the server contract');
+  let ctx = null;
+  if (block) {
+    ctx = { console, state:{}, __detail:null };
+    ctx.getUiLang = () => ctx.__lang || 'ru';
+    ctx.pilotDetail = () => ctx.__detail;
+    ctx.escapeHtml = (s) => String(s);
+    ctx.escapeAttr = (s) => String(s);
+    vm.createContext(ctx);
+    try {
+      vm.runInContext(block + `
+  this.__api = { cardApplicability, cardApplicabilityLabel, cardApplicabilityWhy,
+    cardResponseProfileId, cardResponseOrigin, cardOriginLabel,
+    cardWithheldProfiles, cardApplicabilityVisibleRows,
+    CARD_APPLICABILITY_TEXT, CARD_APPLICABILITY_REASON_TEXT, CARD_ORIGIN_TEXT };`, ctx);
+    } catch (error) {
+      failed += 1; console.log('  ✗ the block evaluates on its own:', error.message);
+    }
+  }
+  const api = (ctx && ctx.__api) || null;
+  ok622(api, 'the block exposes its helpers');
+
+  if (api) {
+    const A = api.cardApplicability;
+    // Five verdicts, and the sixth state that is NOT a verdict: an older server
+    // that says nothing. Reading silence as `not_applicable` would empty the
+    // screen; reading it as `same` would print a claim nobody made.
+    ok622(A({applicability:'same'}).answer === 'same' && A({applicability:'same'}).stated === true, 'same is carried through');
+    ok622(A({applicability:'alternative'}).answer === 'alternative', 'alternative is its own verdict, never folded into same');
+    ok622(A({applicability:'any'}).answer === 'any' && A({applicability:'any'}).hidden === false, 'any (a deliberately open vacancy) is shown');
+    ok622(A({applicability:'not_applicable'}).hidden === true, 'not_applicable is the ONLY verdict that moves under a disclosure');
+    ok622(A({applicability:'unknown'}).hidden === false, 'unknown is NEVER hidden - the canon puts unknowns next to the decision');
+    ok622(A({}).stated === false && A({}).answer === null && A({}).hidden === false,
+      'a row from a server that does not speak this contract keeps rendering exactly as before');
+    ok622(A({applicability:'nonsense'}).stated === false, 'an unrecognised verdict is silence, not a guess');
+    // N25: two different unknowns are two different sentences.
+    const absent = A({applicability:'unknown', applicability_reason:'rank_absent'});
+    const unreadable = A({applicability:'unknown', applicability_reason:'rank_unreadable'});
+    const profileUnreadable = A({applicability:'unknown', applicability_reason:'profile_rank_unreadable'});
+    ok622(absent.reason === 'rank_absent' && unreadable.reason === 'rank_unreadable', 'the two unknowns stay two codes');
+    for (const lang of ['ru', 'en']) {
+      ctx.__lang = lang;
+      const one = api.cardApplicabilityWhy(absent), two = api.cardApplicabilityWhy(unreadable);
+      const three = api.cardApplicabilityWhy(profileUnreadable);
+      ok622(one && two && three && one !== two && two !== three && one !== three,
+        `[${lang}] N25: "he has no rank", "nobody could place his" and "nobody could place the PROFILE's" are three sentences`);
+      ok622(!/^[a-z_]+$/.test(one) && !/^[a-z_]+$/.test(two), `[${lang}] the reason is a sentence, not the wire code`);
+      // N10 on the screen: alternative must not READ as a confirmation.
+      const alt = api.cardApplicabilityLabel(A({applicability:'alternative'}));
+      const same = api.cardApplicabilityLabel(A({applicability:'same'}));
+      ok622(alt && same && alt !== same, `[${lang}] alternative is labelled differently from same`);
+      ok622(api.cardApplicabilityLabel(A({})) === '', `[${lang}] silence prints no label at all`);
+    }
+    // Both dictionaries are complete: an English string in a Russian interface is
+    // a defect of its own (No.627 found one today).
+    for (const table of [api.CARD_APPLICABILITY_TEXT, api.CARD_APPLICABILITY_REASON_TEXT, api.CARD_ORIGIN_TEXT]) {
+      for (const key of Object.keys(table)) {
+        const pair = table[key];
+        ok622(Array.isArray(pair) && pair.length === 2 && pair[0] && pair[1] && pair[0] !== pair[1],
+          `${key} carries a distinct RU and EN string`);
+        ok622(/[Ѐ-ӿ]/.test(pair[0]), `${key} RU string is actually Russian`);
+        ok622(!/[Ѐ-ӿ]/.test(pair[1]), `${key} EN string carries no Cyrillic`);
+      }
+    }
+
+    // ------------------------------------------------- N24 / N23 / (954) origin
+    console.log('# where the first profile CAME FROM - three states, never two');
+    const detail = (card, items) => ({ intakeId:'i-1', card:card, ranks:{ items:items||[], unranked_active_profiles:[], withheld_profiles:[] } });
+    ctx.__detail = detail({ source:'skipi_response', primary_profile_id:'p-master' }, [{profile_id:'p-master', primary:true}]);
+    ok622(api.cardResponseOrigin() === 'response', 'a Skipi response names the profile he responded to');
+    ctx.__detail = detail({ source:'inbound', primary_profile_id:'p-master' }, [{profile_id:'p-master', primary:true}]);
+    ok622(api.cardResponseOrigin() === 'first_context', 'N24: an ordinary letter is a FIRST CONTEXT, never a response');
+    ctx.__detail = detail({ source:'inbound' }, [{profile_id:'p-x', primary:false}]);
+    ok622(api.cardResponseOrigin() === 'none', 'no primary_profile_id means there is no originating profile at all');
+    // (954), border 1: `rank.primary` alone NEVER earns the label.
+    ctx.__detail = detail({ source:'skipi_response' }, [{profile_id:'p-legacy', primary:true}]);
+    ok622(api.cardOriginLabel('p-legacy') === '', 'a legacy primary flag with no intake profile gives NO label');
+    ctx.__detail = detail({ source:'inbound', primary_profile_id:'p-master' }, [{profile_id:'p-master', primary:true}]);
+    for (const lang of ['ru', 'en']) {
+      ctx.__lang = lang;
+      const label = api.cardOriginLabel('p-master');
+      ok622(label && !/отклик|respond/i.test(label), `[${lang}] N24: the letter's first profile is not called a response`);
+      ok622(api.cardOriginLabel('p-other') === '', `[${lang}] a profile that is not the origin carries no origin label`);
+    }
+    ctx.__detail = detail({ source:'skipi_response', primary_profile_id:'p-master' }, [{profile_id:'p-master', primary:true}]);
+    ctx.__lang = 'ru';
+    ok622(/отклик/i.test(api.cardOriginLabel('p-master')), 'RU: a real response IS called a response');
+    ctx.__lang = 'en';
+    ok622(/respond/i.test(api.cardOriginLabel('p-master')), 'EN: a real response IS called a response');
+
+    // ------------------------------------------------------ N7 / N11 / withheld
+    console.log('# what is withheld is NAMED and COUNTED, never silently dropped');
+    ctx.__detail = {
+      intakeId:'i-1',
+      card:{ source:'skipi_response', primary_profile_id:'p-ab' },
+      ranks:{
+        items:[
+          { profile_id:'p-ab', primary:true, applicability:'same' },
+          { profile_id:'p-master', primary:false, applicability:'not_applicable' },
+          // A stored row of a profile the server did NOT list as withheld - it is
+          // switched off now, so it is not an ACTIVE profile, but its evaluation is
+          // still on the card and still must not read as current.
+          { profile_id:'p-old', primary:false, applicability:'not_applicable' },
+          { profile_id:'p-co', primary:false, applicability:'unknown', applicability_reason:'rank_absent' }
+        ],
+        unranked_active_profiles:[],
+        withheld_profiles:[
+          { profile_id:'p-master', name:'Master', applicability:'not_applicable' },
+          { profile_id:'p-chief', name:'Chief Engineer', applicability:'not_applicable' }
+        ]
+      }
+    };
+    const withheld = api.cardWithheldProfiles();
+    // THREE: two active profiles the server withheld, plus one stored row of a
+    // profile it no longer lists. The `unknown` row is NOT here - it stays in the
+    // main list, so counting it as withheld would put a number on the screen that
+    // does not match what the screen hides.
+    ok622(withheld.length === 3, `the withheld set is the UNION of both sides, deduped by profile (got ${withheld.length}, want 3)`);
+    ok622(withheld.filter(w => w.profile_id === 'p-master').length === 1, 'a profile that is both a stored row and a withheld profile is counted ONCE');
+    ok622(withheld.some(w => w.profile_id === 'p-old'), 'a stored inapplicable row the server did not list is still counted');
+    ok622(!withheld.some(w => w.profile_id === 'p-co'), 'an unknown is NOT counted as withheld: the screen does not hide it');
+    const visible = api.cardApplicabilityVisibleRows();
+    ok622(visible.length === 2, `only not_applicable leaves the main list (got ${visible.length}, want 2: the response profile and the unknown)`);
+    ok622(!visible.some(r => r.profile_id === 'p-old'), 'an inapplicable stored row of a switched-off profile leaves the main list too');
+    ok622(visible[0].profile_id === 'p-ab', 'N7: the profile he responded to stands FIRST');
+    ok622(visible.some(r => r.profile_id === 'p-co'), 'N25: the unknown stays in the main list with its explanation');
+    // N7 again, the harder half: an INAPPLICABLE response profile is still shown.
+    ctx.__detail.ranks.items[0].applicability = 'not_applicable';
+    const visibleWithBadPrimary = api.cardApplicabilityVisibleRows();
+    ok622(visibleWithBadPrimary.some(r => r.profile_id === 'p-ab'),
+      'N7: the profile he RESPONDED to is shown even when the rank does not apply to it');
+    ok622(!api.cardWithheldProfiles().some(w => w.profile_id === 'p-ab'),
+      'the response profile is never counted as withheld');
+  }
+
+  // -------------------------------------------------- N20: the labels that lied
+  console.log('# N20 - the captions that promised ALL active profiles');
+  const lies = [
+    ['ru', 'Сравниваются все активные профили соответствия'],
+    ['en', 'Every active compliance profile is compared']
+  ];
+  for (const [lang, text] of lies) {
+    ok622(!html.includes(text), `[${lang}] the caption no longer claims every active profile is compared`);
+  }
+  ok622(!html.includes("'crew_flow.matched_done':'Сопоставлено с активными профилями соответствия.'"),
+    'RU matched_done no longer implies every profile was compared');
+  ok622(!html.includes("'crew_flow.matched_done':'Compared against the active compliance profiles.'"),
+    'EN matched_done no longer implies every profile was compared');
+
+  // ------------------- the three consumers all branch on the SAME adapter (N22)
+  console.log('# N13 / N14 / N22 - all three consumers read one adapter');
+  const consumers = [
+    ['pilotCardFitCardHtml', 'the fit block'],
+    ['pilotCardRankRowHtml', 'the stored evaluations'],
+    ['crewFlowRowMatchHtml', 'the queue row']
+  ];
+  for (const [fn, name] of consumers) {
+    const at = html.indexOf('function ' + fn + '(');
+    if (!ok622(at > 0, `${name} (${fn}) exists`)) continue;
+    const body = html.slice(at, html.indexOf('\nfunction ', at + 10));
+    ok622(/cardApplicability\s*\(/.test(body), `${name} reads applicability through the one adapter`);
+  }
+  // Both cache producers carry the field, or the queue cannot know it at all.
+  for (const fn of ['crewFlowCacheRanks', 'crewFlowCacheRankSummary']) {
+    const at = html.indexOf('function ' + fn + '(');
+    if (!ok622(at > 0, `${fn} exists`)) continue;
+    const body = html.slice(at, html.indexOf('\nfunction ', at + 10));
+    ok622(/applicability/.test(body), `${fn} carries applicability into the row cache`);
+  }
+
+  // -------------------------------------------- N19: the new staleness reasons
+  console.log('# N19 - the three new staleness reasons have words in both languages');
+  const staleAt = html.indexOf('var PILOT_CARD_STALE_TEXT');
+  const staleBlock = staleAt > 0 ? html.slice(staleAt, html.indexOf('};', staleAt)) : '';
+  for (const code of ['rank_not_applicable', 'rank_unknown', 'facts_changed']) {
+    ok622(staleBlock.includes(code + ':['), `stale reason ${code} has its own pair of words`);
+  }
+
+  // --------------------------------------------------------------------- N21
+  console.log('# N21 - a seafarer does not reach a shortlist or a letter he cannot hold');
+  const draftAt = html.indexOf('function cardDraftProfileId()');
+  const draftBody = draftAt > 0 ? html.slice(draftAt, html.indexOf('\nfunction ', draftAt + 10)) : '';
+  ok622(/cardApplicability\s*\(/.test(draftBody), 'the draft never picks a profile the rank does not apply to');
+  const rowAt = html.indexOf('function pilotCardRankRowHtml(');
+  const rowBody = rowAt > 0 ? html.slice(rowAt, html.indexOf('\nfunction ', rowAt + 10)) : '';
+  ok622(/not_applicable|\.hidden/.test(rowBody), 'the shortlist button is refused on an inapplicable row, on the screen and not only on the server');
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);
