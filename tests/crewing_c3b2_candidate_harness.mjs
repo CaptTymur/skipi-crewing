@@ -1089,7 +1089,11 @@ console.log('# K2 modules/crew-flow');
   }
   function makeCrewContext({ language = 'en', settings, demo = false, native = true, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false,
     contactMode = 'both', attachments, bytes404 = false, mailtoFails = false, realEscaping = false, mailbox,
-    contactEmail = 'oleh@example.test' } = {}) {
+    contactEmail = 'oleh@example.test',
+    // No.621. `undefined` is the server's 404 (this intake carries no binding);
+    // an object is the 200 body; `{ __throw: err }` is any OTHER failure, which
+    // the screen must not confuse with an absence (N14).
+    responseContact } = {}) {
     const srv = k2Server({ contactMode, attachments, contactEmail });
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
@@ -1175,6 +1179,13 @@ console.log('# K2 modules/crew-flow');
           if (mailtoFails) throw 'no mail client';
           timeline.push('invoke:open_mailto');
           return null;
+        }
+        if (command === 'crewing_intake_response_contact') {
+          if (responseContact === undefined) {
+            throw { kind: 'server', status: 404, detail: 'candidate intake not found', ambiguous: false };
+          }
+          if (responseContact && responseContact.__throw) throw responseContact.__throw;
+          return responseContact;
         }
         if (command === 'get_mailbox_status') return mailbox === undefined ? { configured: true, status: 'active', email_masked: 'o***@crewing.example' } : mailbox;
         if (command === 'disconnect_mailbox') { timeline.push('invoke:disconnect_mailbox'); return null; }
@@ -2275,6 +2286,263 @@ console.log('# K2 modules/crew-flow');
     softOk(!/mailto:/.test(rust) || !/attachment/.test((rust.match(/fn crewing_intake_open_saved[\s\S]*?\n}/) || [''])[0]),
       'K2.1-12: the byte commands carry no mailto/attachment coupling');
   }
+  // ====================================================================== No.621
+  // The contact the seafarer DELIVERED with his response reaches the screen.
+  //
+  // OWNER (938). Until this card the queue said "no contact has been recorded"
+  // beside a letter whose own From WAS that contact — the screen contradicted
+  // itself. What is drilled here is not only that the address appears, but the
+  // four ways this could be finished honestly and still be wrong:
+  //
+  //  * a FAILED request rendered as an absence ("no contact recorded" over a
+  //    live contact) — the one thing CANON (930) forbids outright (N14);
+  //  * the delivered value smuggled into the FACT CACHE, from where it reaches
+  //    the queue row and the IRREVERSIBLE seafarer save by the back door (N17);
+  //  * an address the agency may not write to (its own, or one at our own inbound
+  //    domain) quietly pre-filling the draft (N7 from the client side);
+  //  * a second copy of the resolution order, so the card and the queue disagree
+  //    about who the addressee is.
+  console.log('\n# No.621 delivered response contact');
+
+  const RC_ADDRESSABLE = { value: 'delivered-621@example.test', is_email: true, offer_email: true };
+  const RC_REFUSED = { value: 'desk@crewing.example', is_email: true, offer_email: false };
+  const RC_NOT_EMAIL = { value: '+995 555 12 34 56', is_email: false, offer_email: false };
+  // A right-to-left override inside an address-shaped string. escapeHtml does not
+  // touch it, so a screen that prints the value verbatim reorders on the operator.
+  const RC_BIDI = { value: 'a\u202Eexe.moc@example.test', is_email: false, offer_email: false };
+
+  // ---- static: one command, one struct, one resolver -------------------------
+  softOk(rust.includes('pub(crate) async fn crewing_intake_response_contact('),
+    'No.621: the contact is a fixed native command');
+  softOk(lib.includes('crewing_intake::crewing_intake_response_contact,'),
+    'No.621: the command is registered in Tauri');
+  {
+    const struct = (rust.match(/pub\(crate\) struct CandidateResponseContact \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(struct !== '', 'No.621: the answer has a struct of its own, not a Value');
+    softOk((struct.match(/#\[serde\(default\)\]/g) || []).length === 3,
+      'N10: all three fields carry #[serde(default)], so a server build without the key does not fail the parse — got '
+        + (struct.match(/#\[serde\(default\)\]/g) || []).length);
+    softOk(/fn a_response_contact_body_without_the_keys_still_parses\(\)/.test(rust),
+      'N10: and that is measured by a unit test rather than only declared');
+    softOk(/&\["response-contact"\]/.test(rust),
+      'No.621: the command asks for the response-contact tail of THIS intake');
+  }
+  {
+    // ONE resolver. The order lives in exactly one function; every consumer calls
+    // it. Two copies is how the card and the queue end up naming two addressees.
+    const resolverCount = (c3b2Source.match(/function cardContactResolved\(/g) || []).length;
+    softOk(resolverCount === 1, 'No.621: exactly one resolver function exists — got ' + resolverCount);
+    const draftOpen = (c3b2Source.match(/function pilotDraftOpen\(intakeId, kind\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(/cardContactResolved\(/.test(draftOpen),
+      'No.621: pilotDraftOpen reads the resolver and not the facts directly');
+    const draftSave = (c3b2Source.match(/async function pilotDraftContactSave\(\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(/cardContactResolved\(/.test(draftSave),
+      'No.621: pilotDraftContactSave recomputes through the SAME resolver');
+    const contactsHtml = (c3b2Source.match(/function pilotCardContactsHtml\(\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(/cardResponseContact\(|cardContactResolved\(/.test(contactsHtml),
+      'No.621: the Contacts block reads the delivered contact through the same two helpers');
+    softOk(!/contact_as_written[\s\S]{0,200}pilot-contact-response/.test(contactsHtml),
+      'No.621: the delivered contact is NOT captioned "as written in the document" — it came from the response, not the CV');
+  }
+  {
+    // THE FORBIDDEN PATH, pinned as a literal. The irreversible write to the
+    // operator's own seafarer database is a question that went to the owner; until
+    // he answers it, this function is byte for byte what it was.
+    const save = (k2crew.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(save !== '', 'No.621: the seafarer-save path is found in the shipped bytes');
+    softOk(!/response|resolved|delivered|offer_email/i.test(save),
+      'No.621/N8: crewFlowSaveToSeafarers mentions nothing of the delivered contact — the irreversible copy is NOT in this card');
+    softOk(/email: facts\.email \|\| ''/.test(save),
+      'No.621/N8: it still writes only the legacy `email` FACT, exactly as before this card');
+    const cache = (k2crew.match(/function crewFlowFactsFor\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(cache !== '' && !/response|resolved|delivered/i.test(cache),
+      'No.621/N17: the fact cache is never fed the delivered contact — the back door into the queue row and the save is closed by ABSENCE, not by a promise');
+  }
+
+  // ---- runtime ---------------------------------------------------------------
+  const rcOpen = async (opts) => {
+    const ctx = makeCrewContext(opts);
+    ctx.__crew.renderCrewFlowView();
+    await flush();
+    ctx.__crew.pilotOpenCard('intake-1');
+    await flush(10);
+    return ctx;
+  };
+  const rcMain = (ctx) => ctx.nodes.get('main').innerHTML;
+  const rcDetail = (ctx) => ctx.state.intakePilot.detail;
+
+  {
+    // R1 — the OUTCOME of the card, and the one check that must be red on the base.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_ADDRESSABLE });
+    const out = rcMain(ctx);
+    softOk(ctx.calls.some((c) => c.command === 'crewing_intake_response_contact'),
+      'No.621 R1: opening a card asks the server for the delivered contact');
+    softOk(out.includes('data-qa="pilot-contact-response"'),
+      'No.621 R1: the Contacts block carries a row for the delivered contact');
+    softOk(out.includes(RC_ADDRESSABLE.value),
+      'No.621 R1: and the address is on the screen');
+    softOk(!out.includes('data-qa="pilot-contacts-empty"'),
+      'No.621 R1: "no contact has been recorded" is gone when a contact was delivered');
+    const caption = cardText(ctx, 'contact_from_response');
+    softOk(!!caption && out.includes(esc(caption)),
+      'No.621 R1: the row says WHERE it came from, in the product\'s own words — ' + JSON.stringify(caption));
+    // and the draft it feeds
+    vm.runInContext("pilotDraftOpen('intake-1','reply')", ctx);
+    await flush();
+    const draft = rcDetail(ctx).draft || {};
+    softOk(draft.to === RC_ADDRESSABLE.value,
+      'No.621 R1: "Write email" opens a draft addressed to the delivered contact — got ' + JSON.stringify(draft.to));
+    softOk(draft.needContact === false,
+      'No.621 R1: and it does not ask for an address it already has');
+    softOk(rcMain(ctx).includes('data-qa="pilot-draft-to"'),
+      'No.621 R1: the addressee is rendered on the card (the mail client is NOT launched here)');
+  }
+  {
+    // R2 — N14, the finding of the counselor: a failure is not an absence.
+    for (const [label, err] of [
+      ['403', { kind: 'server', status: 403, detail: 'not authorised for this crewing', ambiguous: false }],
+      ['500', { kind: 'server', status: 500, detail: null, ambiguous: false }],
+      ['network', { kind: 'network', status: null, detail: null, ambiguous: false }],
+    ]) {
+      const ctx = await rcOpen({ contactMode: 'none', responseContact: { __throw: err } });
+      const out = rcMain(ctx);
+      softOk(out.includes('data-qa="pilot-contact-response-failed"'),
+        'No.621 R2/N14 (' + label + '): the screen says the contact could not be loaded');
+      softOk(!out.includes('data-qa="pilot-contacts-empty"'),
+        'No.621 R2/N14 (' + label + '): and it does NOT say "no contact has been recorded" — CANON (930) п.1');
+      const retry = cardText(ctx, 'contact_response_failed');
+      softOk(!!retry && out.includes(esc(retry)),
+        'No.621 R2/N14 (' + label + '): in the product\'s own words — ' + JSON.stringify(retry));
+    }
+  }
+  {
+    // R3 — a real 404 keeps today's honest sentence and today's button.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: undefined });
+    const out = rcMain(ctx);
+    softOk(out.includes('data-qa="pilot-contacts-empty"'),
+      'No.621 R3/N2: a 404 — and only a 404 — keeps "no contact has been recorded"');
+    softOk(!out.includes('data-qa="pilot-contact-response-failed"'),
+      'No.621 R3/N2: and it is not reported as a failure either');
+    softOk(out.includes('data-qa="pilot-contact-add"'),
+      'No.621 R3: the manual fallback path is untouched');
+  }
+  {
+    // R4 — N7 from the client side, and it is the combination the server-side
+    // drill cannot see: the value IS delivered, and the draft must still refuse it.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_REFUSED });
+    const out = rcMain(ctx);
+    softOk(out.includes(RC_REFUSED.value),
+      'No.621 R4/N7: a refused address is still SHOWN — it is what the seafarer sent');
+    const line = cardText(ctx, 'contact_response_refused');
+    softOk(!!line && out.includes(esc(line)),
+      'No.621 R4/N7: with an honest line saying no letter is prepared to it');
+    vm.runInContext("pilotDraftOpen('intake-1','reply')", ctx);
+    await flush();
+    const draft = rcDetail(ctx).draft || {};
+    softOk(draft.to === '', 'No.621 R4/N7: draft.to is EMPTY — got ' + JSON.stringify(draft.to));
+    softOk(draft.needContact === true,
+      'No.621 R4/N7: and the card asks for an address instead of silently using a forbidden one');
+  }
+  {
+    // R5 — not an address at all.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_NOT_EMAIL });
+    const out = rcMain(ctx);
+    softOk(out.includes('+995 555 12 34 56'), 'No.621 R5/N4: a non-address contact is shown');
+    const line = cardText(ctx, 'contact_response_not_email');
+    softOk(!!line && out.includes(esc(line)),
+      'No.621 R5/N4: with the honest line that this is not an e-mail');
+    vm.runInContext("pilotDraftOpen('intake-1','reply')", ctx);
+    await flush();
+    softOk((rcDetail(ctx).draft || {}).needContact === true,
+      'No.621 R5/N4: and no draft is addressed with it');
+  }
+  {
+    // R6 — N13: the operator's correction wins, and the delivered value stays
+    // visible as the second source rather than disappearing.
+    const ctx = await rcOpen({ contactMode: 'contact', contactEmail: 'operator@example.test', responseContact: RC_ADDRESSABLE });
+    const out = rcMain(ctx);
+    softOk(out.includes('operator@example.test') && out.includes(RC_ADDRESSABLE.value),
+      'No.621 R6/N13: both sources are on the screen');
+    vm.runInContext("pilotDraftOpen('intake-1','reply')", ctx);
+    await flush();
+    softOk((rcDetail(ctx).draft || {}).to === 'operator@example.test',
+      'No.621 R6/N13: the operator fact wins the draft — got ' + JSON.stringify((rcDetail(ctx).draft || {}).to));
+  }
+  {
+    // R7 — N11: the screen does not say two different things at once.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_ADDRESSABLE });
+    const out = rcMain(ctx);
+    softOk(!out.includes('data-qa="crew-flow-email-hint"'),
+      'No.621 R7/N11: with a delivered contact there is no "no address received" under the action buttons');
+    const absent = await rcOpen({ contactMode: 'none', responseContact: undefined });
+    softOk(rcMain(absent).includes('data-qa="crew-flow-email-hint"'),
+      'No.621 R7/N11: and the hint is still there when nothing was delivered — the check is not vacuous');
+  }
+  {
+    // R8 — N17, the back door. Three places the value must NOT be, measured after
+    // the card has been open and the irreversible save has been pressed.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_ADDRESSABLE });
+    const cacheDump = JSON.stringify(ctx.state.crewFlowFacts || {});
+    softOk(!cacheDump.includes(RC_ADDRESSABLE.value),
+      'No.621 R8/N17: the delivered value is absent from crewFlowFactCache()');
+    softOk(!ctx.nodes.get('crew-flow-tree').innerHTML.includes(RC_ADDRESSABLE.value),
+      'No.621 R8/N17: absent from the queue row');
+    await vm.runInContext("crewFlowSaveToSeafarers('intake-1')", ctx);
+    await flush();
+    const saves = ctx.calls.filter((c) => c.command === 'save_seafarer_from_bundle');
+    softOk(saves.length === 1, 'No.621 R8/N17: the save was actually pressed — ' + saves.length + ' call(s)');
+    softOk(saves.length === 1 && !JSON.stringify(saves[0].args).includes(RC_ADDRESSABLE.value),
+      'No.621 R8/N17: and the delivered value is absent from what went to the seafarer database');
+    softOk(saves.length === 1 && saves[0].args.applicantSummary.email === '',
+      'No.621 R8/N17: the saved email is what it was before this card — empty, because no email FACT exists');
+  }
+  {
+    // R9 — N12: a bidi override must not be handed to the markup verbatim.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_BIDI });
+    const out = rcMain(ctx);
+    softOk(!out.includes('\u202E'),
+      'No.621 R9/N12: the right-to-left override does not reach the rendered markup');
+    softOk(/data-qa="pilot-contact-response"/.test(out),
+      'No.621 R9/N12: the row is still rendered — the value is neutralised, not swallowed');
+  }
+  {
+    // R10 — N18: the demo host never reaches the command, so it never gets the
+    // `demo_read_only` toast that would take the demo harness red.
+    const ctx = makeCrewContext({ demo: true, responseContact: RC_ADDRESSABLE });
+    ctx.__crew.renderCrewFlowView();
+    await flush();
+    ctx.__crew.pilotOpenCard('intake-1');
+    await flush(10);
+    softOk(!ctx.calls.some((c) => c.command === 'crewing_intake_response_contact'),
+      'No.621 R10/N18: the demo host issues no response-contact command');
+    softOk(!ctx.toasts.some(([m]) => /demo/i.test(String(m))),
+      'No.621 R10/N18: and no demo toast is raised by this card');
+  }
+  {
+    // R11 — both shipped languages, from the dictionaries rather than re-spelled.
+    for (const lang of ['en', 'ru']) {
+      const ctx = await rcOpen({ language: lang, contactMode: 'none', responseContact: RC_ADDRESSABLE });
+      const out = rcMain(ctx);
+      for (const key of ['contact_from_response', 'contact_response_failed', 'contact_response_refused', 'contact_response_not_email']) {
+        const text = cardText(ctx, key);
+        softOk(!!text, 'No.621 R11 (' + lang + '): ' + key + ' is translated — ' + JSON.stringify(text));
+      }
+      softOk(out.includes(esc(cardText(ctx, 'contact_from_response'))),
+        'No.621 R11 (' + lang + '): the rendered caption is the dictionary one');
+    }
+  }
+  {
+    // R12 — N6 from the client side: the queue never carries the value, and the
+    // list command is not the one that fetched it.
+    const ctx = await rcOpen({ contactMode: 'none', responseContact: RC_ADDRESSABLE });
+    const listCalls = ctx.calls.filter((c) => c.command === 'crewing_intake_candidate_list');
+    softOk(listCalls.length >= 1, 'No.621 R12/N6: the queue was loaded');
+    softOk(!ctx.nodes.get('crew-flow-tree').innerHTML.includes(RC_ADDRESSABLE.value),
+      'No.621 R12/N6: no queue row carries the delivered address');
+    const contactCalls = ctx.calls.filter((c) => c.command === 'crewing_intake_response_contact');
+    softOk(contactCalls.length === 1 && contactCalls[0].args.intakeId === 'intake-1',
+      'No.621 R12/N6: exactly one contact request, for the card that was opened — got ' + contactCalls.length);
+  }
 }
 
 // # K2.1a — attachment ordinal: the client floor against the 0-based server contract
@@ -2327,6 +2595,7 @@ console.log('\n# K2.1a attachment ordinal: client floor vs 0-based server contra
     'K2.1a-2: no arithmetic anywhere in the download path — a client-side shift would re-create the off-by-one');
   softOk(/var ordinal = Number\(a\.ordinal \|\| 0\);/.test(c3b2Source) && /onclick="pilotAttachmentDownload\('\+String\(ordinal\)\+'\)"/.test(c3b2Source),
     'K2.1a-2: the attachment row passes its server ordinal to the download as-is');
+
 }
 
 console.log('\n# control matrix');

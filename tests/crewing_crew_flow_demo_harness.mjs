@@ -1324,5 +1324,30 @@ R2_FIXTURES.profiles = null;
 store.set('skipi_crewing_demo', '1');
 
 
+// ---- No.621: the delivered response contact must not reach the demo host ----
+//
+// `demoInvoke` answers an unknown command with a toast and
+// `reject('demo_read_only')`, so a card that fetched the contact unguarded would
+// raise a demo toast on every open and take this harness red. The guard is
+// pinned HERE, in the demo harness, so the regression is caught by the file
+// whose subject it is - not only by the candidate harness next door.
+section('No.621 response contact stays out of the demo host');
+{
+  const loader = (HTML.match(/async function pilotResponseContactLoad\(\) \{[\s\S]*?\n\}/) || [''])[0];
+  ok(loader !== '', 'No.621: the response-contact loader exists in the shipped bytes');
+  ok(/__demoMode/.test(loader),
+    'No.621/N18: the loader checks the demo host before it invokes anything');
+  ok(loader.indexOf('__demoMode') < loader.indexOf("invoke('crewing_intake_response_contact'"),
+    'No.621/N18: and it checks it BEFORE the invoke, not after');
+  // The crew-flow side keeps a CODE, never the address: nothing in that cache can
+  // travel to a queue row or to the irreversible seafarer save.
+  const cache = (crewBlock.match(/function crewFlowCacheResponseContact\([\s\S]*?\n\}/) || [''])[0];
+  ok(cache !== '', 'No.621: the crew-flow side has its own cache helper');
+  ok(cache !== '' && !/value/.test(cache),
+    'No.621/N17: that cache is handed a state CODE and never the address itself');
+  ok(cache !== '' && !/crewFlowFactCache\(\)/.test(cache),
+    'No.621/N17: and it is not the fact cache - the back door into the queue row and the save is closed by absence');
+}
+
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
