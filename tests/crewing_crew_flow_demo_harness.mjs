@@ -280,6 +280,7 @@ function loadInlineModuleForCurrentStore() {
       + 'crewingSettingsSections: (typeof _crewingSettingsSections === "function" ? _crewingSettingsSections : null), '
       + 'crewingSettingsSectionFor: (typeof _crewingSettingsSectionFor === "function" ? _crewingSettingsSectionFor : null), '
       + 'crewFlowMatchShare: (typeof crewFlowMatchShare === "function" ? crewFlowMatchShare : null), '
+      + 'crewFlowSourceLabel: (typeof crewFlowSourceLabel === "function" ? crewFlowSourceLabel : null), '
       + 'crewFlowCacheRanks: (typeof crewFlowCacheRanks === "function" ? crewFlowCacheRanks : null), '
       + 'crewFlowCacheProfiles: (typeof crewFlowCacheProfiles === "function" ? crewFlowCacheProfiles : null), '
       + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
@@ -963,6 +964,16 @@ if (r3Ready) {
   const pr = (profileId, met, missing, unconfirmed, total, stale) => ({
     profile_id: profileId, profile_version: 1, met, missing, unconfirmed, total, stale: !!stale,
   });
+  // The source codes here are the ones MEASURED on the live pilot queue
+  // (skipi_response / inbound / synthetic) plus one deliberately unrecognised
+  // code, so every branch of the label table is exercised by a real row. The
+  // earlier fixture said 'mail', a string that exists only in the Rust unit
+  // tests -- and a row titled from it looked correct here while every real
+  // record fell through to the generic label on the pilot.
+  const sourceOf = (id) => (id === 'L-noname' ? 'skipi_response'
+    : id === 'L-noname-field' ? 'synthetic'
+    : id === 'L-stale' ? 'no_such_source_code_v9'
+    : 'inbound');
   const listItem = (id, profileRanks, candidateName) => {
     const summary = { state: 'ranked', facts: 3, ranks: (profileRanks || []).length, ranks_stale: 0,
       active_confirmations: 0, needs_review_reason: null };
@@ -974,7 +985,7 @@ if (r3Ready) {
     // Every neighbouring field is deliberately DISTINCT from intake_id: a fixture
     // where source_id equals the id makes a substitution mutation invisible
     // (drill P1 survived exactly that way).
-    return { intake_id: id, receipt_id: 'receipt-' + id, crewing_id: 'crew-flow-demo-harness', source: 'mail',
+    return { intake_id: id, receipt_id: 'receipt-' + id, crewing_id: 'crew-flow-demo-harness', source: sourceOf(id),
       source_id: 'msg-' + id, event_id: 'event-' + id, primary_profile_id: 'p-main', content_sha256: '0'.repeat(64),
       content_bytes: 14412, content_type: 'application/pdf', state: 'ranked', source_trust: 'inbound_alias',
       version: 1, created_at: '2026-09-29T01:10:00Z', issued_at: '2026-09-29T01:10:00Z',
@@ -1175,8 +1186,8 @@ if (r3Ready) {
   // cannot be mistaken for a person's name.
   ok(r3NoNameTitle !== 'L-noname' && r3NoNameTitle.indexOf('L-noname') === -1,
     'R2/N (929): the intake_id is NOT the title when there is no name — got "' + r3NoNameTitle + '"');
-  ok(/^(E-mail|Skipi application|Record)$/.test(r3NoNameTitle),
-    'R2/N (929): the title names where the record came from — got "' + r3NoNameTitle + '"');
+  ok(r3NoNameTitle === 'Skipi application',
+    'R2/N (929): a response delivered from the app is titled as such — got "' + r3NoNameTitle + '"');
   ok(r3NoNameTitle.trim() !== '', 'R2/N: and it is not blank either');
   // The identifier did not vanish: it stays the row's machine handle, and the
   // card prints it in full under Technical details. It is simply not a heading.
@@ -1194,8 +1205,34 @@ if (r3Ready) {
   }
   // The control that keeps all of the above from being vacuous: when a name IS
   // recorded it wins outright, and no source label appears in its place.
-  ok(!/E-mail|Skipi application|Record/.test((r3Row('L-met').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['',''])[1]),
+  ok(!/E-mail|Skipi application|Record|Test record/.test((r3Row('L-met').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['',''])[1]),
     'R2/N (929, control): a named candidate is titled by the NAME, never by the source');
+
+  // ---- 3e-bis. every branch of the source table, in both languages ---------
+  // Measured on the pilot: skipi_response 2, inbound 9, synthetic 3. An
+  // unrecognised code MUST degrade to the neutral word rather than throw or
+  // print the raw code -- three values on one contour do not prove a fourth
+  // cannot arrive from another.
+  const label = MR3.crewFlowSourceLabel;
+  for (const [lang, expect] of [['ru', {
+    skipi_response: 'Отклик из Skipi', inbound: 'Письмо', synthetic: 'Тестовая запись',
+    no_such_source_code_v9: 'Запись', '': 'Запись',
+  }], ['en', {
+    skipi_response: 'Skipi application', inbound: 'E-mail', synthetic: 'Test record',
+    no_such_source_code_v9: 'Record', '': 'Record',
+  }]]) {
+    store.set('skipi-crewing-ui-language', lang);
+    for (const [code, want] of Object.entries(expect)) {
+      ok(label(code) === want,
+        'R2/N (929): source "' + (code || '<empty>') + '" reads "' + want + '" in ' + lang
+        + ' — got "' + label(code) + '"');
+    }
+    ok(label(undefined) === expect[''] && label(null) === expect[''],
+      'R2/N (929): a missing source degrades to the neutral word in ' + lang + ', it does not throw');
+    ok(label('no_such_source_code_v9').indexOf('no_such_source_code_v9') === -1,
+      'R2/N (929): an unrecognised code is never PRINTED — a machine code in a heading is the defect being fixed');
+  }
+  store.set('skipi-crewing-ui-language', 'en');
 
   // ---- 3f. one name, one source of truth ---------------------------------
   // The recorded fact and summary.candidate_name are the SAME fact; the card
@@ -1221,14 +1258,14 @@ if (r3Ready) {
     'R2/L: Russian keeps absent and not-loaded as two different sentences');
   ok(/исходы распознаны не полностью/.test(r3Ru), 'R2/L: the partial state is named in Russian too');
   ok(/имя не указано/.test(r3Ru), 'R2/N: the missing-name state is named in Russian');
-  ok(/Письмо|Отклик из Skipi|Запись/.test(r3Ru), 'R2/N (929): and the row is titled by its SOURCE in Russian, not by an identifier');
+  ok(/Отклик из Skipi/.test(r3Ru), 'R2/N (929): and the row is titled by its SOURCE in Russian, not by an identifier');
   store.set('skipi-crewing-ui-language', 'en');
   const r3En = String(MR3.crewFlowLiveTreeHtml('live'));
   ok(/no stored comparison against this profile/.test(r3En) && /comparison not loaded yet/.test(r3En) && !/[Ѐ-ӿ]/.test(r3En),
     'R2/L: English keeps them as two different sentences and leaves no Cyrillic');
   ok(/outcomes not fully recognised/.test(r3En), 'R2/L: the partial state is named in English too');
   ok(/name not given/.test(r3En), 'R2/N: the missing-name state is named in English');
-  ok(/E-mail|Skipi application|Record/.test(r3En), 'R2/N (929): and by its SOURCE in English');
+  ok(/Skipi application/.test(r3En), 'R2/N (929): and by its SOURCE in English');
 
   // ---- 5. a second render costs nothing ----------------------------------
   const r3Before = calls.length;

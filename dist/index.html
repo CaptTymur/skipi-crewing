@@ -5724,9 +5724,27 @@ function crewFlowRowNameState(item) {
 // of them would be an identifier wearing a name's clothes. An unrecognised
 // source code is not printed either — it becomes the neutral "Record", because
 // a machine code in a heading is the very defect this replaces.
+// The codes below were MEASURED on the live pilot queue, not inferred:
+//   skipi_response  2   responses delivered from the Seafarer app
+//   inbound         9   incoming e-mail
+//   synthetic       3   our own test records
+// The first version of this table guessed `desktop`/`mail` from fixture strings
+// in the Rust unit tests, and on the pilot EVERY unnamed record therefore fell
+// through to the generic label. Repo fixtures are not the product's vocabulary;
+// that was the whole defect, and it is why this comment names where these three
+// came from.
+//
+// Three values on ONE contour is not proof that no other contour sends a fourth.
+// So this stays a lookup TABLE with a fallback, never a three-branch if/else
+// that throws: an unrecognised code degrades to a neutral, true word, and adding
+// a code later is one line here and nothing else.
+//
+// `synthetic` is labelled as a test record on purpose. Calling our own fixture a
+// letter would be a small lie told by the interface about its own data.
 var CREW_FLOW_SOURCE_TEXT = {
-  desktop:['Отклик из Skipi','Skipi application'],
-  mail:['Письмо','E-mail']
+  skipi_response:['Отклик из Skipi','Skipi application'],
+  inbound:['Письмо','E-mail'],
+  synthetic:['Тестовая запись','Test record']
 };
 function crewFlowSourceLabel(source) {
   var pair = CREW_FLOW_SOURCE_TEXT[String(source || '').toLowerCase()];
