@@ -837,7 +837,8 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 .cf-ident { display:flex; gap:12px; align-items:center; min-width:0; }
 .cf-ident-badge { width:44px; height:44px; border-radius:50%; flex:0 0 auto; display:flex;
   align-items:center; justify-content:center; background:var(--panel2); font-weight:700; font-size:15px; }
-.cf-ident-name { font-size:20px; font-weight:700; overflow-wrap:anywhere; }
+.cf-ident-kicker { font-size:10.5px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; color:var(--text2); }
+.cf-ident-name { font-size:20px; font-weight:700; overflow-wrap:anywhere; margin:1px 0 0; }
 .cf-ident-sub { font-size:12.5px; color:var(--text2); overflow-wrap:anywhere; margin-top:1px; }
 .cf-fitcards { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
 .cf-fitcard { flex:1 1 210px; min-width:0; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
@@ -5492,55 +5493,6 @@ function crewFlowProfileSelectHtml(mode) {
   return '<div data-qa="crew-flow-profile-filter" style="padding:6px 12px 8px 16px;color:var(--text2);font-size:11px;">'
     + label + select + '</div>';
 }
-// ===== (928) OWNER 2026-09-30: the ONE permitted number, and its four refusals ==
-// Owner, verbatim: «Формула ровно одна: floor(100 x met / total)»; «Подпись
-// обязательна рядом с числом»; «Это НЕ рейтинг пригодности человека»;
-// «"Нет данных" != 0%».
-//
-// (869) forbade percentages outright. (928) is the owner's LATER clarification
-// and it permits exactly one figure: the share of checks that a STORED
-// evaluation recorded as met, against ONE explicitly chosen profile. Everything
-// the share cannot speak for — unconfirmed, unrecognised, stale, never compared
-// — stays OUTSIDE the number and keeps its own words, because one figure that
-// swallowed them would be read as a judgement of a person.
-//
-// floor, not rounding, and the reason is concrete: 249 of 250 rounds to 100%,
-// and 100% is the one number an operator will act on without opening anything.
-//
-// The refusals ARE the function; they are not edge cases:
-//   total missing / not a positive integer -> no number (nothing to divide by)
-//   met+missing+unconfirmed !== total      -> no number (coverage unproven)
-//   any counter negative or fractional     -> no number (the data is not what it claims)
-//   stale                                  -> no number (a past share is not a current one)
-// In every one of them the row prints WHY. None of them prints 0%: an unanswered
-// question is not a zero, and this function never turns one into the other.
-function crewFlowMatchShare(row) {
-  var out = { pct:null, met:0, total:0, reason:'absent' };
-  if (!row) return out;
-  var counts = [row.met, row.missing, row.unconfirmed];
-  for (var i = 0; i < counts.length; i++) {
-    var n = counts[i];
-    if (typeof n !== 'number' || !isFinite(n) || n < 0 || Math.floor(n) !== n) {
-      out.reason = 'counts_invalid'; return out;
-    }
-  }
-  var total = row.total;
-  if (typeof total !== 'number' || !isFinite(total) || Math.floor(total) !== total || total < 0) {
-    out.reason = 'total_unknown'; return out;
-  }
-  if (total === 0) { out.reason = 'total_zero'; return out; }
-  if (row.met + row.missing + row.unconfirmed !== total) { out.reason = 'not_covered'; return out; }
-  // A stale evaluation keeps its counts (the card can still show them) but loses
-  // the headline number: the owner asked for «устарело» to be stated, not scored.
-  if (row.stale) { out.reason = 'stale'; out.met = row.met; out.total = total; return out; }
-  out.met = row.met; out.total = total;
-  out.pct = Math.floor(100 * row.met / total);
-  // Green is earned by the counts themselves, never by the rounded percentage:
-  // floor(100*249/250) is 99, but floor(100*999/1000) is also 99 — only met===total
-  // may say "all met", and only when nothing is unconfirmed and nothing is stale.
-  out.reason = (row.met === total && row.missing === 0 && row.unconfirmed === 0) ? 'complete' : 'partial';
-  return out;
-}
 // The mandatory caption of (928). It is not decoration: the bare figure is
 // precisely what gets read as a score, so the number is never rendered without it.
 function crewFlowShareCaption(share) {
@@ -6865,7 +6817,17 @@ async function pilotSubmitUpload() {
 // ================= C3b-2 CANDIDATE CARD START =================
 var PILOT_CARD_TEXT = {
   en: {
-    card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh',
+    card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh this candidate',
+    ident_unknown:'Name not in the recorded facts', fit_title:'Match against profiles',
+    fit_none:'No stored comparison for this candidate yet.', fit_explain:'How the figure is counted',
+    fit_reasons:'Which checks',
+    share_caption:'{met} of {total} checks met, by the stored evaluation',
+    share_note:'The figure is the share of checks a stored comparison recorded as met, against one profile. Equal count, no weighting. It is not a probability, not a rating of the person, and it says nothing about whether the documents are current.',
+    share_complete:'All stored checks met', share_partial:'Some checks are open',
+    share_stale:'Stored comparison is out of date', share_total_zero:'The evaluation holds no checks',
+    share_total_unknown:'Evaluation not fully recognised', share_not_covered:'Evaluation not fully recognised',
+    share_counts_invalid:'Evaluation not fully recognised', share_absent:'No comparable figure',
+    section_source:'Source, identifiers and provenance',
     section_facts:'Facts and sources', section_ranks:'Stored comparisons', section_history:'Decision history · original comparison was not preserved',
     source_unverified:'Document unverified · synthetic data only', source_trust:'Source trust', objects:'Sources (objects of this card)', no_objects:'This card has no objects; facts cannot be recorded.',
     facts_empty:'No facts have been recorded yet.', facts_failed:'Facts could not be loaded.', ranks_empty:'No stored comparisons.', ranks_failed:'Comparisons could not be loaded.', card_failed:'Card could not be loaded.', history_empty:'No decisions yet.', profiles_failed:'Compliance profile names are unavailable; ids are shown.',
@@ -6897,7 +6859,17 @@ var PILOT_CARD_TEXT = {
     field_rank_as_written:'rank as written in the document', field_contact_email:'e-mail', field_contact_phone:'phone'
   },
   ru: {
-    card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить',
+    card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить карточку',
+    ident_unknown:'Имени в записанных сведениях нет', fit_title:'Соответствие профилям',
+    fit_none:'Сохранённых сравнений по этому кандидату пока нет.', fit_explain:'Как считается число',
+    fit_reasons:'Какие проверки',
+    share_caption:'выполнено {met} из {total} по сохранённой оценке',
+    share_note:'Число — доля проверок, которые сохранённая оценка отметила выполненными, против одного профиля. Равный подсчёт, без весов. Это не вероятность, не оценка человека и ничего не говорит о том, действительны ли документы.',
+    share_complete:'Все проверки выполнены', share_partial:'Часть проверок открыта',
+    share_stale:'Сохранённая оценка устарела', share_total_zero:'В оценке нет проверок',
+    share_total_unknown:'Оценка распознана не полностью', share_not_covered:'Оценка распознана не полностью',
+    share_counts_invalid:'Оценка распознана не полностью', share_absent:'Нет сопоставимой оценки',
+    section_source:'Источник, идентификаторы и происхождение',
     section_facts:'Сведения и источники', section_ranks:'Сохранённые оценки', section_history:'История решений · исходная оценка не сохранена',
     source_unverified:'Документ не проверен · только синтетические данные', source_trust:'Доверие к источнику', objects:'Источники (объекты этой карточки)', no_objects:'У карточки нет объектов; записать сведения нельзя.',
     facts_empty:'Сведений пока нет.', facts_failed:'Сведения не загружены.', ranks_empty:'Сохранённых оценок нет.', ranks_failed:'Оценки не загружены.', card_failed:'Карточка не загружена.', history_empty:'Решений пока нет.', profiles_failed:'Названия профилей соответствия недоступны; показаны идентификаторы.',
@@ -7203,6 +7175,66 @@ function pilotCardFactFormHtml() {
     + '<label>'+escapeHtml(cardT('span_optional'))+'<input id="pilot-fact-span" maxlength="64" value="'+escapeAttr(f.span || '')+'" oninput="state.intakePilot.detail.form.span=this.value"></label>'
     + '<button data-qa="pilot-fact-submit" onclick="pilotFactSubmit()" '+(d.pending?'disabled':'')+'>'+escapeHtml(correcting ? cardT('correct_fact') : cardT('add_fact'))+'</button></div>'
     + (d.formError ? '<div class="pilot-status error" data-qa="pilot-form-error">'+escapeHtml(cardT('invalid_form'))+'</div>' : '')+'</div>';
+}
+// ===== (928) OWNER 2026-09-30: the ONE permitted number, and its four refusals ==
+// Owner, verbatim: «Формула ровно одна: floor(100 x met / total)»; «Подпись
+// обязательна рядом с числом»; «Это НЕ рейтинг пригодности человека»;
+// «"Нет данных" != 0%».
+//
+// (869) forbade percentages outright. (928) is the owner's LATER clarification
+// and it permits exactly one figure: the share of checks that a STORED
+// evaluation recorded as met, against ONE explicitly chosen profile. Everything
+// the share cannot speak for — unconfirmed, unrecognised, stale, never compared
+// — stays OUTSIDE the number and keeps its own words, because one figure that
+// swallowed them would be read as a judgement of a person.
+//
+// floor, not rounding, and the reason is concrete: 249 of 250 rounds to 100%,
+// and 100% is the one number an operator will act on without opening anything.
+//
+// The refusals ARE the function; they are not edge cases:
+//   total missing / not a positive integer -> no number (nothing to divide by)
+//   met+missing+unconfirmed !== total      -> no number (coverage unproven)
+//   any counter negative or fractional     -> no number (the data is not what it claims)
+//   stale                                  -> no number (a past share is not a current one)
+// In every one of them the row prints WHY. None of them prints 0%: an unanswered
+// question is not a zero, and this function never turns one into the other.
+function crewFlowMatchShare(row) {
+  var out = { pct:null, met:0, total:0, reason:'absent' };
+  if (!row) return out;
+  var counts = [row.met, row.missing, row.unconfirmed];
+  for (var i = 0; i < counts.length; i++) {
+    var n = counts[i];
+    if (typeof n !== 'number' || !isFinite(n) || n < 0 || Math.floor(n) !== n) {
+      out.reason = 'counts_invalid'; return out;
+    }
+  }
+  var total = row.total;
+  if (typeof total !== 'number' || !isFinite(total) || Math.floor(total) !== total || total < 0) {
+    out.reason = 'total_unknown'; return out;
+  }
+  if (total === 0) { out.reason = 'total_zero'; return out; }
+  if (row.met + row.missing + row.unconfirmed !== total) { out.reason = 'not_covered'; return out; }
+  // A stale evaluation keeps its counts (the card can still show them) but loses
+  // the headline number: the owner asked for «устарело» to be stated, not scored.
+  if (row.stale) { out.reason = 'stale'; out.met = row.met; out.total = total; return out; }
+  out.met = row.met; out.total = total;
+  out.pct = Math.floor(100 * row.met / total);
+  // Green is earned by the counts themselves, never by the rounded percentage:
+  // floor(100*249/250) is 99, but floor(100*999/1000) is also 99 — only met===total
+  // may say "all met", and only when nothing is unconfirmed and nothing is stale.
+  out.reason = (row.met === total && row.missing === 0 && row.unconfirmed === 0) ? 'complete' : 'partial';
+  return out;
+}
+// The caption is mandatory (928): the bare figure is exactly what reads as a score.
+function cardShareCaption(share) {
+  return cardT('share_caption').replace('{met}', String(share.met)).replace('{total}', String(share.total));
+}
+// The words that stand where a figure is refused — one per refusal, so the
+// operator learns WHICH question is open instead of seeing a blank.
+function cardShareWord(share) {
+  var key = 'share_' + share.reason;
+  var text = cardT(key);
+  return text === key ? cardT('share_absent') : text;
 }
 function pilotCardReasonGroups(rank) {
   var groups = { met:[], missing:[], unconfirmed:[], unknown:[] };
@@ -7754,16 +7786,133 @@ function pilotDraftHtml() {
     + (dr.state ? '<div class="pilot-status success" data-qa="pilot-draft-state">'+escapeHtml(cardT(dr.state === 'copied' ? 'draft_copied' : 'draft_opened'))+'</div>' : '')
     + '</section>';
 }
+// ===== the card, in the order the questions are actually asked ==============
+// OWNER 2026-09-30: "who is this" comes first, then "what was compared", then
+// "what can I do", and only then the long source material. Receipt ids, media
+// types, trust internals and object lists used to occupy the top of the card;
+// they are still one click away, but they are not the first thing a recruiter
+// reads about a person.
+// Initials, and ONLY from a name that was actually recorded. No initials are
+// derived from an identifier: two letters of a UUID look like a person and are not.
+function pilotCardInitials(name) {
+  var parts = String(name || '').split(/\s+/).filter(Boolean).slice(0, 2);
+  if (!parts.length) return '';
+  return parts.map(function(w){ return w.charAt(0).toUpperCase(); }).join('');
+}
+// The current value of one recorded fact, from the card's OWN load. Version 0 is
+// the current one, exactly as pilotCardFactVersionHtml marks it.
+function pilotCardFactValue(field) {
+  var d = pilotDetail();
+  var list = (d && Array.isArray(d.facts)) ? d.facts : [];
+  for (var i = 0; i < list.length; i++) {
+    if (!list[i] || String(list[i].field) !== field) continue;
+    var versions = Array.isArray(list[i].versions) ? list[i].versions : [];
+    if (!versions.length) return '';
+    var v = versions[0];
+    return String(v && v.value == null ? '' : v.value).replace(/^\s+|\s+$/g, '');
+  }
+  return '';
+}
+function pilotCardIdentityHtml() {
+  var d = pilotDetail(); if (!d) return '';
+  // One candidate, one name. The recorded fact wins; the server's rendering of
+  // the same fact on the card summary fills in; the intake id is the last resort
+  // and is never dressed up as a person.
+  var name = pilotCardFactValue('name');
+  var answered = !!(d.facts && d.facts.length);
+  if (!name && d.card && d.card.summary && d.card.summary.candidate_name != null) {
+    name = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
+    answered = true;
+  }
+  var kind = name ? 'fact' : (answered ? 'none' : 'unknown');
+  var title = name || String(d.intakeId);
+  var initials = pilotCardInitials(name);
+  var sub = [];
+  var rank = pilotCardFactValue('rank');
+  if (rank) sub.push(rank);
+  var ct = d.card && d.card.content_type;
+  if (ct) sub.push(typeof crewFlowChannelLabel === 'function' ? crewFlowChannelLabel(ct) : String(ct));
+  var subHtml = sub.length ? escapeHtml(sub.join(' \u00b7 ')) : '';
+  if (!name && kind === 'none') {
+    subHtml = (subHtml ? subHtml + ' \u00b7 ' : '') + escapeHtml(cardT('ident_unknown'));
+  }
+  var st = { kind: kind };
+  // The screen still names itself, but as a kicker rather than as the headline:
+  // the headline belongs to the person the operator opened.
+  return '<div class="cf-ident" data-qa="pilot-card-identity" data-name="' + escapeAttr(st.kind) + '">'
+    + (initials ? '<div class="cf-ident-badge" aria-hidden="true">' + escapeHtml(initials) + '</div>' : '')
+    + '<div style="min-width:0;"><div class="cf-ident-kicker">' + escapeHtml(cardT('card_title')) + '</div>'
+    + '<h1 class="cf-ident-name" data-qa="pilot-card-name">' + escapeHtml(title) + '</h1>'
+    + (subHtml ? '<div class="cf-ident-sub">' + subHtml + '</div>' : '') + '</div></div>';
+}
+// One compact card per stored comparison: the figure (928) where the data earns
+// one, the exact fraction underneath it always, and the counts the figure does
+// NOT speak for stated separately rather than folded in.
+function pilotCardFitCardHtml(rank) {
+  var g = pilotCardReasonGroups(rank || {});
+  var reasons = Array.isArray(rank && rank.reasons) ? rank.reasons : [];
+  var row = {
+    met: g.met.length, missing: g.missing.length, unconfirmed: g.unconfirmed.length,
+    total: reasons.length, stale: !!(rank && rank.stale)
+  };
+  var share = crewFlowMatchShare(row);
+  var complete = share.reason === 'complete';
+  var head = share.pct !== null
+    ? '<div class="cf-fitcard-pct" data-qa="pilot-fit-pct" data-pct="' + share.pct + '">' + share.pct + '%</div>'
+      + '<div class="cf-fitcard-cap">' + escapeHtml(cardShareCaption(share)) + '</div>'
+    : '<div class="cf-fitcard-pct" data-qa="pilot-fit-pct" data-pct="none">\u2014</div>'
+      + '<div class="cf-fitcard-cap">' + escapeHtml(cardShareWord(share)) + '</div>';
+  var bar = share.pct !== null
+    ? '<div class="cf-bar" aria-hidden="true"><i style="width:' + share.pct + '%;"></i></div>' : '';
+  // missing and unconfirmed stay two different words: "he does not have it" and
+  // "nobody entered it" are not the same statement about a person.
+  var counts = '<div class="cf-counts">' + escapeHtml(cardT('list_missing')) + ': ' + row.missing
+    + ' \u00b7 ' + escapeHtml(cardT('list_unconfirmed')) + ': ' + row.unconfirmed
+    + (g.unknown.length ? ' \u00b7 ' + escapeHtml(cardT('list_unknown')) + ': ' + g.unknown.length : '')
+    + '</div>';
+  return '<div class="cf-fitcard ' + (complete ? 'complete ' : '') + ((rank && rank.primary) ? 'primary' : '') + '"'
+    + ' data-qa="pilot-fit-card" data-profile="' + escapeAttr(String(rank && rank.profile_id))
+    + '" data-fit="' + escapeAttr(share.reason) + '">'
+    + '<div class="cf-fitcard-name">' + pilotCardProfileLabel(rank && rank.profile_id) + '</div>'
+    + '<div class="cf-counts">' + escapeHtml(cardT('profile_version_used')) + ': '
+    + escapeHtml(String(rank && rank.profile_version)) + '</div>'
+    + head + bar + counts + '</div>';
+}
+function pilotCardFitSummaryHtml() {
+  var d = pilotDetail(); if (!d) return '';
+  if (d.ranks == null) {
+    return '<div class="pilot-status">' + escapeHtml(d.ranksLoading ? pilotT('loading') : cardT('fit_none')) + '</div>';
+  }
+  var items = Array.isArray(d.ranks.items) ? d.ranks.items : [];
+  if (!items.length) return '<div class="pilot-status" data-qa="pilot-fit-empty">' + escapeHtml(cardT('fit_none')) + '</div>';
+  // The arithmetic is available, not permanently on display (OWNER 2026-09-30).
+  var explain = '<details class="cf-brk" data-qa="pilot-fit-explain"><summary>' + escapeHtml(cardT('fit_explain')) + '</summary>'
+    + '<div class="pilot-note">' + escapeHtml(cardT('share_note')) + '</div>'
+    + '<div class="pilot-note">' + escapeHtml(cardT('freshness_unverified')) + '</div></details>';
+  return explain + '<div class="cf-fitcards">' + items.map(pilotCardFitCardHtml).join('') + '</div>';
+}
 function pilotRenderCard(main) {
   var d = pilotDetail();
-  main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'"><div class="pilot-hero"><div><h1>'+escapeHtml(cardT('card_title'))+'</h1><p data-qa="pilot-card-intake">'+escapeHtml(pilotT('intake'))+': '+escapeHtml(d.intakeId)+'</p></div><div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
-    + '<section class="pilot-card" data-qa="pilot-card-header">'+pilotCardHeaderHtml()+'</section>'+pilotCardAttemptsHtml()
+  main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'">'
+    // 1. WHO. The card used to open with its own name ("Candidate card") and the
+    //    intake id; the person's name was somewhere further down among the facts.
+    + '<div class="pilot-hero">'+pilotCardIdentityHtml()+'<div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
+    // 2. WHAT WAS COMPARED. Several profiles at once, each with its own figure and
+    //    its own unmet/unconfirmed counts, above the source material.
+    + '<section class="pilot-card" data-qa="pilot-section-fit"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('fit_title'))+'</h2></div>'+pilotCardFitSummaryHtml()+'</section>'
+    + pilotCardAttemptsHtml()
     + pilotDraftHtml()
+    // 3. THE SOURCE MATERIAL, in the order it is read.
     + '<section class="pilot-card" data-qa="pilot-section-letter"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_letter'))+'</h2></div>'+pilotCardLetterHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-attachments"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_attachments'))+'</h2></div>'+pilotCardAttachmentsHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-contacts"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_contacts'))+'</h2></div>'+pilotCardContactsHtml()+'</section>'
     + '<section class="pilot-card" data-qa="pilot-section-facts"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_facts'))+'</h2></div>'+pilotCardFactsHtml()+pilotCardFactFormHtml()+'</section>'
+    // 4. The full comparison with every requirement, unchanged.
     + '<section class="pilot-card" data-qa="pilot-section-ranks"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_ranks'))+'</h2><button data-qa="pilot-rank-now" onclick="pilotRankNow()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('rank_now'))+'</button></div><div class="pilot-note">'+escapeHtml(cardT('rank_note'))+'</div>'+pilotCardRanksHtml()+'</section>'
+    // 5. TECHNICAL. Receipt, media type, size, trust and the object list: still
+    //    here, still complete, no longer the first thing on the card. The intake
+    //    id keeps its data-qa so anything that addressed it still finds it.
+    + '<section class="pilot-card" data-qa="pilot-card-header"><details class="cf-brk"><summary>'+escapeHtml(cardT('section_source'))+'</summary><p class="pilot-note" data-qa="pilot-card-intake">'+escapeHtml(pilotT('intake'))+': '+escapeHtml(d.intakeId)+'</p>'+pilotCardHeaderHtml()+'</details></section>'
     + '<section class="pilot-card" data-qa="pilot-section-history"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_history'))+'</h2></div>'+pilotCardHistoryHtml()+'</section></div>';
 }
 function pilotCardKeydown(ev) {
