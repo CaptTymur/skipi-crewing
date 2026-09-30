@@ -130,6 +130,10 @@ if (api) {
       items:[
         { profile_id:'p-ab', primary:true, applicability:'same' },
         { profile_id:'p-master', primary:false, applicability:'not_applicable' },
+        // A stored row of a profile the server did NOT list as withheld - it is
+        // switched off now, so it is not an ACTIVE profile, but its evaluation is
+        // still on the card and still must not read as current.
+        { profile_id:'p-old', primary:false, applicability:'not_applicable' },
         { profile_id:'p-co', primary:false, applicability:'unknown', applicability_reason:'rank_absent' }
       ],
       unranked_active_profiles:[],
@@ -140,10 +144,17 @@ if (api) {
     }
   };
   const withheld = api.cardWithheldProfiles();
-  ok(withheld.length === 3, `the withheld set is the UNION of stored rows and never-evaluated profiles, deduped by profile (got ${withheld.length}, want 3)`);
+  // THREE: two active profiles the server withheld, plus one stored row of a
+  // profile it no longer lists. The `unknown` row is NOT here - it stays in the
+  // main list, so counting it as withheld would put a number on the screen that
+  // does not match what the screen hides.
+  ok(withheld.length === 3, `the withheld set is the UNION of both sides, deduped by profile (got ${withheld.length}, want 3)`);
   ok(withheld.filter(w => w.profile_id === 'p-master').length === 1, 'a profile that is both a stored row and a withheld profile is counted ONCE');
+  ok(withheld.some(w => w.profile_id === 'p-old'), 'a stored inapplicable row the server did not list is still counted');
+  ok(!withheld.some(w => w.profile_id === 'p-co'), 'an unknown is NOT counted as withheld: the screen does not hide it');
   const visible = api.cardApplicabilityVisibleRows();
   ok(visible.length === 2, `only not_applicable leaves the main list (got ${visible.length}, want 2: the response profile and the unknown)`);
+  ok(!visible.some(r => r.profile_id === 'p-old'), 'an inapplicable stored row of a switched-off profile leaves the main list too');
   ok(visible[0].profile_id === 'p-ab', 'N7: the profile he responded to stands FIRST');
   ok(visible.some(r => r.profile_id === 'p-co'), 'N25: the unknown stays in the main list with its explanation');
   // N7 again, the harder half: an INAPPLICABLE response profile is still shown.
