@@ -2516,6 +2516,34 @@ console.log('# K2 modules/crew-flow');
       'No.621 R9/N12: the row is still rendered — the value is neutralised, not swallowed');
   }
   {
+    // R9b — the same class on the row NEXT DOOR, and it is not hypothetical.
+    // MEASURED in app/crewing_facts.py: an operator-entered fact value is checked
+    // for type, length and NUL and for NOTHING ELSE - no printability, no
+    // directional controls. So a `contact:email` FACT could carry a right-to-left
+    // override and was rendered verbatim before this card. The provenance caption
+    // and the value sanitiser are one edit to one shared row() helper, and leaving
+    // the neighbouring row unsanitised would be deliberately keeping a known path
+    // open in the block being edited.
+    const ctx = await rcOpen({ contactMode: 'contact', contactEmail: 'a\u202Eexe.moc@example.test', responseContact: undefined });
+    const out = rcMain(ctx);
+    const contactRow = (out.match(/<div class="pilot-note" data-qa="pilot-contact-email">[\s\S]*?<\/div>/) || [''])[0];
+    softOk(contactRow !== '', 'No.621 R9b: the operator contact row is rendered');
+    softOk(contactRow !== '' && !contactRow.includes('\u202E'),
+      'No.621 R9b: and the shared row() helper neutralises a bidi override in it too');
+    // THE BOUNDARY, stated rather than hidden, because the check above would read
+    // as more than it is. The SAME value is ALSO printed by the facts block
+    // (pilotCardFactsHtml), which this card does not touch and which renders every
+    // fact value with escapeHtml only - so the override still reaches the markup
+    // there. That is a PRE-EXISTING path of the same class, it is not introduced
+    // here, and closing it means editing the renderer of every fact value. It is
+    // reported to the manager as a finding for the backlog, not widened into this
+    // diff: the card's own rule is that incidental repair happens only when a
+    // named criterion or the safety of THIS action requires it, and N12 is about
+    // the delivered contact, which IS neutralised (R9).
+    softOk(out.includes('\u202E'),
+      'No.621 R9b (boundary, not a fix): the facts block still prints the override verbatim - pre-existing, outside this card, reported for the backlog');
+  }
+  {
     // R10 — N18: the demo host never reaches the command, so it never gets the
     // `demo_read_only` toast that would take the demo harness red.
     const ctx = makeCrewContext({ demo: true, responseContact: RC_ADDRESSABLE });
