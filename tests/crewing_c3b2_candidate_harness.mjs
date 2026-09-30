@@ -2855,6 +2855,28 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
     ok622(staleBlock.includes(code + ':['), `stale reason ${code} has its own pair of words`);
   }
 
+  // ------------- the field has to SURVIVE THE LOADER to reach the screen
+  // Found the hard way: every fixture above sets `d.ranks.withheld_profiles`
+  // directly, so all of them passed while `pilotRanksLoad` quietly dropped the
+  // field off the wire - the count on the screen would have been computed from
+  // stored rows alone and the ACTIVE profiles the server withheld would have
+  // vanished in silence. A renderer assertion cannot see a loader that never
+  // hands it the data.
+  console.log('# the loader carries what the renderer needs');
+  {
+    const loadFn = html.indexOf('async function pilotRanksLoad()');
+    ok622(loadFn > 0, 'pilotRanksLoad exists');
+    const lb = loadFn > 0 ? html.slice(loadFn, html.indexOf('\nasync function ', loadFn + 10)) : '';
+    ok622(/withheld_profiles:\s*Array\.isArray\(result\.withheld_profiles\)/.test(lb),
+      'pilotRanksLoad carries withheld_profiles off the wire - without this the count is always computed from stored rows alone');
+    ok622(/withheld_profiles:Array\.isArray\(result\.withheld_profiles\)\?result\.withheld_profiles:\[\]/.test(lb.replace(/\s+/g, '')) || /\?result\.withheld_profiles:\[\]/.test(lb),
+      'an absent withheld_profiles becomes an empty list, never undefined');
+    for (const field of ['items', 'unranked_active_profiles', 'confirmations']) {
+      ok622(new RegExp(field + ':Array\\.isArray').test(lb.replace(/\s+/g, '')) || lb.includes(field + ':Array.isArray'),
+        'pilotRanksLoad still carries ' + field + ' (No.622 did not drop a sibling)');
+    }
+  }
+
   // ------------- the number on the screen actually reaches the screen (930)
   // The adapter can be perfect and the disclosure still never rendered. These
   // read the emitting code, because the two consumers build their HTML as strings.

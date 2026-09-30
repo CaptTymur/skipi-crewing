@@ -7357,7 +7357,14 @@ async function pilotRanksLoad() {
   try {
     var result = await invoke('crewing_intake_rank_list', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
     if (!pilotDetailStillCurrent(token) || requestId !== d.ranksRequest) return false;
-    d.ranks = { items:Array.isArray(result.items)?result.items:[], unranked_active_profiles:Array.isArray(result.unranked_active_profiles)?result.unranked_active_profiles:[], confirmations:Array.isArray(result.confirmations)?result.confirmations:[] };
+    // No.622: `withheld_profiles` is carried too. Dropping it here was a real
+    // defect of the first cut of this card: the screen computed its "not
+    // evaluated by rank: N" out of the stored rows alone, so the ACTIVE profiles
+    // the server deliberately did not evaluate - the main source of that number -
+    // were withheld silently, which is the exact thing docs/CANON-ui-v1.md
+    // forbids and the exact thing this card exists to fix. An absent field is an
+    // empty list, never a missing one: the two are one absence to a person.
+    d.ranks = { items:Array.isArray(result.items)?result.items:[], unranked_active_profiles:Array.isArray(result.unranked_active_profiles)?result.unranked_active_profiles:[], withheld_profiles:Array.isArray(result.withheld_profiles)?result.withheld_profiles:[], confirmations:Array.isArray(result.confirmations)?result.confirmations:[] };
     // R2: keep this answer for the queue row. Same bytes, no second request.
     try { crewFlowCacheRanks(d.intakeId, d.ranks.items); } catch(_){}
     d.ranksLoading = false; renderIntakePilot(); return true;
