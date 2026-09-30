@@ -1446,6 +1446,13 @@ section('No.623: the queue row says who responded, and only where it can');
     const noname = pick(html, 'N-noname');
     ok(nameOf(noname) === 'Skipi application',
       'No.623/row: a nameless response keeps today’s source title rather than heading the row with a post — got «' + nameOf(noname) + '»');
+    // The TEXT alone cannot tell the two apart: a row that wrongly claimed the
+    // delivered transport would print the same source label (mutation M5 survived
+    // exactly so). What separates them is the state the row reports about itself.
+    ok(/data-name="none"/.test(noname),
+      'No.623/row: and it reports the honest state — a response that carried no name is not a row named BY the response');
+    ok(/data-qa="crew-flow-row-noname"/.test(noname),
+      'No.623/row: so it still says out loud that no name was recorded, instead of going quiet behind a delivered-looking title');
 
     // ---- 6. Б1: nothing of the response enters the store that feeds the
     //         IRREVERSIBLE seafarer save ------------------------------------

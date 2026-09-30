@@ -2770,8 +2770,14 @@ console.log('\n# No.623: the card says who responded');
     softOk(roughLine.includes('41'), 'No.623/3: a year-only date of birth still states the number it has');
     softOk(/data-precision="year"/.test(roughLine),
       'No.623/3: and the screen marks it approximate in the markup');
-    softOk(roughLine !== exactLine,
-      'No.623/3 NEGATIVE: the two precisions do NOT render identically — a computed-to-the-day figure from a year-only birth date is an invented precision');
+    // The comparison is on the VALUE THE OPERATOR READS, not on the whole cell:
+    // a `data-precision` attribute alone made the two cells differ while the
+    // visible text still claimed an exact age (mutation M11 survived exactly so).
+    const valueOf = (line) => (String(line).match(/class="cf-resp-v[^"]*"[^>]*>([^<]*)</) || ['', ''])[1];
+    softOk(valueOf(roughLine) !== valueOf(exactLine),
+      'No.623/3 NEGATIVE: the two precisions do not render the same WORDS — a computed-to-the-day figure from a year-only birth date is an invented precision; got «' + valueOf(roughLine) + '» vs «' + valueOf(exactLine) + '»');
+    softOk(valueOf(exactLine) === '41',
+      'No.623/3 CALIBRATION: the exact case really is the bare number, so the inequality above is not measuring two kinds of hedging');
   }
 
   // ---- 5. experience names the post it was counted for ---------------------

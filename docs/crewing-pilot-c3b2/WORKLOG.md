@@ -815,5 +815,8 @@ a republish is shown as ABSENT with the reason said out loud — never replaced 
 the profile's current post, which (944) forbids: a seafarer who answered
 "Master" was never shown "Chief Officer".
 
-Numbers: the thirteen guard harnesses went 1675 → 1809 passed, 0 failed on both
-sides; failing-first measured 99 red on the base.
+Numbers: the thirteen guard harnesses went 1675 → 1812 passed, 0 failed on both
+sides; failing-first measured 99 red on the base; 15 mutations on the NEW sha,
+all killed — four of them only after the drills that let them through were
+repaired, including a cargo probe that ended in a pipe and could therefore never
+report a failure at all.
