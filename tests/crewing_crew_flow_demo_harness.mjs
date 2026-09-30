@@ -1042,6 +1042,47 @@ if (r3Ready) {
   // ---- 2. the row is filled WITHOUT opening a card ------------------------
   ok(!MR3.state.intakePilot.detail, 'R2/L: no candidate card was opened during the load');
   MR3.crewFlowSelectProfile('p-main');
+
+  // ---- 3z. a refresh must not cost the operator their place ---------------
+  // OWNER 2026-09-30: "выбор строки не теряется при обновлении очереди", and a
+  // failed refresh keeps the rows. Both are pinned here rather than looked at,
+  // because both are silent when they break: the list simply blanks, or the
+  // selection simply jumps, and the operator blames themselves.
+  MR3.state.intakePilot.detail = { intakeId: 'L-gap', generation: 1 };
+  const r3Sel = String(MR3.crewFlowLiveTreeHtml('live'));
+  ok(/data-intake="L-gap"[^>]*aria-selected="true"/.test(r3Sel)
+    || /aria-selected="true"[^>]*data-intake="L-gap"/.test(r3Sel)
+    || /data-intake="L-gap"[\s\S]{0,200}aria-selected="true"/.test(r3Sel),
+    'R2/S: the open candidate is marked selected in the queue, not merely tinted');
+
+  const r3Stamp = MR3.state.intakePilot.queueLastUpdated;
+  const r3RowCount = (r3Sel.match(/data-qa="crew-flow-row"/g) || []).length;
+  ok(r3RowCount > 1, 'R2/S (control): there are rows to lose in the first place — ' + r3RowCount);
+
+  // a refresh IN FLIGHT over rows already in hand
+  MR3.state.intakePilot.queueLoading = true;
+  const r3Loading = String(MR3.crewFlowLiveTreeHtml('live'));
+  ok((r3Loading.match(/data-qa="crew-flow-row"/g) || []).length === r3RowCount,
+    'R2/S: a refresh in flight keeps every row on screen instead of blanking the panel');
+  ok(/data-qa="crew-flow-queue-refreshing"/.test(r3Loading),
+    'R2/S: and it says so, rather than looking identical to an idle list');
+  ok(MR3.state.intakePilot.detail.intakeId === 'L-gap',
+    'R2/S: the open candidate does not change while the queue reloads');
+
+  // a refresh that FAILED
+  MR3.state.intakePilot.queueLoading = false;
+  MR3.state.intakePilot.queueError = new Error('network down');
+  const r3Failed = String(MR3.crewFlowLiveTreeHtml('live'));
+  ok((r3Failed.match(/data-qa="crew-flow-row"/g) || []).length === r3RowCount,
+    'R2/S: a FAILED refresh keeps the previously loaded rows — an outage is not "no candidates"');
+  ok(/data-qa="crew-flow-queue-error-note"/.test(r3Failed),
+    'R2/S: and the failure is stated next to those rows, never hidden behind a disclosure');
+  ok(MR3.state.intakePilot.queueLastUpdated === r3Stamp,
+    'R2/S: the last-SUCCESS timestamp does not move on failure — stale data must not look fresh');
+  ok(/data-intake="L-gap"[\s\S]{0,200}aria-selected="true"/.test(r3Failed),
+    'R2/S: and the selection survives the failure too');
+  MR3.state.intakePilot.queueError = null;
+  MR3.state.intakePilot.detail = null;
   const r3Tree = String(MR3.crewFlowLiveTreeHtml('live'));
   const r3Row = (id) => {
     const m = r3Tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
@@ -1125,16 +1166,36 @@ if (r3Ready) {
   // Nothing may be substituted for a missing name: not the source id, not the
   // content type, not a blank that reads as an unnamed person.
   const r3NoNameTitle = (r3Row('L-noname').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['', ''])[1];
-  ok(r3NoNameTitle === 'L-noname',
-    'R2/N: the title is the intake_id and nothing else when there is no name — got "' + r3NoNameTitle + '"');
+  // (929), OWNER 2026-09-30: "UUID не является основным названием". This used to
+  // assert the opposite — that the title IS the intake_id — and that was correct
+  // under the earlier reading, where the id was the only thing left to print. It
+  // is not correct now: on the owner's own stand the heading came out as
+  // 289bc54e-339b-4422-8069-74d7c576d1ba, wrapped over three lines, and told him
+  // nothing. The title is now the record's SOURCE, which is true, readable, and
+  // cannot be mistaken for a person's name.
+  ok(r3NoNameTitle !== 'L-noname' && r3NoNameTitle.indexOf('L-noname') === -1,
+    'R2/N (929): the intake_id is NOT the title when there is no name — got "' + r3NoNameTitle + '"');
+  ok(/^(E-mail|Skipi application|Record)$/.test(r3NoNameTitle),
+    'R2/N (929): the title names where the record came from — got "' + r3NoNameTitle + '"');
   ok(r3NoNameTitle.trim() !== '', 'R2/N: and it is not blank either');
-  // Name every neighbour that could be quietly promoted into the title.
+  // The identifier did not vanish: it stays the row's machine handle, and the
+  // card prints it in full under Technical details. It is simply not a heading.
+  ok(/data-intake="L-noname"/.test(r3Row('L-noname')),
+    'R2/N (929): the intake_id remains the row handle, just not its name');
+  // Name every neighbour that could be quietly promoted into the title. The
+  // content type is on this list for a reason: deriving the heading from it
+  // would be the same defect in a different field, so the label reads `source`
+  // and nothing else.
   for (const [field, value] of [['source_id', 'msg-L-noname'], ['receipt_id', 'receipt-L-noname'],
                                 ['event_id', 'event-L-noname'], ['content_type', 'application/pdf'],
                                 ['primary_profile_id', 'p-main']]) {
     ok(r3NoNameTitle.indexOf(value) === -1,
       'R2/N: ' + field + ' is never promoted into the title in place of a missing name');
   }
+  // The control that keeps all of the above from being vacuous: when a name IS
+  // recorded it wins outright, and no source label appears in its place.
+  ok(!/E-mail|Skipi application|Record/.test((r3Row('L-met').match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['',''])[1]),
+    'R2/N (929, control): a named candidate is titled by the NAME, never by the source');
 
   // ---- 3f. one name, one source of truth ---------------------------------
   // The recorded fact and summary.candidate_name are the SAME fact; the card
@@ -1159,13 +1220,15 @@ if (r3Ready) {
   ok(/оценки против этого профиля нет/.test(r3Ru) && /оценка ещё не загружена/.test(r3Ru),
     'R2/L: Russian keeps absent and not-loaded as two different sentences');
   ok(/исходы распознаны не полностью/.test(r3Ru), 'R2/L: the partial state is named in Russian too');
-  ok(/имени в записанных сведениях нет/.test(r3Ru), 'R2/N: the missing-name state is named in Russian');
+  ok(/имя не указано/.test(r3Ru), 'R2/N: the missing-name state is named in Russian');
+  ok(/Письмо|Отклик из Skipi|Запись/.test(r3Ru), 'R2/N (929): and the row is titled by its SOURCE in Russian, not by an identifier');
   store.set('skipi-crewing-ui-language', 'en');
   const r3En = String(MR3.crewFlowLiveTreeHtml('live'));
   ok(/no stored comparison against this profile/.test(r3En) && /comparison not loaded yet/.test(r3En) && !/[Ѐ-ӿ]/.test(r3En),
     'R2/L: English keeps them as two different sentences and leaves no Cyrillic');
   ok(/outcomes not fully recognised/.test(r3En), 'R2/L: the partial state is named in English too');
-  ok(/no name in the recorded facts/.test(r3En), 'R2/N: the missing-name state is named in English');
+  ok(/name not given/.test(r3En), 'R2/N: the missing-name state is named in English');
+  ok(/E-mail|Skipi application|Record/.test(r3En), 'R2/N (929): and by its SOURCE in English');
 
   // ---- 5. a second render costs nothing ----------------------------------
   const r3Before = calls.length;
