@@ -225,6 +225,36 @@ pub(crate) struct CandidateIntakeListResponse {
     pub total: u64,
 }
 
+/// No.621 (OWNER (938)): the contact a seafarer chose to expose when he RESPONDED
+/// to a published profile, and the two verdicts the SERVER made about it.
+///
+/// A shape of its own for a route of its own, and it is not a field on
+/// `CandidateIntakeReceipt` on purpose: that struct parses BOTH the card and the
+/// rows of the queue (`CandidateIntakeListResponse`), so a field there would have
+/// put an address on every row of the queue rather than on the card that was
+/// opened.
+///
+/// All three fields are `Option` with `#[serde(default)]`, for the reason written
+/// on `profile_ranks` above: a server that does not carry a key must not fail the
+/// parse. `value` absent is not "no contact" - the ROUTE says that, with a 404 -
+/// it is "this build was told nothing", and the screen keeps those apart.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseContact {
+    #[serde(default)]
+    pub value: Option<String>,
+    /// Is this string, on its own, one e-mail address? The grammar is the
+    /// server's (`crewing_contacts.email_is_plausible`); the webview is given no
+    /// address grammar of its own, because two graders are two answers.
+    #[serde(default)]
+    pub is_email: Option<bool>,
+    /// May a letter be PREPARED to it? False for the agency's own confirmed
+    /// address and for anything at our own inbound domain: one click of "Write
+    /// email" there would post the offer into our own queue as a new document,
+    /// scanned, parsed and paid for.
+    #[serde(default)]
+    pub offer_email: Option<bool>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct CandidateIntakeSubmit {
     pub alias: Option<String>,
@@ -968,6 +998,25 @@ pub(crate) async fn crewing_intake_rank_list(
 }
 
 #[tauri::command]
+pub(crate) async fn crewing_intake_response_contact(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<CandidateResponseContact, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    without_blocking_ui(move || {
+        let url = intake_url(&context, &intake_id, &["response-contact"])?;
+        // `ambiguous_on_network: false` - a GET that failed changed nothing, so
+        // the screen may say plainly that it could not read the contact instead of
+        // holding the outcome UNKNOWN. What it may NOT do is call that an absence,
+        // and that is the screen's half (N14).
+        let (_, response) = send(&context, Method::GET, url, None, false)?;
+        Ok(response)
+    })
+    .await
+}
+
+#[tauri::command]
 pub(crate) async fn crewing_intake_shortlist_confirm(
     expected_context: PilotExpectedContext,
     intake_id: String,
@@ -1327,6 +1376,31 @@ pub(crate) async fn crewing_intake_open_saved(path: String) -> Result<(), PilotB
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// N10: a server build that does not carry the keys must not fail the parse.
+    /// The attribute alone is a claim; this is the measurement, and it is
+    /// calibrated - the full body parses into the values, so a green here is not a
+    /// green over a struct that ignores its input.
+    #[test]
+    fn a_response_contact_body_without_the_keys_still_parses() {
+        let empty: CandidateResponseContact = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.value, None);
+        assert_eq!(empty.is_email, None);
+        assert_eq!(empty.offer_email, None);
+
+        let partial: CandidateResponseContact =
+            serde_json::from_str(r#"{"value":"a@b.test"}"#).unwrap();
+        assert_eq!(partial.value.as_deref(), Some("a@b.test"));
+        assert_eq!(partial.offer_email, None);
+
+        let full: CandidateResponseContact = serde_json::from_str(
+            r#"{"value":"a@b.test","is_email":true,"offer_email":false}"#,
+        )
+        .unwrap();
+        assert_eq!(full.is_email, Some(true));
+        assert_eq!(full.offer_email, Some(false));
+    }
+
     use std::io::{Read, Write};
     use std::net::TcpListener;
     use std::thread;

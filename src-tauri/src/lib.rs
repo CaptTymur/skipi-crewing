@@ -2260,6 +2260,7 @@ pub fn run() {
             crewing_intake::crewing_intake_fact_correct,
             crewing_intake::crewing_intake_candidate_rank,
             crewing_intake::crewing_intake_rank_list,
+            crewing_intake::crewing_intake_response_contact,
             crewing_intake::crewing_intake_shortlist_confirm,
             crewing_intake::crewing_intake_shortlist_withdraw,
             crewing_intake::crewing_intake_matching_profile_list,

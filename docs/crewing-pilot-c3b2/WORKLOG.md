@@ -691,3 +691,66 @@ shown beside it: one candidate, one name. No second name store was introduced, a
 Nothing is ever substituted for a missing name — not the source id, not a contact,
 not a blank that would read as an unnamed person; asserted, including that the title
 is not empty.
+
+## No.621 — the contact the seafarer DELIVERED with his response reaches the card
+
+OWNER (938), verbatim: «давай пока что откроем контакты для крюинга».
+
+`profile_responses.contact` has carried the address since S4 and NO surface of the
+agency read it, so the card printed "Контакт не записан" beside a **letter whose own
+`From` is that contact**. The honest description of the defect is not "there is
+nowhere to reply" — it is that **the screen contradicted itself**: the address was
+already reachable under the "Письмо" disclosure and under "Открыть оригинал (.eml)".
+
+**Server:** a route of its own,
+`GET …/candidate-intake/{intake_id}/response-contact` → `{value, is_email,
+offer_email}` or 404. `_public()` is untouched: it serves the queue LIST and the
+POST with the same schema, so a field there would have handed addresses out in
+PAGES; and the card GET writes no audit line at all, while this disclosure writes
+one. Both are drilled, not promised.
+
+**Client:** one typed command `crewing_intake_response_contact`, one struct with
+`#[serde(default)]` on all three fields (and a unit test that a body without the
+keys parses — the attribute alone is a claim), and **ONE resolver**
+`cardContactResolved()` in the card block. Order: operator fact → delivered with
+the response → legacy `email`. Four consumers read that one function.
+
+**Four things this deliberately does NOT do, each for a named reason:**
+
+1. **The delivered value never enters the fact map or its cache.** It would be a
+   lie about provenance, it would need `_accept_fact` bypassed, and
+   `crewFlowSaveToSeafarers` reads the fact map straight into the **irreversible**
+   seafarer database. The crew-flow side is handed a state CODE
+   (`addressable` / `refused` / `failed`), never the address, so the back door is
+   closed by ABSENCE rather than by a rule.
+2. **`crewFlowSaveToSeafarers` is not touched at all.** `db.rs:739` says to the
+   user "cannot be deleted afterwards — neither here nor in the seafarer
+   database", and the server model exists so that deleting the intake destroys the
+   address; a copy on the operator's disk would outlive that. The owner did not
+   ask for it, so it is not here.
+3. **`draft.to` is fed by `addressable`, never by `email`.** A delivered address
+   the server refuses to offer is SHOWN (it is what the seafarer sent) and never
+   addressed: the agency's own address or one at our own incoming domain in a
+   draft is one click away from posting the offer into our own queue as a new
+   paid document. `is_the_forwarder` is REUSED, never edited — the S2 defence for
+   an ordinary forwarded letter must go on working.
+4. **A failed request is not an absence.** 404 and only 404 keeps «Контакт не
+   записан»; 403, 500, a timeout or a build without the command say "could not be
+   loaded — reopen the card". CANON (930) п.1: недоставка и неизвестность стоят
+   рядом с решением. Drilled with all three failures.
+
+The provenance caption is a PARAMETER now. It used to be welded to «как написано в
+документе», which is true of a fact read out of a CV and a **lie** about an address
+typed into a response form — and an operator weighs the two differently. The
+delivered row says «пришёл с откликом моряка» / "came with the seafarer's response".
+
+Values that did not come out of our own grammar go through `cardSafeText()` before
+they reach markup: `escapeHtml` neutralises five markup characters and nothing
+else, so a right-to-left override survives it and reorders the sentence it sits in.
+
+After this card the address is on the screen in **two** places on purpose, by (930)
+п.1: inside the «Письмо» disclosure as the letter's own material, and beside the
+button as the contact for the action.
+
+Not in this card: anything about the PERSON (name, age, nationality, sea time,
+last vessel) — that is No.623; and any change to what is compared — No.622.

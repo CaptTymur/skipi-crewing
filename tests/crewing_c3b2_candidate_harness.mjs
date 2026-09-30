@@ -189,6 +189,13 @@ function makeServer(options = {}) {
           live[0].withdrawn_by = b.user; live[0].withdrawn_at = '2026-09-23T03:00:00'; return null;
         }
         case 'crewing_intake_matching_profile_list': return { items: b.profiles.map((p) => ({ id: p.id, crewing_id: p.crewing_id, name: p.name, version: p.version, state: p.state })) };
+        // No.621. Every intake of THIS context is an ordinary letter, so the honest
+        // answer is the route's 404 - "this letter carries no response binding".
+        // Answering it here rather than falling into `default` matters: an
+        // undefined command would arrive as a transport failure and the card would
+        // correctly render "could not be loaded", which is not what these fixtures
+        // are about.
+        case 'crewing_intake_response_contact': throw b.reject(404, 'candidate intake not found');
         case 'crewing_intake_alias_list': return { items: [] };
         case 'crewing_intake_candidate_list': return { items: [{ ...b.card, summary: b.card.summary }], limit: 50, offset: args.offset || 0, total: 1 };
         default: throw new Error(`unexpected invoke ${command}`);
@@ -291,7 +298,10 @@ console.log('# positive chain on isolated copies: card → facts → correction 
   ok(/data-qa="pilot-open-card"/.test(main(ctx)) && /pilotOpenCard\('intake-A'\)/.test(main(ctx)), 'queue row renders an Open control wired to the exact intake id');
   await openCard(ctx);
   ok(/data-qa="crewing-intake-card-view" data-intake="intake-A"/.test(main(ctx)), 'card view replaces the queue for the opened intake');
-  ok(ctx.calls.slice(-4).map((c) => c.command).sort().join(',') === 'crewing_intake_candidate_get,crewing_intake_fact_list,crewing_intake_matching_profile_list,crewing_intake_rank_list', 'opening a card issues exactly the four typed reads');
+  // No.621 makes this FIVE: the delivered response contact is fetched with the
+  // card, by its own route, once per opened card. The set stays pinned - the point
+  // of this line is that a card issues exactly these reads and no others.
+  ok(ctx.calls.slice(-5).map((c) => c.command).sort().join(',') === 'crewing_intake_candidate_get,crewing_intake_fact_list,crewing_intake_matching_profile_list,crewing_intake_rank_list,crewing_intake_response_contact', 'opening a card issues exactly the five typed reads (No.621 added the response contact) — got ' + ctx.calls.slice(-5).map((c) => c.command).sort().join(','));
   ok(/Document unverified · synthetic data only/.test(main(ctx)), 'source trust is shown as unverified, not as a scan certificate');
   ok(/data-qa="pilot-object">obj-1 · text\/plain/.test(main(ctx)) && /obj-2 · application\/pdf/.test(main(ctx)), 'objects list shows only id and content type');
   ok(/data-qa="pilot-facts-empty"/.test(main(ctx)) && /data-qa="pilot-ranks-empty"/.test(main(ctx)) && /data-qa="pilot-history-empty"/.test(main(ctx)), 'empty successful reads render as empty, not as errors');
