@@ -5724,9 +5724,72 @@ function renderCrewFlowHost() {
 //   list    — the list carried a name
 //   none    — the server answered that the facts hold no name (said out loud)
 //   unknown — this server build never sent the field: nothing is claimed
+// ===== No.623 (OWNER (943)/(944)): WHO responded, on the queue row ==========
+// `response_headline` rides the list answer the queue already fetches: four
+// values, no request per row. It is present ONLY on a row born of a Skipi
+// response. Measured on this product's own source table — inbound 9 ·
+// skipi_response 2 · synthetic 3 — NINE of fourteen pilot rows are e-mail and
+// will never carry it, so every branch below leaves those rows exactly as they
+// are today. An unconditional heading would make the majority of the queue
+// worse, which is the opposite of what was asked for.
+//
+// `rank_state` is read INSTEAD of guessing from `rank == null`: the server
+// distinguishes "the profile named no post", "the version answered was
+// overwritten by a republish" and "no readable snapshot", and (944) forbids
+// showing today's post to a seafarer who answered a different one. The codes
+// are the server's; the wording is ours, because the server holds no language.
+var CREW_FLOW_RANK_STATE_TEXT = {
+  from_snapshot:['должность не указана','post not stated'],
+  snapshot_superseded:['должность отклика не сохранена','post at the response not kept'],
+  snapshot_unavailable:['должность неизвестна','post unknown']
+};
+function crewFlowRankStateLabel(code) {
+  var pair = CREW_FLOW_RANK_STATE_TEXT[String(code == null ? '' : code)];
+  return pair ? pair[getUiLang() === 'ru' ? 0 : 1] : '';
+}
+function crewFlowResponseHeadline(item) {
+  var h = item && item.response_headline;
+  return (h && typeof h === 'object') ? h : null;
+}
+// First and surname as the seafarer's own vault holds them. Either half may be
+// absent; nothing is invented from the other, and an all-empty pair is NOT a
+// name — the row then keeps the title it has today.
+function crewFlowResponseName(o) {
+  if (!o) return '';
+  var first = String(o.first_name == null ? '' : o.first_name).replace(/^\s+|\s+$/g, '');
+  var last = String(o.surname == null ? '' : o.surname).replace(/^\s+|\s+$/g, '');
+  return (first + ' ' + last).replace(/\s\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+}
+// No.623/Б2. WHY THIS IS A SEPARATE STORE AND HOLDS A CODE.
+//
+// Same reasoning as No.621's contact cache, and the same door left shut:
+// everything in crewFlowFactCache() reaches the queue row through
+// crewFlowFactsFor AND reaches the IRREVERSIBLE seafarer database through
+// crewFlowSaveToSeafarers. A value parked there travels to both by the back
+// door. What the row needs in order to rank three transports of one name is not
+// a value at all — it is one word about where the recorded name came from.
+function crewFlowNameOriginCache() {
+  if (!state.crewFlowNameOrigin) state.crewFlowNameOrigin = {};
+  return state.crewFlowNameOrigin;
+}
+function crewFlowCacheNameOrigin(intakeId, code) {
+  try { crewFlowNameOriginCache()[String(intakeId)] = String(code == null ? '' : code); } catch(_) {}
+}
+function crewFlowNameOrigin(intakeId) {
+  try { return String(crewFlowNameOriginCache()[String(intakeId)] || ''); } catch(_) { return ''; }
+}
+// No.623/Б2: THREE transports of one name now, and the order is assigned, not
+// guessed — an OPERATOR's correction is a human act and is never overwritten by
+// a machine value; what the seafarer sent WITH THE RESPONSE outranks what a
+// parser read out of a CV. Two names for one candidate are still never shown
+// side by side: exactly one wins here and the others are not printed.
 function crewFlowRowNameState(item) {
-  var facts = crewFlowFactsFor(item && item.intake_id);
+  var intakeId = item && item.intake_id;
+  var facts = crewFlowFactsFor(intakeId);
   var fact = String((facts && facts.name) == null ? '' : facts.name).replace(/^\s+|\s+$/g, '');
+  if (fact && crewFlowNameOrigin(intakeId) === 'operator') return { kind:'fact', name:fact };
+  var delivered = crewFlowResponseName(crewFlowResponseHeadline(item));
+  if (delivered) return { kind:'response', name:delivered };
   if (fact) return { kind:'fact', name:fact };
   var summary = item && item.summary;
   if (!summary || !Object.prototype.hasOwnProperty.call(summary, 'candidate_name')) {
@@ -5786,7 +5849,24 @@ function crewFlowRowTitle(item) {
 function crewFlowRowTitleHtml(item) {
   var st = crewFlowRowNameState(item);
   var named = !!st.name;
-  var html = '<span data-qa="crew-flow-row-name" data-name="' + escapeAttr(st.kind) + '">'
+  var html = '';
+  // No.623: the post appears ONLY beside a name that was actually delivered with
+  // a response. A row with no such name keeps today's title, and a post standing
+  // alone in a name's place would be an identifier wearing a name's clothes —
+  // the very defect (929) removed from this heading.
+  if (st.kind === 'response') {
+    var head = crewFlowResponseHeadline(item);
+    var rank = String((head && head.rank) == null ? '' : head.rank).replace(/^\s+|\s+$/g, '');
+    if (rank) {
+      html += '<span data-qa="crew-flow-row-response-rank">' + escapeHtml(rank) + '</span> \u00b7 ';
+    } else {
+      // (944): no post is shown rather than the profile's CURRENT one, and the
+      // row says WHY instead of going quiet about it.
+      var caption = crewFlowRankStateLabel(head && head.rank_state);
+      if (caption) html += '<span class="meta" data-qa="crew-flow-row-rank-state">' + escapeHtml(caption) + '</span> \u00b7 ';
+    }
+  }
+  html += '<span data-qa="crew-flow-row-name" data-name="' + escapeAttr(st.kind) + '">'
     + escapeHtml(named ? st.name : crewFlowSourceLabel(item && item.source)) + '</span>';
   // Only the ANSWERED absence is spelled out. "This build never told us" stays
   // silent, because claiming there is no name would be a claim nobody made — so
@@ -6948,6 +7028,17 @@ var PILOT_CARD_TEXT = {
   en: {
     card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh this candidate',
     ident_unknown:'name not given', record_generic:'Record', fit_title:'Match against profiles',
+    // No.623 (OWNER (943)/(944)): the six elements of a response. The server
+    // holds no language -- it sends closed CODES and the wording lives here.
+    resp_age:'Age', resp_citizenship:'Citizenship', resp_experience:'Sea time in post', resp_vessel:'Last vessel',
+    resp_missing:'not given', resp_age_about:'about {years}',
+    resp_span_ym:'{y} yr {m} mo', resp_span_y:'{y} yr', resp_span_m:'{m} mo', resp_span_d:'{d} days',
+    resp_exp_in_rank:'{span} as {rank}', resp_exp_other_rank:'{span} as {rank} \u2014 a different post from the one responded on',
+    resp_exp_rank_unknown:'the post responded on is not known, so no sea time is counted for it',
+    resp_exp_not_provided:'no sea time was sent with the response',
+    resp_rank_absent:'the profile did not name a post', resp_rank_superseded:'the profile was republished; the post answered was not kept',
+    resp_rank_unavailable:'no readable snapshot of the profile answered',
+    identity_failed:'This card could not be loaded in full.',
     fit_none:'No stored comparison for this candidate yet.', fit_explain:'How the figure is counted',
     fit_reasons:'Which checks', profile_unnamed:'Profile without a name',
     share_caption:'{met} of {total} checks met, by the stored evaluation',
@@ -6997,6 +7088,16 @@ var PILOT_CARD_TEXT = {
   ru: {
     card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить карточку',
     ident_unknown:'имя не указано', record_generic:'Запись', fit_title:'Соответствие профилям',
+    // No.623: те же шесть элементов по-русски. Коды -- с сервера, слова -- здесь.
+    resp_age:'Возраст', resp_citizenship:'Гражданство', resp_experience:'Стаж в должности', resp_vessel:'Последнее судно',
+    resp_missing:'не указано', resp_age_about:'около {years}',
+    resp_span_ym:'{y} г. {m} мес.', resp_span_y:'{y} г.', resp_span_m:'{m} мес.', resp_span_d:'{d} дн.',
+    resp_exp_in_rank:'{span} в должности {rank}', resp_exp_other_rank:'{span} в должности {rank} \u2014 не та, на которую отклик',
+    resp_exp_rank_unknown:'должность отклика неизвестна, стаж по ней не посчитан',
+    resp_exp_not_provided:'стаж с откликом не прислан',
+    resp_rank_absent:'в профиле должность не названа', resp_rank_superseded:'профиль перепубликован; должность на момент отклика не сохранена',
+    resp_rank_unavailable:'читаемого снимка профиля отклика нет',
+    identity_failed:'Карточка загружена не полностью.',
     fit_none:'Сохранённых сравнений по этому кандидату пока нет.', fit_explain:'Как считается число',
     fit_reasons:'Какие проверки', profile_unnamed:'Профиль без названия',
     share_caption:'выполнено {met} из {total} по сохранённой оценке',
@@ -7144,7 +7245,14 @@ async function pilotFactsLoad() {
   try {
     var result = await invoke('crewing_intake_fact_list', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
     if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
-    d.facts = Array.isArray(result.items) ? result.items : []; d.factsLoading = false; renderIntakePilot(); return true;
+    d.facts = Array.isArray(result.items) ? result.items : []; d.factsLoading = false;
+    // No.623/Б2: the row must be able to tell an operator's correction from a
+    // machine reading, or the delivered name would silently overwrite a human
+    // edit. It is handed ONE WORD about origin and never a value - guarded like
+    // crewFlowCacheRanks above, because this card renders in hosts where the
+    // Crew Flow block is not loaded at all.
+    try { crewFlowCacheNameOrigin(d.intakeId, pilotCardNameOrigin()); } catch(_){}
+    renderIntakePilot(); return true;
   } catch(error) {
     if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
     d.factsLoading = false; d.factsError = error; renderIntakePilot(); return false;
@@ -8178,25 +8286,198 @@ function pilotCardFactValue(field) {
   }
   return '';
 }
+// ===== No.623 (OWNER (943)/(944)): the six elements, on the card ============
+// `response_summary` arrives on the candidate GET. It is present ONLY on a card
+// born of a Skipi response — nine of the fourteen pilot cards are e-mail and
+// never carry it — so everything below is drawn only when it is actually there.
+function pilotCardResponseSummary() {
+  var d = pilotDetail();
+  var s = d && d.card && d.card.response_summary;
+  return (s && typeof s === 'object') ? s : null;
+}
+// The card block must not depend on the Crew Flow block being loaded at all
+// (this card renders in hosts where it is not), so the join lives here too.
+function pilotCardPersonName(o) {
+  if (!o) return '';
+  var first = String(o.first_name == null ? '' : o.first_name).replace(/^\s+|\s+$/g, '');
+  var last = String(o.surname == null ? '' : o.surname).replace(/^\s+|\s+$/g, '');
+  return (first + ' ' + last).replace(/\s\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+}
+// No.623/Б2: which hand wrote the recorded name. `corrected_by` is set by the
+// operator route and by nothing else, so its presence on the CURRENT version is
+// the honest test for "a person typed this". Absent = a machine read it out of a
+// document. The answer is a single word, and it is the only thing the queue row
+// is given (crewFlowCacheNameOrigin) — never the name itself.
+function pilotCardNameOrigin() {
+  var d = pilotDetail();
+  var list = (d && Array.isArray(d.facts)) ? d.facts : [];
+  for (var i = 0; i < list.length; i++) {
+    if (!list[i] || String(list[i].field) !== 'name') continue;
+    var versions = Array.isArray(list[i].versions) ? list[i].versions : [];
+    if (!versions.length) return '';
+    var v = versions[0];
+    return (v && v.corrected_by != null && String(v.corrected_by) !== '') ? 'operator' : 'machine';
+  }
+  return '';
+}
+// Age. `age_precision` is the whole point of the pair: a seafarer who recorded
+// only a year of birth has an age that is approximate, and printing it as a
+// bare number would be a precision the client never had. The server never sees
+// a date of birth — the number is computed once, on the seafarer's own device.
+function pilotCardAgeText(s) {
+  if (!s || s.age_years == null) return '';
+  var n = Number(s.age_years);
+  if (!isFinite(n)) return '';
+  return String(s.age_precision) === 'year'
+    ? cardT('resp_age_about').replace('{years}', String(n))
+    : String(n);
+}
+function pilotCardCitizenshipText(s) {
+  if (!s) return '';
+  var name = String(s.citizenship == null ? '' : s.citizenship).replace(/^\s+|\s+$/g, '');
+  var code = String(s.citizenship_code == null ? '' : s.citizenship_code).replace(/^\s+|\s+$/g, '');
+  if (name && code) return name + ' (' + code + ')';
+  return name || code;
+}
+// Whole years and months, and a component that is zero is simply not said:
+// "0 yr 5 mo" reads like a measurement, and the one number nobody may see by
+// accident here is a zero that was never measured.
+function pilotCardDurationText(days) {
+  var total = Number(days);
+  if (!isFinite(total) || total < 0) return '';
+  total = Math.floor(total);
+  var years = Math.floor(total / 365);
+  var months = Math.floor((total - years * 365) / 30);
+  if (years && months) return cardT('resp_span_ym').replace('{y}', String(years)).replace('{m}', String(months));
+  if (years) return cardT('resp_span_y').replace('{y}', String(years));
+  if (months) return cardT('resp_span_m').replace('{m}', String(months));
+  return cardT('resp_span_d').replace('{d}', String(total));
+}
+// Sea time ALWAYS names the post it was counted for. No.622 (matching a profile
+// rank to free text a seafarer typed) is NOT open, so the comparison behind
+// `experience_state` is byte equality: `MASTER` and `Master ` are different
+// posts here, and the screen says which post the figure belongs to rather than
+// implying it is the one responded on.
+function pilotCardExperienceText(s) {
+  if (!s) return '';
+  var state = String(s.experience_state == null ? '' : s.experience_state);
+  if (state === 'response_rank_unknown' || state === 'not_provided') return '';
+  var days = (s.experience_days == null) ? null : Number(s.experience_days);
+  if (days == null || !isFinite(days)) return '';
+  var span = pilotCardDurationText(days);
+  if (!span) return '';
+  var rank = String(s.experience_rank == null ? '' : s.experience_rank).replace(/^\s+|\s+$/g, '');
+  if (!rank) return span;
+  return cardT(state === 'other_rank' ? 'resp_exp_other_rank' : 'resp_exp_in_rank')
+    .replace('{span}', span).replace('{rank}', rank);
+}
+// An absence is not one sentence. "The seafarer sent no sea time" and "we could
+// not tell which post to count" are different answers, and neither of them is
+// "0 days" — the distinction the owner asked for by name.
+function pilotCardExperienceMissingText(s) {
+  var state = String((s && s.experience_state) == null ? '' : s.experience_state);
+  if (state === 'response_rank_unknown') return cardT('resp_exp_rank_unknown');
+  if (state === 'not_provided') return cardT('resp_exp_not_provided');
+  return cardT('resp_missing');
+}
+function pilotCardVesselText(s) {
+  if (!s) return '';
+  var name = String(s.last_vessel_name == null ? '' : s.last_vessel_name).replace(/^\s+|\s+$/g, '');
+  if (!name) return '';
+  var off = String(s.last_vessel_sign_off == null ? '' : s.last_vessel_sign_off).replace(/^\s+|\s+$/g, '');
+  return off ? name + ' · ' + off : name;
+}
+function pilotCardSummaryCell(key, label, text, missingText, precision) {
+  var has = !!text;
+  return '<div class="cf-resp-cell" data-qa="pilot-response-' + key + '"'
+    + (precision ? ' data-precision="' + escapeAttr(String(precision)) + '"' : '') + '>'
+    + '<span class="cf-resp-k">' + escapeHtml(label) + '</span> '
+    + (has
+        ? '<span class="cf-resp-v">' + escapeHtml(text) + '</span>'
+        : '<span class="cf-resp-v muted" data-qa="pilot-response-missing">' + escapeHtml(missingText || cardT('resp_missing')) + '</span>')
+    + '</div>';
+}
+var PILOT_CARD_RANK_STATE_KEY = {
+  from_snapshot:'resp_rank_absent',
+  snapshot_superseded:'resp_rank_superseded',
+  snapshot_unavailable:'resp_rank_unavailable'
+};
+function pilotCardResponseSummaryHtml(s) {
+  var cells = ''
+    + pilotCardSummaryCell('age', cardT('resp_age'), pilotCardAgeText(s), cardT('resp_missing'), s.age_precision)
+    + pilotCardSummaryCell('citizenship', cardT('resp_citizenship'), pilotCardCitizenshipText(s), cardT('resp_missing'))
+    + pilotCardSummaryCell('experience', cardT('resp_experience'), pilotCardExperienceText(s), pilotCardExperienceMissingText(s))
+    + pilotCardSummaryCell('vessel', cardT('resp_vessel'), pilotCardVesselText(s), cardT('resp_missing'));
+  // (944): when the post is absent the card says WHY. It NEVER falls back to the
+  // profile's current post — a seafarer who answered "Master" was never shown
+  // "Chief Officer", and showing it here would put words in their mouth.
+  var stateHtml = '';
+  var rank = String(s.rank == null ? '' : s.rank).replace(/^\s+|\s+$/g, '');
+  if (!rank) {
+    var key = PILOT_CARD_RANK_STATE_KEY[String(s.rank_state == null ? '' : s.rank_state)];
+    if (key) stateHtml = '<div class="cf-resp-note"><span class="meta" data-qa="pilot-response-rank-state">' + escapeHtml(cardT(key)) + '</span></div>';
+  }
+  return '<div class="cf-resp" data-qa="pilot-response-summary">' + cells + '</div>' + stateHtml;
+}
+// The block that sits directly under the heading: what is known about the
+// person, and — CANON (930) п.1 — any failure to load it, stated HERE, beside
+// the decision, rather than folded into a collapsed disclosure further down.
+function pilotCardResponseBlockHtml() {
+  var d = pilotDetail(); if (!d) return '';
+  var out = '';
+  if (d.cardError || d.factsError) {
+    out += '<div class="pilot-status error" data-qa="pilot-identity-load-error">'
+      + escapeHtml(cardT('identity_failed')) + ' '
+      + pilotCardErrorMessage(d.cardError || d.factsError) + '</div>';
+  }
+  var s = pilotCardResponseSummary();
+  if (s) out += pilotCardResponseSummaryHtml(s);
+  return out ? '<section class="pilot-card" data-qa="pilot-response-block">' + out + '</section>' : '';
+}
 function pilotCardIdentityHtml() {
   var d = pilotDetail(); if (!d) return '';
-  // One candidate, one name. The recorded fact wins; the server's rendering of
-  // the same fact on the card summary fills in; the intake id is the last resort
-  // and is never dressed up as a person.
-  var name = pilotCardFactValue('name');
-  var answered = !!(d.facts && d.facts.length);
-  if (!name && d.card && d.card.summary && d.card.summary.candidate_name != null) {
-    name = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
-    answered = true;
+  // No.623/Б2: ONE candidate, ONE name, and now THREE transports carrying it.
+  // The order is assigned, not guessed: an operator's correction is a human act
+  // and must never be overwritten by a machine value; what the seafarer sent
+  // WITH THE RESPONSE outranks what a parser read out of a CV; the server's
+  // rendering of the recorded fact fills the rest. Exactly one wins, so two
+  // names for one candidate are still never shown side by side.
+  var summary = pilotCardResponseSummary();
+  var factName = pilotCardFactValue('name');
+  var delivered = pilotCardPersonName(summary);
+  var name = '', kind = '';
+  if (factName && pilotCardNameOrigin() === 'operator') { name = factName; kind = 'fact'; }
+  else if (delivered) { name = delivered; kind = 'response'; }
+  else if (factName) { name = factName; kind = 'fact'; }
+  else if (d.card && d.card.summary && d.card.summary.candidate_name != null) {
+    var listed = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
+    if (listed) { name = listed; kind = 'list'; }
   }
-  var kind = name ? 'fact' : (answered ? 'none' : 'unknown');
+  // No.623/Б3: THREE STATES, and this is where the contract was broken BEFORE
+  // this card. `answered` used to be `!!(d.facts && d.facts.length)` — "the
+  // question was answered" derived from "the answer was not empty". So a request
+  // that FAILED rendered as "name not given": an unasked question wearing the
+  // clothes of an answered absence, which CANON (930) п.1 forbids outright.
+  //
+  // Answered now means a response actually came back — an EMPTY facts list is an
+  // answer — and a request that did not come back is its own third state.
+  var loadFailed = !!(d.cardError || d.factsError);
+  var answered = Array.isArray(d.facts) || !!d.card;
+  if (!name) kind = loadFailed ? 'error' : (answered ? 'none' : 'unknown');
   // OWNER (929): the heading is never the intake_id. With no recorded name the
   // card is titled by where the record came from; the identifier itself is
   // printed in full, once, under "Source, identifiers and provenance".
   var source = d.card && d.card.source;
   var title = name || (typeof crewFlowSourceLabel === 'function'
     ? crewFlowSourceLabel(source) : cardT('record_generic'));
+  // Initials come from the PERSON's name only — never from the post beside it
+  // and never from an identifier: two letters of a UUID look like a person.
   var initials = pilotCardInitials(name);
+  // No.623: the post THEY RESPONDED ON, beside the name and only there. It is
+  // frozen at the version answered (944) and is absent rather than replaced when
+  // that version was overwritten; the reason is said in the summary below.
+  var headRank = '';
+  if (kind === 'response' && summary) headRank = String(summary.rank == null ? '' : summary.rank).replace(/^\s+|\s+$/g, '');
   var sub = [];
   var rank = pilotCardFactValue('rank');
   if (rank) sub.push(rank);
@@ -8214,7 +8495,9 @@ function pilotCardIdentityHtml() {
   return '<div class="cf-ident" data-qa="pilot-card-identity" data-name="' + escapeAttr(st.kind) + '">'
     + (initials ? '<div class="cf-ident-badge" aria-hidden="true">' + escapeHtml(initials) + '</div>' : '')
     + '<div style="min-width:0;"><div class="cf-ident-kicker">' + escapeHtml(cardT('card_title')) + '</div>'
-    + '<h1 class="cf-ident-name" data-qa="pilot-card-name">' + escapeHtml(title) + '</h1>'
+    + '<h1 class="cf-ident-name">'
+    +   (headRank ? '<span data-qa="pilot-card-response-rank">' + escapeHtml(headRank) + '</span> \u00b7 ' : '')
+    +   '<span data-qa="pilot-card-name">' + escapeHtml(title) + '</span></h1>'
     + (subHtml ? '<div class="cf-ident-sub">' + subHtml + '</div>' : '') + '</div></div>';
 }
 // One compact card per stored comparison: the figure (928) where the data earns
@@ -8278,6 +8561,9 @@ function pilotRenderCard(main, afterHeroHtml) {
     + '<div class="pilot-hero">'+pilotCardIdentityHtml()+'<div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
     // The host (Crew Flow) puts its operator actions here: directly under the
     // name, above the fold, and after the answer to "whose card is this".
+    // 1b. No.623: WHAT IS KNOWN about that person, and any failure to load it,
+    //     directly under the heading and above every disclosure on the card.
+    + pilotCardResponseBlockHtml()
     + (afterHeroHtml || '')
     // 2. WHAT WAS COMPARED. Several profiles at once, each with its own figure and
     //    its own unmet/unconfirmed counts, above the source material.

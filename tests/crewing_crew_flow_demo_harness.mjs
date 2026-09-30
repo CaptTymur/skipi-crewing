@@ -330,6 +330,8 @@ function loadInlineModuleForCurrentStore() {
       + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
       + 'crewFlowCacheRankSummary: (typeof crewFlowCacheRankSummary === "function" ? crewFlowCacheRankSummary : null), '
       + 'crewFlowRankCache: (typeof crewFlowRankCache === "function" ? crewFlowRankCache : null), '
+      + 'crewFlowCacheNameOrigin: (typeof crewFlowCacheNameOrigin === "function" ? crewFlowCacheNameOrigin : null), '
+      + 'crewFlowNameOrigin: (typeof crewFlowNameOrigin === "function" ? crewFlowNameOrigin : null), '
       + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
       + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
       + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '

@@ -154,6 +154,72 @@ pub(crate) struct CandidateIntakeSummary {
     pub profile_ranks: Option<Vec<CandidateProfileRankSummary>>,
 }
 
+/// No.623 (OWNER (943)/(944)): WHO responded, on the queue row.
+///
+/// Four values and no more. The card shape must not ride the list: the server
+/// deliberately answers the queue with this narrow object, and the client type
+/// mirrors that narrowness so a later hand cannot widen the row by accident.
+///
+/// `rank_state` exists ALONGSIDE `rank` on purpose, and is not derived from
+/// `rank.is_none()`: "the profile did not name a post", "the version you
+/// responded to was overwritten by a republish" and "there is no readable
+/// snapshot at all" are three different sentences, and only the server knows
+/// which one is true. The screen holds the wording; the server holds the code.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseHeadline {
+    #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
+    pub rank_state: Option<String>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub surname: Option<String>,
+}
+
+/// No.623: the six elements of the compact summary, as the CARD route answers
+/// them. Thirteen names, frozen by the card: a fourteenth would be a field about
+/// a person that nobody agreed to.
+///
+/// Every field is `Option` with `#[serde(default)]`, for the reason already
+/// written on `profile_ranks` above: a pilot server that does not carry a key
+/// must not fail the parse of the whole card. A value that is absent is not a
+/// zero and not an empty string -- the screen says "not given", and
+/// `experience_state` is what keeps "no data" apart from "no sea time".
+///
+/// `age_years` is a NUMBER and there is deliberately no date of birth here: the
+/// server neither accepts nor stores one, and `age_precision` is what stops the
+/// screen from claiming a to-the-day age it was never given.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseSummary {
+    #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
+    pub rank_state: Option<String>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub surname: Option<String>,
+    #[serde(default)]
+    pub age_years: Option<i64>,
+    #[serde(default)]
+    pub age_precision: Option<String>,
+    #[serde(default)]
+    pub citizenship: Option<String>,
+    #[serde(default)]
+    pub citizenship_code: Option<String>,
+    #[serde(default)]
+    pub experience_rank: Option<String>,
+    #[serde(default)]
+    pub experience_days: Option<i64>,
+    #[serde(default)]
+    pub experience_state: Option<String>,
+    #[serde(default)]
+    pub last_vessel_name: Option<String>,
+    #[serde(default)]
+    pub last_vessel_sign_off: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateIntakeReceipt {
     pub intake_id: String,
@@ -181,6 +247,23 @@ pub(crate) struct CandidateIntakeReceipt {
     #[serde(default)]
     pub attachments: Vec<CandidateIntakeAttachment>,
     pub summary: Option<CandidateIntakeSummary>,
+    /// No.623: WHO responded. Declared on this struct because `send` decodes
+    /// BOTH the card and the rows of the queue into it -- and serde drops a key
+    /// no field declares, silently and without failing the parse. Undeclared,
+    /// the six elements would never leave Rust, the webview would render exactly
+    /// what it renders today, and every renderer test would stay green over it.
+    ///
+    /// The routes stay narrow on the wire: the queue answers `response_headline`
+    /// only, the card answers `response_summary` only. Each is therefore `None`
+    /// on the other route, which is the same `None` an older pilot server
+    /// produces -- and both mean the same thing to the screen ("no response
+    /// fields here"), so one `Option` carries the distinction without the
+    /// `Option<Option<_>>` that `candidate_name` needs. There the three states
+    /// differ ON SCREEN; here they do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_headline: Option<CandidateResponseHeadline>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_summary: Option<CandidateResponseSummary>,
 }
 
 /// One attachment row exactly as `candidate_intake_service.public_attachments_for`
@@ -1399,6 +1482,167 @@ mod tests {
         .unwrap();
         assert_eq!(full.is_email, Some(true));
         assert_eq!(full.offer_email, Some(false));
+    }
+
+
+    /// No.623: THE SILENT-DROP DRILL, in the language the defect lives in.
+    ///
+    /// `send` decodes into `CandidateIntakeReceipt` and serde ignores a key no
+    /// field declares -- no error, no warning, and the value simply never reaches
+    /// the webview. That is precisely the No.622 class the owner paid for: the
+    /// loader dropped `withheld_profiles` while 88 green checks watched, because
+    /// the fixtures put the field straight into the renderer and never crossed
+    /// this boundary.
+    ///
+    /// So the measurement is a ROUND TRIP, not a field-by-field read: decode the
+    /// frozen server body, serialise it back, and require every one of the
+    /// thirteen names to still be there. Delete a field from the struct and this
+    /// goes red; the feature does not quietly become a no-op.
+    fn card_body_with_summary() -> String {
+        r#"{"intake_id":"intake-A","receipt_id":"receipt-A","crewing_id":"crew-1",
+            "source":"skipi_response","source_id":"msg-1","event_id":"e-1",
+            "primary_profile_id":null,"content_sha256":"abc","content_bytes":12,
+            "content_type":"text/plain","state":"ranked","source_trust":"inbound_alias",
+            "version":1,"created_at":"2026-09-30T01:00:00","issued_at":"2026-09-30T01:00:00",
+            "objects":[],"attachments":[],
+            "summary":{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+                       "active_confirmations":0,"needs_review_reason":null},
+            "response_summary":{"rank":"Master","rank_state":"from_snapshot",
+                "first_name":"Ivan","surname":"Petrov","age_years":41,
+                "age_precision":"exact","citizenship":"Ukraine","citizenship_code":"UA",
+                "experience_rank":"Master","experience_days":1170,
+                "experience_state":"matches_response_rank",
+                "last_vessel_name":"MV Southern Cross","last_vessel_sign_off":"2026-03-14"}}"#
+            .to_string()
+    }
+
+    #[test]
+    fn the_card_keeps_every_element_of_the_response_summary_across_the_bridge() {
+        let card: CandidateIntakeReceipt = serde_json::from_str(&card_body_with_summary()).unwrap();
+        let summary = card
+            .response_summary
+            .as_ref()
+            .expect("the card carries a response summary");
+
+        // the values themselves, so a struct that parses but discards is not green
+        assert_eq!(summary.rank.as_deref(), Some("Master"));
+        assert_eq!(summary.rank_state.as_deref(), Some("from_snapshot"));
+        assert_eq!(summary.first_name.as_deref(), Some("Ivan"));
+        assert_eq!(summary.surname.as_deref(), Some("Petrov"));
+        assert_eq!(summary.age_years, Some(41));
+        assert_eq!(summary.age_precision.as_deref(), Some("exact"));
+        assert_eq!(summary.citizenship.as_deref(), Some("Ukraine"));
+        assert_eq!(summary.citizenship_code.as_deref(), Some("UA"));
+        assert_eq!(summary.experience_rank.as_deref(), Some("Master"));
+        assert_eq!(summary.experience_days, Some(1170));
+        assert_eq!(
+            summary.experience_state.as_deref(),
+            Some("matches_response_rank")
+        );
+        assert_eq!(summary.last_vessel_name.as_deref(), Some("MV Southern Cross"));
+        assert_eq!(summary.last_vessel_sign_off.as_deref(), Some("2026-03-14"));
+
+        // and the round trip: what the webview is handed still has all thirteen
+        let back = serde_json::to_string(&card).unwrap();
+        for key in [
+            "rank",
+            "rank_state",
+            "first_name",
+            "surname",
+            "age_years",
+            "age_precision",
+            "citizenship",
+            "citizenship_code",
+            "experience_rank",
+            "experience_days",
+            "experience_state",
+            "last_vessel_name",
+            "last_vessel_sign_off",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// CALIBRATION for the drill above: a body WITHOUT the key must still parse,
+    /// or "an old pilot server breaks every card" ships as a green feature.
+    #[test]
+    fn a_card_from_a_server_without_the_response_keys_still_parses() {
+        let body = card_body_with_summary()
+            .split(",\n            \"response_summary\"")
+            .next()
+            .unwrap()
+            .to_string()
+            + "}";
+        let card: CandidateIntakeReceipt = serde_json::from_str(&body).unwrap();
+        assert!(card.response_summary.is_none());
+        assert!(card.response_headline.is_none());
+        // calibrated: the rest of the card really did arrive
+        assert_eq!(card.intake_id, "intake-A");
+        assert_eq!(card.summary.as_ref().unwrap().facts, 3);
+    }
+
+    /// No.623: the queue row carries the NARROW shape, and the card shape must
+    /// not ride the list. Four values reach a row; the nine card-only elements
+    /// are not on it even when the server would offer them.
+    #[test]
+    fn a_queue_row_carries_the_headline_and_never_the_card_shape() {
+        let row: CandidateIntakeReceipt = serde_json::from_str(
+            r#"{"intake_id":"i-1","receipt_id":"r-1","crewing_id":"crew-1",
+                "source":"skipi_response","source_id":"m-1","event_id":"e-1",
+                "primary_profile_id":null,"content_sha256":"abc","content_bytes":1,
+                "content_type":"text/plain","state":"ranked","source_trust":"inbound_alias",
+                "version":1,"created_at":"2026-09-30T01:00:00","issued_at":"2026-09-30T01:00:00",
+                "objects":[],"attachments":[],"summary":null,
+                "response_headline":{"rank":"Master","rank_state":"from_snapshot",
+                    "first_name":"Ivan","surname":"Petrov"}}"#,
+        )
+        .unwrap();
+        let head = row.response_headline.as_ref().expect("a headline");
+        assert_eq!(head.rank.as_deref(), Some("Master"));
+        assert_eq!(head.first_name.as_deref(), Some("Ivan"));
+        assert_eq!(head.surname.as_deref(), Some("Petrov"));
+        assert!(row.response_summary.is_none());
+
+        // serialised back, a row offers the four and nothing wider
+        let back = serde_json::to_string(&row).unwrap();
+        for absent in ["age_years", "citizenship", "experience_days", "last_vessel_name"] {
+            assert!(
+                !back.contains(absent),
+                "a queue row must not carry the card element {absent}"
+            );
+        }
+    }
+
+    /// No.623: the state code lives ALONGSIDE the value, never derived from it.
+    /// "the profile named no post" and "the version you answered was overwritten"
+    /// are both `rank: null` and they are not the same sentence -- and No.622 is
+    /// not open, so `experience_state` is the only thing that keeps "no data"
+    /// apart from "no sea time".
+    #[test]
+    fn a_state_code_survives_even_when_its_value_is_null() {
+        let s: CandidateResponseSummary = serde_json::from_str(
+            r#"{"rank":null,"rank_state":"snapshot_superseded",
+                "experience_rank":null,"experience_days":null,
+                "experience_state":"response_rank_unknown"}"#,
+        )
+        .unwrap();
+        assert_eq!(s.rank, None);
+        assert_eq!(s.rank_state.as_deref(), Some("snapshot_superseded"));
+        assert_eq!(s.experience_days, None);
+        assert_eq!(
+            s.experience_state.as_deref(),
+            Some("response_rank_unknown")
+        );
+        // zero sea time is a DIFFERENT answer from no sea-time data
+        let zero: CandidateResponseSummary = serde_json::from_str(
+            r#"{"experience_rank":"Master","experience_days":0,"experience_state":"matches_response_rank"}"#,
+        )
+        .unwrap();
+        assert_eq!(zero.experience_days, Some(0));
+        assert_ne!(zero.experience_days, s.experience_days);
     }
 
     use std::io::{Read, Write};
