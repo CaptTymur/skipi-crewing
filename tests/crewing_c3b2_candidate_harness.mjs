@@ -2646,6 +2646,328 @@ console.log('\n# K2.1a attachment ordinal: client floor vs 0-based server contra
 
 }
 
+// ===== No.623 (OWNER (943)/(944)/(963)): after a response, the card says WHO ====
+//
+// Six elements reach the card through `response_summary` on the candidate GET.
+// What is drilled here is not "the renderer can print a name" — a fixture pushed
+// into a renderer proves that and nothing else (card: «зелёный тест, где поле
+// поставлено в фикстуру напрямую, приёмкой не является»). What is drilled is the
+// SHAPE OF THE ANSWER: that the key survives the typed Tauri bridge at all, that
+// the heading stays CONDITIONAL, that three states stay three, and that not one
+// of the six reaches the irreversible seafarer database.
+console.log('\n# No.623: the card says who responded');
+{
+  const RESP = {
+    rank: 'Master', rank_state: 'from_snapshot',
+    first_name: 'Ivan', surname: 'Petrov',
+    age_years: 41, age_precision: 'exact',
+    citizenship: 'Ukraine', citizenship_code: 'UA',
+    experience_rank: 'Master', experience_days: 1170, experience_state: 'matches_response_rank',
+    last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14',
+  };
+  const withSummary = (over) => Object.assign({}, RESP, over || {});
+  const openWith = async (summary, opts) => {
+    const srv = makeServer();
+    if (summary !== undefined) srv.card.response_summary = summary;
+    if (opts && opts.facts) srv.facts = opts.facts;
+    const ctx = makeContext(Object.assign({ server: srv }, (opts && opts.ctx) || {}));
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    return ctx;
+  };
+  const between = (html, from, to) => {
+    const a = html.indexOf(from); if (a < 0) return '';
+    const b = to ? html.indexOf(to, a) : -1;
+    return b < 0 ? html.slice(a) : html.slice(a, b);
+  };
+
+  // ---- 1. the typed bridge. Without this the six never leave Rust -----------
+  // `send` decodes into CandidateIntakeReceipt; serde DROPS a key the struct does
+  // not declare, silently and without failing the parse. So the installed No.621
+  // candidate against an upgraded server renders NOTHING — and every renderer
+  // test above it stays green while it does. This is the first thing that breaks.
+  softOk(/pub response_summary: Option<CandidateResponseSummary>/.test(rust),
+    'No.623/bridge: CandidateIntakeReceipt declares response_summary — otherwise serde drops the key before the webview sees it');
+  softOk(/pub response_headline: Option<CandidateResponseHeadline>/.test(rust),
+    'No.623/bridge: CandidateIntakeReceipt declares response_headline for the queue row');
+  {
+    const sumStruct = (rust.match(/pub\(crate\) struct CandidateResponseSummary \{[\s\S]*?\n\}/) || [''])[0];
+    for (const field of ['rank', 'rank_state', 'first_name', 'surname', 'age_years', 'age_precision',
+      'citizenship', 'citizenship_code', 'experience_rank', 'experience_days', 'experience_state',
+      'last_vessel_name', 'last_vessel_sign_off']) {
+      softOk(new RegExp('pub ' + field + ':').test(sumStruct), 'No.623/bridge: the summary carries ' + field);
+    }
+    // The contract is FROZEN: thirteen names, and a fourteenth would be a field
+    // about a person that nobody agreed to (card STOP: «поле о человеке сверх шести»).
+    const declared = (sumStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
+    softOk(declared === 13, 'No.623/bridge: the summary declares exactly the thirteen frozen names — got ' + declared);
+    const headStruct = (rust.match(/pub\(crate\) struct CandidateResponseHeadline \{[\s\S]*?\n\}/) || [''])[0];
+    const headDeclared = (headStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
+    softOk(headDeclared === 4, 'No.623/bridge: the queue headline declares exactly four — the card shape must not ride the list — got ' + headDeclared);
+    softOk(!/last_vessel|age_years|citizenship|experience_days/.test(headStruct),
+      'No.623/bridge: no card-only element is declared on the queue headline');
+  }
+  // A server that does not carry the keys must not fail the parse of everything
+  // else — the rule already written on `profile_ranks`.
+  softOk(/#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_summary/.test(rust)
+    && /#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_headline/.test(rust),
+    'No.623/bridge: both are #[serde(default)] — an older pilot server still parses');
+  softOk(!/deny_unknown_fields/.test(rust),
+    'No.623/bridge: nothing in the intake bridge denies unknown fields');
+
+  // ---- 2. THE HEADING IS CONDITIONAL --------------------------------------
+  // Measured on the product (`dist/index.html` source table): inbound 9 ·
+  // skipi_response 2 · synthetic 3. NINE of fourteen pilot cards are born of
+  // e-mail and will never carry these fields. An unconditional heading makes the
+  // majority of the queue WORSE, so the negative here is the load-bearing one.
+  {
+    const withResp = await openWith(RESP);
+    const html = withResp.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov</.test(html),
+      'No.623/1: the heading names the person who responded');
+    softOk(/data-qa="pilot-card-response-rank"[^>]*>Master</.test(html),
+      'No.623/1: and the post THEY RESPONDED ON stands beside the name');
+    const headIdx = html.indexOf('data-qa="pilot-card-response-rank"');
+    const nameIdx = html.indexOf('data-qa="pilot-card-name"');
+    softOk(headIdx > 0 && nameIdx > headIdx, 'No.623/1: the order is «post · name», as the owner asked');
+
+    const noResp = await openWith(undefined);
+    const plain = noResp.nodes.get('main').innerHTML;
+    softOk(!/data-qa="pilot-card-response-rank"/.test(plain),
+      'No.623/1 NEGATIVE: a mail-born card (no response_summary) gets NO new heading — nine of fourteen pilot rows are this case');
+    softOk(!/data-qa="pilot-response-summary"/.test(plain),
+      'No.623/1 NEGATIVE: and no summary block is drawn for it');
+    softOk(/data-qa="pilot-card-name"/.test(plain),
+      'No.623/1 NEGATIVE (calibration): the card still renders its own heading — the negative is not measuring a blank card');
+  }
+
+  // ---- 3. the compact summary is VISIBLE, not filed under a disclosure ------
+  {
+    const ctx = await openWith(RESP);
+    const html = ctx.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-response-summary"/.test(html), 'No.623/2: the compact summary is on the card');
+    const sumIdx = html.indexOf('data-qa="pilot-response-summary"');
+    const firstDetails = html.indexOf('<details');
+    softOk(sumIdx > 0 && firstDetails > 0 && sumIdx < firstDetails,
+      'No.623/2: the four elements are ABOVE the first disclosure — CANON (930): a decision is not made inside a collapsed block');
+    const block = between(html, 'data-qa="pilot-response-summary"', '</section>');
+    softOk(!/<details/.test(block), 'No.623/2: and the summary block contains no disclosure of its own');
+    for (const [qa, needle] of [['pilot-response-age', '41'], ['pilot-response-citizenship', 'Ukraine'],
+      ['pilot-response-experience', 'Master'], ['pilot-response-vessel', 'Southern Cross']]) {
+      softOk(new RegExp('data-qa="' + qa + '"').test(block) && block.includes(needle),
+        'No.623/2: ' + qa + ' is one of the four visible elements and states ' + needle);
+    }
+  }
+
+  // ---- 4. age without invented precision ----------------------------------
+  {
+    const exact = await openWith(withSummary({ age_years: 41, age_precision: 'exact' }));
+    const exactLine = between(exact.nodes.get('main').innerHTML, 'data-qa="pilot-response-age"', '</div>');
+    softOk(exactLine.includes('41'), 'No.623/3: an exact date of birth gives the age as a number');
+
+    const rough = await openWith(withSummary({ age_years: 41, age_precision: 'year' }));
+    const roughLine = between(rough.nodes.get('main').innerHTML, 'data-qa="pilot-response-age"', '</div>');
+    softOk(roughLine.includes('41'), 'No.623/3: a year-only date of birth still states the number it has');
+    softOk(/data-precision="year"/.test(roughLine),
+      'No.623/3: and the screen marks it approximate in the markup');
+    softOk(roughLine !== exactLine,
+      'No.623/3 NEGATIVE: the two precisions do NOT render identically — a computed-to-the-day figure from a year-only birth date is an invented precision');
+  }
+
+  // ---- 5. experience names the post it was counted for ---------------------
+  {
+    const same = await openWith(withSummary({ experience_rank: 'Master', experience_state: 'matches_response_rank' }));
+    const sameLine = between(same.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(sameLine.includes('Master'),
+      'No.623/4: the sea time says WHICH post it was counted for, never a bare number');
+
+    const other = await openWith(withSummary({ experience_rank: 'Chief Officer', experience_state: 'other_rank' }));
+    const otherLine = between(other.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(otherLine.includes('Chief Officer'),
+      'No.623/4: when the seafarer wrote a DIFFERENT post, that post is the one named');
+    softOk(otherLine !== sameLine,
+      'No.623/4 NEGATIVE: «counted for the post responded on» and «counted for another post» do not read the same — No.622 is not open, so the screen must say which it is');
+
+    const unknown = await openWith(withSummary({ experience_rank: null, experience_days: null, experience_state: 'response_rank_unknown' }));
+    const unkLine = between(unknown.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(!/\b0\b/.test(unkLine),
+      'No.623/4 NEGATIVE: an unknown post never renders as «0 days» — «no data» and «zero sea time» are different statements about a person');
+  }
+
+  // ---- 6. THE FROZEN POST. (944): the seafarer who answered «Master» must
+  //         never be shown today's «Chief Officer» --------------------------
+  {
+    const superseded = await openWith(withSummary({ rank: null, rank_state: 'snapshot_superseded' }));
+    const html = superseded.nodes.get('main').innerHTML;
+    softOk(!/Chief Officer/.test(between(html, 'data-qa="pilot-card-identity"', '</div></div>')),
+      'No.623/5: a superseded snapshot shows NO post rather than the profile’s current one');
+    softOk(/data-qa="pilot-response-rank-state"/.test(html),
+      'No.623/5: and it says WHY the post is missing, instead of going quiet');
+    const unavailable = await openWith(withSummary({ rank: null, rank_state: 'snapshot_unavailable' }));
+    const a = between(html, 'data-qa="pilot-response-rank-state"', '</span>');
+    const b = between(unavailable.nodes.get('main').innerHTML, 'data-qa="pilot-response-rank-state"', '</span>');
+    softOk(a !== '' && b !== '' && a !== b,
+      'No.623/5: «the version was overwritten» and «there is no readable snapshot» are two different sentences, not one');
+  }
+
+  // ---- 7. Б3: THREE STATES, and the contract was broken BEFORE No.623 ------
+  // `answered = !!(d.facts && d.facts.length)` derived "the question was asked"
+  // from "the answer was not empty". A failed request therefore rendered as an
+  // absence — an unasked question wearing the clothes of an answer.
+  {
+    const srv = makeServer();
+    const ctx = makeContext({ server: srv, invokeImpl: (command) => {
+      if (command === 'crewing_intake_candidate_get') throw { kind: 'server', status: 500, detail: null, ambiguous: false };
+      return undefined;
+    } });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const html = ctx.nodes.get('main').innerHTML;
+    const ident = between(html, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(/data-name="error"/.test(ident),
+      'No.623/Б3: a card request that FAILED is the «could not be loaded» state — not «name not given»');
+    softOk(!/name not given/i.test(ident),
+      'No.623/Б3: and the words «name not given» are not printed over a question nobody answered');
+    softOk(/data-qa="pilot-identity-load-error"/.test(html),
+      'No.623/Б3: the failure is stated NEXT TO THE DECISION');
+    const errIdx = html.indexOf('data-qa="pilot-identity-load-error"');
+    const firstDetails = html.indexOf('<details');
+    softOk(errIdx > 0 && (firstDetails < 0 || errIdx < firstDetails),
+      'No.623/Б3: ...and above the first disclosure — CANON (930) п.1 forbids hiding an error inside a collapsed block');
+  }
+  {
+    const srv = makeServer();
+    const ctx = makeContext({ server: srv, invokeImpl: (command) => {
+      if (command === 'crewing_intake_fact_list') throw { kind: 'server', status: 503, detail: null, ambiguous: false };
+      return undefined;
+    } });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const ident = between(ctx.nodes.get('main').innerHTML, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(/data-name="error"/.test(ident),
+      'No.623/Б3: a facts request that failed is an error too — today it renders as «unknown» with nothing said');
+  }
+  {
+    // CALIBRATION. Without this, "always render error" passes the two above.
+    const clean = await openWith(undefined);
+    const ident = between(clean.nodes.get('main').innerHTML, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(!/data-name="error"/.test(ident),
+      'No.623/Б3 CALIBRATION: a card that loaded CLEANLY is not reported as an error — «always error» does not pass');
+    softOk(/data-name="none"/.test(ident),
+      'No.623/Б3 CALIBRATION: an answered empty facts list is still the honest «no name recorded» — an empty answer IS an answer');
+  }
+
+  // ---- 8. Б2: THREE transports of one name, and the order is assigned ------
+  //         operator correction > delivered with the response > parsed from a CV
+  {
+    const machine = { name: [{ field: 'name', value: 'I. PETROV (OCR)', version: 1, source_object: 'obj-1',
+      page: null, span: null, confidence: 0.4, uncertainty: null, corrected_by: null, created_at: '2026-09-23T01:01:00' }] };
+    const ctx1 = await openWith(RESP, { facts: machine });
+    const h1 = ctx1.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov</.test(h1),
+      'No.623/Б2: the name the seafarer sent WITH THE RESPONSE beats the one a machine read out of a CV');
+    softOk(!/OCR/.test(between(h1, 'data-qa="pilot-card-identity"', '</section>')),
+      'No.623/Б2: and the two are never shown side by side — the invariant above crewFlowRowNameState holds');
+
+    const operator = { name: [{ field: 'name', value: 'Ivan Petrov-Sydorenko', version: 2, source_object: 'obj-1',
+      page: null, span: null, confidence: null, uncertainty: 'operator_entered', corrected_by: 'user-op-1', created_at: '2026-09-23T01:02:00' }] };
+    const ctx2 = await openWith(RESP, { facts: operator });
+    const h2 = ctx2.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov-Sydorenko</.test(h2),
+      'No.623/Б2: an OPERATOR’s correction is a human act and outranks the delivered value — it is never overwritten by it');
+    softOk(!/>Ivan Petrov</.test(h2),
+      'No.623/Б2: and again only one name is on screen');
+  }
+
+  // ---- 9. Б1: NOT ONE of the six reaches the irreversible local database ---
+  // The open owner question is not answered here by the back door. Note the
+  // route: everything in crewFlowFactCache() reaches BOTH the queue row and
+  // `save_seafarer_from_bundle`, so «don’t call the writer» is not enough —
+  // nothing of the response may enter that store in the first place.
+  {
+    const save = (html.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(save !== '', 'No.623/Б1 (control): the irreversible writer is still where it was');
+    softOk(!/response_summary|response_headline|responseSummary|responseHeadline/.test(save),
+      'No.623/Б1: crewFlowSaveToSeafarers does not read a single one of the six — the local export is OUT OF SCOPE for No.623');
+    const applicant = (save.match(/applicantSummary: \{[\s\S]*?\}/) || [''])[0];
+    softOk(/name: facts\.name \|\| ''/.test(applicant) && /rank: facts\.rank \|\| ''/.test(applicant)
+      && /nationality: facts\.nationality \|\| ''/.test(applicant) && /email: facts\.email \|\| ''/.test(applicant),
+      'No.623/Б1: what it writes is byte-for-byte what it wrote before — four recorded facts, nothing delivered');
+    softOk(!/crewFlowFactCache\(\)\[[^\]]*\]\s*=\s*[^;]*response/i.test(html),
+      'No.623/Б1: nothing from the response is ever put into the fact cache, which is the door to that writer');
+  }
+
+  // ---- 10. the summary is RE-READ FROM THE SERVER (acceptance criterion 6) --
+  {
+    const srv = makeServer();
+    srv.card.response_summary = RESP;
+    const ctx = makeContext({ server: srv });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const before = ctx.calls.filter((c) => c.command === 'crewing_intake_candidate_get').length;
+    ctx.__pilot.pilotCardRefreshAll();
+    await flush();
+    const after = ctx.calls.filter((c) => c.command === 'crewing_intake_candidate_get').length;
+    softOk(after === before + 1,
+      'No.623/6: refreshing the card asks the SERVER for the summary again — it does not live in screen memory');
+    // and the value that came back is the one on screen
+    srv.card.response_summary = withSummary({ first_name: 'Ivanna', surname: 'Petrova' });
+    ctx.__pilot.pilotCardRefreshAll();
+    await flush();
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivanna Petrova</.test(ctx.nodes.get('main').innerHTML),
+      'No.623/6: and a changed server answer changes the screen — proving the screen is not showing a cached copy');
+    softOk(!ctx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+      'No.623/6 NEGATIVE: showing the card never produced a LOCAL copy — the negative the owner’s open question requires');
+  }
+
+  // ---- 11. absent elements are honest, in both languages -------------------
+  {
+    const empty = await openWith(withSummary({
+      age_years: null, age_precision: null, citizenship: null, citizenship_code: null,
+      experience_rank: null, experience_days: null, experience_state: 'not_provided',
+      last_vessel_name: null, last_vessel_sign_off: null,
+    }));
+    const block = between(empty.nodes.get('main').innerHTML, 'data-qa="pilot-response-summary"', '</section>');
+    softOk(block !== '', 'No.623/7: a response whose elements are all empty still shows the block — the response itself exists');
+    softOk(!/\b0\b/.test(block), 'No.623/7: and states nothing as «0»');
+    const missing = (block.match(/data-qa="pilot-response-missing"/g) || []).length;
+    softOk(missing >= 4, 'No.623/7: each of the four says «not given» in its own place — got ' + missing);
+  }
+  {
+    for (const lang of ['en', 'ru']) {
+      const srv = makeServer();
+      srv.card.response_summary = RESP;
+      const ctx = makeContext({ server: srv, language: lang });
+      ctx.__pilot.pilotOpenCard('intake-A');
+      await flush();
+      const block = between(ctx.nodes.get('main').innerHTML, 'data-qa="pilot-response-summary"', '</section>');
+      softOk(block !== '' && !/^\s*$/.test(block), 'No.623/8: the summary renders in ' + lang);
+      softOk(!/response_summary\.|card\.[a-z_]+\b(?![^<]*>)/.test(block) && !/\bundefined\b/.test(block),
+        'No.623/8: no untranslated key and no «undefined» leaks onto the screen in ' + lang);
+    }
+    const t = (l, k) => ctxText(l, k);
+    function ctxText(lang, key) {
+      const ctx = makeContext({ language: lang });
+      return ctx.__pilot.cardT(key);
+    }
+    for (const key of ['resp_age', 'resp_citizenship', 'resp_experience', 'resp_vessel', 'resp_missing',
+      'resp_rank_superseded', 'resp_rank_unavailable', 'resp_rank_absent', 'resp_age_about',
+      'resp_exp_other_rank', 'resp_exp_rank_unknown', 'resp_exp_not_provided', 'identity_failed']) {
+      const en = t('en', key); const ru = t('ru', key);
+      softOk(en !== key, 'No.623/8: EN text exists for ' + key);
+      softOk(ru !== key && ru !== en, 'No.623/8: RU text exists for ' + key + ' and is not the English string');
+      softOk(/[Ѐ-ӿ]/.test(ru), 'No.623/8: the RU text for ' + key + ' is actually Russian');
+    }
+  }
+
+  // ---- 12. the dead heading stays dead ------------------------------------
+  {
+    const callSites = (html.match(/crewFlowRowTitle\(/g) || []).length;
+    softOk(callSites <= 1,
+      'No.623/Б2: crewFlowRowTitle was NOT revived — a third independent title rule is exactly what the finding forbade (occurrences: ' + callSites + ')');
+  }
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);
