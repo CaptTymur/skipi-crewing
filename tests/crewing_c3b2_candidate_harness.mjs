@@ -386,7 +386,18 @@ console.log('# RU/EN, nullable values, unknown codes and refusal precedence');
   ok(/Bosun · D \(prof-D\)/.test(main(ctx)), 'a profile created after the run is listed as unranked');
   ok(/data-version="3"[\s\S]*?data-qa="pilot-fact-confidence">confidence 0<\/span> · Unknown reason: future_code/.test(main(ctx)), 'confidence 0 renders as measured zero and an unknown uncertainty code stays visible');
   ok(/data-version="2"[\s\S]*?confidence unknown/.test(main(ctx)), 'confidence null renders as unknown');
-  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)) && /primary profile/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown, and primary is labelled');
+  ok(/data-group="unknown" data-requirement="future:thing"[^<]*Unknown result: future_outcome/.test(rankRow(ctx, 'prof-B', 1)), 'unknown outcome is shown as unknown');
+  // No.622 / DECISIONS (954): this line used to assert that a rank row with
+  // `primary: true` prints "primary profile". That claim is FALSE and the test is
+  // what changes, not the product. The column is the trace of the last run and not
+  // a choice anybody made - the client sends no `primary_profile_id`, so every
+  // press of "Сопоставить" sets it false on every row (crewing_ranking.py:367) -
+  // and its ambiguity was the first reason the preparation of No.622 was BLOCKED.
+  // The origin label now comes from `intake.primary_profile_id` off the card
+  // receipt, and only a Skipi response may be called a response. This fixture
+  // carries no such id, so the honest rendering is NO label at all.
+  ok(!/primary profile/.test(rankRow(ctx, 'prof-B', 1)) && !/data-qa="pilot-rank-origin"/.test(rankRow(ctx, 'prof-B', 1)),
+    'a legacy primary column alone earns NO origin label (No.622, DECISIONS (954) border 1)');
   ok(/Profile changed — compare again/.test(rankRow(ctx, 'prof-A', 1)) && /data-qa="pilot-rank-freshness"/.test(rankRow(ctx, 'prof-A', 1)), 'profile staleness and fact freshness are two separate statements');
   // refusal precedence: domain code before generic 404/403
   await ctx.__pilot.pilotShortlistConfirm('prof-D', 1); await flush();

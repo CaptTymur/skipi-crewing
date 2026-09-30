@@ -5396,8 +5396,8 @@ function crewFlowCacheRanks(intakeId, items) {
       total: reasons.length,
       stale: !!(row && row.stale),
       stale_reason: (row && row.stale_reason != null) ? String(row.stale_reason) : null,
-      // No.622: the verdict rides along, so the row says the same thing the card
-      // says about the same profile (N14/N22).
+      // No.622: the applicability answer rides along, so the row says the same
+      // thing the card says about the same profile (N14/N22).
       applicability: (row && row.applicability != null) ? String(row.applicability) : null,
       applicability_reason: (row && row.applicability_reason != null) ? String(row.applicability_reason) : null
     };
@@ -5634,14 +5634,15 @@ function crewFlowRowMatchHtml(item) {
   }
   var profileExtra = ' data-profile="' + escapeAttr(profileId) + '"';
   if (!row) return badge('absent', crewFlowProfileName(profileId) + ' — ' + crewFlowTr('match_absent'), profileExtra);
-  // No.622: the professional verdict comes FIRST, through the one adapter. A row
+  // No.622: the professional applicability comes FIRST, through the one adapter.
+  // A row
   // that reads "выполнено 1 · не выполнено 1" about a captain's vacancy for an
   // AB is the defect the owner saw (939), and printing it here while the card
   // hides the same evaluation is the "two screens, two truths" the card forbids.
   var fit = cardApplicability(row);
   if (fit.hidden) {
     return badge('not-applicable', crewFlowProfileName(profileId) + ' — ' + cardApplicabilityLabel(fit),
-      profileExtra + ' data-applicability="' + escapeAttr(String(fit.verdict)) + '"');
+      profileExtra + ' data-applicability="' + escapeAttr(String(fit.answer)) + '"');
   }
   var counted = row.met + row.missing + row.unconfirmed;
   var covered = (typeof row.total === 'number' && isFinite(row.total) && row.total === counted);
@@ -5662,7 +5663,7 @@ function crewFlowRowMatchHtml(item) {
   // `unknown` is never hidden and never silent: which unknown it is decides the
   // operator's next action (N25). `alternative` says it is an alternative, so the
   // row cannot be read as a confirmed qualification (N10).
-  if (fit.stated && fit.verdict !== 'same') {
+  if (fit.stated && fit.answer !== 'same') {
     text += ' · ' + cardApplicabilityLabel(fit);
     var rowWhy = cardApplicabilityWhy(fit);
     if (rowWhy) text += ' (' + rowWhy + ')';
@@ -5673,7 +5674,7 @@ function crewFlowRowMatchHtml(item) {
     + ' data-unconfirmed="' + row.unconfirmed + '"'
     + (typeof row.total === 'number' && isFinite(row.total) ? ' data-total="' + row.total + '"' : '')
     + (row.stale ? ' data-stale="1"' : '')
-    + (fit.stated ? ' data-applicability="' + escapeAttr(String(fit.verdict)) + '"' : '')
+    + (fit.stated ? ' data-applicability="' + escapeAttr(String(fit.answer)) + '"' : '')
     + (fit.reason ? ' data-applicability-reason="' + escapeAttr(String(fit.reason)) + '"' : '');
   return badge(covered ? 'ranked' : 'partial', text, extra);
 }
@@ -6987,7 +6988,7 @@ async function pilotSubmitUpload() {
 //
 // The field names are the server's: `applicability` (crewing_rank.VERDICTS) and
 // `applicability_reason` (crewing_rank.REASONS).
-var CARD_APPLICABILITY_VERDICTS = {
+var CARD_APPLICABILITY_ANSWERS = {
   same:1, alternative:1, any:1, unknown:1, not_applicable:1
 };
 // The words. Pairs [ru, en] like every other table of this card, because the
@@ -7032,7 +7033,7 @@ function cardApplicabilityUi(key) { return cardApplicabilityPair(CARD_APPLICABIL
 // THE adapter. Everything else on this screen asks it, never the raw field.
 function cardApplicability(row) {
   var raw = row && row.applicability;
-  var verdict = (typeof raw === 'string' && CARD_APPLICABILITY_VERDICTS[raw]) ? raw : null;
+  var verdict = (typeof raw === 'string' && CARD_APPLICABILITY_ANSWERS[raw]) ? raw : null;
   var reason = (row && row.applicability_reason != null) ? String(row.applicability_reason) : null;
   return {
     // `stated:false` is a server that does not speak this contract - an older
@@ -7042,7 +7043,7 @@ function cardApplicability(row) {
     // So it is neither: the row renders exactly as it did before this card and
     // says nothing about applicability at all.
     stated: verdict !== null,
-    verdict: verdict,
+    answer: verdict,
     reason: (verdict === 'unknown' && CARD_APPLICABILITY_REASON_TEXT[reason]) ? reason : null,
     // Only ONE verdict leaves the main list. `unknown` does not: (939) calls it
     // "честная ручная проверка" and docs/CANON-ui-v1.md keeps unknowns next to
@@ -7050,14 +7051,14 @@ function cardApplicability(row) {
     hidden: verdict === 'not_applicable'
   };
 }
-function cardApplicabilityLabel(verdictOrRow) {
-  var a = (verdictOrRow && typeof verdictOrRow.verdict !== 'undefined') ? verdictOrRow : cardApplicability(verdictOrRow);
+function cardApplicabilityLabel(answerOrRow) {
+  var a = (answerOrRow && typeof answerOrRow.answer !== 'undefined') ? answerOrRow : cardApplicability(answerOrRow);
   if (!a.stated) return '';
-  return cardApplicabilityPair(CARD_APPLICABILITY_TEXT, a.verdict);
+  return cardApplicabilityPair(CARD_APPLICABILITY_TEXT, a.answer);
 }
 // The sentence that stands next to an `unknown`, and only next to one.
-function cardApplicabilityWhy(verdictOrRow) {
-  var a = (verdictOrRow && typeof verdictOrRow.verdict !== 'undefined') ? verdictOrRow : cardApplicability(verdictOrRow);
+function cardApplicabilityWhy(answerOrRow) {
+  var a = (answerOrRow && typeof answerOrRow.answer !== 'undefined') ? answerOrRow : cardApplicability(answerOrRow);
   if (!a.reason) return '';
   return cardApplicabilityPair(CARD_APPLICABILITY_REASON_TEXT, a.reason);
 }
@@ -7127,12 +7128,12 @@ function cardWithheldProfiles() {
   ((d && d.ranks && Array.isArray(d.ranks.withheld_profiles)) ? d.ranks.withheld_profiles : []).forEach(function(w){
     if (!w) return;
     var a = cardApplicability(w);
-    add(w.profile_id, w.name, a.verdict, a.reason);
+    add(w.profile_id, w.name, a.answer, a.reason);
   });
   cardApplicabilityRows().forEach(function(row){
     var a = cardApplicability(row);
     if (!a.hidden) return;
-    add(row && row.profile_id, null, a.verdict, a.reason);
+    add(row && row.profile_id, null, a.answer, a.reason);
   });
   return out;
 }
@@ -7718,7 +7719,7 @@ function pilotCardRankRowHtml(rank) {
   var fit = cardApplicability(rank);
   var why = cardApplicabilityWhy(fit);
   var applicHtml = fit.stated
-    ? '<span data-qa="pilot-rank-applicability" data-applicability="'+escapeAttr(String(fit.verdict))
+    ? '<span data-qa="pilot-rank-applicability" data-applicability="'+escapeAttr(String(fit.answer))
       + (fit.reason ? '" data-applicability-reason="'+escapeAttr(String(fit.reason)) : '')+'">'
       + escapeHtml(cardApplicabilityLabel(fit))+(why ? ' \u00b7 '+escapeHtml(why) : '')+'</span>'
     : '';
@@ -7773,7 +7774,7 @@ function cardWithheldHtml(where) {
     + '<summary>'+escapeHtml(title)+'</summary>'
     + '<div class="pilot-note">'+escapeHtml(cardApplicabilityUi('withheld_note'))+'</div>'
     + rows.map(function(row){
-        var why = cardApplicabilityWhy(row.applicability === 'unknown' ? { verdict:'unknown', reason:row.applicability_reason, stated:true } : row);
+        var why = cardApplicabilityWhy(row.applicability === 'unknown' ? { answer:'unknown', reason:row.applicability_reason, stated:true } : row);
         var name = row.name || (typeof cardProfileName === 'function' ? cardProfileName(row.profile_id) : row.profile_id);
         return '<div class="pilot-note" data-qa="pilot-withheld-row" data-profile="'+escapeAttr(row.profile_id)+'" data-applicability="'+escapeAttr(String(row.applicability))+'">'
           + escapeHtml(String(name))+' \u2014 '+escapeHtml(cardApplicabilityPair(CARD_APPLICABILITY_TEXT, row.applicability))
@@ -8516,7 +8517,7 @@ function pilotCardFitCardHtml(rank) {
   var origin = cardOriginLabel(rank && rank.profile_id);
   var why = cardApplicabilityWhy(fit);
   var applic = fit.stated
-    ? '<div class="cf-fitcard-sub" data-qa="pilot-fit-applicability" data-applicability="' + escapeAttr(String(fit.verdict))
+    ? '<div class="cf-fitcard-sub" data-qa="pilot-fit-applicability" data-applicability="' + escapeAttr(String(fit.answer))
       + (fit.reason ? '" data-applicability-reason="' + escapeAttr(String(fit.reason)) : '') + '">'
       + escapeHtml(cardApplicabilityLabel(fit)) + (why ? ' \u00b7 ' + escapeHtml(why) : '') + '</div>'
     : '';

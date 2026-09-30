@@ -58,12 +58,12 @@ if (api) {
   // Five verdicts, and the sixth state that is NOT a verdict: an older server
   // that says nothing. Reading silence as `not_applicable` would empty the
   // screen; reading it as `same` would print a claim nobody made.
-  ok(A({applicability:'same'}).verdict === 'same' && A({applicability:'same'}).stated === true, 'same is carried through');
-  ok(A({applicability:'alternative'}).verdict === 'alternative', 'alternative is its own verdict, never folded into same');
-  ok(A({applicability:'any'}).verdict === 'any' && A({applicability:'any'}).hidden === false, 'any (a deliberately open vacancy) is shown');
+  ok(A({applicability:'same'}).answer === 'same' && A({applicability:'same'}).stated === true, 'same is carried through');
+  ok(A({applicability:'alternative'}).answer === 'alternative', 'alternative is its own verdict, never folded into same');
+  ok(A({applicability:'any'}).answer === 'any' && A({applicability:'any'}).hidden === false, 'any (a deliberately open vacancy) is shown');
   ok(A({applicability:'not_applicable'}).hidden === true, 'not_applicable is the ONLY verdict that moves under a disclosure');
   ok(A({applicability:'unknown'}).hidden === false, 'unknown is NEVER hidden - the canon puts unknowns next to the decision');
-  ok(A({}).stated === false && A({}).verdict === null && A({}).hidden === false,
+  ok(A({}).stated === false && A({}).answer === null && A({}).hidden === false,
     'a row from a server that does not speak this contract keeps rendering exactly as before');
   ok(A({applicability:'nonsense'}).stated === false, 'an unrecognised verdict is silence, not a guess');
   // N25: two different unknowns are two different sentences.
