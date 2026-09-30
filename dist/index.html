@@ -7823,6 +7823,31 @@ function pilotDraftOpen(intakeId, kind) {
     needContact:!contact.email, contactValue:'', state:null, pending:false
   };
   renderIntakePilot();
+  // CANON (930): the press IS answered — a draft opens, and with no recorded
+  // address it opens asking for one. But it renders further down the card, so on
+  // a short window the operator saw nothing move and read the press as a dead
+  // button. This is NAVIGATION to an answer that already exists, not a new
+  // answer: no toast (a refusal message for an action that succeeded is what
+  // K2.1-7 rightly forbids), no change to the form, its markup, its texts or the
+  // order in which a contact is recorded, and nothing sent or filled in.
+  // `block:'nearest'` moves the card's own scroll container the minimum needed
+  // rather than yanking the whole page. Every step is guarded: this card renders
+  // in stubbed hosts that have no layout and no focus.
+  try {
+    if (typeof document !== 'undefined' && document) {
+      if (typeof document.querySelector === 'function') {
+        var section = document.querySelector('[data-qa="pilot-draft"]');
+        if (section && typeof section.scrollIntoView === 'function') section.scrollIntoView({ block:'nearest' });
+      }
+      if (typeof document.getElementById === 'function') {
+        var addr = document.getElementById('pilot-draft-contact');
+        if (addr && typeof addr.focus === 'function') {
+          // The scroll above already placed it; focus must not fight that.
+          try { addr.focus({ preventScroll:true }); } catch (_) { addr.focus(); }
+        }
+      }
+    }
+  } catch (_) {}
 }
 function pilotDraftClose() {
   var d = pilotDetail();
