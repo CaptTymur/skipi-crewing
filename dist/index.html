@@ -843,7 +843,10 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
 .cf-fitcards { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
 .cf-fitcard { flex:1 1 210px; min-width:0; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
 .cf-fitcard.primary { border-color:var(--accent); }
-.cf-fitcard-name { font-weight:650; font-size:13.5px; overflow-wrap:anywhere; }
+.cf-fitcard-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.cf-fitcard-name { font-weight:700; font-size:14px; overflow-wrap:anywhere; min-width:0; margin:0; }
+.cf-fitcard-ver { font-size:11px; font-weight:650; color:var(--text2); white-space:nowrap; flex:0 0 auto; }
+.cf-fitcard-sub { font-size:12px; color:var(--text2); overflow-wrap:anywhere; margin-top:2px; }
 .cf-fitcard-pct { font-size:26px; font-weight:750; line-height:1.15; margin-top:6px; color:var(--text2); }
 .cf-fitcard.complete .cf-fitcard-pct { color:#1f7a45; }
 .cf-fitcard-cap { font-size:11.5px; color:var(--text2); margin-top:2px; overflow-wrap:anywhere; }
@@ -5428,8 +5431,12 @@ async function crewFlowEnsureProfileNames(context) {
     _crewFlowProfileNamesPending = false;
   }
 }
+// Delegates to the card block's single rule (OWNER 2026-09-30: the picker, the
+// row and the block heading must print the same string). The fallback keeps the
+// old behaviour if this block is ever loaded without the card block.
 function crewFlowProfileName(profileId) {
   var meta = crewFlowProfileCache()[String(profileId)];
+  if (typeof cardProfileDisplayName === 'function') return cardProfileDisplayName(meta, profileId);
   var name = meta && meta.name ? String(meta.name) : '';
   return name || String(profileId);
 }
@@ -6820,7 +6827,7 @@ var PILOT_CARD_TEXT = {
     card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh this candidate',
     ident_unknown:'Name not in the recorded facts', fit_title:'Match against profiles',
     fit_none:'No stored comparison for this candidate yet.', fit_explain:'How the figure is counted',
-    fit_reasons:'Which checks',
+    fit_reasons:'Which checks', profile_unnamed:'Profile without a name',
     share_caption:'{met} of {total} checks met, by the stored evaluation',
     share_note:'The figure is the share of checks a stored comparison recorded as met, against one profile. Equal count, no weighting. It is not a probability, not a rating of the person, and it says nothing about whether the documents are current.',
     share_complete:'All stored checks met', share_partial:'Some checks are open',
@@ -6862,7 +6869,7 @@ var PILOT_CARD_TEXT = {
     card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить карточку',
     ident_unknown:'Имени в записанных сведениях нет', fit_title:'Соответствие профилям',
     fit_none:'Сохранённых сравнений по этому кандидату пока нет.', fit_explain:'Как считается число',
-    fit_reasons:'Какие проверки',
+    fit_reasons:'Какие проверки', profile_unnamed:'Профиль без названия',
     share_caption:'выполнено {met} из {total} по сохранённой оценке',
     share_note:'Число — доля проверок, которые сохранённая оценка отметила выполненными, против одного профиля. Равный подсчёт, без весов. Это не вероятность, не оценка человека и ничего не говорит о том, действительны ли документы.',
     share_complete:'Все проверки выполнены', share_partial:'Часть проверок открыта',
@@ -7123,10 +7130,51 @@ async function pilotShortlistWithdraw(profileId, profileVersion) {
   if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
   await pilotCardWrite('withdraw', profileId+'@'+version, 'crewing_intake_shortlist_withdraw', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
 }
+// ===== OWNER 2026-09-30: one profile, ONE name, in every place it appears =====
+// The block heading, the "compare against" picker and the reasons disclosure must
+// print the SAME string, or the operator cannot tell that they are looking at one
+// profile. This is the single rule; Crew Flow delegates to it rather than keeping
+// a second one. It returns PLAIN TEXT — every caller escapes it, because a
+// profile name is text a person typed.
+//
+// A profile with no name is said so, with its identifier. The post is NOT
+// substituted for the name: "Master" is what the profile requires, not what it
+// is called, and two profiles requiring a Master are not the same profile.
+function cardProfileDisplayName(meta, profileId) {
+  var name = (meta && meta.name != null) ? String(meta.name).replace(/^\s+|\s+$/g, '') : '';
+  if (name) return name;
+  var id = String(profileId == null ? '' : profileId);
+  return cardT('profile_unnamed') + (id ? ' \u00b7 ' + id.slice(0, 8) : '');
+}
+function cardProfileName(profileId) {
+  var d = pilotDetail();
+  return cardProfileDisplayName(d && d.profiles ? d.profiles[profileId] : null, profileId);
+}
+// The post and vessel type a profile asks for are NOT on the profile metadata
+// this client receives (MatchingProfileMetadata carries id, name, version and
+// state, and nothing else). They ARE inside the stored comparison, as the
+// `wanted` side of its own requirements — already in hand, no request added. When
+// the comparison does not state them, the line is simply absent: an empty slot is
+// honest, an invented post is not.
+function cardProfileWantedLine(rank) {
+  var reasons = Array.isArray(rank && rank.reasons) ? rank.reasons : [];
+  var want = {};
+  for (var i = 0; i < reasons.length; i++) {
+    var r = reasons[i] || {};
+    var key = String(r.requirement == null ? '' : r.requirement).toLowerCase();
+    if (r.wanted == null || String(r.wanted) === '') continue;
+    if (key === 'rank' && !want.rank) want.rank = String(r.wanted);
+    if ((key === 'vessel_type' || key === 'vessel type' || key === 'vessel') && !want.vessel) want.vessel = String(r.wanted);
+  }
+  var bits = [];
+  if (want.rank) bits.push(want.rank);
+  if (want.vessel) bits.push(want.vessel);
+  return bits.join(' \u00b7 ');
+}
 function pilotCardProfileLabel(profileId) {
   var d = pilotDetail(), meta = d && d.profiles ? d.profiles[profileId] : null;
   if (!meta) return escapeHtml(cardT('profile')+' '+String(profileId)+'; '+cardT('name_unavailable'));
-  return escapeHtml(meta.name || profileId)+' <span class="pilot-note">('+escapeHtml(String(profileId))+' · '+escapeHtml(cardT('profile_current'))+' '+escapeHtml(String(meta.version))+' · '+escapeHtml(cardT('profile_state'))+' '+escapeHtml(String(meta.state))+')</span>';
+  return escapeHtml(cardProfileDisplayName(meta, profileId))+' <span class="pilot-note">('+escapeHtml(String(profileId))+' · '+escapeHtml(cardT('profile_current'))+' '+escapeHtml(String(meta.version))+' · '+escapeHtml(cardT('profile_state'))+' '+escapeHtml(String(meta.state))+')</span>';
 }
 function pilotCardConfidenceHtml(confidence) {
   if (confidence == null) return escapeHtml(cardT('confidence_unknown'));
@@ -7870,12 +7918,19 @@ function pilotCardFitCardHtml(rank) {
     + ' \u00b7 ' + escapeHtml(cardT('list_unconfirmed')) + ': ' + row.unconfirmed
     + (g.unknown.length ? ' \u00b7 ' + escapeHtml(cardT('list_unknown')) + ': ' + g.unknown.length : '')
     + '</div>';
+  var wanted = cardProfileWantedLine(rank);
   return '<div class="cf-fitcard ' + (complete ? 'complete ' : '') + ((rank && rank.primary) ? 'primary' : '') + '"'
     + ' data-qa="pilot-fit-card" data-profile="' + escapeAttr(String(rank && rank.profile_id))
     + '" data-fit="' + escapeAttr(share.reason) + '">'
-    + '<div class="cf-fitcard-name">' + pilotCardProfileLabel(rank && rank.profile_id) + '</div>'
-    + '<div class="cf-counts">' + escapeHtml(cardT('profile_version_used')) + ': '
-    + escapeHtml(String(rank && rank.profile_version)) + '</div>'
+    // The heading is the profile, and the version stands apart from it: they are
+    // two different facts and reading them as one string loses both.
+    + '<div class="cf-fitcard-head">'
+    +   '<h3 class="cf-fitcard-name" data-qa="pilot-fit-name">' + escapeHtml(cardProfileName(rank && rank.profile_id)) + '</h3>'
+    +   '<span class="cf-fitcard-ver" data-qa="pilot-fit-version">V' + escapeHtml(String(rank && rank.profile_version)) + '</span>'
+    + '</div>'
+    // The post and vessel type the profile asks for — a caption, not a heading,
+    // and present only when the stored comparison actually states them.
+    + (wanted ? '<div class="cf-fitcard-sub" data-qa="pilot-fit-wanted">' + escapeHtml(wanted) + '</div>' : '')
     + head + bar + counts + '</div>';
 }
 function pilotCardFitSummaryHtml() {
