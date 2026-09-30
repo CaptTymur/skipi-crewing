@@ -279,6 +279,7 @@ function loadInlineModuleForCurrentStore() {
       + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal, renderCrewFlowTreeBody, crewFlowLiveTreeHtml, tr, escapeHtml, escapeAttr, '
       + 'crewingSettingsSections: (typeof _crewingSettingsSections === "function" ? _crewingSettingsSections : null), '
       + 'crewingSettingsSectionFor: (typeof _crewingSettingsSectionFor === "function" ? _crewingSettingsSectionFor : null), '
+      + 'crewFlowMatchShare: (typeof crewFlowMatchShare === "function" ? crewFlowMatchShare : null), '
       + 'crewFlowCacheRanks: (typeof crewFlowCacheRanks === "function" ? crewFlowCacheRanks : null), '
       + 'crewFlowCacheProfiles: (typeof crewFlowCacheProfiles === "function" ? crewFlowCacheProfiles : null), '
       + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
@@ -831,8 +832,66 @@ if (r2RuntimeReady) {
   ok(/data-match="not-loaded"/.test(coldRow),
     'R2/2: a candidate whose evaluation is not loaded is distinguishable from one that has no evaluation');
 
-  ok(!/%/.test(metRow + gapRow + otherRow + coldRow),
-    'R2/2: no percentage, score or rating is introduced in the row');
+  // ---- (928), OWNER 2026-09-30 ------------------------------------------
+  // This assertion used to read "no percentage is introduced in the row", and
+  // that was the right test for (869). (928) is the owner's LATER clarification:
+  // one figure is permitted — floor(100 x met / total) against ONE chosen
+  // profile — and it is never permitted bare. So the check is not dropped, it is
+  // replaced by the harder one: the figure must be present where the data earns
+  // it, floored, captioned, and ABSENT everywhere the data does not.
+  const r2Pct = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-pct" data-pct="([^"]*)"[^>]*>([^<]*)</);
+    return m ? { attr: m[1], text: m[2] } : null;
+  };
+  const r2Fit = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit" data-fit="([^"]*)"/);
+    return m ? m[1] : null;
+  };
+  ok(r2Pct(metRow) && r2Pct(metRow).attr === '100' && r2Pct(metRow).text === '100%',
+    'R2/928: 2 of 2 stored checks met prints 100% — got ' + JSON.stringify(r2Pct(metRow)));
+  ok(r2Fit(metRow) === 'complete',
+    'R2/928: and only that case is allowed to say every stored check was met');
+  // 1 of 3 is 33.33...; floor is the owner's explicit instruction, not a taste.
+  ok(r2Pct(gapRow) && r2Pct(gapRow).attr === '33',
+    'R2/928: 1 met of 3 floors to 33%, it does not round to 34% — got ' + JSON.stringify(r2Pct(gapRow)));
+  ok(r2Fit(gapRow) !== 'complete',
+    'R2/928: a row with unmet and unconfirmed checks never reads as all-met, whatever its figure');
+  // The caption is mandatory: the bare number is exactly what gets read as a score.
+  const r2FitText = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit"[^>]*>([\s\S]*?)<\/div>/);
+    return m ? m[1].replace(/<[^>]*>/g, '') : '';
+  };
+  ok(/2 of 2 checks met, by the stored evaluation/.test(r2FitText(metRow)),
+    'R2/928: the figure never appears without "M of N checks met, by the stored evaluation" — got "' + r2FitText(metRow) + '"');
+  ok(/1 of 3 checks met, by the stored evaluation/.test(r2FitText(gapRow)),
+    'R2/928: the caption states the true fraction, not the rounded figure — got "' + r2FitText(gapRow) + '"');
+  // "No data" is not 0%. Both of these carry NO figure at all.
+  ok(r2Pct(otherRow) && r2Pct(otherRow).attr === 'none' && !/%/.test(r2Pct(otherRow).text),
+    'R2/928: no stored comparison against the chosen profile yields no figure — never 0%');
+  ok(r2Pct(coldRow) && r2Pct(coldRow).attr === 'none' && !/%/.test(r2Pct(coldRow).text),
+    'R2/928: an unloaded comparison yields no figure — an unanswered question is not a zero');
+  // The arithmetic itself is available, not permanently on display (owner, final).
+  ok(/<details class="cf-brk"[\s\S]*?data-qa="crew-flow-row-match-line"/.test(metRow),
+    'R2/928: the three counts stay reachable behind a disclosure rather than crowding the row');
+  // The share function's own refusals, stated directly rather than inferred.
+  const share = MR2.crewFlowMatchShare;
+  ok(share({met:19,missing:1,unconfirmed:0,total:20,stale:false}).pct === 95,
+    'R2/928: 19 of 20 is 95%');
+  ok(share({met:249,missing:1,unconfirmed:0,total:250,stale:false}).pct === 99,
+    'R2/928: 249 of 250 floors to 99% — the whole reason floor was specified');
+  ok(share({met:0,missing:0,unconfirmed:0,total:0,stale:false}).pct === null,
+    'R2/928: a zero denominator produces no figure, not 0% and not NaN');
+  ok(share({met:2,missing:1,unconfirmed:1,total:5,stale:false}).pct === null,
+    'R2/928: counts that do not add up to total produce no figure');
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:true}).pct === null,
+    'R2/928: a stale comparison loses its figure — a past share is not a current one');
+  ok(share({met:1,missing:0,unconfirmed:0,total:null,stale:false}).pct === null
+    && share({met:-1,missing:0,unconfirmed:1,total:0,stale:false}).pct === null
+    && share({met:0.5,missing:0.5,unconfirmed:0,total:1,stale:false}).pct === null,
+    'R2/928: an absent, negative or fractional counter produces no figure either');
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false}).reason === 'complete'
+    && share({met:2,missing:0,unconfirmed:1,total:3,stale:false}).reason !== 'complete',
+    'R2/928: unconfirmed keeps a comparison out of "all met" even though it is not a failure');
 
   // the two states must be readable, in both interface languages
   store.set('skipi-crewing-ui-language', 'ru');
