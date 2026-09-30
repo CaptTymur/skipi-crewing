@@ -2855,6 +2855,36 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
     ok622(staleBlock.includes(code + ':['), `stale reason ${code} has its own pair of words`);
   }
 
+  // ------------- the number on the screen actually reaches the screen (930)
+  // The adapter can be perfect and the disclosure still never rendered. These
+  // read the emitting code, because the two consumers build their HTML as strings.
+  console.log('# the withheld count is EMITTED, by both consumers, with its number');
+  {
+    const withheldFn = html.indexOf('function cardWithheldHtml(');
+    ok622(withheldFn > 0, 'cardWithheldHtml exists - one wording of the count for both consumers');
+    const wb = withheldFn > 0 ? html.slice(withheldFn, html.indexOf('\nfunction ', withheldFn + 10)) : '';
+    ok622(/data-qa="pilot-withheld"/.test(wb) && /data-count="/.test(wb),
+      'the disclosure carries a machine-readable count, not only a sentence');
+    ok622(/withheld_title/.test(wb) && /replace\('\{n\}'/.test(wb),
+      'the count is substituted into the heading - the NUMBER is on the screen (docs/CANON-ui-v1.md principle 1)');
+    ok622(/<details/.test(wb) && /<summary>/.test(wb),
+      'it is a disclosure, not a permanently open list: hidden rows are one click away, never silent');
+    ok622(/pilot-withheld-row/.test(wb) && /cardApplicabilityPair\(CARD_APPLICABILITY_TEXT/.test(wb),
+      'each withheld profile is NAMED with its own reason - "2 hidden" alone cannot be acted on');
+    for (const [fn, name] of [['pilotCardFitSummaryHtml', 'the fit block'], ['pilotCardRanksHtml', 'the stored evaluations']]) {
+      const at = html.indexOf('function ' + fn + '(');
+      if (!ok622(at > 0, name + ' (' + fn + ') exists')) continue;
+      const body = html.slice(at, html.indexOf('\nfunction ', at + 10));
+      ok622(/cardWithheldHtml\(/.test(body), name + ' emits the withheld disclosure');
+      ok622(/cardApplicabilityVisibleRows\(\)/.test(body), name + ' lists only the rows that stayed');
+    }
+    // N11: the agency that HAS profiles is never told to create one.
+    const fitAt = html.indexOf('function pilotCardFitSummaryHtml(');
+    const fitBody = html.slice(fitAt, html.indexOf('\nfunction ', fitAt + 10));
+    ok622(/no_origin/.test(fitBody),
+      'N11/N24: with no originating profile the block says so plainly instead of offering "create a profile"');
+  }
+
   // --------------------------------------------------------------------- N21
   console.log('# N21 - a seafarer does not reach a shortlist or a letter he cannot hold');
   const draftAt = html.indexOf('function cardDraftProfileId()');
