@@ -3143,6 +3143,145 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
   ok622(/not_applicable|\.hidden/.test(rowBody), 'the shortlist button is refused on an inapplicable row, on the screen and not only on the server');
 }
 
+// ===== No.637 / S1b: an unreadable post keeps the PERSON and loses the NUMBER ===
+//
+// The defect this measures, end to end: a candidate whose post nobody could read
+// got NO evaluation row at all, so he was not on the screen and the shortlist the
+// owner accepted live answered 404 `rank_not_found` (26 red tests in the server's
+// `test_crewing_632_shortlist_hold.py`, cause established by a calibrated drill).
+// The server writes the row now, which moves the whole question here: the row
+// MUST stay visible with its reason and its button, and MUST carry no figure.
+//
+// **IT IS WRITTEN AGAINST THE RENDERED MARKUP, NOT AGAINST THE SOURCE TEXT**, and
+// that is the point of it. No.640: the existing N22 check only asserts that the
+// body of `pilotCardFitCardHtml` mentions `cardApplicability(`, so deleting the
+// rendered caption from the returned string left the whole suite GREEN (measured
+// by EXEC S1a, three-way calibration). Every assertion below reads the HTML the
+// card actually produced, and the calibration that proves it can go red is run
+// and recorded rather than asserted in a comment.
+console.log('\n# No.637/S1b: the post nobody could read - shown, explained, actionable, and WITHOUT a figure');
+{
+  const ok637 = softOk;
+  // The server of this context answers the way the server answers AFTER S1b:
+  // the evaluation exists for the unreadable post and carries the fresh verdict.
+  // Two profiles in ONE screen, with two different verdicts, so the test cannot
+  // be passed by suppressing everything or by rendering nothing.
+  const verdicts = {
+    'prof-A': { applicability: 'unknown', applicability_reason: 'rank_absent' },
+    'prof-B': { applicability: 'same', applicability_reason: null },
+    'prof-C': { applicability: 'same', applicability_reason: null },
+  };
+  const srv = makeServer();
+  const baseView = srv.ranksView.bind(srv);
+  srv.ranksView = () => baseView().map((row) => Object.assign({}, row, verdicts[row.profile_id] || {}));
+  const ctx = makeContext({ server: srv });
+  await positiveChainUntilRank(ctx);
+
+  const fitCard = (id) => main(ctx).split('data-qa="pilot-fit-card"').slice(1)
+    .find((part) => part.startsWith(` data-profile="${id}"`)) || null;
+  const unknownCard = fitCard('prof-A');
+  const knownCard = fitCard('prof-B');
+  ok637(!!unknownCard, 'the candidate whose post nobody could read HAS a card at all — before S1b the server wrote no row and he was off the screen entirely');
+  ok637(!!knownCard, 'CALIBRATION: a card with a readable post is on the same screen, so "no figure" cannot pass by an empty screen');
+
+  if (unknownCard && knownCard) {
+    // ---- 1. the figure is gone. Both forms of it. ------------------------
+    ok637(/data-qa="pilot-fit-pct" data-pct="none"/.test(unknownCard),
+      'No.637/S1b: the unestablished post carries NO percentage — (939) "ни совпадение, ни 0 %"');
+    ok637(!/%/.test(unknownCard),
+      'No.637/S1b: and not a per-cent sign anywhere on that card');
+    ok637(!/checks met, by the stored evaluation/.test(unknownCard) && !/из \d+ по сохранённой оценке/.test(unknownCard),
+      'No.637/S1b: nor the "M of N checks met" caption — "0 из N" is the same claim written differently');
+    ok637(/data-fit="rank_unknown"/.test(unknownCard),
+      'No.637/S1b: the card names WHICH question is open, machine-readably, instead of leaving a blank');
+    ok637(!/<div class="cf-bar"/.test(unknownCard),
+      'No.637/S1b: no progress bar either — a bar is a figure drawn instead of printed');
+    // CALIBRATION on the same screen: the readable post DOES get its figure.
+    ok637(/data-qa="pilot-fit-pct" data-pct="\d+"/.test(knownCard) && /%/.test(knownCard),
+      'CALIBRATION: the readable post keeps its percentage — S1b removed the figure for ONE verdict, not for everybody');
+    ok637(/checks met, by the stored evaluation/.test(knownCard),
+      'CALIBRATION: and keeps its mandatory caption (928)');
+
+    // ---- 2. the reason is RENDERED, next to the decision (930) -----------
+    ok637(/data-qa="pilot-fit-applicability"/.test(unknownCard),
+      'No.637/S1b: the card RENDERS the applicability line — this is the assertion No.640 found missing: deleting the rendered caption left the whole suite green');
+    ok637(/data-qa="pilot-fit-applicability"[^>]*data-applicability="unknown"/.test(unknownCard),
+      'No.637/S1b: and the rendered line carries the verdict itself');
+    ok637(/data-applicability-reason="rank_absent"/.test(unknownCard),
+      'No.637/S1b: and WHICH unknown it is — "no rank among the facts" and "nobody could place the one he has" are two different next actions');
+    const applicText = (card) => {
+      const m = String(card).match(/data-qa="pilot-fit-applicability"[^>]*>([\s\S]*?)<\/div>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    ok637(applicText(unknownCard).length > 10 && !/^[a-z_]+$/.test(applicText(unknownCard)),
+      'No.637/S1b: the line is a sentence for a person, not the wire code — got "' + applicText(unknownCard) + '"');
+    ok637(!/<details|<summary/.test(unknownCard),
+      'No.637/S1b: and it is NOT under a disclosure — docs/CANON-ui-v1.md principle 1 keeps unknowns next to the decision and the button');
+
+    // ---- 3. the BUTTON. The harm was a man who could not be shortlisted. --
+    ok637(/data-qa="pilot-fit-confirm"/.test(unknownCard),
+      'No.637/S1b: the add-to-shortlist button is on the unknown card — a person pressing it IS the "честная ручная проверка" (939)');
+    ok637(/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-A',1\)"/.test(unknownCard),
+      'No.637/S1b: wired to the pair of ITS OWN card');
+    // ...and the same on the full "stored comparisons" section below it.
+    const unknownRow = rankRow(ctx, 'prof-A', 1);
+    ok637(!!unknownRow && /data-qa="pilot-rank-applicability"[^>]*data-applicability="unknown"/.test(unknownRow),
+      'No.637/S1b: the detailed row says the same thing, through the same adapter');
+    ok637(!!unknownRow && !/data-qa="pilot-rank-stale"/.test(unknownRow),
+      'No.637/S1b: and does NOT call the row out of date — the server stopped stamping unknown as stale, and "устарело" is a different and false sentence');
+    const rowsSection = main(ctx);
+    ok637(/data-qa="pilot-rank-row" data-profile="prof-A"[\s\S]*?data-qa="pilot-confirm"/.test(rowsSection),
+      'No.637/S1b: the detailed row offers the add button too, never the "cannot be shortlisted" note');
+  }
+
+  // ---- 4. the refusal in the ONE function, directly ---------------------
+  const shareOf = (row) => JSON.parse(vm.runInContext(
+    'JSON.stringify(crewFlowMatchShare(' + JSON.stringify(row) + '))', ctx));
+  const counts = { met: 1, missing: 0, unconfirmed: 0, total: 1, stale: false };
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'unknown' })).pct === null,
+    'No.637/S1b: crewFlowMatchShare refuses a figure for an unknown verdict even when the counts divide perfectly');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'unknown' })).reason === 'rank_unknown',
+    'No.637/S1b: and says which refusal it is');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'unknown' })).met === 0
+    && shareOf(Object.assign({}, counts, { applicability: 'unknown' })).total === 0,
+    'No.637/S1b: it hands back no met/total either — the caption is built from those two, so leaving them would print "выполнено 1 из 1"');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'same' })).pct === 100,
+    'CALIBRATION: the same counts with a readable post still produce 100% — the refusal is the verdict, not the arithmetic');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).pct === 100,
+    'not_applicable is NOT handled here: it never reaches a card at all (the adapter hides the row), and quietly suppressing it here would hide a rendering bug instead of failing on it');
+  ok637(shareOf(counts).pct === 100,
+    'a row from a server that does not speak this contract keeps rendering exactly as before');
+
+  // ---- 5. both shipped languages, for both wordings ---------------------
+  {
+    const en = (ctx.setLang('en'), ctx.__pilot.cardT('share_rank_unknown'));
+    const ru = (ctx.setLang('ru'), ctx.__pilot.cardT('share_rank_unknown'));
+    ok637(en && en !== 'share_rank_unknown' && !/[Ѐ-ӿ]/.test(en),
+      `No.637/S1b: EN wording exists for PILOT_CARD_TEXT.share_rank_unknown — got "${en}"`);
+    ok637(ru && ru !== 'share_rank_unknown' && ru !== en && /[Ѐ-ӿ]/.test(ru),
+      `No.637/S1b: RU wording exists for PILOT_CARD_TEXT.share_rank_unknown and is actually Russian — got "${ru}"`);
+  }
+  // The QUEUE row reads a different table, and that table lives outside the two
+  // bounded blocks this harness runs in a vm - so it is read off the file. A
+  // missing key would print the bare wire code `fit_rank_unknown` in the list
+  // next to the candidate's name, which is the same defect one surface over.
+  {
+    const entry = (lang) => new RegExp(
+      "'crew_flow\\.fit_rank_unknown':'([^']+)'"
+    ).exec(html.split('\n').filter((line) => line.includes("'crew_flow.fit_rank_unknown'"))[lang] || '');
+    const enRow = entry(0), ruRow = entry(1);
+    ok637(!!enRow && !/[Ѐ-ӿ]/.test(enRow[1]), 'No.637/S1b: the QUEUE row has an EN word for the refused figure');
+    ok637(!!ruRow && /[Ѐ-ӿ]/.test(ruRow[1]), 'No.637/S1b: and a Russian one — a missing key prints the wire code beside a person\'s name');
+  }
+  ctx.setLang('ru');
+  ctx.__pilot.renderIntakePilot();
+  const ruCard = fitCard('prof-A');
+  ok637(!!ruCard && /[Ѐ-ӿ]/.test(ruCard) && !/%/.test(ruCard),
+    'No.637/S1b: in Russian the card is Russian and still carries no figure');
+  ctx.setLang('en');
+  ctx.__pilot.renderIntakePilot();
+}
+
 // ===== No.623 (OWNER (943)/(944)/(963)): after a response, the card says WHO ====
 //
 // Six elements reach the card through `response_summary` on the candidate GET.
