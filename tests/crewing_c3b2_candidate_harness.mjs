@@ -3928,10 +3928,33 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
       'No.632/5.4: a candidate whose resume nobody picked is left out and SAID so — "не вошли и почему", not a quiet drop');
     softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(noPick))),
       'No.632/5.4: and with nobody left to send, the button is dark rather than building an empty letter');
+    // The numbers are read EXACTLY, and both of them. A check that only looked for
+    // "6" somewhere in this line stayed green under a mutation that printed the
+    // size of the whole shortlist (8) beside the six attachments — the envelope
+    // carried six while the screen said eight, which is the very thing the line
+    // exists to catch.
     softOk(psafeL(() => {
       const m = /data-qa="profile-letter-counts"[^>]*>([^<]*)</.exec(lhtml(L));
-      return !!m && /6/.test(m[1]);
-    }), 'No.632/5.4: the count of candidates in the letter is shown and equals the files that will be attached');
+      const digits = m ? (m[1].match(/\d+/g) || []) : [];
+      return digits.length === 2 && digits[0] === '6' && digits[1] === '6';
+    }), 'No.632/5.4: the line says exactly how many candidates are in the letter and how many files it carries — six and six, not the size of the shortlist');
+    // TWO guards keep the man who was set aside out of this letter — he is not in
+    // the selection AND nobody picked a resume for him (the screen offers no pick
+    // for a held row at all). A drill against the first guard would survive on the
+    // second, which is exactly the shape that let M5 of the server slice and M4 of
+    // the client slice live. So the second guard is REMOVED here: a resume is
+    // seeded for him directly, and `in_selection` is then the only thing standing
+    // between a held candidate and the customer.
+    const seeded = await letterContext();
+    await typeAddress(seeded, 'crewing@oceanic.example.com');
+    if (seeded && seeded.state.profileLetter) {
+      seeded.state.profileLetter.picks.L6 = { ordinal: 0, path: '/home/op/Downloads/Skipi/Crewing/L6/attachment-0.pdf', bytes: 1200 };
+      psafeL(() => seeded.__s632.profileShortlistRerender());
+    }
+    softOk(psafeL(() => !segment(seeded, 'profile-letter-file', 'L6')),
+      'No.632/5.4: with a resume ALREADY in hand for him, the man set aside is STILL out of the letter — in_selection alone holds him back');
+    softOk(psafeL(() => /data-reason="on_hold"/.test(segment(seeded, 'profile-letter-excluded-item', 'L6') || '')),
+      'No.632/5.4: and the reason stays "set aside" rather than turning into "no resume" (calibration of the check above)');
   } else {
     for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.4: selection membership (context absent)');
   }
