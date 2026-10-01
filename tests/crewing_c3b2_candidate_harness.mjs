@@ -20,6 +20,12 @@ const c3b2End = html.indexOf('// ================== C3b-2 CANDIDATE CARD END ===
 assert.ok(c3b1Start > 0 && c3b1End > c3b1Start && c3b2Start > c3b1End && c3b2End > c3b2Start, 'bounded C3b-1 and C3b-2 UI blocks exist in order');
 const c3b1Source = html.slice(c3b1Start, c3b1End);
 const c3b2Source = html.slice(c3b2Start, c3b2End);
+// No.632: the profile-shortlist block is sliced the same way and may be ABSENT —
+// an absent block must read as a RED assertion below, never as an import crash
+// that would hide every other check in this file.
+const s632Start = html.indexOf('// ================= No.632 PROFILE SHORTLIST START =================');
+const s632End = html.indexOf('// ================== No.632 PROFILE SHORTLIST END ==================', s632Start);
+const s632Source = (s632Start > 0 && s632End > s632Start) ? html.slice(s632Start, s632End) : '';
 
 let passed = 0;
 let failed = 0;
@@ -241,6 +247,177 @@ function makeContext({ source = c3b2Source, c3b1 = c3b1Source, server = makeServ
   vm.runInContext(`${c3b1}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT };`, context);
   return context;
 }
+// ===========================================================================
+// No.632: an isolated copy of the PROFILE-SHORTLIST block.
+//
+// It is a separate sandbox from the candidate card for the reason the block is
+// separate code: it renders inside the matching-profile screen, which the
+// candidate card never enters. C3b-1 is loaded with it because the context
+// helpers (`pilotExpected`, `pilotParseError`) live there, and C3b-2 because
+// the row REUSES the six-element helpers No.623 already built rather than
+// growing a second set of them.
+// ===========================================================================
+function makeProfileServer() {
+  return {
+    user: 'user-op-1',
+    profileVersion: 2,
+    items: [
+      // in the selection, decided against the CURRENT version
+      { id: 'dec-1', intake_id: 'intake-1', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:00:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: false },
+      // set aside
+      { id: 'dec-2', intake_id: 'intake-2', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:01:00',
+        on_hold: true, held_by: 'user-op-1', held_at: '2026-10-01T06:00:00', in_selection: false, needs_recompare: false },
+      // decided against an OLDER version: the decision stands and is marked
+      { id: 'dec-3', intake_id: 'intake-3', profile_version: 1, confirmed_by: 'user-op-1', confirmed_at: '2026-09-30T05:00:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: true },
+      // the row whose own details will not load
+      { id: 'dec-4', intake_id: 'intake-4', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:03:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: false },
+    ],
+    cards: {
+      'intake-1': {
+        intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', source: 'response', source_id: 's1', event_id: 'e1',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'application/pdf', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-10-01T04:00:00', issued_at: '2026-10-01T04:00:00',
+        objects: [], attachments: [{ ordinal: 0, filename: 'Ivan_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 1200, verdict: 'accepted', reason: null, eligible: true }],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+        response_summary: { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrenko',
+          age_years: 43, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+          experience_rank: 'Master', experience_days: 520, experience_state: 'in_rank',
+          last_vessel_name: 'MT Odesa Dawn', last_vessel_sign_off: '2026-07-01' },
+      },
+      'intake-2': {
+        intake_id: 'intake-2', receipt_id: 'r2', crewing_id: 'crew-synthetic', source: 'response', source_id: 's2', event_id: 'e2',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'application/pdf', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-09-30T04:00:00', issued_at: '2026-09-30T04:00:00',
+        objects: [], attachments: [{ ordinal: 0, filename: 'Petro_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 900, verdict: 'accepted', reason: null, eligible: true }],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+        response_summary: { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Petro', surname: 'Shevchuk',
+          age_years: 39, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+          experience_rank: 'Master', experience_days: 1160, experience_state: 'in_rank',
+          last_vessel_name: 'MT Black Sea', last_vessel_sign_off: null },
+      },
+      // BORN OF E-MAIL: nine of the fourteen pilot cards are, and they carry no
+      // response summary at all. Nothing may be drawn unconditionally over this.
+      'intake-3': {
+        intake_id: 'intake-3', receipt_id: 'r3', crewing_id: 'crew-synthetic', source: 'mail', source_id: 's3', event_id: 'e3',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'message/rfc822', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-09-27T04:00:00', issued_at: '2026-09-27T04:00:00',
+        objects: [], attachments: [],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+      },
+    },
+    facts: {
+      'intake-1': [{ field: 'name', versions: [{ value: 'Ivan Petrenko', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'ivan.petrenko@example.com', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:phone', versions: [{ value: '+380501112233', version: 1, corrected_by: 'user-op-1' }] }],
+      'intake-2': [{ field: 'name', versions: [{ value: 'Petro Shevchuk', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'petro@example.com', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:phone', versions: [{ value: '+380502223344', version: 1, corrected_by: 'user-op-1' }] }],
+      // e-mail only: no phone, therefore no messenger either, and BOTH say so
+      'intake-3': [{ field: 'name', versions: [{ value: 'Oleh Marchenko', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'oleh@example.com', version: 1, corrected_by: 'user-op-1' }] }],
+    },
+    reject(status, detail) { return { kind: 'server', status, detail }; },
+    handle(command, args) {
+      const b = this;
+      switch (command) {
+        case 'crewing_intake_profile_shortlist': {
+          if (args.profileId !== 'prof-A') throw b.reject(404, 'matching profile not found');
+          return {
+            profile_id: 'prof-A', profile_version: b.profileVersion, profile_state: 'active',
+            items: b.items.map((i) => ({ ...i })),
+            counts: {
+              selected: b.items.length,
+              in_selection: b.items.filter((i) => i.in_selection).length,
+              on_hold: b.items.filter((i) => i.on_hold).length,
+            },
+          };
+        }
+        case 'crewing_intake_candidate_get': {
+          const card = b.cards[args.intakeId];
+          if (!card) throw b.reject(500, null);
+          return { ...card };
+        }
+        case 'crewing_intake_fact_list': {
+          const rows = b.facts[args.intakeId];
+          if (!rows) throw b.reject(500, null);
+          return { items: rows.map((r) => ({ ...r })) };
+        }
+        case 'crewing_intake_response_contact': throw b.reject(404, 'candidate intake not found');
+        case 'crewing_intake_shortlist_hold': {
+          const row = b.items.find((i) => i.intake_id === args.intakeId);
+          if (!row) throw b.reject(404, 'not_confirmed');
+          if (row.on_hold) throw b.reject(409, 'already_on_hold');
+          row.on_hold = true; row.held_by = b.user; row.held_at = '2026-10-01T07:00:00'; row.in_selection = false;
+          return { id: row.id, intake_id: row.intake_id, profile_id: 'prof-A', profile_version: row.profile_version,
+            confirmed_by: row.confirmed_by, confirmed_at: row.confirmed_at, on_hold: true, held_by: row.held_by,
+            held_at: row.held_at, withdrawn_by: null, withdrawn_at: null };
+        }
+        case 'crewing_intake_shortlist_release': {
+          const row = b.items.find((i) => i.intake_id === args.intakeId);
+          if (!row) throw b.reject(404, 'not_confirmed');
+          if (!row.on_hold) throw b.reject(409, 'not_on_hold');
+          row.on_hold = false; row.held_by = null; row.held_at = null; row.in_selection = true;
+          return null;
+        }
+        case 'crewing_intake_shortlist_withdraw': {
+          const at = b.items.findIndex((i) => i.intake_id === args.intakeId);
+          if (at < 0) throw b.reject(404, 'not_confirmed');
+          b.items.splice(at, 1);
+          return null;
+        }
+        case 'open_mailto': return null;
+        default: throw new Error(`unexpected invoke ${command}`);
+      }
+    },
+  };
+}
+
+function makeProfileContext({ server = makeProfileServer(), invokeImpl, language = 'en', profileId = 'prof-A', autoload = true } = {}) {
+  if (!s632Source) throw new Error('No.632 block absent');
+  const nodes = new Map();
+  nodes.set('profile-shortlist-host', { id: 'profile-shortlist-host', innerHTML: '', style: {} });
+  nodes.set('main', { id: 'main', innerHTML: '', style: {} });
+  const calls = [];
+  const copied = [];
+  const toasts = [];
+  let lang = language;
+  const context = {
+    console, Promise, Date, Math, JSON, Number, String, Array, Object, Uint8Array,
+    __demoMode: false,
+    state: {
+      view: 'compliance',
+      settings: { server_url: 'http://127.0.0.1:43123', bearer_token: 'synthetic-token', crewing_id: 'crew-synthetic' },
+      intakePilot: freshPilotState(),
+      selectedComplianceProfile: { id: profileId, name: 'Master — Crude Oil Tanker', version: 2, status: 'active' },
+    },
+    window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
+    navigator: { clipboard: { writeText: async (text) => { copied.push(text); } } },
+    document: { getElementById(id) { return nodes.get(id) || null; }, addEventListener() {} },
+    FileReader: class {},
+    getUiLang() { return lang; },
+    tr(key) { return key; },
+    escapeHtml: esc, escapeAttr: esc,
+    escapeJsString(value) { return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); },
+    humanSize(bytes) { return `${bytes} B`; },
+    showToast(msg, kind) { toasts.push({ msg, kind }); },
+    inAppConfirm: async () => true,
+    async invoke(command, args) {
+      calls.push({ command, args: structuredClone(args) });
+      if (invokeImpl) { const handled = invokeImpl(command, args, calls); if (handled !== undefined) return handled; }
+      return server.handle(command, args);
+    },
+    calls, nodes, server, copied, toasts,
+    setTimeout, clearTimeout, queueMicrotask,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistCopyForMessenger, profileShortlistStateFor, profileShortlistT };`, context);
+  if (autoload) { context.__s632.profileShortlistLoad(profileId); }
+  return context;
+}
+
 async function flush(rounds = 6) {
   for (let i = 0; i < rounds; i += 1) { await Promise.resolve(); await new Promise((resolve) => setTimeout(resolve, 0)); }
 }
@@ -2972,6 +3149,281 @@ console.log('\n# No.623: the card says who responded');
     softOk(callSites <= 1,
       'No.623/Б2: crewFlowRowTitle was NOT revived — a third independent title rule is exactly what the finding forbade (occurrences: ' + callSites + ')');
   }
+}
+
+// ===========================================================================
+// No.632 (OWNER (965)/(969)): the shortlist button on the fit card, and the
+// profile's own list of the candidates chosen for it.
+//
+// Two screens of one subsystem, both on isolated copies of the bounded blocks.
+// Nothing here contacts a server.
+// ===========================================================================
+console.log('# No.632: the add button on every fit card, and the profile shortlist');
+{
+  // ---- 1. the bridge DECLARES every field, or serde drops it in silence ----
+  // The exact defect No.623 paid for twice: serde drops a key no field declares,
+  // without failing the parse. The screen then renders yesterday and every
+  // renderer test stays green over it. So the DECLARATION is asserted here, and
+  // the round trip is asserted in Rust.
+  for (const command of ['crewing_intake_shortlist_hold', 'crewing_intake_shortlist_release', 'crewing_intake_profile_shortlist']) {
+    softOk(new RegExp(`pub\\(crate\\) async fn ${command}\\b`).test(rust), `No.632/1: the bridge defines ${command}`);
+    softOk(new RegExp(`crewing_intake::${command}\\b`).test(lib), `No.632/1: ${command} is registered in the Tauri handler`);
+  }
+  const structFields = (name) => {
+    const m = new RegExp(`pub\\(crate\\) struct ${name} \\{([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  for (const [name, fields] of [
+    ['ShortlistHold', ['id', 'intake_id', 'profile_id', 'profile_version', 'confirmed_by', 'confirmed_at', 'on_hold', 'held_by', 'held_at', 'withdrawn_by', 'withdrawn_at']],
+    ['ProfileShortlistItem', ['id', 'intake_id', 'profile_version', 'confirmed_by', 'confirmed_at', 'on_hold', 'held_by', 'held_at', 'in_selection', 'needs_recompare']],
+    ['ProfileShortlistCounts', ['selected', 'in_selection', 'on_hold']],
+    ['ProfileShortlistResponse', ['profile_id', 'profile_version', 'profile_state', 'items', 'counts']],
+  ]) {
+    const body = structFields(name);
+    for (const field of fields) {
+      softOk(body !== '' && new RegExp(`\\bpub ${field}:`).test(body), `No.632/1: ${name} declares ${field} — undeclared is silently dropped`);
+    }
+  }
+  // The three refusal words of the new state. Not on the allowlist = the screen
+  // receives a bare 403/409 and cannot say WHICH door was shut.
+  for (const code of ['already_on_hold', 'not_on_hold', 'hold_not_permitted']) {
+    softOk(new RegExp(`"${code}"`).test(rust), `No.632/1: ${code} passes the bridge's safe-detail allowlist`);
+  }
+  const fnBody = (name) => {
+    const m = new RegExp(`pub\\(crate\\) async fn ${name}\\(([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  softOk(/send_no_content\(/.test(fnBody('crewing_intake_shortlist_release')),
+    'No.632/1: the release goes through send_no_content — an undocumented 200 stays UNKNOWN instead of being called a success');
+  softOk(/Method::DELETE/.test(fnBody('crewing_intake_shortlist_release')), 'No.632/1: the release is a DELETE');
+  softOk(/Method::POST/.test(fnBody('crewing_intake_shortlist_hold')), 'No.632/1: the hold is a POST');
+  softOk(/checked_pair\(&pair\)/.test(fnBody('crewing_intake_shortlist_hold')), 'No.632/1: the hold validates the pair before any dispatch');
+  softOk(/"matching-profiles"/.test(fnBody('crewing_intake_profile_shortlist')) && /"shortlist"/.test(fnBody('crewing_intake_profile_shortlist')),
+    'No.632/1: the reverse list asks the matching-profiles surface');
+  softOk(/Method::GET/.test(fnBody('crewing_intake_profile_shortlist')), 'No.632/1: the reverse list is a GET');
+
+  // ---- 2. the STOP lines of the card, read off the block itself ----------
+  softOk(s632Source !== '', 'No.632/2: the profile-shortlist block is bounded by its own markers');
+  softOk(s632Source !== '' && !/crewFlowSaveToSeafarers|saveCandidateToSeafarers/.test(s632Source),
+    'No.632/2: the block never writes into the local seafarers table (STOP of the card)');
+  softOk(s632Source !== '' && !/send_mail|sendMail/.test(s632Source),
+    'No.632/2: the block never sends mail — OWNER (739) п.5, the operator sends from their own client');
+  softOk(s632Source !== '' && !/localStorage|sessionStorage|indexedDB/.test(s632Source),
+    'No.632/2: the list is NOT kept on the device — it is re-read from the server, which is what "survives a restart" means');
+
+  // ---- 3. module 1: the button on EVERY fit card -------------------------
+  {
+    const ctx = makeContext();
+    await positiveChainUntilRank(ctx);
+    const fitCards = () => main(ctx).split('data-qa="pilot-fit-card"');
+    const fitCard = (id) => fitCards().slice(1).find((part) => part.startsWith(` data-profile="${id}"`)) || null;
+    softOk(['prof-A', 'prof-B', 'prof-C'].every((id) => fitCard(id) && /data-qa="pilot-fit-confirm"/.test(fitCard(id))),
+      'No.632/3: EVERY card of "match against profiles" carries the add button, not only the primary one');
+    softOk(/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-B',1\)"/.test(main(ctx)),
+      'No.632/3: the button is wired to the pair of ITS OWN card — profile and version');
+    softOk(/data-qa="pilot-fit-into"/.test(fitCard('prof-A') || ''),
+      'No.632/3: the card says which profile and which version the press puts him into');
+    const before = ctx.calls.filter((c) => c.command === 'crewing_intake_shortlist_confirm').length;
+    await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
+    const confirms = ctx.calls.filter((c) => c.command === 'crewing_intake_shortlist_confirm');
+    softOk(confirms.length === before + 1 && JSON.stringify(confirms.slice(-1)[0].args.pair) === JSON.stringify({ profile_id: 'prof-B', profile_version: 1 }),
+      'No.632/3 (PRESERVE sentinel, green on the base too): the existing confirm dispatch still sends exactly the viewed pair');
+    // The duplicate is visible BEFORE the press, not discovered through a 409.
+    softOk(/data-qa="pilot-fit-onlist"/.test(fitCard('prof-B') || ''),
+      'No.632/3: the card he is ALREADY on says so, before anything is pressed');
+    softOk(!!fitCard('prof-B') && /data-qa="pilot-fit-onlist"/.test(fitCard('prof-B')) && !/data-qa="pilot-fit-confirm"/.test(fitCard('prof-B')),
+      'No.632/3: and offers no second add on that card — calibrated: the card must exist and carry the tag, so an empty screen cannot pass this');
+    softOk(!/data-qa="pilot-fit-onlist"/.test(fitCard('prof-A') || '') && /data-qa="pilot-fit-confirm"/.test(fitCard('prof-A') || ''),
+      'No.632/3: the OTHER cards are untouched by that decision');
+    softOk((main(ctx).match(/data-qa="pilot-fit-confirm"/g) || []).length === 2,
+      'No.632/3: exactly the two remaining cards offer the add — the count is asserted, not eyeballed');
+    // Three states: a figure, an absence, and a read that FAILED.
+    const broken = makeContext({ invokeImpl: (command) => { if (command === 'crewing_intake_rank_list') throw { kind: 'server', status: 500 }; } });
+    await openCard(broken); await flush();
+    softOk(/data-qa="pilot-ranks-error"/.test(main(broken)) && !/data-qa="pilot-fit-confirm"/.test(main(broken))
+      && /data-qa="pilot-fit-confirm"/.test(main(ctx)),
+      'No.632/3: when the comparisons could not be read the block says so and offers no button over data it does not have — calibrated against a context where the button IS drawn');
+  }
+  for (const key of ['fit_on_shortlist', 'fit_into']) {
+    const en = makeContext({ language: 'en' }).__pilot.cardT(key);
+    const ru = makeContext({ language: 'ru' }).__pilot.cardT(key);
+    softOk(en !== key, `No.632/3: EN text exists for ${key}`);
+    softOk(ru !== key && ru !== en && /[Ѐ-ӿ]/.test(ru), `No.632/3: RU text exists for ${key} and is actually Russian`);
+  }
+
+  // ---- 4. module 2: the profile's own list -------------------------------
+  let pctx = null;
+  try { pctx = makeProfileContext(); await flush(); } catch (e) { pctx = null; }
+  const psafe = (fn) => { try { const v = fn(); return v === undefined ? false : v; } catch (e) { return false; } };
+  const phtml = (c) => ((c || pctx) ? (c || pctx).nodes.get('profile-shortlist-host').innerHTML : '');
+  // split, not a greedy regex: each segment is exactly what lies between one row
+  // marker and the next, so "the other rows are untouched" can be asserted.
+  const prowOf = (c, intakeId) => phtml(c).split('data-qa="profile-shortlist-row"').slice(1)
+    .find((part) => part.startsWith(` data-intake="${intakeId}"`)) || null;
+  const prow = (intakeId) => prowOf(pctx, intakeId);
+  const pcalls = () => (pctx ? pctx.calls : []);
+
+  softOk(psafe(() => /data-qa="profile-shortlist"/.test(phtml())), 'No.632/4: the profile renders a shortlist section');
+  softOk(psafe(() => pcalls().some((c) => c.command === 'crewing_intake_profile_shortlist' && c.args.profileId === 'prof-A')),
+    'No.632/4: the section asks the SERVER for the list of this profile');
+  softOk(psafe(() => /data-qa="profile-shortlist-counts"/.test(phtml())),
+    'No.632/4: the counts the server computed are shown — selected, in the selection, on hold');
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-counts"[^>]*>([^<]*)</.exec(phtml());
+    return !!m && /4/.test(m[1]) && /3/.test(m[1]);
+  }), 'No.632/4: and they are the SERVER\'s three numbers, not a recount on the screen');
+  softOk(psafe(() => ['intake-1', 'intake-2', 'intake-3', 'intake-4'].every((id) => prow(id))), 'No.632/4: every shortlisted candidate has a row');
+
+  // the six facts of a row, through the SAME helpers No.623 built
+  softOk(psafe(() => /Ivan Petrenko/.test(prow('intake-1'))), 'No.632/4: the row names the person');
+  softOk(psafe(() => /data-qa="profile-shortlist-age"/.test(prow('intake-1')) && /43/.test(prow('intake-1'))), 'No.632/4: age');
+  softOk(psafe(() => /data-qa="profile-shortlist-citizenship"/.test(prow('intake-1')) && /Ukrainian/.test(prow('intake-1'))), 'No.632/4: citizenship');
+  softOk(psafe(() => /data-qa="profile-shortlist-experience"/.test(prow('intake-1')) && /Master/.test(prow('intake-1'))),
+    'No.632/4: sea time, and it NAMES the post it was counted for (No.622 is not open — equality is by bytes)');
+  softOk(psafe(() => /data-qa="profile-shortlist-vessel"/.test(prow('intake-1')) && /Odesa Dawn/.test(prow('intake-1'))), 'No.632/4: last vessel');
+  softOk(psafe(() => /data-qa="profile-shortlist-cv"/.test(prow('intake-1'))), 'No.632/4: whether a CV was received');
+  softOk(psafe(() => /data-qa="profile-shortlist-cv"[^>]*data-cv="yes"/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-cv"[^>]*data-cv="no"/.test(prow('intake-3'))),
+    'No.632/4: a candidate WITHOUT an attachment is named as having none — he does not pass silently');
+  // Nine of the fourteen pilot cards are born of e-mail and carry no summary at
+  // all. Nothing may be printed unconditionally over that.
+  softOk(psafe(() => /data-qa="profile-shortlist-missing"/.test(prow('intake-3'))),
+    'No.632/4: a candidate with no response summary SAYS the fields were not given');
+  softOk(psafe(() => !!prow('intake-3') && !/>0 </.test(prow('intake-3'))),
+    'No.632/4: and an absence is never turned into a zero — calibrated: the row must exist first');
+  softOk(psafe(() => !!prow('intake-3') && /data-qa="profile-shortlist-age"[^>]*data-state="missing"/.test(prow('intake-3'))
+    && /data-qa="profile-shortlist-age"[^>]*data-state="have"/.test(prow('intake-1') || '')),
+    'No.632/4: an absent age is MARKED absent while a present one is marked present — two states on the wire, not one blank');
+
+  // three states: a value, an absence, and a read that FAILED are three things
+  softOk(psafe(() => /data-qa="profile-shortlist-row-error"/.test(prow('intake-4'))),
+    'No.632/4: a row whose own details could not be read says SO — beside the actions, not folded away');
+  softOk(psafe(() => !!prow('intake-4') && /data-qa="profile-shortlist-row-error"/.test(prow('intake-4'))
+    && !/data-qa="profile-shortlist-missing"/.test(prow('intake-4'))),
+    'No.632/4: and a failed read is NEVER rendered as "not given" — calibrated: the row and its error must both be there');
+  softOk(psafe(() => /data-qa="profile-shortlist-row" data-intake="intake-4"/.test(phtml())),
+    'No.632/4: the row itself still stands — the decision is a fact even when the person\'s details are not in hand');
+
+  // the three states of the decision
+  softOk(psafe(() => /data-qa="profile-shortlist-inselection"/.test(prow('intake-1'))), 'No.632/4: the one who goes out is marked');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold"/.test(prow('intake-2'))), 'No.632/4: the one set aside is marked');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold-note"/.test(prow('intake-2'))),
+    'No.632/4: and it says IN WORDS that he will not go in the selection');
+  softOk(psafe(() => /data-qa="profile-shortlist-release"/.test(prow('intake-2')) && !/data-qa="profile-shortlist-hold-action"/.test(prow('intake-2'))),
+    'No.632/4: a candidate on hold is offered the way back, not the way he already went');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold-action"/.test(prow('intake-1')) && !/data-qa="profile-shortlist-release"/.test(prow('intake-1'))),
+    'No.632/4: a candidate in the selection is offered the hold');
+  softOk(psafe(() => /data-qa="profile-shortlist-recompare"/.test(prow('intake-3'))),
+    'No.632/4: a decision taken against an older version of the vacancy is MARKED — and stays on the list');
+  softOk(psafe(() => !!prow('intake-1') && !/data-qa="profile-shortlist-recompare"/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-recompare"/.test(prow('intake-3') || '')),
+    'No.632/4: a decision taken against the current version is NOT marked, while the older one IS — the mark distinguishes, it is not decoration');
+
+  // contacts: only the mechanisms this product already has, and an absent one is
+  // DARK AND NAMED rather than hidden
+  softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*onclick/.test(prow('intake-1')) && !/data-qa="profile-shortlist-email"[^>]*disabled/.test(prow('intake-1'))),
+    'No.632/4: e-mail is offered where an address was received');
+  softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-3'))), 'No.632/4: a missing phone is a DARK button');
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-phone"[^>]*>([^<]*)</.exec(prow('intake-3') || '');
+    return !!m && /—/.test(m[1]);
+  }), 'No.632/4: and the dark button SAYS what is missing instead of vanishing');
+  softOk(psafe(() => /data-qa="profile-shortlist-messenger"[^>]*disabled/.test(prow('intake-3'))),
+    'No.632/4: no number means no messenger either, and that is said too');
+  softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*onclick/.test(prow('intake-1') || '')
+    && !/data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-messenger"[^>]*onclick/.test(prow('intake-1'))),
+    'No.632/4: where a number WAS received both buttons are live and wired — calibrated: they must be present, not merely not-disabled');
+  if (pctx) {
+    await pctx.__s632.profileShortlistEmail('intake-1'); await flush();
+    const mailto = pcalls().filter((c) => c.command === 'open_mailto').slice(-1)[0];
+    softOk(!!mailto && mailto.args.to === 'ivan.petrenko@example.com',
+      'No.632/4: e-mail hands the draft to the operator\'s own client through the EXISTING open_mailto — Crewing sends nothing');
+    await pctx.__s632.profileShortlistCopyPhone('intake-1'); await flush();
+    softOk(pctx.copied.some((t) => /\+380501112233/.test(t)),
+      'No.632/4: the phone action uses the clipboard this build already has — no dialler is invented');
+  } else { softOk(false, 'No.632/4: e-mail opens the operator client'); softOk(false, 'No.632/4: phone uses the clipboard'); }
+
+  // the three writes carry the version THE DECISION WAS MADE AGAINST
+  if (pctx) {
+    await pctx.__s632.profileShortlistHold('intake-1'); await flush();
+    const hold = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_hold').slice(-1)[0];
+    softOk(!!hold && hold.args.intakeId === 'intake-1' && JSON.stringify(hold.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: the hold is dispatched for that candidate and that pair');
+    await pctx.__s632.profileShortlistRelease('intake-2'); await flush();
+    const rel = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_release').slice(-1)[0];
+    softOk(!!rel && rel.args.intakeId === 'intake-2' && JSON.stringify(rel.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: the return from hold is dispatched for that pair');
+    // the row decided against v1 while the profile is on v2 keeps v1
+    await pctx.__s632.profileShortlistHold('intake-3'); await flush();
+    const holdOld = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_hold').slice(-1)[0];
+    softOk(!!holdOld && holdOld.args.pair.profile_version === 1,
+      'No.632/4: a decision made against an OLDER version is moved at THAT version, never at the profile\'s current one');
+    const reads = pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+    await pctx.__s632.profileShortlistRemove('intake-4'); await flush();
+    const rem = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_withdraw').slice(-1)[0];
+    softOk(!!rem && rem.args.intakeId === 'intake-4' && JSON.stringify(rem.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: "remove from the profile" is the EXISTING withdraw of exactly this pair — no other profile is touched');
+    softOk(pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length > reads,
+      'No.632/4: every write is followed by a re-read from the server, so the screen never shows its own guess');
+    softOk(!prow('intake-4'), 'No.632/4: and the removed row is gone because the SERVER no longer lists it');
+  } else {
+    for (const m of ['hold dispatched', 'release dispatched', 'older version preserved', 'withdraw dispatched', 're-read after every write', 'removed row gone']) softOk(false, 'No.632/4: ' + m);
+  }
+
+  // a refusal gets the server's own word, including the one closing the back door
+  {
+    let refusing = null;
+    try { refusing = makeProfileContext({ invokeImpl: (command) => { if (command === 'crewing_intake_shortlist_hold') throw { kind: 'server', status: 403, detail: 'hold_not_permitted' }; } }); await flush(); } catch (e) { refusing = null; }
+    if (refusing) { await refusing.__s632.profileShortlistHold('intake-1'); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-action-error"/.test(phtml(refusing))),
+      'No.632/4: a refused hold is stated on the screen, not swallowed');
+    softOk(psafe(() => /data-qa="profile-shortlist-row" data-intake="intake-1"[\s\S]*?data-qa="profile-shortlist-hold-action"/.test(phtml(refusing))),
+      'No.632/4: and the candidate stays exactly where he was — a refusal moves nothing');
+  }
+
+  // ---- 5. isolation, and the failure of the list itself ------------------
+  {
+    let failing = null;
+    try { failing = makeProfileContext({ invokeImpl: (command) => { if (command === 'crewing_intake_profile_shortlist') throw { kind: 'server', status: 404, detail: 'matching profile not found' }; } }); await flush(); } catch (e) { failing = null; }
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing))),
+      'No.632/5: another agency\'s profile answers exactly as an absent one, and the screen says the list could not be read');
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing)) && !/data-qa="profile-shortlist-row"/.test(phtml(failing))),
+      'No.632/5: and it shows not one row of anybody — calibrated: the section must have rendered its error, so a blank host cannot pass');
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing)) && !/data-qa="profile-shortlist-empty"/.test(phtml(failing))),
+      'No.632/5: a list that could not be read is NEVER rendered as an empty shortlist — calibrated against the rendered error');
+    // calibration: an empty list IS rendered as empty, so the check above is
+    // about the failure and not about the renderer being silent in general.
+    let emptyCtx = null;
+    try {
+      const server = makeProfileServer(); server.items = [];
+      emptyCtx = makeProfileContext({ server }); await flush();
+    } catch (e) { emptyCtx = null; }
+    softOk(psafe(() => /data-qa="profile-shortlist-empty"/.test(phtml(emptyCtx))),
+      'No.632/5: calibration — a genuinely empty shortlist IS said to be empty');
+  }
+  if (pctx) {
+    const n = pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+    await pctx.__s632.profileShortlistLoad('prof-A'); await flush();
+    softOk(pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length === n + 1,
+      'No.632/5: opening the profile again re-reads the list from the server — that is what survives a restart of the app');
+  } else { softOk(false, 'No.632/5: reopening re-reads the list'); }
+
+  // ---- 6. RU/EN for every new word of module 2 ---------------------------
+  // `ps_email` is deliberately NOT in this list: "e-mail" is the same word in
+  // both languages and the owner-approved frame prints it that way, so it gets
+  // its own assertion below instead of a Cyrillic one it could never satisfy.
+  for (const key of ['ps_title', 'ps_counts', 'ps_in_selection', 'ps_on_hold', 'ps_hold_note', 'ps_hold', 'ps_release',
+    'ps_remove', 'ps_phone', 'ps_messenger', 'ps_email_none', 'ps_phone_none', 'ps_messenger_none',
+    'ps_cv_present', 'ps_cv_absent', 'ps_failed', 'ps_row_failed', 'ps_empty', 'ps_recompare', 'ps_note', 'ps_loading']) {
+    const en = psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT(key));
+    const ru = psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT(key));
+    softOk(!!en && en !== key, `No.632/6: EN text exists for ${key}`);
+    softOk(!!ru && ru !== key && ru !== en && /[Ѐ-ӿ]/.test(ru), `No.632/6: RU text exists for ${key} and is actually Russian`);
+  }
+  softOk(psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail')
+    && psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail'),
+    'No.632/6: ps_email is "e-mail" in both languages — the owner-approved frame prints it that way');
 }
 
 console.log('\n# control matrix');
