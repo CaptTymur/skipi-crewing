@@ -2271,6 +2271,7 @@ pub fn run() {
             crewing_intake::crewing_intake_object_download,
             crewing_intake::crewing_intake_attachment_download,
             crewing_intake::crewing_intake_open_saved,
+            crewing_intake::crewing_customer_letter_prepare,
             contact::open_mailto,
             fetch_applications_for_vacancy,
             rank_compliance_candidate,

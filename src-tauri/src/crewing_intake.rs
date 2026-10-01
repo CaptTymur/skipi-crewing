@@ -214,6 +214,24 @@ pub(crate) struct CandidateResponseSummary {
     pub experience_days: Option<i64>,
     #[serde(default)]
     pub experience_state: Option<String>,
+    /// No.632/S5: the career as `{rank: days}`, exactly as the seafarer's own
+    /// client merged it (never summed) and the server stored it.
+    ///
+    /// The letter of THIS slice is written for a profile the candidate may never
+    /// have responded to, and then the pair above is about a DIFFERENT post. So
+    /// the map is the only thing the letter may read, and it is read by EQUALITY:
+    /// a post the map does not name is "not stated", and a post it names with `0`
+    /// is a MEASURED zero. `days || "not stated"` turns the second into the first
+    /// and is the bug the drills of this card forbid.
+    #[serde(default)]
+    pub experience_days_by_rank: Option<std::collections::BTreeMap<String, i64>>,
+    /// The server's own answer for the post of the response's OWN profile, and
+    /// the state word that goes with it. Declared because the card shows them;
+    /// the letter of another profile reads the map above instead.
+    #[serde(default)]
+    pub experience_days_for_rank: Option<i64>,
+    #[serde(default)]
+    pub experience_days_for_rank_state: Option<String>,
     #[serde(default)]
     pub last_vessel_name: Option<String>,
     #[serde(default)]
@@ -1632,6 +1650,292 @@ pub(crate) async fn crewing_intake_open_saved(path: String) -> Result<(), PilotB
     .await
 }
 
+// ---------- No.632/S5: the letter to the customer (OWNER 2026-10-01) --------
+//
+// The operator presses one button; this writes a complete `.eml` next to the
+// copies it already writes, and hands it to the mail client he already uses. He
+// reads it there and HE presses send.
+//
+// Crewing sends nothing, and that is not a preference. OWNER (739) п.5: "check
+// and REUSE the existing mechanism of the Seafarer home. DO NOT build your own
+// mail client"; and the owner's word of 2026-10-01: "use the existing mechanism
+// for preparing a letter with attachments, WITHOUT server-side sending". The
+// contract harness of this home holds that door shut by exact equality over the
+// call sites, and this code does not go near it.
+//
+// Why an `.eml` and not `mailto:` — measured, not preferred: `contact.rs` opens
+// a `mailto:` draft and says in its own header that nothing can be attached,
+// because `mailto:` cannot carry a file. The resumes ARE the point here.
+//
+// The shape is the Seafarer original (`skipi-public
+// src-tauri/src/commands/mail_intent.rs:169-200`): multipart MIME, base64 parts,
+// handed to the OS opener. Two deliberate differences:
+//
+//   * the Seafarer original discards the result of the opener (`let _ =
+//     spawn()`), so a client that never came up is indistinguishable from one
+//     that did. Here the outcome is carried back to the screen in `opened`, and
+//     the guard is separated from the opener so a drill can measure it with the
+//     side effect stubbed.
+//   * no `From:` and no "Sent via Skipi" footer. The sender is the AGENCY, from
+//     its own client and its own address; a Skipi line in the agency's letter to
+//     its customer would make us the sender of it.
+
+/// Where the drafts go, inside the folder this module already owns.
+const LETTER_FOLDER: &str = "Letters";
+/// A mail client has to open this file. The ceiling is the same one the byte
+/// routes use for a single download, applied here to the WHOLE letter.
+const LETTER_CEILING_BYTES: u64 = DOWNLOAD_CEILING_BYTES;
+
+/// One resume, as the screen hands it over: a file THIS APP wrote (the path the
+/// audited byte route returned) and the name the customer is to see.
+///
+/// The name is a separate field because the byte route deliberately names every
+/// download `attachment-<ordinal>.<ext>` — the letter's own filename never
+/// reaches a header, which is right for a download and wrong for an envelope
+/// carrying six of them: the customer would receive `attachment-0.pdf` six
+/// times. The screen names each one for its candidate; this side sanitises it
+/// again, because a name that came out of a stranger's letter is hostile input
+/// even after a screen has shown it.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct CustomerLetterAttachment {
+    pub path: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct CustomerLetterIntent {
+    pub to: String,
+    pub subject: String,
+    pub body: String,
+    #[serde(default)]
+    pub attachments: Vec<CustomerLetterAttachment>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct CustomerLetterDraft {
+    pub path: String,
+    pub bytes: u64,
+    pub sha256: String,
+    /// Whether the operator's mail client actually came up. `Ok` with
+    /// `opened: false` is a real and common answer (a machine with no handler for
+    /// `message/rfc822`), and it is NOT a failure of the letter: the file is
+    /// written and named, so the screen can tell him where it is instead of
+    /// claiming a draft he never saw.
+    pub opened: bool,
+    pub open_error: Option<String>,
+}
+
+/// RFC 2047 encoded-word for a header that is not pure ASCII. Cyrillic subjects
+/// are the normal case here, not the exception.
+fn letter_header_value(value: &str) -> String {
+    let clean: String = value
+        .chars()
+        .filter(|c| *c != '\r' && *c != '\n' && *c != '\0')
+        .collect();
+    if clean.is_ascii() {
+        return clean;
+    }
+    format!("=?UTF-8?B?{}?=", BASE64_STANDARD.encode(clean.as_bytes()))
+}
+
+fn letter_html_escape(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+/// The type is read off the extension of the file WE wrote, which the byte route
+/// chose from its own closed set. Unknown stays `application/octet-stream`: the
+/// attachment still opens, it just carries no preview hint.
+fn letter_attachment_mime(name: &str) -> &'static str {
+    let lower = name.to_ascii_lowercase();
+    if lower.ends_with(".pdf") {
+        "application/pdf"
+    } else if lower.ends_with(".docx") {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    } else if lower.ends_with(".eml") {
+        "message/rfc822"
+    } else if lower.ends_with(".txt") {
+        "text/plain"
+    } else {
+        "application/octet-stream"
+    }
+}
+
+/// The body is carried TWICE and both copies are the same characters: once as
+/// `text/plain`, once as `text/html` inside a `<pre>`.
+///
+/// That is the whole reason there is an HTML part at all. The comparison table
+/// is a table of columns, and a proportional font turns it into a paragraph; a
+/// `<pre>` keeps it aligned in a client that prefers HTML. Deriving the HTML
+/// from the SAME text rather than rendering a second table from the data is the
+/// point: two renderers of one table is how a screen comes to show one thing and
+/// an envelope to carry another.
+fn build_letter_eml(
+    intent: &CustomerLetterIntent,
+    recipient: &str,
+    parts: &[(String, Vec<u8>)],
+    stamp: &str,
+    boundary_seed: u128,
+) -> Result<String, PilotBridgeError> {
+    let outer = format!("=_skipi_crewing_{:x}", boundary_seed);
+    let inner = format!("=_skipi_crewing_alt_{:x}", boundary_seed);
+    // A boundary that occurs in the body ends the part early and the letter
+    // arrives truncated. It cannot happen with the seed above, and it is still
+    // refused rather than assumed away.
+    if intent.body.contains(&outer) || intent.body.contains(&inner) {
+        return Err(invalid_request("letter_boundary_collision"));
+    }
+    let body_crlf = intent.body.replace("\r\n", "\n").replace('\n', "\r\n");
+
+    let mut out = String::new();
+    // No `From:`. The operator's client fills in its own identity, which is the
+    // agency's — exactly the point of handing the draft over instead of sending.
+    out.push_str(&format!("To: {}\r\n", recipient));
+    out.push_str(&format!(
+        "Subject: {}\r\n",
+        letter_header_value(&intent.subject)
+    ));
+    out.push_str(&format!("Date: {}\r\n", stamp));
+    out.push_str("MIME-Version: 1.0\r\n");
+    out.push_str(&format!(
+        "Content-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n",
+        outer
+    ));
+    out.push_str("This is a multi-part message in MIME format.\r\n");
+
+    out.push_str(&format!("--{}\r\n", outer));
+    out.push_str(&format!(
+        "Content-Type: multipart/alternative; boundary=\"{}\"\r\n\r\n",
+        inner
+    ));
+
+    out.push_str(&format!("--{}\r\n", inner));
+    out.push_str("Content-Type: text/plain; charset=utf-8\r\n");
+    out.push_str("Content-Transfer-Encoding: 8bit\r\n\r\n");
+    out.push_str(&body_crlf);
+    out.push_str("\r\n");
+
+    out.push_str(&format!("--{}\r\n", inner));
+    out.push_str("Content-Type: text/html; charset=utf-8\r\n");
+    out.push_str("Content-Transfer-Encoding: 8bit\r\n\r\n");
+    out.push_str("<html><body><pre style=\"font-family:monospace;font-size:13px\">\r\n");
+    out.push_str(&letter_html_escape(&body_crlf));
+    out.push_str("\r\n</pre></body></html>\r\n");
+    out.push_str(&format!("--{}--\r\n", inner));
+
+    for (name, bytes) in parts {
+        let mime = letter_attachment_mime(name);
+        let encoded = BASE64_STANDARD.encode(bytes);
+        out.push_str(&format!("--{}\r\n", outer));
+        out.push_str(&format!("Content-Type: {}; name=\"{}\"\r\n", mime, name));
+        out.push_str("Content-Transfer-Encoding: base64\r\n");
+        out.push_str(&format!(
+            "Content-Disposition: attachment; filename=\"{}\"\r\n\r\n",
+            name
+        ));
+        for chunk in encoded.as_bytes().chunks(76) {
+            out.push_str(&String::from_utf8_lossy(chunk));
+            out.push_str("\r\n");
+        }
+    }
+    out.push_str(&format!("--{}--\r\n", outer));
+    Ok(out)
+}
+
+/// The whole operation as ONE sync function with the opener passed IN, for the
+/// same reason `open_saved_with` is shaped that way: the guard can then be
+/// measured with the side effect STUBBED, so a drill that removes a check fails
+/// a test instead of opening a mail client on the machine running the drill
+/// (skipi-ops AGENTS, «Субагенты» п.6).
+fn prepare_letter_with<F>(
+    root: &std::path::Path,
+    intent: &CustomerLetterIntent,
+    stamp: &str,
+    boundary_seed: u128,
+    opener: F,
+) -> Result<CustomerLetterDraft, PilotBridgeError>
+where
+    F: Fn(&str) -> Result<(), String>,
+{
+    use sha2::{Digest, Sha256};
+    // The recipient is a stranger's address typed by hand, and it is about to be
+    // written into a header. The strict ASCII addr-spec check of `contact.rs` is
+    // reused rather than restated — a second grammar for one address is how two
+    // screens come to accept two different things.
+    let recipient = crate::contact::checked_recipient(&intent.to)
+        .map_err(|_| invalid_request("letter_recipient_shape"))?;
+
+    // Every attachment must be a file THIS APP wrote, under
+    // Downloads/Skipi/Crewing. Without this the command would be "attach any
+    // file on this machine and mail it", reachable by whoever reaches the
+    // bridge — and the one thing this letter does is leave the building.
+    let mut parts: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut total: u64 = 0;
+    for (index, attachment) in intent.attachments.iter().enumerate() {
+        let resolved = resolved_saved_path(root, &attachment.path)?;
+        let bytes = std::fs::read(&resolved).map_err(|_| invalid_request("letter_attachment_unreadable"))?;
+        total = total.saturating_add(bytes.len() as u64);
+        if total > LETTER_CEILING_BYTES {
+            return Err(invalid_request("letter_too_large"));
+        }
+        let fallback = format!("resume-{}.pdf", index + 1);
+        let name = safe_download_name(&attachment.name, &fallback);
+        parts.push((name, bytes));
+    }
+
+    let eml = build_letter_eml(intent, &recipient, &parts, stamp, boundary_seed)?;
+    let folder = root.join(LETTER_FOLDER);
+    std::fs::create_dir_all(&folder).map_err(|_| invalid_request("cannot_create_folder"))?;
+    let target = folder.join(format!("Skipi_Crewing_{:x}.eml", boundary_seed));
+    std::fs::write(&target, eml.as_bytes()).map_err(|_| invalid_request("cannot_write_letter"))?;
+    let digest = Sha256::digest(eml.as_bytes());
+
+    // The opener is the LAST thing, and its answer is kept. A client that did not
+    // come up leaves a letter that exists and a screen that says so.
+    let (opened, open_error) = match opener(&target.to_string_lossy()) {
+        Ok(()) => (true, None),
+        Err(_) => (false, Some("cannot_open_file".to_string())),
+    };
+    Ok(CustomerLetterDraft {
+        path: target.to_string_lossy().to_string(),
+        bytes: eml.as_bytes().len() as u64,
+        sha256: digest.iter().map(|b| format!("{:02x}", b)).collect(),
+        opened,
+        open_error,
+    })
+}
+
+/// Writes the draft and hands it to the operator's own mail client. It does not
+/// send, it cannot send, and it talks to no server at all: there is no context
+/// argument because there is no request.
+#[tauri::command]
+pub(crate) async fn crewing_customer_letter_prepare(
+    intent: CustomerLetterIntent,
+) -> Result<CustomerLetterDraft, PilotBridgeError> {
+    without_blocking_ui(move || {
+        let root = saved_root()?;
+        let stamp = chrono::Utc::now()
+            .format("%a, %d %b %Y %H:%M:%S +0000")
+            .to_string();
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        prepare_letter_with(&root, &intent, &stamp, seed, crate::open_with_default_app)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2583,6 +2887,273 @@ mod tests {
         );
         assert!(open_saved_with(&root, "/etc/passwd", record).is_err());
         assert_eq!(opened.borrow().len(), 1, "and neither must a system path");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    // ---------- No.632/S5: the letter to the customer ----------------------
+
+    /// A temp stand for the letter tests: a downloads root with two saved
+    /// resumes in it, plus one file OUTSIDE it. Nothing here touches the real
+    /// `Downloads/Skipi/Crewing`.
+    fn letter_stand(tag: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let base = std::env::temp_dir().join(format!(
+            "skipi-crewing-632-letter-{}-{}",
+            std::process::id(),
+            tag
+        ));
+        let root = base.join("root");
+        std::fs::create_dir_all(root.join("intake-1")).unwrap();
+        std::fs::create_dir_all(root.join("intake-2")).unwrap();
+        std::fs::write(root.join("intake-1").join("attachment-0.pdf"), b"%PDF-1.4 one").unwrap();
+        std::fs::write(root.join("intake-2").join("attachment-0.pdf"), b"%PDF-1.4 two").unwrap();
+        std::fs::write(base.join("outside.pdf"), b"%PDF-1.4 outside").unwrap();
+        (base, root)
+    }
+
+    fn letter_intent(root: &std::path::Path, to: &str) -> CustomerLetterIntent {
+        CustomerLetterIntent {
+            to: to.to_string(),
+            subject: "Кандидаты по вашему заказу: Master, Crude Oil Tanker".to_string(),
+            body: "Здравствуйте, уважаемый заказчик!\n\nКандидат  | Возраст\nIvan P.   | 43\n\nС уважением,\nMarlow Crewing Ltd".to_string(),
+            attachments: vec![
+                CustomerLetterAttachment {
+                    path: root.join("intake-1").join("attachment-0.pdf").to_string_lossy().to_string(),
+                    name: "Ivan_Petrenko_CV.pdf".to_string(),
+                },
+                CustomerLetterAttachment {
+                    path: root.join("intake-2").join("attachment-0.pdf").to_string_lossy().to_string(),
+                    name: "Petro_Shevchuk_CV.pdf".to_string(),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn the_letter_carries_the_table_in_its_body_and_the_resumes_attached() {
+        let (base, root) = letter_stand("shape");
+        let intent = letter_intent(&root, "crewing@oceanic.example.com");
+        let opened = std::cell::RefCell::new(Vec::new());
+        let record = |p: &str| {
+            opened.borrow_mut().push(p.to_string());
+            Ok(())
+        };
+        let draft = prepare_letter_with(
+            &root,
+            &intent,
+            "Thu, 01 Oct 2026 20:00:00 +0000",
+            0x1234,
+            record,
+        )
+        .expect("the letter is written");
+
+        // the file exists, inside the folder this app owns, and the opener was
+        // handed exactly it
+        assert!(draft.path.contains("Letters"), "{}", draft.path);
+        assert!(std::path::Path::new(&draft.path).is_file());
+        assert_eq!(opened.borrow().len(), 1);
+        assert_eq!(opened.borrow()[0], draft.path);
+        assert!(draft.opened);
+        assert_eq!(draft.open_error, None);
+
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert_eq!(draft.bytes, eml.as_bytes().len() as u64);
+        // the envelope
+        assert!(eml.starts_with("To: crewing@oceanic.example.com\r\n"));
+        assert!(eml.contains("MIME-Version: 1.0\r\n"));
+        assert!(eml.contains("Content-Type: multipart/mixed; boundary=\"=_skipi_crewing_1234\""));
+        assert!(eml.contains("Content-Type: multipart/alternative; boundary=\"=_skipi_crewing_alt_1234\""));
+        // NO `From:` — the agency's own client fills that in, and that is what
+        // makes the AGENCY the sender rather than us
+        assert!(!eml.contains("\r\nFrom:"), "the letter must not name a sender");
+        assert!(!eml.contains("Skipi (https://skipi.app)"), "no Skipi footer in the agency's letter");
+        // the Cyrillic subject survives as an encoded word, not as raw bytes in a
+        // header
+        assert!(eml.contains("Subject: =?UTF-8?B?"));
+        // the table is IN THE BODY, twice, and both copies are the same text
+        assert!(eml.contains("Content-Type: text/plain; charset=utf-8"));
+        assert!(eml.contains("Content-Type: text/html; charset=utf-8"));
+        assert!(eml.contains("Кандидат  | Возраст\r\nIvan P.   | 43"));
+        assert!(eml.contains("<pre style=\"font-family:monospace"));
+        assert_eq!(
+            eml.matches("Marlow Crewing Ltd").count(),
+            2,
+            "the body is carried as plain text AND as the same text inside <pre>"
+        );
+        // the resumes, base64, under the names the customer will read
+        assert!(eml.contains("Content-Disposition: attachment; filename=\"Ivan_Petrenko_CV.pdf\""));
+        assert!(eml.contains("Content-Disposition: attachment; filename=\"Petro_Shevchuk_CV.pdf\""));
+        assert_eq!(eml.matches("Content-Transfer-Encoding: base64").count(), 2);
+        assert!(eml.contains(&BASE64_STANDARD.encode(b"%PDF-1.4 one")));
+        assert!(eml.contains(&BASE64_STANDARD.encode(b"%PDF-1.4 two")));
+        assert!(eml.contains("Content-Type: application/pdf; name=\"Ivan_Petrenko_CV.pdf\""));
+        assert!(eml.ends_with("--=_skipi_crewing_1234--\r\n"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_resume_outside_the_downloads_folder_never_reaches_the_letter() {
+        // The one thing this command does is leave the building. Without this
+        // guard it is "attach any file on this machine and mail it", reachable by
+        // whoever reaches the bridge.
+        let (base, root) = letter_stand("guard");
+        let opened = std::cell::RefCell::new(0_usize);
+        let record = |_: &str| {
+            *opened.borrow_mut() += 1;
+            Ok(())
+        };
+        for hostile in [
+            base.join("outside.pdf").to_string_lossy().to_string(),
+            "/etc/passwd".to_string(),
+            root.join("intake-1").join("..").join("..").join("outside.pdf").to_string_lossy().to_string(),
+            String::new(),
+        ] {
+            let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+            intent.attachments = vec![CustomerLetterAttachment {
+                path: hostile.clone(),
+                name: "x.pdf".to_string(),
+            }];
+            let err = prepare_letter_with(&root, &intent, "d", 1, record)
+                .expect_err(&format!("{hostile} must be refused"));
+            assert_eq!(err.kind, "invalid_request");
+        }
+        #[cfg(unix)]
+        {
+            let link = root.join("intake-1").join("escape.pdf");
+            std::os::unix::fs::symlink(base.join("outside.pdf"), &link).unwrap();
+            let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+            intent.attachments = vec![CustomerLetterAttachment {
+                path: link.to_string_lossy().to_string(),
+                name: "x.pdf".to_string(),
+            }];
+            assert!(
+                prepare_letter_with(&root, &intent, "d", 1, record).is_err(),
+                "a symlink pointing out of the folder must resolve and be refused"
+            );
+        }
+        assert_eq!(
+            *opened.borrow(),
+            0,
+            "no letter was written, so nothing must have been opened"
+        );
+        // CALIBRATION: the same stand DOES produce a letter for a file inside the
+        // folder, so the refusals above are the guard and not a broken stand.
+        let intent = letter_intent(&root, "crewing@oceanic.example.com");
+        assert!(prepare_letter_with(&root, &intent, "d", 2, record).is_ok());
+        assert_eq!(*opened.borrow(), 1);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn an_address_the_mail_client_would_refuse_is_refused_here_first() {
+        // Reuses the addr-spec check of `contact.rs` rather than restating it: a
+        // smuggled `attachment=` would otherwise become a SECOND compose field on
+        // the operator's draft, and a CR would become a second header.
+        let (base, root) = letter_stand("to");
+        let opened = std::cell::RefCell::new(0_usize);
+        let record = |_: &str| {
+            *opened.borrow_mut() += 1;
+            Ok(())
+        };
+        for hostile in [
+            "a@b.test%2Cattachment=%27/etc/passwd%27",
+            "-flag@b.test",
+            "a@b.test\r\nBcc: someone@else.test",
+            "two@addresses.test, other@addresses.test",
+            "no-at-sign",
+            "кирилица@почта.рф",
+            "",
+        ] {
+            let intent = letter_intent(&root, hostile);
+            let err = prepare_letter_with(&root, &intent, "d", 3, record)
+                .expect_err(&format!("{hostile:?} must be refused"));
+            assert_eq!(err.detail.as_deref(), Some("letter_recipient_shape"));
+        }
+        assert_eq!(*opened.borrow(), 0, "nothing was prepared, nothing was opened");
+        // CALIBRATION: a plain address passes through the same path
+        assert!(prepare_letter_with(
+            &root,
+            &letter_intent(&root, "crewing@oceanic.example.com"),
+            "d",
+            4,
+            record
+        )
+        .is_ok());
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_mail_client_that_did_not_open_is_reported_and_the_letter_is_kept() {
+        // The one honest defect of the Seafarer original (`let _ = spawn()`): a
+        // client that never came up reads exactly like one that did. Here the
+        // answer comes back, and the written file is still named — the operator
+        // can open it himself instead of being told about a draft he never saw.
+        let (base, root) = letter_stand("opener");
+        let refuse = |_: &str| Err("no handler for message/rfc822".to_string());
+        let draft = prepare_letter_with(
+            &root,
+            &letter_intent(&root, "crewing@oceanic.example.com"),
+            "d",
+            5,
+            refuse,
+        )
+        .expect("a client that will not open is not a failure of the letter");
+        assert!(!draft.opened);
+        assert_eq!(draft.open_error.as_deref(), Some("cannot_open_file"));
+        assert!(std::path::Path::new(&draft.path).is_file());
+        assert!(draft.bytes > 0 && draft.sha256.len() == 64);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_hostile_attachment_name_cannot_forge_a_header() {
+        // The name is chosen on the screen out of a stranger's letter. A quote
+        // would end the `filename="..."` value and a CR would start a new header.
+        let (base, root) = letter_stand("name");
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.attachments = vec![CustomerLetterAttachment {
+            path: root.join("intake-1").join("attachment-0.pdf").to_string_lossy().to_string(),
+            name: "ev\"il\r\nContent-Type: text/html; name=\"x.pdf".to_string(),
+        }];
+        let draft = prepare_letter_with(&root, &intent, "d", 6, |_| Ok(())).unwrap();
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert!(!eml.contains("Content-Type: text/html; name=\"x.pdf"));
+        assert_eq!(
+            eml.matches("Content-Disposition: attachment;").count(),
+            1,
+            "one attachment stays one attachment"
+        );
+        assert!(!eml.contains("ev\"il"), "the quote never reaches the header");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn the_html_copy_of_the_body_escapes_what_a_name_may_contain() {
+        // The HTML part exists so the comparison table stays aligned, and it is
+        // derived from the SAME text as the plain part. A candidate named with an
+        // angle bracket must not become markup in it.
+        let (base, root) = letter_stand("html");
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.body = "Кандидат <b>A & B</b> | 43".to_string();
+        let draft = prepare_letter_with(&root, &intent, "d", 7, |_| Ok(())).unwrap();
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert!(eml.contains("Кандидат <b>A & B</b> | 43"), "the plain part is the text itself");
+        assert!(eml.contains("Кандидат &lt;b&gt;A &amp; B&lt;/b&gt; | 43"), "the html part escapes it");
+        assert!(!eml.contains("<pre style=\"font-family:monospace;font-size:13px\">\r\nКандидат <b>"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_letter_too_heavy_for_a_mail_client_is_refused_by_name() {
+        let (base, root) = letter_stand("size");
+        let fat = root.join("intake-1").join("fat.pdf");
+        std::fs::write(&fat, vec![0_u8; (LETTER_CEILING_BYTES + 1) as usize]).unwrap();
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.attachments = vec![CustomerLetterAttachment {
+            path: fat.to_string_lossy().to_string(),
+            name: "fat.pdf".to_string(),
+        }];
+        let err = prepare_letter_with(&root, &intent, "d", 8, |_| Ok(())).expect_err("too large");
+        assert_eq!(err.detail.as_deref(), Some("letter_too_large"));
         let _ = std::fs::remove_dir_all(&base);
     }
 

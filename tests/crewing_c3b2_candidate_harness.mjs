@@ -3888,8 +3888,15 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
     'No.632/5.3: every candidate in the selection offers his files for the operator to pick the resume from');
   softOk(psafeL(() => /data-qa="profile-letter-pick"[^>]*data-ordinal="0"/.test(segment(L, 'profile-letter-pick-row', 'L1') || '')),
     'No.632/5.3: the pick names the FILE, by the ordinal the byte route is asked for');
-  softOk(s632Source !== '' && !/classif|recognis|recognize|detect_cv|is_resume/i.test(s632Source),
-    'No.632/5.3: no resume recogniser is introduced — the choice is the operator\'s (owner\'s word of 2026-10-01)');
+  // Structural, not a prose filter: the first version of this check searched the
+  // block for words like "recognise" and was promptly tripped by a COMMENT saying
+  // there is no recogniser. What carries the owner's rule is that a pick is
+  // recorded in exactly ONE place, and that place is the operator pressing a
+  // button — nothing in the block derives it from a file.
+  softOk(s632Source !== '' && (s632Source.match(/ls\.picks\[[a-z]+\] = /g) || []).length === 1,
+    'No.632/5.3: a resume is recorded in exactly ONE place — the operator\'s own press; nothing derives it (owner\'s word of 2026-10-01)');
+  softOk(s632Source !== '' && !/\b(classifyResume|detectResume|guessResume|isResumeFile|looksLikeCv)\b/.test(s632Source),
+    'No.632/5.3: and no classifier of attachments is introduced under any name');
   if (L) {
     const before = L.server.downloads.length;
     await pick(L, ['L1']);
@@ -4090,13 +4097,22 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
   // Scoped to the bodies of the new functions on purpose: `base64`, `saved_root`
   // and `let _ =` all already exist in this module, so a file-wide search would
   // be green over a letter builder that does none of it.
+  // `fn name<F>(` is a real signature in this module (the opener is passed in as a
+  // type parameter), and the first extractor written here missed exactly that —
+  // four checks then passed judgement on an EMPTY string. Calibrated below.
   const rbody = (signature) => {
-    const m = new RegExp(`fn ${signature}\\(([\\s\\S]*?)\\n\\}`).exec(rust);
+    const m = new RegExp(`fn ${signature}(?:<[^>]*>)?\\(([\\s\\S]*?)\\n\\}`).exec(rust);
     return m ? m[1] : '';
   };
   const letterFn = rbody('crewing_customer_letter_prepare');
   const letterBuild = rbody('build_letter_eml');
   const letterWith = rbody('prepare_letter_with');
+  // CALIBRATION of the extractor itself: each body must be non-empty AND must
+  // contain something only that function has. Without this, every check below is
+  // a verdict about an empty string.
+  softOk(letterFn !== '' && letterBuild !== '' && letterWith !== ''
+    && /multipart\/mixed/.test(letterBuild) && /opener\(/.test(letterWith) && /saved_root\(\)/.test(letterFn),
+    'No.632/5.11: calibration — the three function bodies were actually found (a missed signature would make every check below a verdict about an empty string)');
   for (const field of ['experience_days_by_rank', 'experience_days_for_rank', 'experience_days_for_rank_state']) {
     softOk(new RegExp(`pub ${field}:`).test(rust),
       `No.632/5.11: the bridge DECLARES ${field} — an undeclared key is dropped by serde on the way to the webview`);
