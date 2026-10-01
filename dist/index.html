@@ -7424,12 +7424,26 @@ async function pilotShortlistConfirm(profileId, profileVersion) {
   var version = Number(profileVersion);
   if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
   await pilotCardWrite('confirm', profileId+'@'+version, 'crewing_intake_shortlist_confirm', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+  pilotShortlistTouched(profileId);
 }
 async function pilotShortlistWithdraw(profileId, profileVersion) {
   var d = pilotDetail(); if (!d) return;
   var version = Number(profileVersion);
   if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
   await pilotCardWrite('withdraw', profileId+'@'+version, 'crewing_intake_shortlist_withdraw', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+  pilotShortlistTouched(profileId);
+}
+// Deliberately UNCONDITIONAL on the outcome. An acknowledged write obviously
+// moves the list; a REFUSED one may still have been applied (`unknown` is a
+// real outcome of pilotCardWrite, which is why that word exists), and an
+// unnecessary re-read costs one request while a stale "nobody" costs the
+// operator a wrong decision. Guarded by `typeof` for the same reason
+// crewFlowCacheResponseContact is: this card renders in hosts where the No.632
+// block is not loaded at all.
+function pilotShortlistTouched(profileId) {
+  try {
+    if (typeof profileShortlistInvalidate === 'function') profileShortlistInvalidate(profileId);
+  } catch (_) {}
 }
 // ===== OWNER 2026-09-30: one profile, ONE name, in every place it appears =====
 // The block heading, the "compare against" picker and the reasons disclosure must
@@ -7948,9 +7962,12 @@ function pilotCardAttachmentsHtml() {
 // ---- contacts --------------------------------------------------------------
 // R3: the recorded contact fact is the ONE addressee. The pre-S2 `email` field is
 // a fallback, and wherever it is used the screen says where it came from.
-function cardContactFacts() {
-  var d = pilotDetail();
-  var rows = (d && Array.isArray(d.facts)) ? d.facts : [];
+function cardContactFacts() { return cardContactFactsFrom((pilotDetail() || {}).facts); }
+// The SAME reader, given its rows instead of fetching them from the open card:
+// the profile's shortlist row has facts of its own and must not grow a second
+// copy of this order (see cardContactResolvedFrom below).
+function cardContactFactsFrom(factRows) {
+  var rows = Array.isArray(factRows) ? factRows : [];
   var pick = function(field){
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i] || {};
@@ -7997,8 +8014,15 @@ function cardSafeText(value) {
 // never reach draft.to: that is the second face of the anti-loop, and it is the
 // one the server-side check cannot see.
 function cardContactResolved() {
-  var facts = cardContactFacts();
-  var delivered = cardResponseContact();
+  return cardContactResolvedFrom((pilotDetail() || {}).facts, cardResponseContact());
+}
+// The order itself, given its two inputs. Every consumer — the card and the
+// profile's shortlist row — calls THIS, so there is one order and not two.
+// `delivered` carries the three states of No.621 ('have' / 'none' / 'failed')
+// and is passed through untouched, because "could not be read" is not "absent"
+// and the caller must still be able to tell them apart.
+function cardContactResolvedFrom(factRows, delivered) {
+  var facts = cardContactFactsFrom(factRows);
   var out = {
     email:'', source:'none', legacy:false, addressable:false,
     delivered:delivered, phone:facts.phone,
@@ -8662,6 +8686,8 @@ var PROFILE_SHORTLIST_TEXT = {
   ps_email:['e-mail','e-mail'],
   ps_phone:['Скопировать номер','Copy the number'],
   ps_email_none:['e-mail — нет','e-mail — none'],
+  ps_email_unknown:['e-mail — не удалось получить','e-mail — could not be read'],
+  ps_email_not_usable:['e-mail — письмо не готовится','e-mail — no letter is prepared'],
   ps_phone_none:['Номера нет','No number'],
   ps_attachments:['вложений: {n}','attachments: {n}'],
   ps_attachments_none:['вложений нет','no attachments'],
@@ -8701,6 +8727,25 @@ function profileShortlistRerender() {
 }
 // Called by the profile screen on every render; it loads once per profile and
 // does nothing on the repaints its own loading causes.
+// A decision about this profile's shortlist taken ELSEWHERE — on the candidate
+// card, which is where the owner's button lives — makes the answer this section
+// is holding false. Nothing here polls and nothing here guesses: the cached
+// answer is simply declared stale, and the next `profileShortlistEnsure` asks
+// the server once. The alternative that was in the build until now is the
+// screen printing "nobody has been shortlisted" over a list that holds him.
+function profileShortlistInvalidate(profileId) {
+  var st = state.profileShortlist;
+  if (!st) return;
+  var id = String(profileId == null ? '' : profileId);
+  // Keyed, not a broom: a decision about ANOTHER profile says nothing about the
+  // list this section is showing, and throwing it away would be a second read
+  // bought with nothing.
+  if (!id || st.profileId !== id) return;
+  // The generation is bumped FIRST, so a read already in flight cannot land
+  // after the invalidation and restore the very answer we just declared stale.
+  st.generation++;
+  st.loading = false; st.data = null; st.rows = {}; st.error = null; st.actionError = null;
+}
 function profileShortlistEnsure(profileId) {
   var st = state.profileShortlist;
   var id = String(profileId == null ? '' : profileId);
@@ -8746,14 +8791,14 @@ async function profileShortlistLoadRows(profileId, generation, context) {
   var items = (st.data && Array.isArray(st.data.items)) ? st.data.items : [];
   items.forEach(function(item){
     var key = String(item && item.intake_id);
-    st.rows[key] = { loading:true, error:null, card:null, facts:null };
+    st.rows[key] = { loading:true, error:null, card:null, facts:null, responseContact:null };
   });
   profileShortlistRerender();
   await Promise.all(items.map(async function(item){
     var key = String(item && item.intake_id);
     var row = st.rows[key];
     if (!row) return;
-    var cardResult = null, cardError = null, factsResult = null, factsError = null;
+    var cardResult = null, cardError = null, factsResult = null, factsError = null, contact = null;
     await Promise.all([
       (async function(){
         try { cardResult = await invoke('crewing_intake_candidate_get', Object.assign(pilotExpected(context), { intakeId:key })); }
@@ -8762,32 +8807,60 @@ async function profileShortlistLoadRows(profileId, generation, context) {
       (async function(){
         try { factsResult = await invoke('crewing_intake_fact_list', Object.assign(pilotExpected(context), { intakeId:key })); }
         catch (e) { factsError = e; }
+      })(),
+      // The address the seafarer DELIVERED with his response, read exactly as the
+      // card reads it — same command, same three states, same 404 rule. Without
+      // it this row resolved contacts from the fact map alone and reported "no
+      // e-mail" over an address the card was showing.
+      (async function(){
+        try {
+          var rc = await invoke('crewing_intake_response_contact', Object.assign(pilotExpected(context), { intakeId:key }));
+          var value = (rc && rc.value != null) ? String(rc.value) : '';
+          // A 200 carrying no value is not an address and not an absence either.
+          contact = value
+            ? { state:'have', value:value, isEmail:!!(rc && rc.is_email), offerEmail:!!(rc && rc.offer_email) }
+            : { state:'failed' };
+        } catch (e) {
+          // 404 and ONLY 404 means "this letter carries no response binding".
+          // Everything else is an unknown, and CANON (930) п.1 forbids drawing an
+          // unknown as an absence.
+          var err = (typeof pilotParseError === 'function') ? pilotParseError(e) : null;
+          contact = (err && err.status === 404) ? { state:'none' } : { state:'failed' };
+        }
       })()
     ]);
     if (st.generation !== generation) return;
-    row.card = cardResult; row.facts = factsResult;
+    row.card = cardResult; row.facts = factsResult; row.responseContact = contact;
+    // The delivered contact is NOT folded into row.error: a card and its facts
+    // that loaded fine still make a usable row, and the contact's own failure is
+    // said on the contact's own button.
     row.error = cardError || factsError || null;
     row.loading = false;
   }));
   if (st.generation !== generation) return;
   profileShortlistRerender();
 }
-// The contacts THIS PRODUCT ALREADY HAS, read from the recorded facts. No new
-// channel is invented here: an address goes to the operator's own mail client
-// through `open_mailto`, a number goes to the clipboard this build already uses
-// for the draft, and there is no dialler because this product has none.
+// The contacts THIS PRODUCT ALREADY HAS, resolved by the CARD's own resolver
+// rather than by a second copy of its order — the card's comment says plainly
+// that two copies are how the card and a row come to name two different
+// addressees for one person, and this row WAS the second copy.
+// No new channel is invented here: an address goes to the operator's own mail
+// client through `open_mailto`, a number goes to the clipboard this build
+// already uses for the draft, and there is no dialler because there is none.
 function profileShortlistContacts(row) {
-  var out = { email:'', phone:'' };
-  var items = (row && row.facts && Array.isArray(row.facts.items)) ? row.facts.items : [];
-  for (var i = 0; i < items.length; i++) {
-    var f = items[i];
-    if (!f || !Array.isArray(f.versions) || !f.versions.length) continue;
-    var value = String(f.versions[0] && f.versions[0].value == null ? '' : f.versions[0].value).replace(/^\s+|\s+$/g, '');
-    if (!value) continue;
-    if (String(f.field) === 'contact:email') out.email = value;
-    if (String(f.field) === 'contact:phone') out.phone = value;
-  }
-  return out;
+  var facts = (row && row.facts && Array.isArray(row.facts.items)) ? row.facts.items : [];
+  var delivered = (row && row.responseContact && row.responseContact.state) ? row.responseContact : null;
+  var r = cardContactResolvedFrom(facts, delivered);
+  return {
+    email: r.email,
+    phone: r.phone,
+    // `addressable` is the card's own word: an address that exists and that the
+    // server will NOT offer is shown, never written to, and never called absent.
+    addressable: !!r.addressable,
+    // 'have' | 'none' | 'failed' — three states, because "we could not find out"
+    // and "there is nobody to write to" are different sentences.
+    contactState: delivered ? delivered.state : (r.email ? 'have' : 'none')
+  };
 }
 // The order is the CARD's assigned order (No.623/Б2), reused rather than
 // restated: an operator's correction is a human act and is never overwritten by
@@ -8850,13 +8923,19 @@ function profileShortlistFactsHtml(row) {
 function profileShortlistContactButtonsHtml(intakeId, row) {
   var c = profileShortlistContacts(row);
   var js = '\'' + escapeJsString(String(intakeId)) + '\'';
-  var mailable = c.email && cardCheckedRecipient(c.email);
+  var mailable = c.email && c.addressable && cardCheckedRecipient(c.email);
   // A missing contact is a DARK BUTTON THAT SAYS WHAT IS MISSING. Hiding it
   // would let the operator read "no button" as "not applicable" instead of
   // "nobody gave us a number" (CANON (930) п.1).
+  // Four states, not two. Saying "e-mail — нет" over an address that exists, or
+  // over a question nobody answered, is exactly the lie this section is here to
+  // avoid: the operator would conclude "nobody left an address".
+  var emailDark = c.email
+    ? 'ps_email_not_usable'
+    : (c.contactState === 'failed' ? 'ps_email_unknown' : 'ps_email_none');
   var email = mailable
     ? '<button data-qa="profile-shortlist-email" onclick="profileShortlistEmail(' + js + ')">' + escapeHtml(profileShortlistT('ps_email')) + '</button>'
-    : '<button data-qa="profile-shortlist-email" disabled>' + escapeHtml(profileShortlistT('ps_email_none')) + '</button>';
+    : '<button data-qa="profile-shortlist-email" disabled data-state="' + emailDark + '">' + escapeHtml(profileShortlistT(emailDark)) + '</button>';
   // There is no dialler and no messenger transport in this build, and inventing
   // either is outside this card. What exists is the clipboard, so the button is
   // named for the clipboard: it copies the number. A button called "phone" would
@@ -8995,10 +9074,13 @@ async function profileShortlistRemove(intakeId) { await profileShortlistWrite(in
 async function profileShortlistEmail(intakeId) {
   var st = state.profileShortlist; if (!st) return;
   var row = st.rows[String(intakeId)];
-  var email = profileShortlistContacts(row).email;
+  var c = profileShortlistContacts(row);
+  var email = c.email;
   // The same grammar the card uses, not a second one: an address that Rust would
-  // refuse must not be reported here as a draft that opened.
-  if (!email || !cardCheckedRecipient(email)) return;
+  // refuse must not be reported here as a draft that opened — and an address the
+  // SERVER refuses to offer must not be written to either. That is the second
+  // face of the No.621 anti-loop, the one the server-side check cannot see.
+  if (!email || !c.addressable || !cardCheckedRecipient(email)) return;
   var profile = state.selectedComplianceProfile || {};
   var subject = String(profile.name == null ? '' : profile.name);
   try {

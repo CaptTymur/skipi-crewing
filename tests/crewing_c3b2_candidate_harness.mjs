@@ -3487,7 +3487,7 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
   // both languages and the owner-approved frame prints it that way, so it gets
   // its own assertion below instead of a Cyrillic one it could never satisfy.
   for (const key of ['ps_title', 'ps_counts', 'ps_in_selection', 'ps_on_hold', 'ps_hold_note', 'ps_hold', 'ps_release',
-    'ps_remove', 'ps_phone', 'ps_email_none', 'ps_phone_none',
+    'ps_remove', 'ps_phone', 'ps_email_none', 'ps_email_unknown', 'ps_email_not_usable', 'ps_phone_none',
     'ps_attachments', 'ps_attachments_none', 'ps_copied', 'ps_failed', 'ps_row_failed', 'ps_empty', 'ps_recompare', 'ps_note', 'ps_loading']) {
     const en = psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT(key));
     const ru = psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT(key));
