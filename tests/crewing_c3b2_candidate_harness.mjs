@@ -3188,7 +3188,12 @@ console.log('\n# No.623: the card says who responded');
     }
     for (const key of ['resp_age', 'resp_citizenship', 'resp_experience', 'resp_vessel', 'resp_missing',
       'resp_rank_superseded', 'resp_rank_unavailable', 'resp_rank_absent', 'resp_age_about',
-      'resp_exp_other_rank', 'resp_exp_rank_unknown', 'resp_exp_not_provided', 'identity_failed']) {
+      'resp_exp_other_rank', 'resp_exp_rank_unknown', 'resp_exp_not_provided', 'identity_failed',
+      // No.632/S6: the label that now carries the post. Added to THIS list and
+      // not to a new one: a key that names a person's post in front of a
+      // customer must be under the same RU/EN completeness sensor as its
+      // neighbours, or it ships in one language.
+      'resp_exp_label_rank']) {
       const en = t('en', key); const ru = t('ru', key);
       softOk(en !== key, 'No.623/8: EN text exists for ' + key);
       softOk(ru !== key && ru !== en, 'No.623/8: RU text exists for ' + key + ' and is not the English string');

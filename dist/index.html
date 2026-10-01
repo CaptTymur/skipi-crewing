@@ -7038,7 +7038,7 @@ var PILOT_CARD_TEXT = {
     resp_age:'Age', resp_citizenship:'Citizenship', resp_experience:'Sea time in post', resp_vessel:'Last vessel',
     resp_missing:'not given', resp_age_about:'about {years}',
     resp_span_ym:'{y} yr {m} mo', resp_span_y:'{y} yr', resp_span_m:'{m} mo', resp_span_d:'{d} days',
-    resp_exp_in_rank:'{span} as {rank}', resp_exp_other_rank:'{span} as {rank} \u2014 a different post from the one responded on',
+    resp_exp_label_rank:'Sea time as {rank}', resp_exp_other_rank:'{span} \u2014 a different post from the one responded on',
     resp_exp_rank_unknown:'the post responded on is not known, so no sea time is counted for it',
     resp_exp_not_provided:'no sea time was sent with the response',
     resp_rank_absent:'the profile did not name a post', resp_rank_superseded:'the profile was republished; the post answered was not kept',
@@ -7100,7 +7100,7 @@ var PILOT_CARD_TEXT = {
     resp_age:'Возраст', resp_citizenship:'Гражданство', resp_experience:'Стаж в должности', resp_vessel:'Последнее судно',
     resp_missing:'не указано', resp_age_about:'около {years}',
     resp_span_ym:'{y} г. {m} мес.', resp_span_y:'{y} г.', resp_span_m:'{m} мес.', resp_span_d:'{d} дн.',
-    resp_exp_in_rank:'{span} в должности {rank}', resp_exp_other_rank:'{span} в должности {rank} \u2014 не та, на которую отклик',
+    resp_exp_label_rank:'Стаж в должности {rank}', resp_exp_other_rank:'{span} \u2014 не та, на которую отклик',
     resp_exp_rank_unknown:'должность отклика неизвестна, стаж по ней не посчитан',
     resp_exp_not_provided:'стаж с откликом не прислан',
     resp_rank_absent:'в профиле должность не названа', resp_rank_superseded:'профиль перепубликован; должность на момент отклика не сохранена',
@@ -8407,9 +8407,21 @@ function pilotCardExperienceText(s) {
   var span = pilotCardDurationText(days);
   if (!span) return '';
   var rank = String(s.experience_rank == null ? '' : s.experience_rank).replace(/^\s+|\s+$/g, '');
-  if (!rank) return span;
-  return cardT(state === 'other_rank' ? 'resp_exp_other_rank' : 'resp_exp_in_rank')
-    .replace('{span}', span).replace('{rank}', rank);
+  if (!rank || state !== 'other_rank') return span;
+  // The post is named by the LABEL now (`pilotCardExperienceLabel`), so the
+  // value carries only the figure and, when the days were counted for a
+  // different post, the warning that says so. Saying the post in both halves is
+  // what made one line read «Стаж в должности 9 мес. в должности Bosun».
+  return cardT('resp_exp_other_rank').replace('{span}', span);
+}
+// The label of the sea-time cell, and the ONE place the post is named in that
+// line. The wording is the letter's own `pl_table_seatime` — «Стаж в должности
+// {rank}» / «Sea time as {rank}» — reused rather than copied into a second
+// form, so the card, the row of the profile and the letter say it identically.
+function pilotCardExperienceLabel(s) {
+  var rank = String((s && s.experience_rank) == null ? '' : s.experience_rank).replace(/^\s+|\s+$/g, '');
+  if (!rank) return cardT('resp_experience');
+  return cardT('resp_exp_label_rank').replace('{rank}', rank);
 }
 // An absence is not one sentence. "The seafarer sent no sea time" and "we could
 // not tell which post to count" are different answers, and neither of them is
@@ -8446,7 +8458,7 @@ function pilotCardResponseSummaryHtml(s) {
   var cells = ''
     + pilotCardSummaryCell('age', cardT('resp_age'), pilotCardAgeText(s), cardT('resp_missing'), s.age_precision)
     + pilotCardSummaryCell('citizenship', cardT('resp_citizenship'), pilotCardCitizenshipText(s), cardT('resp_missing'))
-    + pilotCardSummaryCell('experience', cardT('resp_experience'), pilotCardExperienceText(s), pilotCardExperienceMissingText(s))
+    + pilotCardSummaryCell('experience', pilotCardExperienceLabel(s), pilotCardExperienceText(s), pilotCardExperienceMissingText(s))
     + pilotCardSummaryCell('vessel', cardT('resp_vessel'), pilotCardVesselText(s), cardT('resp_missing'));
   // (944): when the post is absent the card says WHY. It NEVER falls back to the
   // profile's current post — a seafarer who answered "Master" was never shown
@@ -8957,17 +8969,30 @@ function profileShortlistFactsHtml(row) {
   // cell is asked for its own value and says so when it has none.
   var s = (row && row.card && row.card.response_summary) ? row.card.response_summary : null;
   var att = profileShortlistAttachmentCount(row);
+  // The cells are INLINE, so without something between them the row reads
+  // «Возраст 38Гражданство Spanish (ES)Стаж …» — which is what five live people
+  // on the stand showed and one did not. The separator is ' · ', the glyph this
+  // product already joins values with (`pilotCardVesselText`), and it is put in
+  // the MARKUP rather than in CSS so that what the operator reads is what a test
+  // can read: a `::before` would be invisible to the harness and to any check of
+  // the text itself. The last cell is conditional, so the parts are joined
+  // rather than concatenated — a separator must never dangle after nothing.
+  var parts = [
+    profileShortlistCell('age', cardT('resp_age'), s ? pilotCardAgeText(s) : '', cardT('resp_missing')),
+    profileShortlistCell('citizenship', cardT('resp_citizenship'), s ? pilotCardCitizenshipText(s) : '', cardT('resp_missing')),
+    profileShortlistCell('experience', s ? pilotCardExperienceLabel(s) : cardT('resp_experience'), s ? pilotCardExperienceText(s) : '',
+        s ? pilotCardExperienceMissingText(s) : cardT('resp_missing')),
+    profileShortlistCell('vessel', cardT('resp_vessel'), s ? pilotCardVesselText(s) : '', cardT('resp_missing'))
+  ];
+  if (att !== null) {
+    parts.push('<span class="ps-cell" data-qa="profile-shortlist-attachments" data-attachments="' + att + '">'
+      + '<span class="' + (att > 0 ? 'ps-v' : 'ps-v miss') + '">'
+      + escapeHtml(att > 0
+          ? profileShortlistT('ps_attachments').replace('{n}', String(att))
+          : profileShortlistT('ps_attachments_none')) + '</span></span>');
+  }
   return '<div class="ps-facts">'
-    + profileShortlistCell('age', cardT('resp_age'), s ? pilotCardAgeText(s) : '', cardT('resp_missing'))
-    + profileShortlistCell('citizenship', cardT('resp_citizenship'), s ? pilotCardCitizenshipText(s) : '', cardT('resp_missing'))
-    + profileShortlistCell('experience', cardT('resp_experience'), s ? pilotCardExperienceText(s) : '',
-        s ? pilotCardExperienceMissingText(s) : cardT('resp_missing'))
-    + profileShortlistCell('vessel', cardT('resp_vessel'), s ? pilotCardVesselText(s) : '', cardT('resp_missing'))
-    + (att === null ? '' : '<span class="ps-cell" data-qa="profile-shortlist-attachments" data-attachments="' + att + '">'
-        + '<span class="' + (att > 0 ? 'ps-v' : 'ps-v miss') + '">'
-        + escapeHtml(att > 0
-            ? profileShortlistT('ps_attachments').replace('{n}', String(att))
-            : profileShortlistT('ps_attachments_none')) + '</span></span>')
+    + parts.join('<span class="ps-sep" aria-hidden="true"> \u00b7 </span>')
     + '</div>';
 }
 function profileShortlistContactButtonsHtml(intakeId, row) {
