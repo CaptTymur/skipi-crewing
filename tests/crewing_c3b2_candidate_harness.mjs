@@ -430,6 +430,17 @@ this.__s632b = {
   ensure: typeof profileShortlistEnsure === 'function' ? profileShortlistEnsure : null,
   invalidate: typeof profileShortlistInvalidate === 'function' ? profileShortlistInvalidate : null,
   confirm: pilotShortlistConfirm, withdraw: pilotShortlistWithdraw,
+};
+this.__s632c = {
+  prepare: typeof profileLetterPrepare === 'function' ? profileLetterPrepare : null,
+  pick: typeof profileLetterPick === 'function' ? profileLetterPick : null,
+  unpick: typeof profileLetterUnpick === 'function' ? profileLetterUnpick : null,
+  setTo: typeof profileLetterSetTo === 'function' ? profileLetterSetTo : null,
+  setBody: typeof profileLetterSetBody === 'function' ? profileLetterSetBody : null,
+  editToggle: typeof profileLetterEditToggle === 'function' ? profileLetterEditToggle : null,
+  compose: typeof profileLetterCompose === 'function' ? profileLetterCompose : null,
+  seaTime: typeof profileLetterSeaTime === 'function' ? profileLetterSeaTime : null,
+  section: typeof profileLetterSectionHtml === 'function' ? profileLetterSectionHtml : null,
 };`, context);
   if (autoload) { context.__s632.profileShortlistLoad(profileId); }
   return context;
@@ -2900,7 +2911,11 @@ console.log('\n# No.623: the card says who responded');
     // The contract is FROZEN: thirteen names, and a fourteenth would be a field
     // about a person that nobody agreed to (card STOP: «поле о человеке сверх шести»).
     const declared = (sumStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
-    softOk(declared === 13, 'No.623/bridge: the summary declares exactly the thirteen frozen names — got ' + declared);
+    // No.632/S5: thirteen plus the three keys of the career map the server now
+    // answers (experience_days_by_rank / _for_rank / _for_rank_state). The count
+    // is kept EXACT rather than loosened to ">= 13", so it still catches a
+    // fourteenth field about a person that nobody agreed to.
+    softOk(declared === 16, 'No.623/bridge: the summary declares exactly the sixteen frozen names — thirteen of No.623 plus the three of the No.632 career map — got ' + declared);
     const headStruct = (rust.match(/pub\(crate\) struct CandidateResponseHeadline \{[\s\S]*?\n\}/) || [''])[0];
     const headDeclared = (headStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
     softOk(headDeclared === 4, 'No.623/bridge: the queue headline declares exactly four — the card shape must not ride the list — got ' + headDeclared);
@@ -3635,6 +3650,477 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
         'No.632/8: the operator\'s recorded fact still outranks the delivered value — the CARD\'s order, reused and not restated');
     } else { softOk(false, 'No.632/8: the recorded fact outranks the delivered value'); }
   }
+}
+
+// ---------------------------------------------------------------------------
+// No.632/5 (OWNER 2026-10-01): the LETTER to the customer.
+//
+// The operator presses one button, the product builds an .eml with the
+// comparison table IN THE BODY and the chosen resumes attached, and the
+// OPERATOR'S OWN mail client opens on it. Crewing sends nothing: OWNER (739)
+// п.5 and the owner's own word of today — "use the existing mechanism for
+// preparing a letter with attachments, WITHOUT server-side sending".
+//
+// Five constraints, each bought by a finding, and each drilled below:
+//   1. sea time is counted for the rank of THIS profile, read out of the career
+//      map by EQUALITY — never the number the candidate's own response carried;
+//   2. an attachment is not a resume: the operator PICKS the file, and a
+//      candidate with no picked file does not go in the letter SILENTLY;
+//   3. a candidate set aside is out of the selection, and his absence is said;
+//   4. there is no customer address in the data — the operator types it, and it
+//      is on screen before the mail client is opened;
+//   5. the signature is the AGENCY's; "Skipi Crewing" as the sender would make
+//      Skipi the sender of the agency's letter.
+// ---------------------------------------------------------------------------
+console.log('# No.632/5: the letter to the customer — prepared, never sent');
+{
+  // ---- the fixture: one profile for Master / Crude Oil Tanker, five people
+  //
+  // The career maps are the point of the fixture, so each one is a different
+  // sentence the letter has to be able to say:
+  //   L1 Master in the map AND responded as Master      -> the number
+  //   L2 responded as Chief Officer, Master in the map  -> the MASTER number
+  //   L3 Master NOT in the map                          -> "not stated", and
+  //                                                        NOT the response pair
+  //   L4 Master present as a MEASURED ZERO              -> a zero, not "not stated"
+  //   L5 lowercase 'master' only                        -> "not stated" (No.622 shut)
+  //   L6 set aside                                      -> out of the selection
+  //   L7 the two numbers for Master DISAGREE            -> no number at all
+  //   L8 no attachments at all                          -> no resume to pick
+  function makeLetterServer() {
+    const card = (id, name, surname, extra, attachments) => ({
+      intake_id: id, receipt_id: 'r-' + id, crewing_id: 'crew-synthetic', source: 'response', source_id: 's-' + id,
+      event_id: 'e-' + id, primary_profile_id: null, content_sha256: 'x', content_bytes: 10,
+      content_type: 'application/pdf', state: 'ranked', source_trust: 'unverified', version: 1,
+      created_at: '2026-10-01T04:00:00', issued_at: '2026-10-01T04:00:00', objects: [],
+      attachments: attachments === undefined
+        ? [{ ordinal: 0, filename: name + '_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 1200, verdict: 'accepted', reason: 'clean', eligible: true }]
+        : attachments,
+      summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+      response_summary: Object.assign({
+        rank: 'Master', rank_state: 'from_snapshot', first_name: name, surname: surname,
+        age_years: 43, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+        experience_rank: 'Master', experience_days: 520, experience_state: 'matches_response_rank',
+        experience_days_by_rank: { Master: 520 }, experience_days_for_rank: 520,
+        experience_days_for_rank_state: 'from_map',
+        last_vessel_name: 'MT Odesa Dawn', last_vessel_sign_off: '2026-07-01',
+      }, extra || {}),
+    });
+    const items = [
+      { intake_id: 'L1', on_hold: false, in_selection: true },
+      { intake_id: 'L2', on_hold: false, in_selection: true },
+      { intake_id: 'L3', on_hold: false, in_selection: true },
+      { intake_id: 'L4', on_hold: false, in_selection: true },
+      { intake_id: 'L5', on_hold: false, in_selection: true },
+      { intake_id: 'L6', on_hold: true, in_selection: false },
+      { intake_id: 'L7', on_hold: false, in_selection: true },
+      { intake_id: 'L8', on_hold: false, in_selection: true },
+    ].map((row, index) => ({
+      id: 'dec-' + row.intake_id, intake_id: row.intake_id, profile_version: 2,
+      confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:0' + index + ':00',
+      on_hold: row.on_hold, held_by: row.on_hold ? 'user-op-1' : null,
+      held_at: row.on_hold ? '2026-10-01T06:00:00' : null,
+      in_selection: row.in_selection, needs_recompare: false,
+    }));
+    return {
+      user: 'user-op-1', profileVersion: 2, profileState: 'active', items,
+      // what the opener did, and what the .eml was asked to carry
+      prepared: [], downloads: [], openerFails: false, downloadFails: {},
+      cards: {
+        L1: card('L1', 'Ivan', 'Petrenko'),
+        L2: card('L2', 'Petro', 'Shevchuk', {
+          rank: 'Chief Officer', experience_rank: 'Chief Officer', experience_days: 999,
+          experience_state: 'matches_response_rank',
+          experience_days_by_rank: { Master: 365, 'Chief Officer': 999 },
+          experience_days_for_rank: 999, experience_days_for_rank_state: 'from_map',
+        }),
+        L3: card('L3', 'Mykola', 'Kravets', {
+          rank: 'Chief Officer', experience_rank: 'Chief Officer', experience_days: 888,
+          experience_days_by_rank: { 'Chief Officer': 888 },
+          experience_days_for_rank: 888, experience_days_for_rank_state: 'from_map',
+        }),
+        L4: card('L4', 'Taras', 'Bondar', {
+          experience_days: 0, experience_days_by_rank: { Master: 0 },
+          experience_days_for_rank: 0, experience_days_for_rank_state: 'from_map',
+        }),
+        L5: card('L5', 'Yurii', 'Lysenko', {
+          experience_days_by_rank: { master: 700 },
+          experience_days_for_rank: null, experience_days_for_rank_state: 'rank_not_in_map',
+        }),
+        L6: card('L6', 'Oleh', 'Marchenko'),
+        L7: card('L7', 'Dmytro', 'Sydorenko', {
+          experience_days: 548, experience_days_by_rank: { Master: 365 },
+          experience_days_for_rank: null,
+          experience_days_for_rank_state: 'disagrees_with_response_pair',
+        }),
+        L8: card('L8', 'Serhii', 'Tkachuk', undefined, []),
+      },
+      facts: {},
+      reject(status, detail) { return { kind: 'server', status, detail }; },
+      handle(command, args) {
+        const b = this;
+        switch (command) {
+          case 'crewing_intake_profile_shortlist': {
+            if (args.profileId !== 'prof-A') throw b.reject(404, 'matching profile not found');
+            return {
+              profile_id: 'prof-A', profile_version: b.profileVersion, profile_state: b.profileState,
+              items: b.items.map((i) => ({ ...i })),
+              counts: {
+                selected: b.items.length,
+                in_selection: b.items.filter((i) => i.in_selection).length,
+                on_hold: b.items.filter((i) => i.on_hold).length,
+              },
+            };
+          }
+          case 'crewing_intake_candidate_get': {
+            const found = b.cards[args.intakeId];
+            if (!found) throw b.reject(500, null);
+            return JSON.parse(JSON.stringify(found));
+          }
+          case 'crewing_intake_fact_list': return { items: (b.facts[args.intakeId] || []).map((r) => ({ ...r })) };
+          case 'crewing_intake_response_contact': throw b.reject(404, 'candidate intake not found');
+          case 'crewing_intake_attachment_download': {
+            if (b.downloadFails[args.intakeId]) throw b.reject(404, 'not_found');
+            b.downloads.push({ intakeId: args.intakeId, ordinal: args.ordinal });
+            return { path: '/home/op/Downloads/Skipi/Crewing/' + args.intakeId + '/attachment-' + args.ordinal + '.pdf', bytes: 1200, sha256: 'deadbeef' };
+          }
+          case 'crewing_customer_letter_prepare': {
+            b.prepared.push(JSON.parse(JSON.stringify(args)));
+            if (b.openerFails) {
+              return { path: '/home/op/Downloads/Skipi/Crewing/Letters/letter.eml', bytes: 4096, sha256: 'ab', opened: false, open_error: 'cannot_open_file' };
+            }
+            return { path: '/home/op/Downloads/Skipi/Crewing/Letters/letter.eml', bytes: 4096, sha256: 'ab', opened: true, open_error: null };
+          }
+          case 'open_mailto': return null;
+          default: throw new Error(`unexpected invoke ${command}`);
+        }
+      },
+    };
+  }
+
+  async function letterContext(opts = {}) {
+    const server = opts.server || makeLetterServer();
+    const ctx = makeProfileContext({
+      server,
+      language: opts.language || 'ru',
+      profileId: 'prof-A',
+    });
+    // the profile the letter is FOR: its rank is what the sea-time column counts
+    ctx.state.selectedComplianceProfile = Object.assign({
+      id: 'prof-A', name: 'Master — Crude Oil Tanker', version: 2, status: 'active',
+      rank: 'Master', vessel_type: 'Crude Oil Tanker',
+    }, opts.profile || {});
+    ctx.state.settings.company_name = opts.company === undefined ? 'Marlow Crewing Ltd' : opts.company;
+    if (opts.webShell) ctx.window.__SKIPI_WEB_SHELL__ = true;
+    await flush();
+    // the host is re-rendered so the letter block sees the profile fields above
+    psafeL(() => ctx.__s632.profileShortlistRerender());
+    return ctx;
+  }
+  const psafeL = (fn) => { try { const v = fn(); return v === undefined ? false : v; } catch (e) { return false; } };
+  const lhtml = (c) => (c ? c.nodes.get('profile-shortlist-host').innerHTML : '');
+  const lfn = (c, name) => (c && c.__s632c ? c.__s632c[name] : null);
+  const segment = (c, qa, key, attr = 'data-intake') => lhtml(c).split(`data-qa="${qa}"`).slice(1)
+    .find((part) => part.startsWith(` ${attr}="${key}"`)) || null;
+  const bodyText = (c) => {
+    const m = /data-qa="profile-letter-body"[^>]*>([\s\S]*?)<\/pre>/.exec(lhtml(c));
+    return m ? m[1] : '';
+  };
+  // Picking a resume is the operator's explicit act; this is that act, for the
+  // people the test wants in the letter.
+  async function pick(c, ids) {
+    for (const id of ids) {
+      const fn = lfn(c, 'pick');
+      if (!fn) return false;
+      await psafeL(() => fn(id, 0));
+      await flush();
+    }
+    return true;
+  }
+  async function typeAddress(c, value) {
+    const fn = lfn(c, 'setTo');
+    if (!fn) return false;
+    await psafeL(() => fn(value));
+    await flush();
+    return true;
+  }
+
+  let L = null;
+  try { L = await letterContext(); } catch (e) { L = null; }
+
+  // ---- 5.1 the block exists, and it is a PREPARATION, not a send ----------
+  softOk(psafeL(() => /data-qa="profile-letter"/.test(lhtml(L))),
+    'No.632/5.1: the profile screen carries the "prepare a letter for the customer" block');
+  softOk(psafeL(() => typeof lfn(L, 'prepare') === 'function'),
+    'No.632/5.1: preparing the letter is a function of the block, reachable from the screen');
+  // The owner's word, as a sensor: the button says what it DOES.
+  softOk(psafeL(() => {
+    const m = /data-qa="profile-letter-prepare"[^>]*>([^<]*)</.exec(lhtml(L));
+    return !!m && /Подготовить письмо/.test(m[1]);
+  }), 'No.632/5.1: the button is called "Подготовить письмо" — not "Отправить", because the operator sends it');
+  softOk(psafeL(() => /data-qa="profile-letter-prepare"/.test(lhtml(L)) && !/Отправить заказчику/.test(lhtml(L))),
+    'No.632/5.1: nothing on the screen promises that Crewing sends the letter — calibrated: the button must be RENDERED, so an empty host cannot pass this');
+  softOk(s632Source !== '' && !/invoke\(\s*['"]send_mail['"]/.test(s632Source),
+    'No.632/5.1 (PRESERVE sentinel, green on the base too): the block never calls send_mail — the door the owner closed stays closed');
+  softOk(s632Source !== '' && !/smtp|sendmail|mail_accounts/i.test(s632Source),
+    'No.632/5.1 (PRESERVE sentinel, green on the base too): and it names no server-side mail transport at all');
+
+  // ---- 5.2 the address: it is not in the data, so the operator types it ----
+  softOk(psafeL(() => /data-qa="profile-letter-to"/.test(lhtml(L))),
+    'No.632/5.2: there is a field for the customer address — the profile carries only a NAME, never an address');
+  softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(L))),
+    'No.632/5.2: with no address typed the button is dark — calibrated below by the same button going live');
+  softOk(psafeL(() => {
+    const m = /data-qa="profile-letter-to-state"[^>]*>([^<]*)</.exec(lhtml(L));
+    return !!m && m[1].trim() !== '';
+  }), 'No.632/5.2: and it SAYS what is missing instead of being silently unusable');
+  if (L) {
+    await typeAddress(L, 'not-an-address');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(L))),
+      'No.632/5.2: an address the mail client would refuse keeps the button dark');
+    await typeAddress(L, 'crewing@oceanic.example.com');
+    softOk(psafeL(() => /data-qa="profile-letter-to"[^>]*value="crewing@oceanic\.example\.com"/.test(lhtml(L))),
+      'No.632/5.2: the typed address is ON SCREEN before any mail client is opened');
+  } else { softOk(false, 'No.632/5.2: address refusal'); softOk(false, 'No.632/5.2: address visible'); }
+
+  // ---- 5.3 the resume is PICKED. An attachment is not a resume ------------
+  softOk(psafeL(() => !!segment(L, 'profile-letter-pick-row', 'L1')),
+    'No.632/5.3: every candidate in the selection offers his files for the operator to pick the resume from');
+  softOk(psafeL(() => /data-qa="profile-letter-pick"[^>]*data-ordinal="0"/.test(segment(L, 'profile-letter-pick-row', 'L1') || '')),
+    'No.632/5.3: the pick names the FILE, by the ordinal the byte route is asked for');
+  softOk(s632Source !== '' && !/classif|recognis|recognize|detect_cv|is_resume/i.test(s632Source),
+    'No.632/5.3: no resume recogniser is introduced — the choice is the operator\'s (owner\'s word of 2026-10-01)');
+  if (L) {
+    const before = L.server.downloads.length;
+    await pick(L, ['L1']);
+    softOk(L.server.downloads.length === before + 1 && L.server.downloads.slice(-1)[0].intakeId === 'L1',
+      'No.632/5.3: picking a file fetches THOSE bytes through the existing audited byte route, not a new channel');
+    softOk(psafeL(() => /data-qa="profile-letter-file"[^>]*data-intake="L1"/.test(lhtml(L))),
+      'No.632/5.3: and the picked file is listed as an attachment of the letter, before it is built');
+  } else { softOk(false, 'No.632/5.3: pick downloads'); softOk(false, 'No.632/5.3: pick listed'); }
+
+  // ---- 5.4 who is IN the letter, and who is NAMED as out -----------------
+  if (L) {
+    await pick(L, ['L2', 'L3', 'L4', 'L5', 'L7']);
+    // L6 is set aside, L8 has no file at all, and nobody picked a file for them
+    const inLetter = (id) => !!segment(L, 'profile-letter-file', id);
+    softOk(['L1', 'L2', 'L3', 'L4', 'L5', 'L7'].every(inLetter),
+      'No.632/5.4: the people with a picked resume are in the letter');
+    softOk(inLetter('L1') && !inLetter('L6'),
+      'No.632/5.4: the candidate SET ASIDE is not in the letter while the others ARE — in_selection is the server\'s predicate and the screen keeps no second copy of it (calibrated: a letter with nobody in it cannot pass this)');
+    softOk(psafeL(() => (segment(L, 'profile-letter-excluded-item', 'L6') || '').length > 0),
+      'No.632/5.4: and he is NAMED as left out, with the reason — not silently missing');
+    softOk(psafeL(() => /data-reason="on_hold"/.test(segment(L, 'profile-letter-excluded-item', 'L6') || '')),
+      'No.632/5.4: the reason given for him is that he was set aside');
+    softOk(!inLetter('L8') && psafeL(() => /data-reason="no_attachments"/.test(segment(L, 'profile-letter-excluded-item', 'L8') || '')),
+      'No.632/5.4: a candidate with no files at all is left out AND the screen says it is files he lacks');
+    // the whole point of the owner's sentence: a missing resume is never silent
+    const noPick = await letterContext();
+    await typeAddress(noPick, 'crewing@oceanic.example.com');
+    softOk(psafeL(() => /data-reason="no_resume_picked"/.test(segment(noPick, 'profile-letter-excluded-item', 'L1') || '')),
+      'No.632/5.4: a candidate whose resume nobody picked is left out and SAID so — "не вошли и почему", not a quiet drop');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(noPick))),
+      'No.632/5.4: and with nobody left to send, the button is dark rather than building an empty letter');
+    softOk(psafeL(() => {
+      const m = /data-qa="profile-letter-counts"[^>]*>([^<]*)</.exec(lhtml(L));
+      return !!m && /6/.test(m[1]);
+    }), 'No.632/5.4: the count of candidates in the letter is shown and equals the files that will be attached');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.4: selection membership (context absent)');
+  }
+
+  // ---- 5.5 SEA TIME: the rank of THIS profile, by equality ---------------
+  // The costliest cell in the letter: a number counted for another post, sent
+  // to a third party over the agency's name.
+  if (L) {
+    const b = bodyText(L);
+    softOk(/Стаж в должности Master/.test(b),
+      'No.632/5.5: the column NAMES the post it counts — the post of THIS profile');
+    softOk(/1 г\. 5 мес\./.test(b) && !/520/.test(b),
+      'No.632/5.5: the figure is rendered by the card\'s own duration helper (1 г. 5 мес.) and the raw day count never appears');
+    // L2 responded as Chief Officer with 999 days; the map says Master = 365
+    const l2 = /Petro Shevchuk[^\n]*/.exec(b);
+    softOk(!!l2 && /1 г\./.test(l2[0]) && !/999/.test(l2[0]) && !/2 г\./.test(l2[0]),
+      'No.632/5.5: a candidate who responded for ANOTHER post gets the number of THIS post out of the map — never his response figure');
+    // L3 has no Master key at all
+    const l3 = /Mykola Kravets[^\n]*/.exec(b);
+    softOk(!!l3 && /не указано/.test(l3[0]) && !/888/.test(l3[0]) && !/2 г\./.test(l3[0]),
+      'No.632/5.5: a post the map does not name is "не указано" — and the response pair is NOT borrowed for it');
+    // L4 is a measured zero
+    const l4 = /Taras Bondar[^\n]*/.exec(b);
+    softOk(!!l4 && !/не указано/.test(l4[0]) && /0/.test(l4[0]),
+      'No.632/5.5: a MEASURED zero is a zero, not "не указано" — `days || "не указано"` is the bug this forbids');
+    // L5 has only a lowercase spelling: No.622 is not open here
+    const l5 = /Yurii Lysenko[^\n]*/.exec(b);
+    softOk(!!l5 && /не указано/.test(l5[0]) && !/700/.test(l5[0]),
+      'No.632/5.5: spelling is compared by EQUALITY — "master" is not "Master" (No.622 is not opened here)');
+    // L7: two numbers that disagree are not a number
+    const l7 = /Dmytro Sydorenko[^\n]*/.exec(b);
+    softOk(!!l7 && !/365/.test(l7[0]) && !/548/.test(l7[0]) && !/1 г\./.test(l7[0]),
+      'No.632/5.5: when the two figures for this post DISAGREE the letter carries neither of them');
+    softOk(psafeL(() => /data-state="disagrees_with_response_pair"/.test(segment(L, 'profile-letter-pick-row', 'L7') || '')),
+      'No.632/5.5: and the operator is told WHY that cell is empty, beside the decision (CANON (930) п.1)');
+    softOk(psafeL(() => /data-qa="profile-letter-seatime"[^>]*data-intake="L3"[^>]*data-state="rank_not_in_map"/.test(lhtml(L))),
+      'No.632/5.5: each cell carries the state it was resolved from, so an absence is never mistaken for a zero');
+  } else {
+    for (let i = 0; i < 9; i += 1) softOk(false, 'No.632/5.5: sea time (context absent)');
+  }
+
+  // ---- 5.6 the body: the owner's own text, the table IN it, agency sign ---
+  if (L) {
+    const b = bodyText(L);
+    softOk(/заказчик/i.test(b), 'No.632/5.6: the letter greets the customer, in the owner\'s own words');
+    softOk(/Crude Oil Tanker/.test(b) && /Master/.test(b),
+      'No.632/5.6: it names the order — the post and the vessel type of this profile');
+    softOk(/Кандидат/.test(b) && /Возраст/.test(b) && /Гражданство/.test(b) && /Последнее судно/.test(b),
+      'No.632/5.6: the comparison TABLE is in the body of the letter — the customer sees the comparison at once');
+    softOk(/Ivan Petrenko/.test(b) && /43/.test(b) && /Ukrainian/.test(b) && /MT Odesa Dawn/.test(b),
+      'No.632/5.6: with the basic data of each candidate the owner asked for');
+    softOk(/Marlow Crewing Ltd/.test(b),
+      'No.632/5.6: the letter is signed by the AGENCY — it is the agency that sends it from its own client');
+    softOk(/Marlow Crewing Ltd/.test(b) && !/Skipi/.test(b),
+      'No.632/5.6: and never by Skipi — calibrated against the agency name actually standing there: a Skipi signature would make Skipi the sender of the agency\'s letter');
+    const noCompany = await letterContext({ company: '' });
+    await typeAddress(noCompany, 'crewing@oceanic.example.com');
+    await pick(noCompany, ['L1']);
+    softOk(psafeL(() => /заказчик/i.test(bodyText(noCompany)) && !/Skipi/.test(bodyText(noCompany))),
+      'No.632/5.6: with no agency name recorded the signature is ABSENT, never substituted by ours — calibrated: the letter itself must have been composed');
+    softOk(psafeL(() => /data-qa="profile-letter-company-missing"/.test(lhtml(noCompany))),
+      'No.632/5.6: and the operator is told the agency name is not set, where he can fix it');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.6: letter body (context absent)');
+  }
+
+  // ---- 5.7 ONE composer: what is previewed is what is handed to the bridge -
+  if (L) {
+    const previewed = bodyText(L);
+    const before = L.server.prepared.length;
+    await psafeL(() => lfn(L, 'prepare')());
+    await flush(); await flush();
+    const call = L.server.prepared.slice(-1)[0] || null;
+    softOk(L.server.prepared.length === before + 1,
+      'No.632/5.7: pressing the button prepares exactly ONE letter');
+    softOk(!!call && String((call.intent || {}).to || call.to || '') === 'crewing@oceanic.example.com',
+      'No.632/5.7: and it is addressed to what the operator typed and saw');
+    const sent = call ? String((call.intent || {}).body || call.body || '') : '';
+    const decoded = previewed.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    softOk(sent !== '' && sent === decoded,
+      'No.632/5.7: the body handed to the bridge is the body on screen, character for character — one composer, not two');
+    const files = call ? ((call.intent || {}).attachments || call.attachments || []) : [];
+    softOk(Array.isArray(files) && files.length === 6,
+      'No.632/5.7: exactly the picked resumes are attached — the screen says six and the envelope carries six');
+    softOk(Array.isArray(files) && files.length === 6 && files.every((f) => /^\/home\/op\/Downloads\/Skipi\/Crewing\//.test(String(f.path || f))),
+      'No.632/5.7: and every attachment is a file this app itself saved, by the path the byte route returned (calibrated on the count: `every` over an empty list proves nothing)');
+    softOk(Array.isArray(files) && files.length === 6
+      && files.every((f) => /\.pdf$/i.test(String(f.name || '')) && !/^attachment-/.test(String(f.name || '')))
+      && new Set(files.map((f) => String(f.name || ''))).size === 6,
+      'No.632/5.7: the attachment reaching the customer is NAMED for its candidate, and the six names are SIX — not "attachment-0.pdf" six times over');
+    softOk(L.server.prepared.length === before + 1 && !L.calls.some((c) => c.command === 'send_mail'),
+      'No.632/5.7: nothing was SENT though a letter WAS prepared — the whole chain carries no send_mail (calibrated on the preparation having happened)');
+    softOk(psafeL(() => /data-qa="profile-letter-result"/.test(lhtml(L))),
+      'No.632/5.7: and the screen says where the draft is, so the operator can find it in his client');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.7: one composer (context absent)');
+  }
+
+  // ---- 5.8 failures are LOUD: the opener, and the bytes -------------------
+  {
+    const failing = await letterContext();
+    if (failing) failing.server.openerFails = true;
+    await typeAddress(failing, 'crewing@oceanic.example.com');
+    await pick(failing, ['L1']);
+    await psafeL(() => lfn(failing, 'prepare')());
+    await flush(); await flush();
+    softOk(psafeL(() => /data-qa="profile-letter-error"/.test(lhtml(failing))),
+      'No.632/5.8: a mail client that did not open is SAID, never swallowed (the one honest defect of the Seafarer original)');
+    softOk(psafeL(() => /letter\.eml/.test(lhtml(failing))),
+      'No.632/5.8: and the file that WAS written is named, so the work is not lost with the failure');
+    const noBytes = await letterContext();
+    if (noBytes) noBytes.server.downloadFails = { L1: true };
+    await typeAddress(noBytes, 'crewing@oceanic.example.com');
+    await pick(noBytes, ['L1']);
+    if (noBytes) { await pick(noBytes, ['L2']); }
+    softOk(psafeL(() => !!segment(noBytes, 'profile-letter-file', 'L2') && !segment(noBytes, 'profile-letter-file', 'L1')),
+      'No.632/5.8: a resume whose bytes could not be fetched is NOT attached, while his neighbour\'s IS — calibrated, so an empty attachment list cannot pass');
+    softOk(psafeL(() => /data-reason="no_resume_picked"|data-reason="bytes_failed"/.test(segment(noBytes, 'profile-letter-excluded-item', 'L1') || '')),
+      'No.632/5.8: and that candidate is named among those left out, with his own reason');
+    softOk(psafeL(() => /data-qa="profile-letter-pick-error"[^>]*data-intake="L1"/.test(lhtml(noBytes))),
+      'No.632/5.8: the failure is shown on his own row too, not only in the summary');
+  }
+
+  // ---- 5.9 the shell and the archived vacancy ----------------------------
+  {
+    const web = await letterContext({ webShell: true });
+    softOk(psafeL(() => /data-qa="profile-letter-web-note"/.test(lhtml(web))),
+      'No.632/5.9: in the browser shell, where this app cannot write files, the block says so');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(web))),
+      'No.632/5.9: and offers no button that could not work there');
+    const archived = await letterContext();
+    if (archived) { archived.server.profileState = 'archived'; await psafeL(() => archived.__s632.profileShortlistLoad('prof-A')); await flush(); await flush(); }
+    softOk(psafeL(() => /data-qa="profile-letter-archived"/.test(lhtml(archived))),
+      'No.632/5.9: an ARCHIVED vacancy is flagged beside the button — the operator decides, but he is not kept in the dark');
+  }
+
+  // ---- 5.10 RU and EN, both complete -------------------------------------
+  {
+    const keys = ['pl_title', 'pl_to', 'pl_to_empty', 'pl_to_bad', 'pl_subject', 'pl_greeting', 'pl_order',
+      'pl_table_candidate', 'pl_table_age', 'pl_table_citizenship', 'pl_table_seatime', 'pl_table_vessel',
+      'pl_attached_note', 'pl_sign', 'pl_prepare', 'pl_edit', 'pl_edit_done', 'pl_counts', 'pl_excluded',
+      'pl_reason_on_hold', 'pl_reason_no_resume', 'pl_reason_no_attachments', 'pl_reason_bytes', 'pl_reason_row_failed',
+      'pl_pick', 'pl_picked', 'pl_unpick', 'pl_not_stated', 'pl_result', 'pl_open_failed', 'pl_company_missing',
+      'pl_archived', 'pl_web_note', 'pl_empty', 'pl_seatime_reason'];
+    const ru = (key) => psafeL(() => { L.getUiLang = () => 'ru'; return L.__s632.profileShortlistT(key); });
+    const en = (key) => psafeL(() => { L.getUiLang = () => 'en'; return L.__s632.profileShortlistT(key); });
+    for (const key of keys) {
+      const r = ru(key); const e = en(key);
+      softOk(e && e !== key, `No.632/5.10: EN text exists for ${key}`);
+      softOk(r && r !== key && r !== e && /[Ѐ-ӿ]/.test(r), `No.632/5.10: RU text exists for ${key} and is actually Russian`);
+    }
+    // a slot that is not substituted in one language is how a count turns back
+    // into a word
+    for (const key of ['pl_counts', 'pl_subject', 'pl_order']) {
+      const r = ru(key); const e = en(key);
+      softOk(/\{/.test(String(r)) && /\{/.test(String(e)), `No.632/5.10: both languages of ${key} carry their slots`);
+    }
+    if (L) L.getUiLang = () => 'ru';
+  }
+
+  // ---- 5.11 the bridge: the three map keys, the guard, the loud opener ----
+  //
+  // Scoped to the bodies of the new functions on purpose: `base64`, `saved_root`
+  // and `let _ =` all already exist in this module, so a file-wide search would
+  // be green over a letter builder that does none of it.
+  const rbody = (signature) => {
+    const m = new RegExp(`fn ${signature}\\(([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  const letterFn = rbody('crewing_customer_letter_prepare');
+  const letterBuild = rbody('build_letter_eml');
+  const letterWith = rbody('prepare_letter_with');
+  for (const field of ['experience_days_by_rank', 'experience_days_for_rank', 'experience_days_for_rank_state']) {
+    softOk(new RegExp(`pub ${field}:`).test(rust),
+      `No.632/5.11: the bridge DECLARES ${field} — an undeclared key is dropped by serde on the way to the webview`);
+  }
+  softOk(/pub\(crate\) async fn crewing_customer_letter_prepare\(/.test(rust),
+    'No.632/5.11: preparing the .eml is a fixed native command');
+  softOk(/crewing_intake::crewing_customer_letter_prepare,/.test(lib),
+    'No.632/5.11: and it is registered in the Tauri handler');
+  softOk(letterBuild !== '' || letterWith !== '',
+    'No.632/5.11: the .eml is built by a function of its own, so a unit test can hold it without a Tauri runtime');
+  softOk(/resolved_saved_path\(/.test(letterWith + letterBuild + letterFn),
+    'No.632/5.11: every attachment path is resolved INSIDE Downloads/Skipi/Crewing — this is not a "mail any file on this machine" command');
+  softOk(/checked_recipient\(/.test(letterWith + letterBuild + letterFn),
+    'No.632/5.11: the recipient passes the strict addr-spec check before a single header is written');
+  softOk(/BASE64_STANDARD|base64/.test(letterBuild),
+    'No.632/5.11: attachments are carried base64, as the Seafarer original does — mailto cannot carry a file');
+  softOk(letterWith !== '' && !/let _ = /.test(letterWith),
+    'No.632/5.11: the opener result is NOT discarded — the Seafarer original swallows it (`let _ = spawn()`) and that is the defect named in review');
+  softOk(/opened/.test(rust) && /pub opened:/.test(rust),
+    'No.632/5.11: whether the client actually opened is carried BACK to the screen as a field, not assumed');
+  softOk(/opener/.test(letterWith),
+    'No.632/5.11: the guard is separated from the opener, so a drill can measure it with the side effect STUBBED');
+  softOk(!/send_mail|smtp|sendmail/i.test(rust),
+    'No.632/5.11 (PRESERVE sentinel, green on the base too): this module still knows nothing about sending');
 }
 
 console.log('\n# control matrix');

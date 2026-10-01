@@ -1688,6 +1688,9 @@ mod tests {
                 "age_precision":"exact","citizenship":"Ukraine","citizenship_code":"UA",
                 "experience_rank":"Master","experience_days":1170,
                 "experience_state":"matches_response_rank",
+                "experience_days_by_rank":{"Master":1170,"Bosun":300},
+                "experience_days_for_rank":1170,
+                "experience_days_for_rank_state":"from_map",
                 "last_vessel_name":"MV Southern Cross","last_vessel_sign_off":"2026-03-14"}}"#
             .to_string()
     }
@@ -1854,7 +1857,13 @@ mod tests {
         assert_eq!(summary.last_vessel_name.as_deref(), Some("MV Southern Cross"));
         assert_eq!(summary.last_vessel_sign_off.as_deref(), Some("2026-03-14"));
 
-        // and the round trip: what the webview is handed still has all thirteen
+        // and the round trip: what the webview is handed still has all sixteen.
+        //
+        // No.632/S5 added the last three. They are asserted HERE, through the
+        // round trip, and not only by reading the struct: the letter needs the
+        // career map, and a key this struct does not declare is dropped by serde
+        // on the way to the webview without an error, without a warning, and
+        // with every renderer test still green over it (the No.622 class).
         let back = serde_json::to_string(&card).unwrap();
         for key in [
             "rank",
@@ -1868,6 +1877,9 @@ mod tests {
             "experience_rank",
             "experience_days",
             "experience_state",
+            "experience_days_by_rank",
+            "experience_days_for_rank",
+            "experience_days_for_rank_state",
             "last_vessel_name",
             "last_vessel_sign_off",
         ] {
