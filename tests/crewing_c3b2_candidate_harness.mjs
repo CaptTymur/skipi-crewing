@@ -3268,6 +3268,7 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
     .find((part) => part.startsWith(` data-intake="${intakeId}"`)) || null;
   const prow = (intakeId) => prowOf(pctx, intakeId);
   const pcalls = () => (pctx ? pctx.calls : []);
+  const refusingState = (c) => (c ? c.__s632.profileShortlistStateFor('prof-A') : null);
 
   softOk(psafe(() => /data-qa="profile-shortlist"/.test(phtml())), 'No.632/4: the profile renders a shortlist section');
   softOk(psafe(() => pcalls().some((c) => c.command === 'crewing_intake_profile_shortlist' && c.args.profileId === 'prof-A')),
@@ -3279,6 +3280,29 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
     return !!m && /4/.test(m[1]) && /3/.test(m[1]);
   }), 'No.632/4: and they are the SERVER\'s three numbers, not a recount on the screen');
   softOk(psafe(() => ['intake-1', 'intake-2', 'intake-3', 'intake-4'].every((id) => prow(id))), 'No.632/4: every shortlisted candidate has a row');
+  // The fixture above makes the server's counts AGREE with what a naive recount
+  // of the rows would produce, so it cannot tell the two apart. This one makes
+  // them disagree on purpose: `in_selection` is the one predicate the letter
+  // will use, and a screen that recounts is a SECOND place where "who goes to
+  // the customer" is decided — which is how a screen comes to say three while an
+  // envelope carries four.
+  {
+    let divergent = null;
+    try {
+      const inner = makeProfileServer();
+      const passthrough = inner.handle.bind(inner);
+      inner.handle = (command, args) => {
+        const answer = passthrough(command, args);
+        if (command === 'crewing_intake_profile_shortlist') answer.counts = { selected: 7, in_selection: 5, on_hold: 2 };
+        return answer;
+      };
+      divergent = makeProfileContext({ server: inner }); await flush();
+    } catch (e) { divergent = null; }
+    softOk(psafe(() => {
+      const m = /data-qa="profile-shortlist-counts"[^>]*>([^<]*)</.exec(phtml(divergent));
+      return !!m && /7/.test(m[1]) && /5/.test(m[1]) && !/\b4\b/.test(m[1]);
+    }), 'No.632/4: the counts shown are the SERVER\'s even when they disagree with the rows on screen — the screen does not keep a second copy of that rule');
+  }
 
   // the six facts of a row, through the SAME helpers No.623 built
   softOk(psafe(() => /Ivan Petrenko/.test(prow('intake-1'))), 'No.632/4: the row names the person');
@@ -3398,6 +3422,13 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
       'No.632/5: and it shows not one row of anybody — calibrated: the section must have rendered its error, so a blank host cannot pass');
     softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing)) && !/data-qa="profile-shortlist-empty"/.test(phtml(failing))),
       'No.632/5: a list that could not be read is NEVER rendered as an empty shortlist — calibrated against the rendered error');
+    // TWO guards stand between a failed read and the words "nobody is on this
+    // list": the renderer puts the error branch first, AND the state keeps no
+    // list at all. A drill that only removes one is held up by the other and
+    // proves the survivor — so the second guard is asserted on the STATE, where
+    // the renderer cannot cover for it.
+    softOk(psafe(() => refusingState(failing).data === null),
+      'No.632/5: and the state holds NO list after a failed read — the second guard, drilled apart from the first');
     // calibration: an empty list IS rendered as empty, so the check above is
     // about the failure and not about the renderer being silent in general.
     let emptyCtx = null;
