@@ -8660,25 +8660,23 @@ var PROFILE_SHORTLIST_TEXT = {
   ps_release:['Вернуть в подборку','Bring back'],
   ps_remove:['Убрать из профиля','Remove from the profile'],
   ps_email:['e-mail','e-mail'],
-  ps_phone:['телефон','phone'],
-  ps_messenger:['мессенджер','messenger'],
+  ps_phone:['Скопировать номер','Copy the number'],
   ps_email_none:['e-mail — нет','e-mail — none'],
-  ps_phone_none:['телефон — нет','phone — none'],
-  ps_messenger_none:['мессенджер — нет','messenger — none'],
-  ps_cv_present:['CV есть','CV on file'],
-  ps_cv_absent:['CV не получен','no CV received'],
+  ps_phone_none:['Номера нет','No number'],
+  ps_attachments:['вложений: {n}','attachments: {n}'],
+  ps_attachments_none:['вложений нет','no attachments'],
   ps_recompare:['вакансия изменилась после этого решения — сравнить заново','the vacancy changed after this decision — compare again'],
   ps_name_unknown:['имя не указано','name not given'],
   ps_not_connected:['Компания не подключена — откройте Настройки → Подключение','Not connected — open Settings → Connection'],
-  ps_copied:['Скопировано — вставьте в мессенджер','Copied — paste it into your messenger'],
+  ps_copied:['Номер скопирован','The number is copied'],
   ps_copy_failed:['Скопировать не удалось','Could not copy'],
   ps_email_failed:['Почтовый клиент не открылся','The mail client did not open'],
-  // The limit is NAMED rather than hidden: this product has no CV classifier, so
-  // "CV" here means "an attachment was received with this candidate" and nothing
-  // more. Saying it plainly costs one line; not saying it would let an operator
-  // read a verdict the data never carried.
-  ps_note:['«Убрать из профиля» рвёт связь только с ЭТИМ профилем — кандидат остаётся в очереди и в других профилях. Стаж — по должности, под которой он откликнулся, из его Experience. «CV есть» означает «пришло вложение»: распознавателя резюме в продукте нет.',
-           'Removing him from the profile breaks the link with THIS profile only — he stays in the queue and in other profiles. Sea time is counted for the post he responded on, from his own Experience. "CV on file" means "an attachment arrived": this build has no CV classifier.']
+  // The limit is NAMED rather than hidden: this build has no resume recogniser,
+  // so the row counts FILES and says so. Calling an attachment a resume would be
+  // a verdict the data never carried — the operator picks the resume himself
+  // when the letter is prepared.
+  ps_note:['«Убрать из профиля» рвёт связь только с ЭТИМ профилем — кандидат остаётся в очереди и в других профилях. Стаж — по должности, под которой он откликнулся, из его Experience. «вложений» — это сколько файлов пришло с откликом; какой из них резюме, продукт не определяет.',
+           'Removing him from the profile breaks the link with THIS profile only — he stays in the queue and in other profiles. Sea time is counted for the post he responded on, from his own Experience. "attachments" is how many files arrived with the response; which of them is a resume, this build does not decide.']
 };
 function profileShortlistT(key) {
   var row = PROFILE_SHORTLIST_TEXT[key];
@@ -8810,13 +8808,16 @@ function profileShortlistPersonName(row) {
   var listed = row && row.card && row.card.summary && row.card.summary.candidate_name;
   return String(listed == null ? '' : listed).replace(/^\s+|\s+$/g, '');
 }
-// Three states, never two: a value, a stated absence, and — one level up, in the
+// Three states, never two: a number, a stated zero, and — one level up, in the
 // row — a read that failed. `null` here means "the card was never read", and the
 // renderer must not let it fall into either of the other two.
-function profileShortlistHasCv(row) {
+//
+// It counts FILES. It does not say which file is a resume, because nothing in
+// this build knows that: there is no resume recogniser and none is added here.
+function profileShortlistAttachmentCount(row) {
   var atts = (row && row.card && Array.isArray(row.card.attachments)) ? row.card.attachments : null;
   if (atts === null) return null;
-  return atts.length > 0;
+  return atts.length;
 }
 function profileShortlistCell(key, label, text, missingText) {
   var has = !!text;
@@ -8832,16 +8833,18 @@ function profileShortlistFactsHtml(row) {
   // fourteen pilot cards are — so NOTHING below is drawn unconditionally: each
   // cell is asked for its own value and says so when it has none.
   var s = (row && row.card && row.card.response_summary) ? row.card.response_summary : null;
-  var cv = profileShortlistHasCv(row);
+  var att = profileShortlistAttachmentCount(row);
   return '<div class="ps-facts">'
     + profileShortlistCell('age', cardT('resp_age'), s ? pilotCardAgeText(s) : '', cardT('resp_missing'))
     + profileShortlistCell('citizenship', cardT('resp_citizenship'), s ? pilotCardCitizenshipText(s) : '', cardT('resp_missing'))
     + profileShortlistCell('experience', cardT('resp_experience'), s ? pilotCardExperienceText(s) : '',
         s ? pilotCardExperienceMissingText(s) : cardT('resp_missing'))
     + profileShortlistCell('vessel', cardT('resp_vessel'), s ? pilotCardVesselText(s) : '', cardT('resp_missing'))
-    + (cv === null ? '' : '<span class="ps-cell" data-qa="profile-shortlist-cv" data-cv="' + (cv ? 'yes' : 'no') + '">'
-        + '<span class="' + (cv ? 'ps-v' : 'ps-v miss') + '">'
-        + escapeHtml(profileShortlistT(cv ? 'ps_cv_present' : 'ps_cv_absent')) + '</span></span>')
+    + (att === null ? '' : '<span class="ps-cell" data-qa="profile-shortlist-attachments" data-attachments="' + att + '">'
+        + '<span class="' + (att > 0 ? 'ps-v' : 'ps-v miss') + '">'
+        + escapeHtml(att > 0
+            ? profileShortlistT('ps_attachments').replace('{n}', String(att))
+            : profileShortlistT('ps_attachments_none')) + '</span></span>')
     + '</div>';
 }
 function profileShortlistContactButtonsHtml(intakeId, row) {
@@ -8854,17 +8857,16 @@ function profileShortlistContactButtonsHtml(intakeId, row) {
   var email = mailable
     ? '<button data-qa="profile-shortlist-email" onclick="profileShortlistEmail(' + js + ')">' + escapeHtml(profileShortlistT('ps_email')) + '</button>'
     : '<button data-qa="profile-shortlist-email" disabled>' + escapeHtml(profileShortlistT('ps_email_none')) + '</button>';
-  // There is no dialler in this build, and inventing one is outside this card.
-  // What exists is the clipboard, so the number is handed over through it — and
-  // a messenger is keyed by that same number, which is why the two buttons go
-  // dark together.
+  // There is no dialler and no messenger transport in this build, and inventing
+  // either is outside this card. What exists is the clipboard, so the button is
+  // named for the clipboard: it copies the number. A button called "phone" would
+  // promise a call this product cannot place, and a second one called
+  // "messenger" would promise a channel it does not have — both were removed on
+  // the owner's word of 2026-10-01. One number, one button.
   var phone = c.phone
     ? '<button data-qa="profile-shortlist-phone" onclick="profileShortlistCopyPhone(' + js + ')">' + escapeHtml(profileShortlistT('ps_phone')) + '</button>'
     : '<button data-qa="profile-shortlist-phone" disabled>' + escapeHtml(profileShortlistT('ps_phone_none')) + '</button>';
-  var messenger = c.phone
-    ? '<button data-qa="profile-shortlist-messenger" onclick="profileShortlistCopyForMessenger(' + js + ')">' + escapeHtml(profileShortlistT('ps_messenger')) + '</button>'
-    : '<button data-qa="profile-shortlist-messenger" disabled>' + escapeHtml(profileShortlistT('ps_messenger_none')) + '</button>';
-  return email + phone + messenger;
+  return email + phone;
 }
 function profileShortlistRowHtml(item) {
   var st = state.profileShortlist;
@@ -9012,19 +9014,6 @@ async function profileShortlistCopyPhone(intakeId) {
   var phone = profileShortlistContacts(st.rows[String(intakeId)]).phone;
   if (!phone) return;
   try { await navigator.clipboard.writeText(phone); }
-  catch (e) { showToast(profileShortlistT('ps_copy_failed'), 'error'); return; }
-  showToast(profileShortlistT('ps_copied'), 'success');
-}
-// A messenger in this build is reached the way the card's "share" already works:
-// the text goes to the clipboard and the operator pastes it where they talk to
-// people. No messenger transport is added here, and none is implied.
-async function profileShortlistCopyForMessenger(intakeId) {
-  var st = state.profileShortlist; if (!st) return;
-  var row = st.rows[String(intakeId)];
-  var c = profileShortlistContacts(row);
-  if (!c.phone) return;
-  var text = [profileShortlistPersonName(row), c.phone, c.email].filter(function(x){ return x; }).join('\n');
-  try { await navigator.clipboard.writeText(text); }
   catch (e) { showToast(profileShortlistT('ps_copy_failed'), 'error'); return; }
   showToast(profileShortlistT('ps_copied'), 'success');
 }

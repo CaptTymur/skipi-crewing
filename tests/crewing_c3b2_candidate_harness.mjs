@@ -315,7 +315,7 @@ function makeProfileServer() {
       'intake-2': [{ field: 'name', versions: [{ value: 'Petro Shevchuk', version: 1, corrected_by: 'user-op-1' }] },
                    { field: 'contact:email', versions: [{ value: 'petro@example.com', version: 1, corrected_by: 'user-op-1' }] },
                    { field: 'contact:phone', versions: [{ value: '+380502223344', version: 1, corrected_by: 'user-op-1' }] }],
-      // e-mail only: no phone, therefore no messenger either, and BOTH say so
+      // e-mail only: no phone, so the number button is dark and SAYS so
       'intake-3': [{ field: 'name', versions: [{ value: 'Oleh Marchenko', version: 1, corrected_by: 'user-op-1' }] },
                    { field: 'contact:email', versions: [{ value: 'oleh@example.com', version: 1, corrected_by: 'user-op-1' }] }],
     },
@@ -413,7 +413,7 @@ function makeProfileContext({ server = makeProfileServer(), invokeImpl, language
     setTimeout, clearTimeout, queueMicrotask,
   };
   vm.createContext(context);
-  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistCopyForMessenger, profileShortlistStateFor, profileShortlistT };`, context);
+  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistStateFor, profileShortlistT };`, context);
   if (autoload) { context.__s632.profileShortlistLoad(profileId); }
   return context;
 }
@@ -3311,10 +3311,19 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
   softOk(psafe(() => /data-qa="profile-shortlist-experience"/.test(prow('intake-1')) && /Master/.test(prow('intake-1'))),
     'No.632/4: sea time, and it NAMES the post it was counted for (No.622 is not open — equality is by bytes)');
   softOk(psafe(() => /data-qa="profile-shortlist-vessel"/.test(prow('intake-1')) && /Odesa Dawn/.test(prow('intake-1'))), 'No.632/4: last vessel');
-  softOk(psafe(() => /data-qa="profile-shortlist-cv"/.test(prow('intake-1'))), 'No.632/4: whether a CV was received');
-  softOk(psafe(() => /data-qa="profile-shortlist-cv"[^>]*data-cv="yes"/.test(prow('intake-1'))
-    && /data-qa="profile-shortlist-cv"[^>]*data-cv="no"/.test(prow('intake-3'))),
+  softOk(psafe(() => /data-qa="profile-shortlist-attachments"/.test(prow('intake-1'))), 'No.632/4: how many files arrived with the response');
+  softOk(psafe(() => /data-qa="profile-shortlist-attachments"[^>]*data-attachments="1"/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-attachments"[^>]*data-attachments="0"/.test(prow('intake-3'))),
     'No.632/4: a candidate WITHOUT an attachment is named as having none — he does not pass silently');
+  softOk(psafe(() => /<span class="ps-v">attachments: 1<\/span>/.test(prow('intake-1'))),
+    'No.632/4: and the COUNT is on the screen, not a yes/no verdict about what the file is');
+  softOk(psafe(() => !/\{n\}/.test(String(phtml() || ''))),
+    'No.632/4: the count is substituted into the text, never printed as a raw placeholder');
+  // The product has no resume recogniser, so no surface of this section is
+  // allowed to call a file a CV. This is the owner's word of 2026-10-01 turned
+  // into a sensor rather than a promise.
+  softOk(psafe(() => !/\bCV\b/.test(String(phtml() || ''))),
+    'No.632/4: the word "CV" appears NOWHERE in what the operator reads — an attachment is not a resume');
   // Nine of the fourteen pilot cards are born of e-mail and carry no summary at
   // all. Nothing may be printed unconditionally over that.
   softOk(psafe(() => /data-qa="profile-shortlist-missing"/.test(prow('intake-3'))),
@@ -3356,14 +3365,24 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
   softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-3'))), 'No.632/4: a missing phone is a DARK button');
   softOk(psafe(() => {
     const m = /data-qa="profile-shortlist-phone"[^>]*>([^<]*)</.exec(prow('intake-3') || '');
-    return !!m && /—/.test(m[1]);
+    return !!m && /Номера нет|No number/.test(m[1]);
   }), 'No.632/4: and the dark button SAYS what is missing instead of vanishing');
-  softOk(psafe(() => /data-qa="profile-shortlist-messenger"[^>]*disabled/.test(prow('intake-3'))),
-    'No.632/4: no number means no messenger either, and that is said too');
   softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*onclick/.test(prow('intake-1') || '')
-    && !/data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-1'))
-    && /data-qa="profile-shortlist-messenger"[^>]*onclick/.test(prow('intake-1'))),
-    'No.632/4: where a number WAS received both buttons are live and wired — calibrated: they must be present, not merely not-disabled');
+    && !/data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-1'))),
+    'No.632/4: where a number WAS received the button is live and wired — calibrated: it must be present, not merely not-disabled');
+  // The number is offered ONCE. A second button over the same clipboard, named
+  // for a transport this build does not have, was removed on the owner's word
+  // of 2026-10-01; this keeps it from growing back.
+  softOk(psafe(() => (String(prow('intake-1') || '').match(/<button/g) || []).length === 4),
+    'No.632/4: the row offers exactly four buttons — e-mail, copy the number, set aside, remove; no second clipboard button grows back');
+  softOk(psafe(() => !/messenger|мессенджер/i.test(String(phtml() || ''))),
+    'No.632/4: no button promises a messenger — the product has no messenger transport');
+  // A button must be named by what it DOES. "phone" promises a call; this one
+  // copies. Calibrated: the live label must exist first.
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-phone"[^>]*onclick[^>]*>([^<]*)</.exec(prow('intake-1') || '');
+    return !!m && /Скопировать номер|Copy the number/.test(m[1]) && !/^телефон$|^phone$/i.test(m[1]);
+  }), 'No.632/4: the number button is named for the clipboard, not for a call this build cannot place');
   if (pctx) {
     await pctx.__s632.profileShortlistEmail('intake-1'); await flush();
     const mailto = pcalls().filter((c) => c.command === 'open_mailto').slice(-1)[0];
@@ -3451,13 +3470,16 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
   // both languages and the owner-approved frame prints it that way, so it gets
   // its own assertion below instead of a Cyrillic one it could never satisfy.
   for (const key of ['ps_title', 'ps_counts', 'ps_in_selection', 'ps_on_hold', 'ps_hold_note', 'ps_hold', 'ps_release',
-    'ps_remove', 'ps_phone', 'ps_messenger', 'ps_email_none', 'ps_phone_none', 'ps_messenger_none',
-    'ps_cv_present', 'ps_cv_absent', 'ps_failed', 'ps_row_failed', 'ps_empty', 'ps_recompare', 'ps_note', 'ps_loading']) {
+    'ps_remove', 'ps_phone', 'ps_email_none', 'ps_phone_none',
+    'ps_attachments', 'ps_attachments_none', 'ps_copied', 'ps_failed', 'ps_row_failed', 'ps_empty', 'ps_recompare', 'ps_note', 'ps_loading']) {
     const en = psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT(key));
     const ru = psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT(key));
     softOk(!!en && en !== key, `No.632/6: EN text exists for ${key}`);
     softOk(!!ru && ru !== key && ru !== en && /[Ѐ-ӿ]/.test(ru), `No.632/6: RU text exists for ${key} and is actually Russian`);
   }
+  softOk(psafe(() => /\{n\}/.test(makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_attachments')))
+    && psafe(() => /\{n\}/.test(makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_attachments'))),
+    'No.632/6: both languages carry a COUNT slot for the attachments, so neither can quietly become a yes/no word');
   softOk(psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail')
     && psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail'),
     'No.632/6: ps_email is "e-mail" in both languages — the owner-approved frame prints it that way');
