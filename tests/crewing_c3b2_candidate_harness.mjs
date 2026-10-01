@@ -319,6 +319,7 @@ function makeProfileServer() {
       'intake-3': [{ field: 'name', versions: [{ value: 'Oleh Marchenko', version: 1, corrected_by: 'user-op-1' }] },
                    { field: 'contact:email', versions: [{ value: 'oleh@example.com', version: 1, corrected_by: 'user-op-1' }] }],
     },
+    responseContacts: {},
     reject(status, detail) { return { kind: 'server', status, detail }; },
     handle(command, args) {
       const b = this;
@@ -345,7 +346,18 @@ function makeProfileServer() {
           if (!rows) throw b.reject(500, null);
           return { items: rows.map((r) => ({ ...r })) };
         }
-        case 'crewing_intake_response_contact': throw b.reject(404, 'candidate intake not found');
+        case 'crewing_intake_response_contact': {
+          const rc = b.responseContacts ? b.responseContacts[args.intakeId] : undefined;
+          // DEFAULT IS TODAY'S BEHAVIOUR: no entry means 404, which the card's own
+          // grammar reads as "this letter carries no response binding".
+          if (rc === undefined) throw b.reject(404, 'candidate intake not found');
+          if (rc === 'failed') throw b.reject(500, null);
+          return { value: rc.value, is_email: rc.is_email, offer_email: rc.offer_email };
+        }
+        case 'crewing_intake_shortlist_confirm': {
+          return { profile_id: args.pair.profile_id, profile_version: args.pair.profile_version,
+            confirmed_by: b.user, confirmed_at: '2026-10-01T08:00:00' };
+        }
         case 'crewing_intake_shortlist_hold': {
           const row = b.items.find((i) => i.intake_id === args.intakeId);
           if (!row) throw b.reject(404, 'not_confirmed');
@@ -413,7 +425,12 @@ function makeProfileContext({ server = makeProfileServer(), invokeImpl, language
     setTimeout, clearTimeout, queueMicrotask,
   };
   vm.createContext(context);
-  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistStateFor, profileShortlistT };`, context);
+  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistStateFor, profileShortlistT };
+this.__s632b = {
+  ensure: typeof profileShortlistEnsure === 'function' ? profileShortlistEnsure : null,
+  invalidate: typeof profileShortlistInvalidate === 'function' ? profileShortlistInvalidate : null,
+  confirm: pilotShortlistConfirm, withdraw: pilotShortlistWithdraw,
+};`, context);
   if (autoload) { context.__s632.profileShortlistLoad(profileId); }
   return context;
 }
@@ -3483,6 +3500,141 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
   softOk(psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail')
     && psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail'),
     'No.632/6: ps_email is "e-mail" in both languages — the owner-approved frame prints it that way');
+
+  // ---- 7. a decision taken on the CANDIDATE CARD reaches the profile --------
+  // The owner's path is literally: add from the match card, then open the
+  // profile. Before this, `profileShortlistEnsure` loaded ONCE per profile, so a
+  // section that had already been opened kept answering from the read it did
+  // BEFORE the decision — "nobody has been shortlisted" printed over a list that
+  // now held him. The fix must be INVALIDATION, not a timer: exactly one extra
+  // read, and only because a decision happened.
+  softOk(psafe(() => typeof makeProfileContext({ autoload: false }).__s632b.invalidate === 'function'),
+    'No.632/7: a shortlist decision has somewhere to say "that cached list is stale"');
+  {
+    let pc = null;
+    try { pc = makeProfileContext({ autoload: false }); pc.renderIntakePilot = () => {}; } catch (e) { pc = null; }
+    if (pc) {
+      const reads = () => pc.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc.__s632.profileShortlistLoad('prof-A'); await flush();
+      const before = reads();
+      softOk(before > 0 && psafe(() => pc.__s632.profileShortlistStateFor('prof-A').data !== null),
+        'No.632/7: calibration — the section really holds a loaded list before the decision');
+      // a second open with NO decision in between must not ask again: that is what
+      // separates invalidation from polling, and it is asserted BEFORE the decision
+      // so a fix that simply reloads on every render fails here.
+      psafe(() => pc.__s632b.ensure('prof-A')); await flush();
+      softOk(reads() === before,
+        'No.632/7: without a decision the section does NOT ask again — invalidation, not polling');
+      // the REAL card writer, the one the owner's button is wired to
+      pc.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc.__s632b.confirm('prof-A', 1)); await flush();
+      psafe(() => pc.__s632b.ensure('prof-A')); await flush();
+      softOk(reads() === before + 1,
+        'No.632/7: a decision on the CARD invalidates the profile list and the next open re-reads it — exactly once');
+      softOk(psafe(() => pc.__s632.profileShortlistStateFor('prof-A').data !== null),
+        'No.632/7: and what it re-read is a LIST, not an error — the invalidation does not leave the section broken');
+    } else {
+      for (let i = 0; i < 4; i++) softOk(false, 'No.632/7: the card decision reaches the profile list');
+    }
+  }
+  {
+    // the same for taking the decision BACK from the card
+    let pc2 = null;
+    try { pc2 = makeProfileContext({ autoload: false }); pc2.renderIntakePilot = () => {}; } catch (e) { pc2 = null; }
+    if (pc2) {
+      const reads2 = () => pc2.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc2.__s632.profileShortlistLoad('prof-A'); await flush();
+      const b2 = reads2();
+      pc2.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc2.__s632b.withdraw('prof-A', 1)); await flush();
+      psafe(() => pc2.__s632b.ensure('prof-A')); await flush();
+      softOk(reads2() === b2 + 1, 'No.632/7: withdrawing from the card invalidates it too — both writers, not one');
+    } else { softOk(false, 'No.632/7: withdrawing from the card invalidates it too'); }
+  }
+  {
+    // a decision about ANOTHER profile must not throw away this one's list
+    let pc3 = null;
+    try { pc3 = makeProfileContext({ autoload: false }); pc3.renderIntakePilot = () => {}; } catch (e) { pc3 = null; }
+    if (pc3) {
+      const reads3 = () => pc3.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc3.__s632.profileShortlistLoad('prof-A'); await flush();
+      const b3 = reads3();
+      pc3.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc3.__s632b.confirm('prof-OTHER', 1)); await flush();
+      psafe(() => pc3.__s632b.ensure('prof-A')); await flush();
+      softOk(reads3() === b3, 'No.632/7: a decision about a DIFFERENT profile leaves this list alone — the invalidation is keyed, not a broom');
+    } else { softOk(false, 'No.632/7: a decision about a different profile leaves this list alone'); }
+  }
+
+  // ---- 8. the row names the SAME addressee as the card ----------------------
+  // The card's resolver says in its own comment that two copies of the contact
+  // order are how "the card and the queue row end up naming two different
+  // addressees for one person". The shortlist row WAS the second copy: it read
+  // the fact map only, so an address the seafarer delivered WITH HIS RESPONSE
+  // was reported on the row as "no e-mail" while the card showed it.
+  {
+    const mk = (facts, rc) => {
+      const srv = makeProfileServer();
+      if (facts) srv.facts['intake-1'] = srv.facts['intake-1'].filter((f) => f.field !== 'contact:email');
+      srv.responseContacts = rc;
+      let c = null;
+      try { c = makeProfileContext({ server: srv }); } catch (e) { c = null; }
+      return c;
+    };
+    const delivered = mk(true, { 'intake-1': { value: 'ivan.delivered@example.com', is_email: true, offer_email: true } });
+    if (delivered) { await flush(); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*onclick/.test(prowOf(delivered, 'intake-1'))
+      && !/data-qa="profile-shortlist-email"[^>]*disabled/.test(prowOf(delivered, 'intake-1'))),
+      'No.632/8: an address the seafarer DELIVERED with his response makes the row\'s e-mail live — the row no longer says "none" over an address the card shows');
+    if (delivered) {
+      await psafe(() => delivered.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(delivered.calls.filter((c) => c.command === 'open_mailto').slice(-1)[0]?.args?.to === 'ivan.delivered@example.com',
+        'No.632/8: and the letter goes to THAT address, not to a second one resolved by a different order');
+    } else { softOk(false, 'No.632/8: the letter goes to the delivered address'); }
+
+    // calibration: a genuine absence must still say so
+    const none = mk(true, {});
+    if (none) { await flush(); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*disabled/.test(prowOf(none, 'intake-1'))),
+      'No.632/8: calibration — with no fact and no delivered contact the button is dark');
+
+    // a read that FAILED is not an absence (CANON (930) п.1, and the card already
+    // says so in words)
+    const failed = mk(true, { 'intake-1': 'failed' });
+    if (failed) { await flush(); await flush(); }
+    softOk(psafe(() => {
+      const m = /data-qa="profile-shortlist-email"[^>]*>([^<]*)</.exec(prowOf(failed, 'intake-1') || '');
+      return !!m && !/нет|none/i.test(m[1]);
+    }), 'No.632/8: a delivered contact that could NOT be read is never printed as "no e-mail"');
+
+    // delivered, but the server refuses to offer it: the address exists and the
+    // row must not call that an absence either, and must not write to it
+    const refused = mk(true, { 'intake-1': { value: 'crew@our-own-inbox.example', is_email: true, offer_email: false } });
+    if (refused) { await flush(); await flush(); }
+    softOk(psafe(() => {
+      const row = prowOf(refused, 'intake-1') || '';
+      const m = /data-qa="profile-shortlist-email"[^>]*>([^<]*)</.exec(row);
+      return /data-qa="profile-shortlist-email"[^>]*disabled/.test(row) && !!m && !/нет|none/i.test(m[1]);
+    }), 'No.632/8: an address the server will not write to is dark but NOT called absent');
+    if (refused) {
+      const beforeMail = refused.calls.filter((c) => c.command === 'open_mailto').length;
+      await psafe(() => refused.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(refused.calls.filter((c) => c.command === 'open_mailto').length === beforeMail,
+        'No.632/8: and no letter is prepared to it — the anti-loop of No.621 holds on this surface too');
+    } else { softOk(false, 'No.632/8: no letter is prepared to a refused address'); }
+
+    // the operator's own correction still outranks the delivered value
+    const bothSources = mk(false, { 'intake-1': { value: 'delivered@example.com', is_email: true, offer_email: true } });
+    if (bothSources) { await flush(); await flush(); }
+    if (bothSources) {
+      await psafe(() => bothSources.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(bothSources.calls.filter((c) => c.command === 'open_mailto').slice(-1)[0]?.args?.to === 'ivan.petrenko@example.com',
+        'No.632/8: the operator\'s recorded fact still outranks the delivered value — the CARD\'s order, reused and not restated');
+    } else { softOk(false, 'No.632/8: the recorded fact outranks the delivered value'); }
+  }
 }
 
 console.log('\n# control matrix');
