@@ -3821,8 +3821,12 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
       profileId: 'prof-A',
     });
     // the profile the letter is FOR: its rank is what the sea-time column counts
+    // No `version` here ON PURPOSE: the object this screen actually holds comes
+    // from the legacy /api/compliance-profiles route and has no such field. The
+    // stand printed "версия )" into a letter for a customer because the fixture
+    // had one and the product did not.
     ctx.state.selectedComplianceProfile = Object.assign({
-      id: 'prof-A', name: 'Master — Crude Oil Tanker', version: 2, status: 'active',
+      id: 'prof-A', name: 'Master — Crude Oil Tanker', status: 'active',
       rank: 'Master', vessel_type: 'Crude Oil Tanker',
     }, opts.profile || {});
     ctx.state.settings.company_name = opts.company === undefined ? 'Marlow Crewing Ltd' : opts.company;
@@ -4040,6 +4044,15 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
       'No.632/5.6: with the basic data of each candidate the owner asked for');
     softOk(/Marlow Crewing Ltd/.test(b),
       'No.632/5.6: the letter is signed by the AGENCY — it is the agency that sends it from its own client');
+    // Found on the stand: an unsubstituted slot went out in the letter itself.
+    softOk(!/версия\s*\)/.test(b) && !/version\s*\)/.test(b) && !/\{version\}/.test(b),
+      'No.632/5.6: the letter never carries an EMPTY version — the clause is dropped when the number is unknown, not printed hollow');
+    softOk(/версия 2/.test(b),
+      'No.632/5.6: and when the server named the profile version, the letter names it too (calibration of the check above)');
+    softOk(psafeL(() => {
+      const m = /data-qa="profile-letter-to-state"[^>]*>([^<]*)</.exec(lhtml(L));
+      return !!m && !/резюме/i.test(m[1]);
+    }), 'No.632/5.6: the hint under the ADDRESS field talks about the address, not about a resume');
     softOk(/Marlow Crewing Ltd/.test(b) && !/Skipi/.test(b),
       'No.632/5.6: and never by Skipi — calibrated against the agency name actually standing there: a Skipi signature would make Skipi the sender of the agency\'s letter');
     const noCompany = await letterContext({ company: '' });
@@ -4130,7 +4143,7 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
       'pl_attached_note', 'pl_sign', 'pl_prepare', 'pl_edit', 'pl_edit_done', 'pl_counts', 'pl_excluded',
       'pl_reason_on_hold', 'pl_reason_no_resume', 'pl_reason_no_attachments', 'pl_reason_bytes', 'pl_reason_row_failed',
       'pl_pick', 'pl_picked', 'pl_unpick', 'pl_not_stated', 'pl_result', 'pl_open_failed', 'pl_company_missing',
-      'pl_archived', 'pl_web_note', 'pl_empty', 'pl_seatime_reason'];
+      'pl_archived', 'pl_web_note', 'pl_empty', 'pl_seatime_reason', 'pl_order_version', 'pl_to_ok'];
     const ru = (key) => psafeL(() => { L.getUiLang = () => 'ru'; return L.__s632.profileShortlistT(key); });
     const en = (key) => psafeL(() => { L.getUiLang = () => 'en'; return L.__s632.profileShortlistT(key); });
     for (const key of keys) {

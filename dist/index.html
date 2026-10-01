@@ -8710,8 +8710,13 @@ var PROFILE_SHORTLIST_TEXT = {
   pl_to_bad:['Такой адрес почтовый клиент не примет','The mail client will not accept this address'],
   pl_subject:['Кандидаты по вашему заказу: {rank}, {vessel}','Candidates for your order: {rank}, {vessel}'],
   pl_greeting:['Здравствуйте, уважаемый заказчик!','Dear customer,'],
-  pl_order:['По вашему заказу — {rank} на {vessel} (профиль «{profile}», версия {version}) — мы подобрали следующих кандидатов:',
-            'For your order — {rank} on {vessel} (profile \u201c{profile}\u201d, version {version}) — we have selected the following candidates:'],
+  pl_order:['По вашему заказу — {rank} на {vessel} (профиль «{profile}»{version}) — мы подобрали следующих кандидатов:',
+            'For your order — {rank} on {vessel} (profile \u201c{profile}\u201d{version}) — we have selected the following candidates:'],
+  // A separate fragment, so that an unknown version DROPS the clause instead of
+  // printing "версия )" into a letter to a customer — which is what the stand
+  // showed, because the object this screen holds carries no version at all.
+  pl_order_version:[', версия {n}',', version {n}'],
+  pl_to_ok:['адрес принят','the address is accepted'],
   pl_table_candidate:['Кандидат','Candidate'],
   pl_table_age:['Возраст','Age'],
   pl_table_citizenship:['Гражданство','Citizenship'],
@@ -9263,6 +9268,10 @@ function profileLetterCompose() {
   var rank = String(profile.rank == null ? '' : profile.rank).replace(/^\s+|\s+$/g, '');
   var vessel = String(profile.vessel_type == null ? '' : profile.vessel_type).replace(/^\s+|\s+$/g, '');
   var company = cardCompanyName();
+  // The version of THIS profile as the SERVER just stated it. The legacy object
+  // this screen holds has no `version` field, and reading one off it printed an
+  // empty clause into a real letter.
+  var version = (st && st.data && st.data.profile_version != null) ? st.data.profile_version : null;
   var out = { ready:false, to:'', subject:'', body:'', rows:[], attachments:[], excluded:[],
     company:company, rank:rank, vessel:vessel, listed:false };
   if (!st || st.data === null || !Array.isArray(st.data.items)) return out;
@@ -9331,7 +9340,8 @@ function profileLetterCompose() {
     '',
     profileShortlistT('pl_order').replace('{rank}', rank || none).replace('{vessel}', vessel || none)
       .replace('{profile}', String(profile.name == null ? '' : profile.name))
-      .replace('{version}', String(profile.version == null ? '' : profile.version)),
+      .replace('{version}', version == null ? ''
+        : profileShortlistT('pl_order_version').replace('{n}', String(version))),
     '',
     lines.join('\n'),
     '',
@@ -9424,7 +9434,7 @@ function profileLetterSectionHtml() {
     + '<span class="ps-k">' + escapeHtml(profileShortlistT('pl_to')) + '</span> '
     + '<input type="text" data-qa="profile-letter-to" value="' + escapeAttr(composed.to) + '"'
     + ' oninput="profileLetterSetTo(this.value)" style="min-width:260px">'
-    + '<span class="pilot-note" data-qa="profile-letter-to-state">' + escapeHtml(toState || profileShortlistT('pl_picked')) + '</span>'
+    + '<span class="pilot-note" data-qa="profile-letter-to-state">' + escapeHtml(toState || profileShortlistT('pl_to_ok')) + '</span>'
     + '</div>';
   var picks = items.filter(function(i){ return i && i.in_selection; })
     .map(function(i){ return profileLetterPickRowHtml(i, composed); }).join('');
