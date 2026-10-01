@@ -768,7 +768,13 @@ const controls = [
     async sensor(ctx) {
       await positiveChainUntilRank(ctx);
       const buttons = [...main(ctx).matchAll(/onclick="(pilotShortlistConfirm\('prof-C',1\))"/g)];
-      assert.equal(buttons.length, 1, 'C row has its own confirm control');
+      // TWO since No.632, and the number stays load-bearing rather than being
+      // loosened to ">= 1": the compact fit card gained the add button the owner
+      // asked for (968), and the full-comparison row below keeps the one it
+      // already had — an accepted screen is not redone to make a count tidy.
+      // Both must address prof-C and nothing else, which is what this control is
+      // for; the click below exercises the first of them.
+      assert.equal(buttons.length, 2, 'C has its own confirm control on BOTH surfaces of the card — the fit card and the full comparison row');
       vm.runInContext(buttons[0][1], ctx); await flush();
       const call = ctx.calls.find((c) => c.command === 'crewing_intake_shortlist_confirm');
       assert.equal(call.args.pair.profile_id, 'prof-C', 'stub recorded the clicked profile id, not the first row');

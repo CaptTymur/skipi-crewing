@@ -464,6 +464,86 @@ pub(crate) struct ShortlistHistory {
     pub withdrawn_at: Option<String>,
 }
 
+/// No.632: ONE shortlist decision carrying its THIRD state.
+///
+/// `on_hold` is not derived from `held_at.is_some()` on this side: the server
+/// computes it from the live row and the two can only disagree if one of them
+/// is wrong, so the client reads the answer rather than recomputing it.
+///
+/// Every field is declared. That sentence is the whole point of this struct and
+/// it is written again because No.623 paid for it twice: `serde` DROPS a key no
+/// field declares, silently and without failing the parse — the webview would
+/// then render exactly what it renders today and every renderer test would stay
+/// green over the hole.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ShortlistHold {
+    pub id: String,
+    pub intake_id: String,
+    pub profile_id: String,
+    pub profile_version: i64,
+    pub confirmed_by: String,
+    pub confirmed_at: String,
+    pub on_hold: bool,
+    #[serde(default)]
+    pub held_by: Option<String>,
+    #[serde(default)]
+    pub held_at: Option<String>,
+    #[serde(default)]
+    pub withdrawn_by: Option<String>,
+    #[serde(default)]
+    pub withdrawn_at: Option<String>,
+}
+
+/// No.632: one shortlisted candidate as the PROFILE's own list shows him.
+///
+/// It carries `intake_id` and NOT the person: the reverse list is a list of
+/// DECISIONS, and who those decisions are about is read from the candidate
+/// surface that already owns that data. A name on this row would be a second
+/// place where a candidate's identity lives.
+///
+/// `in_selection` and `needs_recompare` are both computed by the server and
+/// both arrive here rather than being re-derived: `in_selection` is the single
+/// predicate that decides who goes to the customer, and a second copy of that
+/// rule on the screen is how a screen comes to say three while an envelope
+/// carries four.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistItem {
+    pub id: String,
+    pub intake_id: String,
+    /// The version the DECISION was taken against — not the profile's current
+    /// one. Every move of this decision must quote this number back.
+    pub profile_version: i64,
+    pub confirmed_by: String,
+    pub confirmed_at: String,
+    pub on_hold: bool,
+    #[serde(default)]
+    pub held_by: Option<String>,
+    #[serde(default)]
+    pub held_at: Option<String>,
+    pub in_selection: bool,
+    pub needs_recompare: bool,
+}
+
+/// Three numbers from one read, and the server's own invariant between them:
+/// `selected == in_selection + on_hold`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistCounts {
+    pub selected: i64,
+    pub in_selection: i64,
+    pub on_hold: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistResponse {
+    pub profile_id: String,
+    /// The version the profile is on NOW, beside the version each decision was
+    /// taken against, so the screen can say "decided on v1, the vacancy is v3".
+    pub profile_version: i64,
+    pub profile_state: String,
+    pub items: Vec<ProfileShortlistItem>,
+    pub counts: ProfileShortlistCounts,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateRanksResponse {
     pub items: Vec<CandidateProfileRank>,
@@ -631,6 +711,13 @@ fn safe_detail(value: &Value) -> Option<String> {
         "not_confirmed",
         "already_withdrawn",
         "withdraw_not_permitted",
+        // No.632 domain codes: the third state. `hold_not_permitted` carries a
+        // word of its own while standing behind the WITHDRAWAL's own check —
+        // a colleague refused the undo who could set the candidate aside
+        // instead would reach the identical outcome through an unguarded door.
+        "already_on_hold",
+        "not_on_hold",
+        "hold_not_permitted",
         // P2/S1 publication. Two refusals that share a 422 and differ only by
         // their words, so the card can tell the operator WHICH field is
         // missing instead of "something is wrong".
@@ -1137,6 +1224,95 @@ pub(crate) async fn crewing_intake_shortlist_withdraw(
     .await
 }
 
+/// No.632: set this candidate aside WITHOUT taking the decision back.
+///
+/// He stays in the profile, he can be brought back, and he is out of the
+/// selection that goes to the customer by default. The server owns all three of
+/// those sentences; this is a typed pipe to them.
+///
+/// `ambiguous_on_network = true`, like every other write in this file: a request
+/// that died on the wire may or may not have been applied, and the screen has to
+/// say UNKNOWN rather than pick an answer for the operator.
+#[tauri::command]
+pub(crate) async fn crewing_intake_shortlist_hold(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    pair: ShortlistPair,
+    state: tauri::State<'_, AppState>,
+) -> Result<ShortlistHold, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let (profile_id, version) = checked_pair(&pair)?;
+    without_blocking_ui(move || {
+        let url = intake_url(
+            &context,
+            &intake_id,
+            &["shortlist", profile_id.as_str(), version.as_str(), "hold"],
+        )?;
+        let (_, response) = send(&context, Method::POST, url, None, true)?;
+        Ok(response)
+    })
+    .await
+}
+
+/// No.632: bring a candidate who was set aside back into the selection.
+///
+/// A 204 with an empty body is the ONLY success, through `send_no_content` — the
+/// same policy the withdrawal already follows, and for the same reason: an
+/// undocumented 200 is not an acknowledgement and must leave the outcome
+/// UNKNOWN rather than be reported as a release that may not have happened.
+#[tauri::command]
+pub(crate) async fn crewing_intake_shortlist_release(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    pair: ShortlistPair,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let (profile_id, version) = checked_pair(&pair)?;
+    without_blocking_ui(move || {
+        let url = intake_url(
+            &context,
+            &intake_id,
+            &["shortlist", profile_id.as_str(), version.as_str(), "hold"],
+        )?;
+        send_no_content(&context, Method::DELETE, url)
+    })
+    .await
+}
+
+/// No.632: who is shortlisted FOR THIS PROFILE — the list read from the other
+/// end.
+///
+/// The first read of this subsystem that does not start from a candidate, so it
+/// is the first whose isolation does not rest on a candidate predicate. The
+/// server says so in its own docstring and carries the tenant on both tables;
+/// nothing on this side may compensate for that and nothing here tries to.
+///
+/// `ambiguous_on_network = false`: a GET that failed changed nothing, so the
+/// screen may say plainly that it could not read the list. What it may NOT do is
+/// call that an empty shortlist — and that half belongs to the screen.
+#[tauri::command]
+pub(crate) async fn crewing_intake_profile_shortlist(
+    expected_context: PilotExpectedContext,
+    profile_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<ProfileShortlistResponse, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let profile_id = profile_id.trim().to_string();
+    if profile_id.is_empty() || profile_id.chars().count() > PROFILE_ID_MAX_CHARS {
+        return Err(invalid_request("invalid_profile_id"));
+    }
+    without_blocking_ui(move || {
+        let url = fixed_url(
+            &context,
+            &["matching-profiles", profile_id.as_str(), "shortlist"],
+        )?;
+        let (_, response) = send(&context, Method::GET, url, None, false)?;
+        Ok(response)
+    })
+    .await
+}
+
 #[tauri::command]
 pub(crate) async fn crewing_intake_matching_profile_list(
     expected_context: PilotExpectedContext,
@@ -1514,6 +1690,142 @@ mod tests {
                 "experience_state":"matches_response_rank",
                 "last_vessel_name":"MV Southern Cross","last_vessel_sign_off":"2026-03-14"}}"#
             .to_string()
+    }
+
+    /// No.632: THE SAME SILENT-DROP DRILL, for the two bodies this card adds.
+    ///
+    /// The measurement is a ROUND TRIP for the same reason it was in No.623: a
+    /// field-by-field read of a struct proves the struct, while the defect lives
+    /// at the boundary — what the webview is actually handed. Delete any field
+    /// from `ProfileShortlistItem` and this goes red instead of the feature
+    /// quietly becoming a no-op on a screen whose renderer tests stay green.
+    fn profile_shortlist_body() -> String {
+        r#"{"profile_id":"prof-A","profile_version":3,"profile_state":"active",
+            "items":[{"id":"dec-1","intake_id":"intake-1","profile_version":1,
+                      "confirmed_by":"user-op-1","confirmed_at":"2026-10-01T05:00:00",
+                      "on_hold":true,"held_by":"user-op-2","held_at":"2026-10-01T06:00:00",
+                      "in_selection":false,"needs_recompare":true}],
+            "counts":{"selected":3,"in_selection":2,"on_hold":1}}"#
+            .to_string()
+    }
+
+    #[test]
+    fn the_profile_shortlist_keeps_every_field_across_the_bridge() {
+        let list: ProfileShortlistResponse =
+            serde_json::from_str(&profile_shortlist_body()).unwrap();
+
+        // the values, so a struct that parses but discards is not green
+        assert_eq!(list.profile_id, "prof-A");
+        assert_eq!(list.profile_version, 3);
+        assert_eq!(list.profile_state, "active");
+        assert_eq!(list.counts.selected, 3);
+        assert_eq!(list.counts.in_selection, 2);
+        assert_eq!(list.counts.on_hold, 1);
+        let item = &list.items[0];
+        assert_eq!(item.id, "dec-1");
+        assert_eq!(item.intake_id, "intake-1");
+        // The version of the DECISION, not of the profile. If these two were
+        // ever confused, every move of this row would quote the wrong number and
+        // the server would answer 409 — or worse, succeed against a pair the
+        // operator never looked at.
+        assert_eq!(item.profile_version, 1);
+        assert_ne!(item.profile_version, list.profile_version);
+        assert_eq!(item.confirmed_by, "user-op-1");
+        assert_eq!(item.confirmed_at, "2026-10-01T05:00:00");
+        assert!(item.on_hold);
+        assert_eq!(item.held_by.as_deref(), Some("user-op-2"));
+        assert_eq!(item.held_at.as_deref(), Some("2026-10-01T06:00:00"));
+        assert!(!item.in_selection);
+        assert!(item.needs_recompare);
+
+        // and the round trip: what the webview is handed still carries them all
+        let back = serde_json::to_string(&list).unwrap();
+        for key in [
+            "profile_id",
+            "profile_version",
+            "profile_state",
+            "items",
+            "counts",
+            "id",
+            "intake_id",
+            "confirmed_by",
+            "confirmed_at",
+            "on_hold",
+            "held_by",
+            "held_at",
+            "in_selection",
+            "needs_recompare",
+            "selected",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// A server that carries MORE than this build knows must not fail the parse,
+    /// and a server that carries the optional holder fields as null must not be
+    /// read as "somebody held him". Calibrated: the full body above parses into
+    /// real values, so a green here is not a green over a struct ignoring input.
+    #[test]
+    fn a_shortlist_row_without_the_holder_fields_still_parses() {
+        let row: ProfileShortlistItem = serde_json::from_str(
+            r#"{"id":"dec-9","intake_id":"intake-9","profile_version":2,
+                "confirmed_by":"u1","confirmed_at":"2026-10-01T00:00:00",
+                "on_hold":false,"in_selection":true,"needs_recompare":false,
+                "a_field_this_build_has_never_heard_of":42}"#,
+        )
+        .unwrap();
+        assert_eq!(row.held_by, None);
+        assert_eq!(row.held_at, None);
+        assert!(!row.on_hold);
+        assert!(row.in_selection);
+    }
+
+    /// The hold answers ONE decision with its third state, and the screen reads
+    /// `on_hold` rather than inferring it from `held_at`: the two can only
+    /// disagree if one of them is wrong, and the server owns the answer.
+    #[test]
+    fn the_hold_reply_keeps_every_field_across_the_bridge() {
+        let hold: ShortlistHold = serde_json::from_str(
+            r#"{"id":"dec-1","intake_id":"intake-1","profile_id":"prof-A","profile_version":2,
+                "confirmed_by":"u1","confirmed_at":"2026-10-01T05:00:00","on_hold":true,
+                "held_by":"u2","held_at":"2026-10-01T06:00:00",
+                "withdrawn_by":null,"withdrawn_at":null}"#,
+        )
+        .unwrap();
+        assert!(hold.on_hold);
+        assert_eq!(hold.profile_id, "prof-A");
+        assert_eq!(hold.profile_version, 2);
+        assert_eq!(hold.held_by.as_deref(), Some("u2"));
+        assert_eq!(hold.withdrawn_at, None);
+        let back = serde_json::to_string(&hold).unwrap();
+        for key in [
+            "id", "intake_id", "profile_id", "profile_version", "confirmed_by",
+            "confirmed_at", "on_hold", "held_by", "held_at", "withdrawn_by", "withdrawn_at",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// The three new refusal words reach the screen. A code that is not on the
+    /// allowlist arrives as a bare status, and the screen cannot then say WHICH
+    /// door was shut — which is the whole reason `hold_not_permitted` exists as a
+    /// word of its own while standing behind the withdrawal's own check.
+    #[test]
+    fn the_three_hold_refusals_survive_the_safe_detail_filter() {
+        for code in ["already_on_hold", "not_on_hold", "hold_not_permitted"] {
+            let body = serde_json::json!({ "detail": code });
+            assert_eq!(safe_detail(&body).as_deref(), Some(code));
+        }
+        // calibration: a word NOT on the allowlist is still dropped, so the test
+        // above measures the allowlist and not a filter that passes everything.
+        let invented = serde_json::json!({ "detail": "hold_not_permitted_by_accident" });
+        assert_eq!(safe_detail(&invented), None);
     }
 
     #[test]
