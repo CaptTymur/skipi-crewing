@@ -3478,6 +3478,134 @@ console.log('# No.632: the add button on every fit card, and the profile shortli
       'No.632/4: and the candidate stays exactly where he was — a refusal moves nothing');
   }
 
+  // ---- 4b. No.632/S6: THE ROW IS READ BY A HUMAN -------------------------
+  //
+  // Two defects the stand showed only once FIVE live people stood in the list,
+  // and neither was visible with one:
+  //
+  //   * the facts are inline <span>s with NOTHING between them, so the row
+  //     renders «Возраст 38Гражданство Spanish (ES)Стаж …вложений: 1»;
+  //   * the sea-time label says «Стаж в должности» and the VALUE repeats
+  //     «в должности {rank}», so one line says «в должности» twice.
+  //
+  // Neither the separator nor the wording is invented here. ' · ' is the glyph
+  // this product already joins values with (`pilotCardVesselText`), and
+  // «Стаж в должности {rank}» / «Sea time as {rank}» is VERBATIM the letter's
+  // own `pl_table_seatime` — the form the owner has already seen and accepted.
+  {
+    const strip = (html) => String(html || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    const factsOf = (c, intakeId) => {
+      const row = prowOf(c, intakeId) || '';
+      const a = row.indexOf('<div class="ps-facts">');
+      if (a < 0) return '';
+      const b = row.indexOf('</div>', a);
+      return strip(b < 0 ? row.slice(a) : row.slice(a, b));
+    };
+    const cellOf = (c, intakeId, key) => {
+      const row = prowOf(c, intakeId) || '';
+      const a = row.indexOf('data-qa="profile-shortlist-' + key + '"');
+      if (a < 0) return '';
+      const b = row.indexOf('</span></span>', a);
+      return strip(b < 0 ? row.slice(a) : row.slice(a, b + 14));
+    };
+    let ruP = null;
+    try { ruP = makeProfileContext({ language: 'ru' }); await flush(); } catch (e) { ruP = null; }
+    const ruFacts = psafe(() => factsOf(ruP, 'intake-1')) || '';
+    const enFacts = psafe(() => factsOf(pctx, 'intake-1')) || '';
+
+    // CALIBRATION FIRST, both languages: every assertion below is about what
+    // stands BETWEEN fields, and all of them would pass over an empty row.
+    softOk(['Возраст', 'Гражданство', 'Стаж', 'Последнее судно', 'вложений'].every((w) => ruFacts.includes(w)),
+      'No.632/S6 CALIBRATION: the RU row really renders all five facts, so the separator checks are not measuring a blank row — got «' + ruFacts + '»');
+    softOk(['Age', 'Citizenship', 'Sea time', 'Last vessel', 'attachments'].every((w) => enFacts.includes(w)),
+      'No.632/S6 CALIBRATION: the EN row really renders all five facts — got «' + enFacts + '»');
+
+    // 1. SEPARATORS. Every field after the first is preceded by the separator.
+    for (const label of ['Гражданство', 'Стаж в должности', 'Последнее судно', 'вложений']) {
+      softOk(ruFacts.includes('· ' + label),
+        'No.632/S6: RU — «' + label + '» is separated from the field before it, it does not grow out of it');
+    }
+    for (const label of ['Citizenship', 'Sea time', 'Last vessel', 'attachments']) {
+      softOk(enFacts.includes('· ' + label),
+        'No.632/S6: EN — «' + label + '» is separated from the field before it');
+    }
+    // the exact glue the stand showed, as a negative in both languages
+    softOk(!/43Гражданство/.test(ruFacts) && !/\d[А-ЯЁ]/.test(ruFacts),
+      'No.632/S6 NEGATIVE: RU — no value runs straight into the next field name («Возраст 43Гражданство …»)');
+    softOk(!/43Citizenship/.test(enFacts) && !/\)[A-Z]/.test(enFacts),
+      'No.632/S6 NEGATIVE: EN — no value runs straight into the next field name');
+
+    // 2. THE DOUBLING. The post is named ONCE in the line, by the label.
+    const ruExp = psafe(() => cellOf(ruP, 'intake-1', 'experience')) || '';
+    const enExp = psafe(() => cellOf(pctx, 'intake-1', 'experience')) || '';
+    softOk(ruExp.includes('Master') && /\d/.test(ruExp),
+      'No.632/S6 CALIBRATION: the RU sea-time cell carries the post and a number, so the counting below is over a real sentence — got «' + ruExp + '»');
+    softOk((ruExp.match(/в должности/g) || []).length === 1,
+      'No.632/S6: RU — «в должности» is said ONCE in the sea-time line, not twice — got «' + ruExp + '»');
+    softOk(/Стаж в должности Master 1 г\. 5 мес\./.test(ruExp),
+      'No.632/S6: RU — the line reads «Стаж в должности Master 1 г. 5 мес.», the letter\'s own wording');
+    softOk(/Sea time as Master 1 yr 5 mo/.test(enExp),
+      'No.632/S6: EN — the line reads «Sea time as Master 1 yr 5 mo», the letter\'s own wording — got «' + enExp + '»');
+    softOk(!/in post/.test(enExp),
+      'No.632/S6 NEGATIVE: EN — the clumsy «in post …  as …» is gone from the sea-time line');
+
+    // 3. The SAME line on the accepted candidate card, because ONE function
+    // writes it for both surfaces. Leaving the card doubled while the row reads
+    // correctly would be a second wording for one fact — exactly what this slice
+    // is removing.
+    for (const [lang, want, forbid] of [['ru', /Стаж в должности Master 3 г\. 2 мес\./, /в должности[\s\S]*в должности/],
+                                        ['en', /Sea time as Master 3 yr 2 mo/, /in post/]]) {
+      let cardCtx = null;
+      try {
+        const srv = makeServer();
+        srv.card.response_summary = { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrov',
+          age_years: 41, age_precision: 'exact', citizenship: 'Ukraine', citizenship_code: 'UA',
+          experience_rank: 'Master', experience_days: 1170, experience_state: 'matches_response_rank',
+          last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14' };
+        cardCtx = makeContext({ server: srv, language: lang });
+        cardCtx.__pilot.pilotOpenCard('intake-A');
+        await flush();
+      } catch (e) { cardCtx = null; }
+      const line = psafe(() => {
+        const html = cardCtx.nodes.get('main').innerHTML;
+        const a = html.indexOf('data-qa="pilot-response-experience"');
+        if (a < 0) return '';
+        return strip(html.slice(a, html.indexOf('</div>', a)));
+      }) || '';
+      softOk(line.includes('Master'),
+        'No.632/S6 CALIBRATION: the ' + lang.toUpperCase() + ' card line carries the post — got «' + line + '»');
+      softOk(want.test(line),
+        'No.632/S6: the accepted card says it the same way as the row and the letter (' + lang.toUpperCase() + ') — got «' + line + '»');
+      softOk(!forbid.test(line),
+        'No.632/S6 NEGATIVE: the ' + lang.toUpperCase() + ' card line no longer repeats the post twice');
+    }
+
+    // 4. The OTHER-POST warning survives the move: the post is still named and
+    // the two states still read differently.
+    {
+      let otherCtx = null;
+      try {
+        const srv = makeServer();
+        srv.card.response_summary = { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrov',
+          age_years: 41, age_precision: 'exact', citizenship: 'Ukraine', citizenship_code: 'UA',
+          experience_rank: 'Chief Officer', experience_days: 1170, experience_state: 'other_rank',
+          last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14' };
+        otherCtx = makeContext({ server: srv, language: 'ru' });
+        otherCtx.__pilot.pilotOpenCard('intake-A');
+        await flush();
+      } catch (e) { otherCtx = null; }
+      const line = psafe(() => {
+        const html = otherCtx.nodes.get('main').innerHTML;
+        const a = html.indexOf('data-qa="pilot-response-experience"');
+        return a < 0 ? '' : strip(html.slice(a, html.indexOf('</div>', a)));
+      }) || '';
+      softOk(line.includes('Chief Officer'),
+        'No.632/S6: a sea time counted for ANOTHER post still names that post');
+      softOk(/не та, на которую отклик/.test(line),
+        'No.632/S6: and still carries the warning that it is not the post responded on — the move of the rank did not flatten two states into one');
+    }
+  }
+
   // ---- 5. isolation, and the failure of the list itself ------------------
   {
     let failing = null;
