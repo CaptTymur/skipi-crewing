@@ -9485,12 +9485,31 @@ function profileLetterSectionHtml() {
 function profileShortlistHostHtml() {
   return profileShortlistSectionHtml() + profileLetterSectionHtml();
 }
+// The address is typed into a field that the repaint below REPLACES, so the
+// focus and the caret are carried across by hand. Without this the operator types
+// one character, the section repaints, the element he was typing into no longer
+// exists, and the rest of the address goes nowhere — found on the stand, because
+// a test that calls this setter directly is not a keyboard.
+function profileLetterFocusTo(caret) {
+  if (typeof document === 'undefined' || !document || !document.querySelector) return null;
+  var el = null;
+  try { el = document.querySelector('[data-qa="profile-letter-to"]'); } catch (e) { return null; }
+  if (!el) return null;
+  if (caret === undefined) return (el.selectionStart == null) ? null : el.selectionStart;
+  try {
+    if (el.focus) el.focus();
+    if (caret != null && el.setSelectionRange) el.setSelectionRange(caret, caret);
+  } catch (e) { /* a shell without selection support still keeps the value */ }
+  return null;
+}
 function profileLetterSetTo(value) {
   var st = state.profileShortlist; if (!st) return;
   var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
   ls.to = String(value == null ? '' : value);
   ls.draft = null; ls.error = null;
+  var caret = profileLetterFocusTo();
   profileShortlistRerender();
+  profileLetterFocusTo(caret == null ? String(ls.to).length : caret);
 }
 function profileLetterSetBody(value) {
   var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);

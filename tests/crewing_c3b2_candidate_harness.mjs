@@ -407,7 +407,22 @@ function makeProfileContext({ server = makeProfileServer(), invokeImpl, language
     },
     window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
     navigator: { clipboard: { writeText: async (text) => { copied.push(text); } } },
-    document: { getElementById(id) { return nodes.get(id) || null; }, addEventListener() {} },
+    // `querySelector` exists here because of a defect the vm could not see: the
+    // section re-renders on every keystroke, which REPLACES the input the
+    // operator is typing into, and only the first character ever landed. The
+    // fake element records focus and caret calls so the fix is measurable.
+    document: {
+      getElementById(id) { return nodes.get(id) || null; },
+      querySelector(sel) {
+        if (!/profile-letter-to/.test(String(sel))) return null;
+        if (!nodes.has('__to_input')) {
+          nodes.set('__to_input', { value: '', selectionStart: 0, focused: 0, caret: [],
+            focus() { this.focused += 1; }, setSelectionRange(a) { this.caret.push(a); } });
+        }
+        return nodes.get('__to_input');
+      },
+      addEventListener() {},
+    },
     FileReader: class {},
     getUiLang() { return lang; },
     tr(key) { return key; },
@@ -3882,6 +3897,23 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
     softOk(psafeL(() => /data-qa="profile-letter-to"[^>]*value="crewing@oceanic\.example\.com"/.test(lhtml(L))),
       'No.632/5.2: the typed address is ON SCREEN before any mail client is opened');
   } else { softOk(false, 'No.632/5.2: address refusal'); softOk(false, 'No.632/5.2: address visible'); }
+
+  // ---- 5.2b typing an address must SURVIVE the re-render -----------------
+  //
+  // Found live on the stand, not here: the section repaints on every keystroke,
+  // the repaint replaces the <input> the operator is typing into, focus is lost
+  // and only the FIRST character of the address ever arrives. A test that calls
+  // the setter directly — as every check above does — cannot see that, because
+  // the setter is not the keyboard.
+  if (L) {
+    const beforeFocus = (L.nodes.get('__to_input') || {}).focused || 0;
+    await typeAddress(L, 'crewing@oceanic.example.com');
+    const input = L.nodes.get('__to_input');
+    softOk(!!input && input.focused > beforeFocus,
+      'No.632/5.2b: after the section repaints, the address field is focused again — otherwise the operator types one character and loses the field');
+    softOk(!!input && Array.isArray(input.caret) && input.caret.length > 0,
+      'No.632/5.2b: and the caret is put back where it was, so the address is not typed backwards');
+  } else { softOk(false, 'No.632/5.2b: focus survives the repaint'); softOk(false, 'No.632/5.2b: caret restored'); }
 
   // ---- 5.3 the resume is PICKED. An attachment is not a resume ------------
   softOk(psafeL(() => !!segment(L, 'profile-letter-pick-row', 'L1')),
