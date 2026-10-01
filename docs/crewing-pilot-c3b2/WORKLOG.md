@@ -754,3 +754,69 @@ button as the contact for the action.
 
 Not in this card: anything about the PERSON (name, age, nationality, sea time,
 last vessel) — that is No.623; and any change to what is compared — No.622.
+
+## No.623 — S3, the client of Crewing says WHO responded (2026-09-30)
+
+OWNER (943)/(944)/(963). Server half frozen and accepted upstream
+(`feature/crewing-623-response-summary-20260930`); this is the client half only.
+Nothing about WHAT IS COMPARED changed — No.622 is untouched, and no weight or
+filter of the rating was added.
+
+**The defect that had to be fixed before anything could be shown.** `send()`
+decodes every intake answer into `CandidateIntakeReceipt`, and serde ignores a
+key no field declares — no error, no warning. Undeclared, `response_headline`
+and `response_summary` would have been dropped at the bridge, the screen would
+have rendered exactly what it renders today, and every renderer test would have
+stayed green over it. That is the No.622 class the owner already paid for once
+(the loader dropped `withheld_profiles` past 88 green checks). So the two types
+are declared, and the drill is a serde ROUND TRIP in `cargo test --lib`, not a
+regex over the source: decode the frozen body, serialise it back, require all
+thirteen names to survive. Deleting a field goes red instead of going quiet.
+
+**The heading is CONDITIONAL, and that is the load-bearing negative.** Measured
+from this product's own source table: `inbound 9 · skipi_response 2 ·
+synthetic 3`. Nine of fourteen pilot cards are born of e-mail and will never
+carry these fields. «Должность · Имя» therefore appears only where the fields
+actually arrived; every other row and card is byte-identical to before. An
+unconditional heading would have made the majority of the queue worse.
+
+**Three transports of one name, and the order is assigned.** An operator's
+correction (`corrected_by` on the current fact version) > the value delivered
+with the response > what a parser read out of a CV. A human edit is never
+overwritten by a machine value. Exactly one name is chosen, so the standing
+invariant — two names for one candidate are never shown side by side — holds.
+The dead `crewFlowRowTitle` was NOT revived: a third independent title rule was
+the thing to avoid.
+
+**Three states, and one of them was already broken here.** `answered` was
+`!!(d.facts && d.facts.length)` — "the question was answered" derived from "the
+answer was not empty". A failed request therefore printed «имя не указано»: an
+unasked question wearing the clothes of an answered absence. Now a response that
+came back is an answer (an EMPTY list included), a request that did not come
+back is its own state, and the failure is stated directly under the heading —
+above every disclosure, per CANON (930) п.1 — instead of only inside a collapsed
+`<details>`.
+
+**Nothing of the response reaches the local seafarer database.** The open owner
+question stays open. `crewFlowSaveToSeafarers` is untouched and writes the same
+four recorded facts it always did. The lock that matters is not "do not call the
+writer" but ABSENCE: everything in `crewFlowFactCache()` reaches both the queue
+row and that irreversible write, so no delivered value is ever put there. What
+the row needs to rank three name transports is one word about origin, kept in a
+store of its own — the same shape No.621 used for the contact code. The
+acceptance criterion "the details survive a refresh" is met by RE-READING FROM
+THE SERVER, and the negative (no local copy appears) is drilled.
+
+**Honesty of the four elements.** Age prints as approximate when
+`age_precision` is `year`, because a to-the-day figure from a year-only birth
+date is a precision the client never had. Sea time always names the post it was
+counted for, and «no data» never renders as «0». A post that was overwritten by
+a republish is shown as ABSENT with the reason said out loud — never replaced by
+the profile's current post, which (944) forbids: a seafarer who answered
+"Master" was never shown "Chief Officer".
+
+Numbers: the thirteen guard harnesses went 1675 → 1812 passed, 0 failed on both
+sides; failing-first measured 99 red on the base; 15 mutations on the NEW sha,
+all killed — four of them only after the drills that let them through were
+repaired, including a cargo probe that ended in a pipe and could therefore never
+report a failure at all.

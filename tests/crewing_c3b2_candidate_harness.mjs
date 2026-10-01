@@ -20,6 +20,12 @@ const c3b2End = html.indexOf('// ================== C3b-2 CANDIDATE CARD END ===
 assert.ok(c3b1Start > 0 && c3b1End > c3b1Start && c3b2Start > c3b1End && c3b2End > c3b2Start, 'bounded C3b-1 and C3b-2 UI blocks exist in order');
 const c3b1Source = html.slice(c3b1Start, c3b1End);
 const c3b2Source = html.slice(c3b2Start, c3b2End);
+// No.632: the profile-shortlist block is sliced the same way and may be ABSENT —
+// an absent block must read as a RED assertion below, never as an import crash
+// that would hide every other check in this file.
+const s632Start = html.indexOf('// ================= No.632 PROFILE SHORTLIST START =================');
+const s632End = html.indexOf('// ================== No.632 PROFILE SHORTLIST END ==================', s632Start);
+const s632Source = (s632Start > 0 && s632End > s632Start) ? html.slice(s632Start, s632End) : '';
 
 let passed = 0;
 let failed = 0;
@@ -241,6 +247,220 @@ function makeContext({ source = c3b2Source, c3b1 = c3b1Source, server = makeServ
   vm.runInContext(`${c3b1}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT };`, context);
   return context;
 }
+// ===========================================================================
+// No.632: an isolated copy of the PROFILE-SHORTLIST block.
+//
+// It is a separate sandbox from the candidate card for the reason the block is
+// separate code: it renders inside the matching-profile screen, which the
+// candidate card never enters. C3b-1 is loaded with it because the context
+// helpers (`pilotExpected`, `pilotParseError`) live there, and C3b-2 because
+// the row REUSES the six-element helpers No.623 already built rather than
+// growing a second set of them.
+// ===========================================================================
+function makeProfileServer() {
+  return {
+    user: 'user-op-1',
+    profileVersion: 2,
+    items: [
+      // in the selection, decided against the CURRENT version
+      { id: 'dec-1', intake_id: 'intake-1', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:00:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: false },
+      // set aside
+      { id: 'dec-2', intake_id: 'intake-2', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:01:00',
+        on_hold: true, held_by: 'user-op-1', held_at: '2026-10-01T06:00:00', in_selection: false, needs_recompare: false },
+      // decided against an OLDER version: the decision stands and is marked
+      { id: 'dec-3', intake_id: 'intake-3', profile_version: 1, confirmed_by: 'user-op-1', confirmed_at: '2026-09-30T05:00:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: true },
+      // the row whose own details will not load
+      { id: 'dec-4', intake_id: 'intake-4', profile_version: 2, confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:03:00',
+        on_hold: false, held_by: null, held_at: null, in_selection: true, needs_recompare: false },
+    ],
+    cards: {
+      'intake-1': {
+        intake_id: 'intake-1', receipt_id: 'r1', crewing_id: 'crew-synthetic', source: 'response', source_id: 's1', event_id: 'e1',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'application/pdf', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-10-01T04:00:00', issued_at: '2026-10-01T04:00:00',
+        objects: [], attachments: [{ ordinal: 0, filename: 'Ivan_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 1200, verdict: 'accepted', reason: null, eligible: true }],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+        response_summary: { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrenko',
+          age_years: 43, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+          experience_rank: 'Master', experience_days: 520, experience_state: 'in_rank',
+          last_vessel_name: 'MT Odesa Dawn', last_vessel_sign_off: '2026-07-01' },
+      },
+      'intake-2': {
+        intake_id: 'intake-2', receipt_id: 'r2', crewing_id: 'crew-synthetic', source: 'response', source_id: 's2', event_id: 'e2',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'application/pdf', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-09-30T04:00:00', issued_at: '2026-09-30T04:00:00',
+        objects: [], attachments: [{ ordinal: 0, filename: 'Petro_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 900, verdict: 'accepted', reason: null, eligible: true }],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+        response_summary: { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Petro', surname: 'Shevchuk',
+          age_years: 39, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+          experience_rank: 'Master', experience_days: 1160, experience_state: 'in_rank',
+          last_vessel_name: 'MT Black Sea', last_vessel_sign_off: null },
+      },
+      // BORN OF E-MAIL: nine of the fourteen pilot cards are, and they carry no
+      // response summary at all. Nothing may be drawn unconditionally over this.
+      'intake-3': {
+        intake_id: 'intake-3', receipt_id: 'r3', crewing_id: 'crew-synthetic', source: 'mail', source_id: 's3', event_id: 'e3',
+        primary_profile_id: null, content_sha256: 'x', content_bytes: 10, content_type: 'message/rfc822', state: 'ranked',
+        source_trust: 'unverified', version: 1, created_at: '2026-09-27T04:00:00', issued_at: '2026-09-27T04:00:00',
+        objects: [], attachments: [],
+        summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+      },
+    },
+    facts: {
+      'intake-1': [{ field: 'name', versions: [{ value: 'Ivan Petrenko', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'ivan.petrenko@example.com', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:phone', versions: [{ value: '+380501112233', version: 1, corrected_by: 'user-op-1' }] }],
+      'intake-2': [{ field: 'name', versions: [{ value: 'Petro Shevchuk', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'petro@example.com', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:phone', versions: [{ value: '+380502223344', version: 1, corrected_by: 'user-op-1' }] }],
+      // e-mail only: no phone, so the number button is dark and SAYS so
+      'intake-3': [{ field: 'name', versions: [{ value: 'Oleh Marchenko', version: 1, corrected_by: 'user-op-1' }] },
+                   { field: 'contact:email', versions: [{ value: 'oleh@example.com', version: 1, corrected_by: 'user-op-1' }] }],
+    },
+    responseContacts: {},
+    reject(status, detail) { return { kind: 'server', status, detail }; },
+    handle(command, args) {
+      const b = this;
+      switch (command) {
+        case 'crewing_intake_profile_shortlist': {
+          if (args.profileId !== 'prof-A') throw b.reject(404, 'matching profile not found');
+          return {
+            profile_id: 'prof-A', profile_version: b.profileVersion, profile_state: 'active',
+            items: b.items.map((i) => ({ ...i })),
+            counts: {
+              selected: b.items.length,
+              in_selection: b.items.filter((i) => i.in_selection).length,
+              on_hold: b.items.filter((i) => i.on_hold).length,
+            },
+          };
+        }
+        case 'crewing_intake_candidate_get': {
+          const card = b.cards[args.intakeId];
+          if (!card) throw b.reject(500, null);
+          return { ...card };
+        }
+        case 'crewing_intake_fact_list': {
+          const rows = b.facts[args.intakeId];
+          if (!rows) throw b.reject(500, null);
+          return { items: rows.map((r) => ({ ...r })) };
+        }
+        case 'crewing_intake_response_contact': {
+          const rc = b.responseContacts ? b.responseContacts[args.intakeId] : undefined;
+          // DEFAULT IS TODAY'S BEHAVIOUR: no entry means 404, which the card's own
+          // grammar reads as "this letter carries no response binding".
+          if (rc === undefined) throw b.reject(404, 'candidate intake not found');
+          if (rc === 'failed') throw b.reject(500, null);
+          return { value: rc.value, is_email: rc.is_email, offer_email: rc.offer_email };
+        }
+        case 'crewing_intake_shortlist_confirm': {
+          return { profile_id: args.pair.profile_id, profile_version: args.pair.profile_version,
+            confirmed_by: b.user, confirmed_at: '2026-10-01T08:00:00' };
+        }
+        case 'crewing_intake_shortlist_hold': {
+          const row = b.items.find((i) => i.intake_id === args.intakeId);
+          if (!row) throw b.reject(404, 'not_confirmed');
+          if (row.on_hold) throw b.reject(409, 'already_on_hold');
+          row.on_hold = true; row.held_by = b.user; row.held_at = '2026-10-01T07:00:00'; row.in_selection = false;
+          return { id: row.id, intake_id: row.intake_id, profile_id: 'prof-A', profile_version: row.profile_version,
+            confirmed_by: row.confirmed_by, confirmed_at: row.confirmed_at, on_hold: true, held_by: row.held_by,
+            held_at: row.held_at, withdrawn_by: null, withdrawn_at: null };
+        }
+        case 'crewing_intake_shortlist_release': {
+          const row = b.items.find((i) => i.intake_id === args.intakeId);
+          if (!row) throw b.reject(404, 'not_confirmed');
+          if (!row.on_hold) throw b.reject(409, 'not_on_hold');
+          row.on_hold = false; row.held_by = null; row.held_at = null; row.in_selection = true;
+          return null;
+        }
+        case 'crewing_intake_shortlist_withdraw': {
+          const at = b.items.findIndex((i) => i.intake_id === args.intakeId);
+          if (at < 0) throw b.reject(404, 'not_confirmed');
+          b.items.splice(at, 1);
+          return null;
+        }
+        case 'open_mailto': return null;
+        default: throw new Error(`unexpected invoke ${command}`);
+      }
+    },
+  };
+}
+
+function makeProfileContext({ server = makeProfileServer(), invokeImpl, language = 'en', profileId = 'prof-A', autoload = true } = {}) {
+  if (!s632Source) throw new Error('No.632 block absent');
+  const nodes = new Map();
+  nodes.set('profile-shortlist-host', { id: 'profile-shortlist-host', innerHTML: '', style: {} });
+  nodes.set('main', { id: 'main', innerHTML: '', style: {} });
+  const calls = [];
+  const copied = [];
+  const toasts = [];
+  let lang = language;
+  const context = {
+    console, Promise, Date, Math, JSON, Number, String, Array, Object, Uint8Array,
+    __demoMode: false,
+    state: {
+      view: 'compliance',
+      settings: { server_url: 'http://127.0.0.1:43123', bearer_token: 'synthetic-token', crewing_id: 'crew-synthetic' },
+      intakePilot: freshPilotState(),
+      selectedComplianceProfile: { id: profileId, name: 'Master — Crude Oil Tanker', version: 2, status: 'active' },
+    },
+    window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
+    navigator: { clipboard: { writeText: async (text) => { copied.push(text); } } },
+    // `querySelector` exists here because of a defect the vm could not see: the
+    // section re-renders on every keystroke, which REPLACES the input the
+    // operator is typing into, and only the first character ever landed. The
+    // fake element records focus and caret calls so the fix is measurable.
+    document: {
+      getElementById(id) { return nodes.get(id) || null; },
+      querySelector(sel) {
+        if (!/profile-letter-to/.test(String(sel))) return null;
+        if (!nodes.has('__to_input')) {
+          nodes.set('__to_input', { value: '', selectionStart: 0, focused: 0, caret: [],
+            focus() { this.focused += 1; }, setSelectionRange(a) { this.caret.push(a); } });
+        }
+        return nodes.get('__to_input');
+      },
+      addEventListener() {},
+    },
+    FileReader: class {},
+    getUiLang() { return lang; },
+    tr(key) { return key; },
+    escapeHtml: esc, escapeAttr: esc,
+    escapeJsString(value) { return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); },
+    humanSize(bytes) { return `${bytes} B`; },
+    showToast(msg, kind) { toasts.push({ msg, kind }); },
+    inAppConfirm: async () => true,
+    async invoke(command, args) {
+      calls.push({ command, args: structuredClone(args) });
+      if (invokeImpl) { const handled = invokeImpl(command, args, calls); if (handled !== undefined) return handled; }
+      return server.handle(command, args);
+    },
+    calls, nodes, server, copied, toasts,
+    setTimeout, clearTimeout, queueMicrotask,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${c3b1Source}\n${c3b2Source}\n${s632Source}\nthis.__s632 = { profileShortlistLoad, profileShortlistSectionHtml, profileShortlistRerender, profileShortlistHold, profileShortlistRelease, profileShortlistRemove, profileShortlistEmail, profileShortlistCopyPhone, profileShortlistStateFor, profileShortlistT };
+this.__s632b = {
+  ensure: typeof profileShortlistEnsure === 'function' ? profileShortlistEnsure : null,
+  invalidate: typeof profileShortlistInvalidate === 'function' ? profileShortlistInvalidate : null,
+  confirm: pilotShortlistConfirm, withdraw: pilotShortlistWithdraw,
+};
+this.__s632c = {
+  prepare: typeof profileLetterPrepare === 'function' ? profileLetterPrepare : null,
+  pick: typeof profileLetterPick === 'function' ? profileLetterPick : null,
+  unpick: typeof profileLetterUnpick === 'function' ? profileLetterUnpick : null,
+  setTo: typeof profileLetterSetTo === 'function' ? profileLetterSetTo : null,
+  setBody: typeof profileLetterSetBody === 'function' ? profileLetterSetBody : null,
+  editToggle: typeof profileLetterEditToggle === 'function' ? profileLetterEditToggle : null,
+  compose: typeof profileLetterCompose === 'function' ? profileLetterCompose : null,
+  seaTime: typeof profileLetterSeaTime === 'function' ? profileLetterSeaTime : null,
+  section: typeof profileLetterSectionHtml === 'function' ? profileLetterSectionHtml : null,
+};`, context);
+  if (autoload) { context.__s632.profileShortlistLoad(profileId); }
+  return context;
+}
+
 async function flush(rounds = 6) {
   for (let i = 0; i < rounds; i += 1) { await Promise.resolve(); await new Promise((resolve) => setTimeout(resolve, 0)); }
 }
@@ -602,7 +822,13 @@ const controls = [
     async sensor(ctx) {
       await positiveChainUntilRank(ctx);
       const buttons = [...main(ctx).matchAll(/onclick="(pilotShortlistConfirm\('prof-C',1\))"/g)];
-      assert.equal(buttons.length, 1, 'C row has its own confirm control');
+      // TWO since No.632, and the number stays load-bearing rather than being
+      // loosened to ">= 1": the compact fit card gained the add button the owner
+      // asked for (968), and the full-comparison row below keeps the one it
+      // already had — an accepted screen is not redone to make a count tidy.
+      // Both must address prof-C and nothing else, which is what this control is
+      // for; the click below exercises the first of them.
+      assert.equal(buttons.length, 2, 'C has its own confirm control on BOTH surfaces of the card — the fit card and the full comparison row');
       vm.runInContext(buttons[0][1], ctx); await flush();
       const call = ctx.calls.find((c) => c.command === 'crewing_intake_shortlist_confirm');
       assert.equal(call.args.pair.profile_id, 'prof-C', 'stub recorded the clicked profile id, not the first row');
@@ -2915,6 +3141,1474 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
   const rowAt = html.indexOf('function pilotCardRankRowHtml(');
   const rowBody = rowAt > 0 ? html.slice(rowAt, html.indexOf('\nfunction ', rowAt + 10)) : '';
   ok622(/not_applicable|\.hidden/.test(rowBody), 'the shortlist button is refused on an inapplicable row, on the screen and not only on the server');
+}
+
+// ===== No.623 (OWNER (943)/(944)/(963)): after a response, the card says WHO ====
+//
+// Six elements reach the card through `response_summary` on the candidate GET.
+// What is drilled here is not "the renderer can print a name" — a fixture pushed
+// into a renderer proves that and nothing else (card: «зелёный тест, где поле
+// поставлено в фикстуру напрямую, приёмкой не является»). What is drilled is the
+// SHAPE OF THE ANSWER: that the key survives the typed Tauri bridge at all, that
+// the heading stays CONDITIONAL, that three states stay three, and that not one
+// of the six reaches the irreversible seafarer database.
+console.log('\n# No.623: the card says who responded');
+{
+  const RESP = {
+    rank: 'Master', rank_state: 'from_snapshot',
+    first_name: 'Ivan', surname: 'Petrov',
+    age_years: 41, age_precision: 'exact',
+    citizenship: 'Ukraine', citizenship_code: 'UA',
+    experience_rank: 'Master', experience_days: 1170, experience_state: 'matches_response_rank',
+    last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14',
+  };
+  const withSummary = (over) => Object.assign({}, RESP, over || {});
+  const openWith = async (summary, opts) => {
+    const srv = makeServer();
+    if (summary !== undefined) srv.card.response_summary = summary;
+    if (opts && opts.facts) srv.facts = opts.facts;
+    const ctx = makeContext(Object.assign({ server: srv }, (opts && opts.ctx) || {}));
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    return ctx;
+  };
+  const between = (html, from, to) => {
+    const a = html.indexOf(from); if (a < 0) return '';
+    const b = to ? html.indexOf(to, a) : -1;
+    return b < 0 ? html.slice(a) : html.slice(a, b);
+  };
+
+  // ---- 1. the typed bridge. Without this the six never leave Rust -----------
+  // `send` decodes into CandidateIntakeReceipt; serde DROPS a key the struct does
+  // not declare, silently and without failing the parse. So the installed No.621
+  // candidate against an upgraded server renders NOTHING — and every renderer
+  // test above it stays green while it does. This is the first thing that breaks.
+  softOk(/pub response_summary: Option<CandidateResponseSummary>/.test(rust),
+    'No.623/bridge: CandidateIntakeReceipt declares response_summary — otherwise serde drops the key before the webview sees it');
+  softOk(/pub response_headline: Option<CandidateResponseHeadline>/.test(rust),
+    'No.623/bridge: CandidateIntakeReceipt declares response_headline for the queue row');
+  {
+    const sumStruct = (rust.match(/pub\(crate\) struct CandidateResponseSummary \{[\s\S]*?\n\}/) || [''])[0];
+    for (const field of ['rank', 'rank_state', 'first_name', 'surname', 'age_years', 'age_precision',
+      'citizenship', 'citizenship_code', 'experience_rank', 'experience_days', 'experience_state',
+      'last_vessel_name', 'last_vessel_sign_off']) {
+      softOk(new RegExp('pub ' + field + ':').test(sumStruct), 'No.623/bridge: the summary carries ' + field);
+    }
+    // The contract is FROZEN: thirteen names, and a fourteenth would be a field
+    // about a person that nobody agreed to (card STOP: «поле о человеке сверх шести»).
+    const declared = (sumStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
+    // No.632/S5: thirteen plus the three keys of the career map the server now
+    // answers (experience_days_by_rank / _for_rank / _for_rank_state). The count
+    // is kept EXACT rather than loosened to ">= 13", so it still catches a
+    // fourteenth field about a person that nobody agreed to.
+    softOk(declared === 16, 'No.623/bridge: the summary declares exactly the sixteen frozen names — thirteen of No.623 plus the three of the No.632 career map — got ' + declared);
+    const headStruct = (rust.match(/pub\(crate\) struct CandidateResponseHeadline \{[\s\S]*?\n\}/) || [''])[0];
+    const headDeclared = (headStruct.match(/\n {4}pub [a-z_]+:/g) || []).length;
+    softOk(headDeclared === 4, 'No.623/bridge: the queue headline declares exactly four — the card shape must not ride the list — got ' + headDeclared);
+    softOk(!/last_vessel|age_years|citizenship|experience_days/.test(headStruct),
+      'No.623/bridge: no card-only element is declared on the queue headline');
+  }
+  // A server that does not carry the keys must not fail the parse of everything
+  // else — the rule already written on `profile_ranks`.
+  softOk(/#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_summary/.test(rust)
+    && /#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_headline/.test(rust),
+    'No.623/bridge: both are #[serde(default)] — an older pilot server still parses');
+  softOk(!/deny_unknown_fields/.test(rust),
+    'No.623/bridge: nothing in the intake bridge denies unknown fields');
+
+  // ---- 2. THE HEADING IS CONDITIONAL --------------------------------------
+  // Measured on the product (`dist/index.html` source table): inbound 9 ·
+  // skipi_response 2 · synthetic 3. NINE of fourteen pilot cards are born of
+  // e-mail and will never carry these fields. An unconditional heading makes the
+  // majority of the queue WORSE, so the negative here is the load-bearing one.
+  {
+    const withResp = await openWith(RESP);
+    const html = withResp.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov</.test(html),
+      'No.623/1: the heading names the person who responded');
+    softOk(/data-qa="pilot-card-response-rank"[^>]*>Master</.test(html),
+      'No.623/1: and the post THEY RESPONDED ON stands beside the name');
+    const headIdx = html.indexOf('data-qa="pilot-card-response-rank"');
+    const nameIdx = html.indexOf('data-qa="pilot-card-name"');
+    softOk(headIdx > 0 && nameIdx > headIdx, 'No.623/1: the order is «post · name», as the owner asked');
+
+    const noResp = await openWith(undefined);
+    const plain = noResp.nodes.get('main').innerHTML;
+    softOk(!/data-qa="pilot-card-response-rank"/.test(plain),
+      'No.623/1 NEGATIVE: a mail-born card (no response_summary) gets NO new heading — nine of fourteen pilot rows are this case');
+    softOk(!/data-qa="pilot-response-summary"/.test(plain),
+      'No.623/1 NEGATIVE: and no summary block is drawn for it');
+    softOk(/data-qa="pilot-card-name"/.test(plain),
+      'No.623/1 NEGATIVE (calibration): the card still renders its own heading — the negative is not measuring a blank card');
+  }
+
+  // ---- 3. the compact summary is VISIBLE, not filed under a disclosure ------
+  {
+    const ctx = await openWith(RESP);
+    const html = ctx.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-response-summary"/.test(html), 'No.623/2: the compact summary is on the card');
+    const sumIdx = html.indexOf('data-qa="pilot-response-summary"');
+    const firstDetails = html.indexOf('<details');
+    softOk(sumIdx > 0 && firstDetails > 0 && sumIdx < firstDetails,
+      'No.623/2: the four elements are ABOVE the first disclosure — CANON (930): a decision is not made inside a collapsed block');
+    const block = between(html, 'data-qa="pilot-response-summary"', '</section>');
+    softOk(!/<details/.test(block), 'No.623/2: and the summary block contains no disclosure of its own');
+    for (const [qa, needle] of [['pilot-response-age', '41'], ['pilot-response-citizenship', 'Ukraine'],
+      ['pilot-response-experience', 'Master'], ['pilot-response-vessel', 'Southern Cross']]) {
+      softOk(new RegExp('data-qa="' + qa + '"').test(block) && block.includes(needle),
+        'No.623/2: ' + qa + ' is one of the four visible elements and states ' + needle);
+    }
+  }
+
+  // ---- 4. age without invented precision ----------------------------------
+  {
+    const exact = await openWith(withSummary({ age_years: 41, age_precision: 'exact' }));
+    const exactLine = between(exact.nodes.get('main').innerHTML, 'data-qa="pilot-response-age"', '</div>');
+    softOk(exactLine.includes('41'), 'No.623/3: an exact date of birth gives the age as a number');
+
+    const rough = await openWith(withSummary({ age_years: 41, age_precision: 'year' }));
+    const roughLine = between(rough.nodes.get('main').innerHTML, 'data-qa="pilot-response-age"', '</div>');
+    softOk(roughLine.includes('41'), 'No.623/3: a year-only date of birth still states the number it has');
+    softOk(/data-precision="year"/.test(roughLine),
+      'No.623/3: and the screen marks it approximate in the markup');
+    // The comparison is on the VALUE THE OPERATOR READS, not on the whole cell:
+    // a `data-precision` attribute alone made the two cells differ while the
+    // visible text still claimed an exact age (mutation M11 survived exactly so).
+    const valueOf = (line) => (String(line).match(/class="cf-resp-v[^"]*"[^>]*>([^<]*)</) || ['', ''])[1];
+    softOk(valueOf(roughLine) !== valueOf(exactLine),
+      'No.623/3 NEGATIVE: the two precisions do not render the same WORDS — a computed-to-the-day figure from a year-only birth date is an invented precision; got «' + valueOf(roughLine) + '» vs «' + valueOf(exactLine) + '»');
+    softOk(valueOf(exactLine) === '41',
+      'No.623/3 CALIBRATION: the exact case really is the bare number, so the inequality above is not measuring two kinds of hedging');
+  }
+
+  // ---- 5. experience names the post it was counted for ---------------------
+  {
+    const same = await openWith(withSummary({ experience_rank: 'Master', experience_state: 'matches_response_rank' }));
+    const sameLine = between(same.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(sameLine.includes('Master'),
+      'No.623/4: the sea time says WHICH post it was counted for, never a bare number');
+
+    const other = await openWith(withSummary({ experience_rank: 'Chief Officer', experience_state: 'other_rank' }));
+    const otherLine = between(other.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(otherLine.includes('Chief Officer'),
+      'No.623/4: when the seafarer wrote a DIFFERENT post, that post is the one named');
+    softOk(otherLine !== sameLine,
+      'No.623/4 NEGATIVE: «counted for the post responded on» and «counted for another post» do not read the same — No.622 is not open, so the screen must say which it is');
+
+    const unknown = await openWith(withSummary({ experience_rank: null, experience_days: null, experience_state: 'response_rank_unknown' }));
+    const unkLine = between(unknown.nodes.get('main').innerHTML, 'data-qa="pilot-response-experience"', '</div>');
+    softOk(!/\b0\b/.test(unkLine),
+      'No.623/4 NEGATIVE: an unknown post never renders as «0 days» — «no data» and «zero sea time» are different statements about a person');
+  }
+
+  // ---- 6. THE FROZEN POST. (944): the seafarer who answered «Master» must
+  //         never be shown today's «Chief Officer» --------------------------
+  {
+    const superseded = await openWith(withSummary({ rank: null, rank_state: 'snapshot_superseded' }));
+    const html = superseded.nodes.get('main').innerHTML;
+    softOk(!/Chief Officer/.test(between(html, 'data-qa="pilot-card-identity"', '</div></div>')),
+      'No.623/5: a superseded snapshot shows NO post rather than the profile’s current one');
+    softOk(/data-qa="pilot-response-rank-state"/.test(html),
+      'No.623/5: and it says WHY the post is missing, instead of going quiet');
+    const unavailable = await openWith(withSummary({ rank: null, rank_state: 'snapshot_unavailable' }));
+    const a = between(html, 'data-qa="pilot-response-rank-state"', '</span>');
+    const b = between(unavailable.nodes.get('main').innerHTML, 'data-qa="pilot-response-rank-state"', '</span>');
+    softOk(a !== '' && b !== '' && a !== b,
+      'No.623/5: «the version was overwritten» and «there is no readable snapshot» are two different sentences, not one');
+  }
+
+  // ---- 7. Б3: THREE STATES, and the contract was broken BEFORE No.623 ------
+  // `answered = !!(d.facts && d.facts.length)` derived "the question was asked"
+  // from "the answer was not empty". A failed request therefore rendered as an
+  // absence — an unasked question wearing the clothes of an answer.
+  {
+    const srv = makeServer();
+    const ctx = makeContext({ server: srv, invokeImpl: (command) => {
+      if (command === 'crewing_intake_candidate_get') throw { kind: 'server', status: 500, detail: null, ambiguous: false };
+      return undefined;
+    } });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const html = ctx.nodes.get('main').innerHTML;
+    const ident = between(html, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(/data-name="error"/.test(ident),
+      'No.623/Б3: a card request that FAILED is the «could not be loaded» state — not «name not given»');
+    softOk(!/name not given/i.test(ident),
+      'No.623/Б3: and the words «name not given» are not printed over a question nobody answered');
+    softOk(/data-qa="pilot-identity-load-error"/.test(html),
+      'No.623/Б3: the failure is stated NEXT TO THE DECISION');
+    const errIdx = html.indexOf('data-qa="pilot-identity-load-error"');
+    const firstDetails = html.indexOf('<details');
+    softOk(errIdx > 0 && (firstDetails < 0 || errIdx < firstDetails),
+      'No.623/Б3: ...and above the first disclosure — CANON (930) п.1 forbids hiding an error inside a collapsed block');
+  }
+  {
+    const srv = makeServer();
+    const ctx = makeContext({ server: srv, invokeImpl: (command) => {
+      if (command === 'crewing_intake_fact_list') throw { kind: 'server', status: 503, detail: null, ambiguous: false };
+      return undefined;
+    } });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const ident = between(ctx.nodes.get('main').innerHTML, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(/data-name="error"/.test(ident),
+      'No.623/Б3: a facts request that failed is an error too — today it renders as «unknown» with nothing said');
+  }
+  {
+    // CALIBRATION. Without this, "always render error" passes the two above.
+    const clean = await openWith(undefined);
+    const ident = between(clean.nodes.get('main').innerHTML, 'data-qa="pilot-card-identity"', '</section>');
+    softOk(!/data-name="error"/.test(ident),
+      'No.623/Б3 CALIBRATION: a card that loaded CLEANLY is not reported as an error — «always error» does not pass');
+    softOk(/data-name="none"/.test(ident),
+      'No.623/Б3 CALIBRATION: an answered empty facts list is still the honest «no name recorded» — an empty answer IS an answer');
+  }
+
+  // ---- 8. Б2: THREE transports of one name, and the order is assigned ------
+  //         operator correction > delivered with the response > parsed from a CV
+  {
+    const machine = { name: [{ field: 'name', value: 'I. PETROV (OCR)', version: 1, source_object: 'obj-1',
+      page: null, span: null, confidence: 0.4, uncertainty: null, corrected_by: null, created_at: '2026-09-23T01:01:00' }] };
+    const ctx1 = await openWith(RESP, { facts: machine });
+    const h1 = ctx1.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov</.test(h1),
+      'No.623/Б2: the name the seafarer sent WITH THE RESPONSE beats the one a machine read out of a CV');
+    softOk(!/OCR/.test(between(h1, 'data-qa="pilot-card-identity"', '</section>')),
+      'No.623/Б2: and the two are never shown side by side — the invariant above crewFlowRowNameState holds');
+
+    const operator = { name: [{ field: 'name', value: 'Ivan Petrov-Sydorenko', version: 2, source_object: 'obj-1',
+      page: null, span: null, confidence: null, uncertainty: 'operator_entered', corrected_by: 'user-op-1', created_at: '2026-09-23T01:02:00' }] };
+    const ctx2 = await openWith(RESP, { facts: operator });
+    const h2 = ctx2.nodes.get('main').innerHTML;
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivan Petrov-Sydorenko</.test(h2),
+      'No.623/Б2: an OPERATOR’s correction is a human act and outranks the delivered value — it is never overwritten by it');
+    softOk(!/>Ivan Petrov</.test(h2),
+      'No.623/Б2: and again only one name is on screen');
+  }
+
+  // ---- 9. Б1: NOT ONE of the six reaches the irreversible local database ---
+  // The open owner question is not answered here by the back door. Note the
+  // route: everything in crewFlowFactCache() reaches BOTH the queue row and
+  // `save_seafarer_from_bundle`, so «don’t call the writer» is not enough —
+  // nothing of the response may enter that store in the first place.
+  {
+    const save = (html.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(save !== '', 'No.623/Б1 (control): the irreversible writer is still where it was');
+    softOk(!/response_summary|response_headline|responseSummary|responseHeadline/.test(save),
+      'No.623/Б1: crewFlowSaveToSeafarers does not read a single one of the six — the local export is OUT OF SCOPE for No.623');
+    const applicant = (save.match(/applicantSummary: \{[\s\S]*?\}/) || [''])[0];
+    softOk(/name: facts\.name \|\| ''/.test(applicant) && /rank: facts\.rank \|\| ''/.test(applicant)
+      && /nationality: facts\.nationality \|\| ''/.test(applicant) && /email: facts\.email \|\| ''/.test(applicant),
+      'No.623/Б1: what it writes is byte-for-byte what it wrote before — four recorded facts, nothing delivered');
+    softOk(!/crewFlowFactCache\(\)\[[^\]]*\]\s*=\s*[^;]*response/i.test(html),
+      'No.623/Б1: nothing from the response is ever put into the fact cache, which is the door to that writer');
+  }
+
+  // ---- 10. the summary is RE-READ FROM THE SERVER (acceptance criterion 6) --
+  {
+    const srv = makeServer();
+    srv.card.response_summary = RESP;
+    const ctx = makeContext({ server: srv });
+    ctx.__pilot.pilotOpenCard('intake-A');
+    await flush();
+    const before = ctx.calls.filter((c) => c.command === 'crewing_intake_candidate_get').length;
+    ctx.__pilot.pilotCardRefreshAll();
+    await flush();
+    const after = ctx.calls.filter((c) => c.command === 'crewing_intake_candidate_get').length;
+    softOk(after === before + 1,
+      'No.623/6: refreshing the card asks the SERVER for the summary again — it does not live in screen memory');
+    // and the value that came back is the one on screen
+    srv.card.response_summary = withSummary({ first_name: 'Ivanna', surname: 'Petrova' });
+    ctx.__pilot.pilotCardRefreshAll();
+    await flush();
+    softOk(/data-qa="pilot-card-name"[^>]*>Ivanna Petrova</.test(ctx.nodes.get('main').innerHTML),
+      'No.623/6: and a changed server answer changes the screen — proving the screen is not showing a cached copy');
+    softOk(!ctx.calls.some((c) => c.command === 'save_seafarer_from_bundle'),
+      'No.623/6 NEGATIVE: showing the card never produced a LOCAL copy — the negative the owner’s open question requires');
+  }
+
+  // ---- 11. absent elements are honest, in both languages -------------------
+  {
+    const empty = await openWith(withSummary({
+      age_years: null, age_precision: null, citizenship: null, citizenship_code: null,
+      experience_rank: null, experience_days: null, experience_state: 'not_provided',
+      last_vessel_name: null, last_vessel_sign_off: null,
+    }));
+    const block = between(empty.nodes.get('main').innerHTML, 'data-qa="pilot-response-summary"', '</section>');
+    softOk(block !== '', 'No.623/7: a response whose elements are all empty still shows the block — the response itself exists');
+    softOk(!/\b0\b/.test(block), 'No.623/7: and states nothing as «0»');
+    const missing = (block.match(/data-qa="pilot-response-missing"/g) || []).length;
+    softOk(missing >= 4, 'No.623/7: each of the four says «not given» in its own place — got ' + missing);
+  }
+  {
+    for (const lang of ['en', 'ru']) {
+      const srv = makeServer();
+      srv.card.response_summary = RESP;
+      const ctx = makeContext({ server: srv, language: lang });
+      ctx.__pilot.pilotOpenCard('intake-A');
+      await flush();
+      const block = between(ctx.nodes.get('main').innerHTML, 'data-qa="pilot-response-summary"', '</section>');
+      softOk(block !== '' && !/^\s*$/.test(block), 'No.623/8: the summary renders in ' + lang);
+      softOk(!/response_summary\.|card\.[a-z_]+\b(?![^<]*>)/.test(block) && !/\bundefined\b/.test(block),
+        'No.623/8: no untranslated key and no «undefined» leaks onto the screen in ' + lang);
+    }
+    const t = (l, k) => ctxText(l, k);
+    function ctxText(lang, key) {
+      const ctx = makeContext({ language: lang });
+      return ctx.__pilot.cardT(key);
+    }
+    for (const key of ['resp_age', 'resp_citizenship', 'resp_experience', 'resp_vessel', 'resp_missing',
+      'resp_rank_superseded', 'resp_rank_unavailable', 'resp_rank_absent', 'resp_age_about',
+      'resp_exp_other_rank', 'resp_exp_rank_unknown', 'resp_exp_not_provided', 'identity_failed',
+      // No.632/S6: the label that now carries the post. Added to THIS list and
+      // not to a new one: a key that names a person's post in front of a
+      // customer must be under the same RU/EN completeness sensor as its
+      // neighbours, or it ships in one language.
+      'resp_exp_label_rank']) {
+      const en = t('en', key); const ru = t('ru', key);
+      softOk(en !== key, 'No.623/8: EN text exists for ' + key);
+      softOk(ru !== key && ru !== en, 'No.623/8: RU text exists for ' + key + ' and is not the English string');
+      softOk(/[Ѐ-ӿ]/.test(ru), 'No.623/8: the RU text for ' + key + ' is actually Russian');
+    }
+  }
+
+  // ---- 12. the dead heading stays dead ------------------------------------
+  {
+    const callSites = (html.match(/crewFlowRowTitle\(/g) || []).length;
+    softOk(callSites <= 1,
+      'No.623/Б2: crewFlowRowTitle was NOT revived — a third independent title rule is exactly what the finding forbade (occurrences: ' + callSites + ')');
+  }
+}
+
+// ===========================================================================
+// No.632 (OWNER (965)/(969)): the shortlist button on the fit card, and the
+// profile's own list of the candidates chosen for it.
+//
+// Two screens of one subsystem, both on isolated copies of the bounded blocks.
+// Nothing here contacts a server.
+// ===========================================================================
+console.log('# No.632: the add button on every fit card, and the profile shortlist');
+{
+  // ---- 1. the bridge DECLARES every field, or serde drops it in silence ----
+  // The exact defect No.623 paid for twice: serde drops a key no field declares,
+  // without failing the parse. The screen then renders yesterday and every
+  // renderer test stays green over it. So the DECLARATION is asserted here, and
+  // the round trip is asserted in Rust.
+  for (const command of ['crewing_intake_shortlist_hold', 'crewing_intake_shortlist_release', 'crewing_intake_profile_shortlist']) {
+    softOk(new RegExp(`pub\\(crate\\) async fn ${command}\\b`).test(rust), `No.632/1: the bridge defines ${command}`);
+    softOk(new RegExp(`crewing_intake::${command}\\b`).test(lib), `No.632/1: ${command} is registered in the Tauri handler`);
+  }
+  const structFields = (name) => {
+    const m = new RegExp(`pub\\(crate\\) struct ${name} \\{([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  for (const [name, fields] of [
+    ['ShortlistHold', ['id', 'intake_id', 'profile_id', 'profile_version', 'confirmed_by', 'confirmed_at', 'on_hold', 'held_by', 'held_at', 'withdrawn_by', 'withdrawn_at']],
+    ['ProfileShortlistItem', ['id', 'intake_id', 'profile_version', 'confirmed_by', 'confirmed_at', 'on_hold', 'held_by', 'held_at', 'in_selection', 'needs_recompare']],
+    ['ProfileShortlistCounts', ['selected', 'in_selection', 'on_hold']],
+    ['ProfileShortlistResponse', ['profile_id', 'profile_version', 'profile_state', 'items', 'counts']],
+  ]) {
+    const body = structFields(name);
+    for (const field of fields) {
+      softOk(body !== '' && new RegExp(`\\bpub ${field}:`).test(body), `No.632/1: ${name} declares ${field} — undeclared is silently dropped`);
+    }
+  }
+  // The three refusal words of the new state. Not on the allowlist = the screen
+  // receives a bare 403/409 and cannot say WHICH door was shut.
+  for (const code of ['already_on_hold', 'not_on_hold', 'hold_not_permitted']) {
+    softOk(new RegExp(`"${code}"`).test(rust), `No.632/1: ${code} passes the bridge's safe-detail allowlist`);
+  }
+  const fnBody = (name) => {
+    const m = new RegExp(`pub\\(crate\\) async fn ${name}\\(([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  softOk(/send_no_content\(/.test(fnBody('crewing_intake_shortlist_release')),
+    'No.632/1: the release goes through send_no_content — an undocumented 200 stays UNKNOWN instead of being called a success');
+  softOk(/Method::DELETE/.test(fnBody('crewing_intake_shortlist_release')), 'No.632/1: the release is a DELETE');
+  softOk(/Method::POST/.test(fnBody('crewing_intake_shortlist_hold')), 'No.632/1: the hold is a POST');
+  softOk(/checked_pair\(&pair\)/.test(fnBody('crewing_intake_shortlist_hold')), 'No.632/1: the hold validates the pair before any dispatch');
+  softOk(/"matching-profiles"/.test(fnBody('crewing_intake_profile_shortlist')) && /"shortlist"/.test(fnBody('crewing_intake_profile_shortlist')),
+    'No.632/1: the reverse list asks the matching-profiles surface');
+  softOk(/Method::GET/.test(fnBody('crewing_intake_profile_shortlist')), 'No.632/1: the reverse list is a GET');
+
+  // ---- 2. the STOP lines of the card, read off the block itself ----------
+  softOk(s632Source !== '', 'No.632/2: the profile-shortlist block is bounded by its own markers');
+  softOk(s632Source !== '' && !/crewFlowSaveToSeafarers|saveCandidateToSeafarers/.test(s632Source),
+    'No.632/2: the block never writes into the local seafarers table (STOP of the card)');
+  softOk(s632Source !== '' && !/send_mail|sendMail/.test(s632Source),
+    'No.632/2: the block never sends mail — OWNER (739) п.5, the operator sends from their own client');
+  softOk(s632Source !== '' && !/localStorage|sessionStorage|indexedDB/.test(s632Source),
+    'No.632/2: the list is NOT kept on the device — it is re-read from the server, which is what "survives a restart" means');
+
+  // ---- 3. module 1: the button on EVERY fit card -------------------------
+  {
+    const ctx = makeContext();
+    await positiveChainUntilRank(ctx);
+    const fitCards = () => main(ctx).split('data-qa="pilot-fit-card"');
+    const fitCard = (id) => fitCards().slice(1).find((part) => part.startsWith(` data-profile="${id}"`)) || null;
+    softOk(['prof-A', 'prof-B', 'prof-C'].every((id) => fitCard(id) && /data-qa="pilot-fit-confirm"/.test(fitCard(id))),
+      'No.632/3: EVERY card of "match against profiles" carries the add button, not only the primary one');
+    softOk(/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-B',1\)"/.test(main(ctx)),
+      'No.632/3: the button is wired to the pair of ITS OWN card — profile and version');
+    softOk(/data-qa="pilot-fit-into"/.test(fitCard('prof-A') || ''),
+      'No.632/3: the card says which profile and which version the press puts him into');
+    const before = ctx.calls.filter((c) => c.command === 'crewing_intake_shortlist_confirm').length;
+    await ctx.__pilot.pilotShortlistConfirm('prof-B', 1); await flush();
+    const confirms = ctx.calls.filter((c) => c.command === 'crewing_intake_shortlist_confirm');
+    softOk(confirms.length === before + 1 && JSON.stringify(confirms.slice(-1)[0].args.pair) === JSON.stringify({ profile_id: 'prof-B', profile_version: 1 }),
+      'No.632/3 (PRESERVE sentinel, green on the base too): the existing confirm dispatch still sends exactly the viewed pair');
+    // The duplicate is visible BEFORE the press, not discovered through a 409.
+    softOk(/data-qa="pilot-fit-onlist"/.test(fitCard('prof-B') || ''),
+      'No.632/3: the card he is ALREADY on says so, before anything is pressed');
+    softOk(!!fitCard('prof-B') && /data-qa="pilot-fit-onlist"/.test(fitCard('prof-B')) && !/data-qa="pilot-fit-confirm"/.test(fitCard('prof-B')),
+      'No.632/3: and offers no second add on that card — calibrated: the card must exist and carry the tag, so an empty screen cannot pass this');
+    softOk(!/data-qa="pilot-fit-onlist"/.test(fitCard('prof-A') || '') && /data-qa="pilot-fit-confirm"/.test(fitCard('prof-A') || ''),
+      'No.632/3: the OTHER cards are untouched by that decision');
+    softOk((main(ctx).match(/data-qa="pilot-fit-confirm"/g) || []).length === 2,
+      'No.632/3: exactly the two remaining cards offer the add — the count is asserted, not eyeballed');
+    // Three states: a figure, an absence, and a read that FAILED.
+    const broken = makeContext({ invokeImpl: (command) => { if (command === 'crewing_intake_rank_list') throw { kind: 'server', status: 500 }; } });
+    await openCard(broken); await flush();
+    softOk(/data-qa="pilot-ranks-error"/.test(main(broken)) && !/data-qa="pilot-fit-confirm"/.test(main(broken))
+      && /data-qa="pilot-fit-confirm"/.test(main(ctx)),
+      'No.632/3: when the comparisons could not be read the block says so and offers no button over data it does not have — calibrated against a context where the button IS drawn');
+  }
+  for (const key of ['fit_on_shortlist', 'fit_into']) {
+    const en = makeContext({ language: 'en' }).__pilot.cardT(key);
+    const ru = makeContext({ language: 'ru' }).__pilot.cardT(key);
+    softOk(en !== key, `No.632/3: EN text exists for ${key}`);
+    softOk(ru !== key && ru !== en && /[Ѐ-ӿ]/.test(ru), `No.632/3: RU text exists for ${key} and is actually Russian`);
+  }
+
+  // ---- 4. module 2: the profile's own list -------------------------------
+  let pctx = null;
+  try { pctx = makeProfileContext(); await flush(); } catch (e) { pctx = null; }
+  const psafe = (fn) => { try { const v = fn(); return v === undefined ? false : v; } catch (e) { return false; } };
+  const phtml = (c) => ((c || pctx) ? (c || pctx).nodes.get('profile-shortlist-host').innerHTML : '');
+  // split, not a greedy regex: each segment is exactly what lies between one row
+  // marker and the next, so "the other rows are untouched" can be asserted.
+  const prowOf = (c, intakeId) => phtml(c).split('data-qa="profile-shortlist-row"').slice(1)
+    .find((part) => part.startsWith(` data-intake="${intakeId}"`)) || null;
+  const prow = (intakeId) => prowOf(pctx, intakeId);
+  const pcalls = () => (pctx ? pctx.calls : []);
+  const refusingState = (c) => (c ? c.__s632.profileShortlistStateFor('prof-A') : null);
+
+  softOk(psafe(() => /data-qa="profile-shortlist"/.test(phtml())), 'No.632/4: the profile renders a shortlist section');
+  softOk(psafe(() => pcalls().some((c) => c.command === 'crewing_intake_profile_shortlist' && c.args.profileId === 'prof-A')),
+    'No.632/4: the section asks the SERVER for the list of this profile');
+  softOk(psafe(() => /data-qa="profile-shortlist-counts"/.test(phtml())),
+    'No.632/4: the counts the server computed are shown — selected, in the selection, on hold');
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-counts"[^>]*>([^<]*)</.exec(phtml());
+    return !!m && /4/.test(m[1]) && /3/.test(m[1]);
+  }), 'No.632/4: and they are the SERVER\'s three numbers, not a recount on the screen');
+  softOk(psafe(() => ['intake-1', 'intake-2', 'intake-3', 'intake-4'].every((id) => prow(id))), 'No.632/4: every shortlisted candidate has a row');
+  // The fixture above makes the server's counts AGREE with what a naive recount
+  // of the rows would produce, so it cannot tell the two apart. This one makes
+  // them disagree on purpose: `in_selection` is the one predicate the letter
+  // will use, and a screen that recounts is a SECOND place where "who goes to
+  // the customer" is decided — which is how a screen comes to say three while an
+  // envelope carries four.
+  {
+    let divergent = null;
+    try {
+      const inner = makeProfileServer();
+      const passthrough = inner.handle.bind(inner);
+      inner.handle = (command, args) => {
+        const answer = passthrough(command, args);
+        if (command === 'crewing_intake_profile_shortlist') answer.counts = { selected: 7, in_selection: 5, on_hold: 2 };
+        return answer;
+      };
+      divergent = makeProfileContext({ server: inner }); await flush();
+    } catch (e) { divergent = null; }
+    softOk(psafe(() => {
+      const m = /data-qa="profile-shortlist-counts"[^>]*>([^<]*)</.exec(phtml(divergent));
+      return !!m && /7/.test(m[1]) && /5/.test(m[1]) && !/\b4\b/.test(m[1]);
+    }), 'No.632/4: the counts shown are the SERVER\'s even when they disagree with the rows on screen — the screen does not keep a second copy of that rule');
+  }
+
+  // the six facts of a row, through the SAME helpers No.623 built
+  softOk(psafe(() => /Ivan Petrenko/.test(prow('intake-1'))), 'No.632/4: the row names the person');
+  softOk(psafe(() => /data-qa="profile-shortlist-age"/.test(prow('intake-1')) && /43/.test(prow('intake-1'))), 'No.632/4: age');
+  softOk(psafe(() => /data-qa="profile-shortlist-citizenship"/.test(prow('intake-1')) && /Ukrainian/.test(prow('intake-1'))), 'No.632/4: citizenship');
+  softOk(psafe(() => /data-qa="profile-shortlist-experience"/.test(prow('intake-1')) && /Master/.test(prow('intake-1'))),
+    'No.632/4: sea time, and it NAMES the post it was counted for (No.622 is not open — equality is by bytes)');
+  softOk(psafe(() => /data-qa="profile-shortlist-vessel"/.test(prow('intake-1')) && /Odesa Dawn/.test(prow('intake-1'))), 'No.632/4: last vessel');
+  softOk(psafe(() => /data-qa="profile-shortlist-attachments"/.test(prow('intake-1'))), 'No.632/4: how many files arrived with the response');
+  softOk(psafe(() => /data-qa="profile-shortlist-attachments"[^>]*data-attachments="1"/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-attachments"[^>]*data-attachments="0"/.test(prow('intake-3'))),
+    'No.632/4: a candidate WITHOUT an attachment is named as having none — he does not pass silently');
+  softOk(psafe(() => /<span class="ps-v">attachments: 1<\/span>/.test(prow('intake-1'))),
+    'No.632/4: and the COUNT is on the screen, not a yes/no verdict about what the file is');
+  softOk(psafe(() => !/\{n\}/.test(String(phtml() || ''))),
+    'No.632/4: the count is substituted into the text, never printed as a raw placeholder');
+  // The product has no resume recogniser, so no surface of this section is
+  // allowed to call a file a CV. This is the owner's word of 2026-10-01 turned
+  // into a sensor rather than a promise.
+  softOk(psafe(() => !/\bCV\b/.test(String(phtml() || ''))),
+    'No.632/4: the word "CV" appears NOWHERE in what the operator reads — an attachment is not a resume');
+  // Nine of the fourteen pilot cards are born of e-mail and carry no summary at
+  // all. Nothing may be printed unconditionally over that.
+  softOk(psafe(() => /data-qa="profile-shortlist-missing"/.test(prow('intake-3'))),
+    'No.632/4: a candidate with no response summary SAYS the fields were not given');
+  softOk(psafe(() => !!prow('intake-3') && !/>0 </.test(prow('intake-3'))),
+    'No.632/4: and an absence is never turned into a zero — calibrated: the row must exist first');
+  softOk(psafe(() => !!prow('intake-3') && /data-qa="profile-shortlist-age"[^>]*data-state="missing"/.test(prow('intake-3'))
+    && /data-qa="profile-shortlist-age"[^>]*data-state="have"/.test(prow('intake-1') || '')),
+    'No.632/4: an absent age is MARKED absent while a present one is marked present — two states on the wire, not one blank');
+
+  // three states: a value, an absence, and a read that FAILED are three things
+  softOk(psafe(() => /data-qa="profile-shortlist-row-error"/.test(prow('intake-4'))),
+    'No.632/4: a row whose own details could not be read says SO — beside the actions, not folded away');
+  softOk(psafe(() => !!prow('intake-4') && /data-qa="profile-shortlist-row-error"/.test(prow('intake-4'))
+    && !/data-qa="profile-shortlist-missing"/.test(prow('intake-4'))),
+    'No.632/4: and a failed read is NEVER rendered as "not given" — calibrated: the row and its error must both be there');
+  softOk(psafe(() => /data-qa="profile-shortlist-row" data-intake="intake-4"/.test(phtml())),
+    'No.632/4: the row itself still stands — the decision is a fact even when the person\'s details are not in hand');
+
+  // the three states of the decision
+  softOk(psafe(() => /data-qa="profile-shortlist-inselection"/.test(prow('intake-1'))), 'No.632/4: the one who goes out is marked');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold"/.test(prow('intake-2'))), 'No.632/4: the one set aside is marked');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold-note"/.test(prow('intake-2'))),
+    'No.632/4: and it says IN WORDS that he will not go in the selection');
+  softOk(psafe(() => /data-qa="profile-shortlist-release"/.test(prow('intake-2')) && !/data-qa="profile-shortlist-hold-action"/.test(prow('intake-2'))),
+    'No.632/4: a candidate on hold is offered the way back, not the way he already went');
+  softOk(psafe(() => /data-qa="profile-shortlist-hold-action"/.test(prow('intake-1')) && !/data-qa="profile-shortlist-release"/.test(prow('intake-1'))),
+    'No.632/4: a candidate in the selection is offered the hold');
+  softOk(psafe(() => /data-qa="profile-shortlist-recompare"/.test(prow('intake-3'))),
+    'No.632/4: a decision taken against an older version of the vacancy is MARKED — and stays on the list');
+  softOk(psafe(() => !!prow('intake-1') && !/data-qa="profile-shortlist-recompare"/.test(prow('intake-1'))
+    && /data-qa="profile-shortlist-recompare"/.test(prow('intake-3') || '')),
+    'No.632/4: a decision taken against the current version is NOT marked, while the older one IS — the mark distinguishes, it is not decoration');
+
+  // contacts: only the mechanisms this product already has, and an absent one is
+  // DARK AND NAMED rather than hidden
+  softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*onclick/.test(prow('intake-1')) && !/data-qa="profile-shortlist-email"[^>]*disabled/.test(prow('intake-1'))),
+    'No.632/4: e-mail is offered where an address was received');
+  softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-3'))), 'No.632/4: a missing phone is a DARK button');
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-phone"[^>]*>([^<]*)</.exec(prow('intake-3') || '');
+    return !!m && /Номера нет|No number/.test(m[1]);
+  }), 'No.632/4: and the dark button SAYS what is missing instead of vanishing');
+  softOk(psafe(() => /data-qa="profile-shortlist-phone"[^>]*onclick/.test(prow('intake-1') || '')
+    && !/data-qa="profile-shortlist-phone"[^>]*disabled/.test(prow('intake-1'))),
+    'No.632/4: where a number WAS received the button is live and wired — calibrated: it must be present, not merely not-disabled');
+  // The number is offered ONCE. A second button over the same clipboard, named
+  // for a transport this build does not have, was removed on the owner's word
+  // of 2026-10-01; this keeps it from growing back.
+  softOk(psafe(() => (String(prow('intake-1') || '').match(/<button/g) || []).length === 4),
+    'No.632/4: the row offers exactly four buttons — e-mail, copy the number, set aside, remove; no second clipboard button grows back');
+  softOk(psafe(() => !/messenger|мессенджер/i.test(String(phtml() || ''))),
+    'No.632/4: no button promises a messenger — the product has no messenger transport');
+  // A button must be named by what it DOES. "phone" promises a call; this one
+  // copies. Calibrated: the live label must exist first.
+  softOk(psafe(() => {
+    const m = /data-qa="profile-shortlist-phone"[^>]*onclick[^>]*>([^<]*)</.exec(prow('intake-1') || '');
+    return !!m && /Скопировать номер|Copy the number/.test(m[1]) && !/^телефон$|^phone$/i.test(m[1]);
+  }), 'No.632/4: the number button is named for the clipboard, not for a call this build cannot place');
+  if (pctx) {
+    await pctx.__s632.profileShortlistEmail('intake-1'); await flush();
+    const mailto = pcalls().filter((c) => c.command === 'open_mailto').slice(-1)[0];
+    softOk(!!mailto && mailto.args.to === 'ivan.petrenko@example.com',
+      'No.632/4: e-mail hands the draft to the operator\'s own client through the EXISTING open_mailto — Crewing sends nothing');
+    await pctx.__s632.profileShortlistCopyPhone('intake-1'); await flush();
+    softOk(pctx.copied.some((t) => /\+380501112233/.test(t)),
+      'No.632/4: the phone action uses the clipboard this build already has — no dialler is invented');
+  } else { softOk(false, 'No.632/4: e-mail opens the operator client'); softOk(false, 'No.632/4: phone uses the clipboard'); }
+
+  // the three writes carry the version THE DECISION WAS MADE AGAINST
+  if (pctx) {
+    await pctx.__s632.profileShortlistHold('intake-1'); await flush();
+    const hold = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_hold').slice(-1)[0];
+    softOk(!!hold && hold.args.intakeId === 'intake-1' && JSON.stringify(hold.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: the hold is dispatched for that candidate and that pair');
+    await pctx.__s632.profileShortlistRelease('intake-2'); await flush();
+    const rel = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_release').slice(-1)[0];
+    softOk(!!rel && rel.args.intakeId === 'intake-2' && JSON.stringify(rel.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: the return from hold is dispatched for that pair');
+    // the row decided against v1 while the profile is on v2 keeps v1
+    await pctx.__s632.profileShortlistHold('intake-3'); await flush();
+    const holdOld = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_hold').slice(-1)[0];
+    softOk(!!holdOld && holdOld.args.pair.profile_version === 1,
+      'No.632/4: a decision made against an OLDER version is moved at THAT version, never at the profile\'s current one');
+    const reads = pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+    await pctx.__s632.profileShortlistRemove('intake-4'); await flush();
+    const rem = pcalls().filter((c) => c.command === 'crewing_intake_shortlist_withdraw').slice(-1)[0];
+    softOk(!!rem && rem.args.intakeId === 'intake-4' && JSON.stringify(rem.args.pair) === JSON.stringify({ profile_id: 'prof-A', profile_version: 2 }),
+      'No.632/4: "remove from the profile" is the EXISTING withdraw of exactly this pair — no other profile is touched');
+    softOk(pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length > reads,
+      'No.632/4: every write is followed by a re-read from the server, so the screen never shows its own guess');
+    softOk(!prow('intake-4'), 'No.632/4: and the removed row is gone because the SERVER no longer lists it');
+  } else {
+    for (const m of ['hold dispatched', 'release dispatched', 'older version preserved', 'withdraw dispatched', 're-read after every write', 'removed row gone']) softOk(false, 'No.632/4: ' + m);
+  }
+
+  // a refusal gets the server's own word, including the one closing the back door
+  {
+    let refusing = null;
+    try { refusing = makeProfileContext({ invokeImpl: (command) => { if (command === 'crewing_intake_shortlist_hold') throw { kind: 'server', status: 403, detail: 'hold_not_permitted' }; } }); await flush(); } catch (e) { refusing = null; }
+    if (refusing) { await refusing.__s632.profileShortlistHold('intake-1'); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-action-error"/.test(phtml(refusing))),
+      'No.632/4: a refused hold is stated on the screen, not swallowed');
+    softOk(psafe(() => /data-qa="profile-shortlist-row" data-intake="intake-1"[\s\S]*?data-qa="profile-shortlist-hold-action"/.test(phtml(refusing))),
+      'No.632/4: and the candidate stays exactly where he was — a refusal moves nothing');
+  }
+
+  // ---- 4b. No.632/S6: THE ROW IS READ BY A HUMAN -------------------------
+  //
+  // Two defects the stand showed only once FIVE live people stood in the list,
+  // and neither was visible with one:
+  //
+  //   * the facts are inline <span>s with NOTHING between them, so the row
+  //     renders «Возраст 38Гражданство Spanish (ES)Стаж …вложений: 1»;
+  //   * the sea-time label says «Стаж в должности» and the VALUE repeats
+  //     «в должности {rank}», so one line says «в должности» twice.
+  //
+  // Neither the separator nor the wording is invented here. ' · ' is the glyph
+  // this product already joins values with (`pilotCardVesselText`), and
+  // «Стаж в должности {rank}» / «Sea time as {rank}» is VERBATIM the letter's
+  // own `pl_table_seatime` — the form the owner has already seen and accepted.
+  {
+    const strip = (html) => String(html || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    const factsOf = (c, intakeId) => {
+      const row = prowOf(c, intakeId) || '';
+      const a = row.indexOf('<div class="ps-facts">');
+      if (a < 0) return '';
+      const b = row.indexOf('</div>', a);
+      return strip(b < 0 ? row.slice(a) : row.slice(a, b));
+    };
+    const cellOf = (c, intakeId, key) => {
+      const row = prowOf(c, intakeId) || '';
+      const a = row.indexOf('data-qa="profile-shortlist-' + key + '"');
+      if (a < 0) return '';
+      const b = row.indexOf('</span></span>', a);
+      return strip(b < 0 ? row.slice(a) : row.slice(a, b + 14));
+    };
+    let ruP = null;
+    try { ruP = makeProfileContext({ language: 'ru' }); await flush(); } catch (e) { ruP = null; }
+    const ruFacts = psafe(() => factsOf(ruP, 'intake-1')) || '';
+    const enFacts = psafe(() => factsOf(pctx, 'intake-1')) || '';
+
+    // CALIBRATION FIRST, both languages: every assertion below is about what
+    // stands BETWEEN fields, and all of them would pass over an empty row.
+    softOk(['Возраст', 'Гражданство', 'Стаж', 'Последнее судно', 'вложений'].every((w) => ruFacts.includes(w)),
+      'No.632/S6 CALIBRATION: the RU row really renders all five facts, so the separator checks are not measuring a blank row — got «' + ruFacts + '»');
+    softOk(['Age', 'Citizenship', 'Sea time', 'Last vessel', 'attachments'].every((w) => enFacts.includes(w)),
+      'No.632/S6 CALIBRATION: the EN row really renders all five facts — got «' + enFacts + '»');
+
+    // 1. SEPARATORS. Every field after the first is preceded by the separator.
+    for (const label of ['Гражданство', 'Стаж в должности', 'Последнее судно', 'вложений']) {
+      softOk(ruFacts.includes('· ' + label),
+        'No.632/S6: RU — «' + label + '» is separated from the field before it, it does not grow out of it');
+    }
+    for (const label of ['Citizenship', 'Sea time', 'Last vessel', 'attachments']) {
+      softOk(enFacts.includes('· ' + label),
+        'No.632/S6: EN — «' + label + '» is separated from the field before it');
+    }
+    // the exact glue the stand showed, as a negative in both languages
+    softOk(!/43Гражданство/.test(ruFacts) && !/\d[А-ЯЁ]/.test(ruFacts),
+      'No.632/S6 NEGATIVE: RU — no value runs straight into the next field name («Возраст 43Гражданство …»)');
+    softOk(!/43Citizenship/.test(enFacts) && !/\)[A-Z]/.test(enFacts),
+      'No.632/S6 NEGATIVE: EN — no value runs straight into the next field name');
+
+    // 2. THE DOUBLING. The post is named ONCE in the line, by the label.
+    const ruExp = psafe(() => cellOf(ruP, 'intake-1', 'experience')) || '';
+    const enExp = psafe(() => cellOf(pctx, 'intake-1', 'experience')) || '';
+    softOk(ruExp.includes('Master') && /\d/.test(ruExp),
+      'No.632/S6 CALIBRATION: the RU sea-time cell carries the post and a number, so the counting below is over a real sentence — got «' + ruExp + '»');
+    softOk((ruExp.match(/в должности/g) || []).length === 1,
+      'No.632/S6: RU — «в должности» is said ONCE in the sea-time line, not twice — got «' + ruExp + '»');
+    softOk(/Стаж в должности Master 1 г\. 5 мес\./.test(ruExp),
+      'No.632/S6: RU — the line reads «Стаж в должности Master 1 г. 5 мес.», the letter\'s own wording');
+    softOk(/Sea time as Master 1 yr 5 mo/.test(enExp),
+      'No.632/S6: EN — the line reads «Sea time as Master 1 yr 5 mo», the letter\'s own wording — got «' + enExp + '»');
+    softOk(!/in post/.test(enExp),
+      'No.632/S6 NEGATIVE: EN — the clumsy «in post …  as …» is gone from the sea-time line');
+
+    // 3. The SAME line on the accepted candidate card, because ONE function
+    // writes it for both surfaces. Leaving the card doubled while the row reads
+    // correctly would be a second wording for one fact — exactly what this slice
+    // is removing.
+    for (const [lang, want, forbid] of [['ru', /Стаж в должности Master 3 г\. 2 мес\./, /в должности[\s\S]*в должности/],
+                                        ['en', /Sea time as Master 3 yr 2 mo/, /in post/]]) {
+      let cardCtx = null;
+      try {
+        const srv = makeServer();
+        srv.card.response_summary = { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrov',
+          age_years: 41, age_precision: 'exact', citizenship: 'Ukraine', citizenship_code: 'UA',
+          experience_rank: 'Master', experience_days: 1170, experience_state: 'matches_response_rank',
+          last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14' };
+        cardCtx = makeContext({ server: srv, language: lang });
+        cardCtx.__pilot.pilotOpenCard('intake-A');
+        await flush();
+      } catch (e) { cardCtx = null; }
+      const line = psafe(() => {
+        const html = cardCtx.nodes.get('main').innerHTML;
+        const a = html.indexOf('data-qa="pilot-response-experience"');
+        if (a < 0) return '';
+        return strip(html.slice(a, html.indexOf('</div>', a)));
+      }) || '';
+      softOk(line.includes('Master'),
+        'No.632/S6 CALIBRATION: the ' + lang.toUpperCase() + ' card line carries the post — got «' + line + '»');
+      softOk(want.test(line),
+        'No.632/S6: the accepted card says it the same way as the row and the letter (' + lang.toUpperCase() + ') — got «' + line + '»');
+      softOk(!forbid.test(line),
+        'No.632/S6 NEGATIVE: the ' + lang.toUpperCase() + ' card line no longer repeats the post twice');
+    }
+
+    // 4. The OTHER-POST warning survives the move: the post is still named and
+    // the two states still read differently.
+    {
+      let otherCtx = null;
+      try {
+        const srv = makeServer();
+        srv.card.response_summary = { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrov',
+          age_years: 41, age_precision: 'exact', citizenship: 'Ukraine', citizenship_code: 'UA',
+          experience_rank: 'Chief Officer', experience_days: 1170, experience_state: 'other_rank',
+          last_vessel_name: 'MV Southern Cross', last_vessel_sign_off: '2026-03-14' };
+        otherCtx = makeContext({ server: srv, language: 'ru' });
+        otherCtx.__pilot.pilotOpenCard('intake-A');
+        await flush();
+      } catch (e) { otherCtx = null; }
+      const line = psafe(() => {
+        const html = otherCtx.nodes.get('main').innerHTML;
+        const a = html.indexOf('data-qa="pilot-response-experience"');
+        return a < 0 ? '' : strip(html.slice(a, html.indexOf('</div>', a)));
+      }) || '';
+      softOk(line.includes('Chief Officer'),
+        'No.632/S6: a sea time counted for ANOTHER post still names that post');
+      softOk(/не та, на которую отклик/.test(line),
+        'No.632/S6: and still carries the warning that it is not the post responded on — the move of the rank did not flatten two states into one');
+    }
+  }
+
+  // ---- 5. isolation, and the failure of the list itself ------------------
+  {
+    let failing = null;
+    try { failing = makeProfileContext({ invokeImpl: (command) => { if (command === 'crewing_intake_profile_shortlist') throw { kind: 'server', status: 404, detail: 'matching profile not found' }; } }); await flush(); } catch (e) { failing = null; }
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing))),
+      'No.632/5: another agency\'s profile answers exactly as an absent one, and the screen says the list could not be read');
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing)) && !/data-qa="profile-shortlist-row"/.test(phtml(failing))),
+      'No.632/5: and it shows not one row of anybody — calibrated: the section must have rendered its error, so a blank host cannot pass');
+    softOk(psafe(() => /data-qa="profile-shortlist-error"/.test(phtml(failing)) && !/data-qa="profile-shortlist-empty"/.test(phtml(failing))),
+      'No.632/5: a list that could not be read is NEVER rendered as an empty shortlist — calibrated against the rendered error');
+    // TWO guards stand between a failed read and the words "nobody is on this
+    // list": the renderer puts the error branch first, AND the state keeps no
+    // list at all. A drill that only removes one is held up by the other and
+    // proves the survivor — so the second guard is asserted on the STATE, where
+    // the renderer cannot cover for it.
+    softOk(psafe(() => refusingState(failing).data === null),
+      'No.632/5: and the state holds NO list after a failed read — the second guard, drilled apart from the first');
+    // calibration: an empty list IS rendered as empty, so the check above is
+    // about the failure and not about the renderer being silent in general.
+    let emptyCtx = null;
+    try {
+      const server = makeProfileServer(); server.items = [];
+      emptyCtx = makeProfileContext({ server }); await flush();
+    } catch (e) { emptyCtx = null; }
+    softOk(psafe(() => /data-qa="profile-shortlist-empty"/.test(phtml(emptyCtx))),
+      'No.632/5: calibration — a genuinely empty shortlist IS said to be empty');
+  }
+  if (pctx) {
+    const n = pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+    await pctx.__s632.profileShortlistLoad('prof-A'); await flush();
+    softOk(pcalls().filter((c) => c.command === 'crewing_intake_profile_shortlist').length === n + 1,
+      'No.632/5: opening the profile again re-reads the list from the server — that is what survives a restart of the app');
+  } else { softOk(false, 'No.632/5: reopening re-reads the list'); }
+
+  // ---- 6. RU/EN for every new word of module 2 ---------------------------
+  // `ps_email` is deliberately NOT in this list: "e-mail" is the same word in
+  // both languages and the owner-approved frame prints it that way, so it gets
+  // its own assertion below instead of a Cyrillic one it could never satisfy.
+  for (const key of ['ps_title', 'ps_counts', 'ps_in_selection', 'ps_on_hold', 'ps_hold_note', 'ps_hold', 'ps_release',
+    'ps_remove', 'ps_phone', 'ps_email_none', 'ps_email_unknown', 'ps_email_not_usable', 'ps_phone_none',
+    'ps_attachments', 'ps_attachments_none', 'ps_copied', 'ps_failed', 'ps_row_failed', 'ps_empty', 'ps_recompare', 'ps_note', 'ps_loading']) {
+    const en = psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT(key));
+    const ru = psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT(key));
+    softOk(!!en && en !== key, `No.632/6: EN text exists for ${key}`);
+    softOk(!!ru && ru !== key && ru !== en && /[Ѐ-ӿ]/.test(ru), `No.632/6: RU text exists for ${key} and is actually Russian`);
+  }
+  softOk(psafe(() => /\{n\}/.test(makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_attachments')))
+    && psafe(() => /\{n\}/.test(makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_attachments'))),
+    'No.632/6: both languages carry a COUNT slot for the attachments, so neither can quietly become a yes/no word');
+  softOk(psafe(() => makeProfileContext({ language: 'ru', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail')
+    && psafe(() => makeProfileContext({ language: 'en', autoload: false }).__s632.profileShortlistT('ps_email') === 'e-mail'),
+    'No.632/6: ps_email is "e-mail" in both languages — the owner-approved frame prints it that way');
+
+  // ---- 7. a decision taken on the CANDIDATE CARD reaches the profile --------
+  // The owner's path is literally: add from the match card, then open the
+  // profile. Before this, `profileShortlistEnsure` loaded ONCE per profile, so a
+  // section that had already been opened kept answering from the read it did
+  // BEFORE the decision — "nobody has been shortlisted" printed over a list that
+  // now held him. The fix must be INVALIDATION, not a timer: exactly one extra
+  // read, and only because a decision happened.
+  softOk(psafe(() => typeof makeProfileContext({ autoload: false }).__s632b.invalidate === 'function'),
+    'No.632/7: a shortlist decision has somewhere to say "that cached list is stale"');
+  {
+    let pc = null;
+    try { pc = makeProfileContext({ autoload: false }); pc.renderIntakePilot = () => {}; } catch (e) { pc = null; }
+    if (pc) {
+      const reads = () => pc.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc.__s632.profileShortlistLoad('prof-A'); await flush();
+      const before = reads();
+      softOk(before > 0 && psafe(() => pc.__s632.profileShortlistStateFor('prof-A').data !== null),
+        'No.632/7: calibration — the section really holds a loaded list before the decision');
+      // a second open with NO decision in between must not ask again: that is what
+      // separates invalidation from polling, and it is asserted BEFORE the decision
+      // so a fix that simply reloads on every render fails here.
+      psafe(() => pc.__s632b.ensure('prof-A')); await flush();
+      softOk(reads() === before,
+        'No.632/7: without a decision the section does NOT ask again — invalidation, not polling');
+      // the REAL card writer, the one the owner's button is wired to
+      pc.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc.__s632b.confirm('prof-A', 1)); await flush();
+      psafe(() => pc.__s632b.ensure('prof-A')); await flush();
+      softOk(reads() === before + 1,
+        'No.632/7: a decision on the CARD invalidates the profile list and the next open re-reads it — exactly once');
+      softOk(psafe(() => pc.__s632.profileShortlistStateFor('prof-A').data !== null),
+        'No.632/7: and what it re-read is a LIST, not an error — the invalidation does not leave the section broken');
+    } else {
+      for (let i = 0; i < 4; i++) softOk(false, 'No.632/7: the card decision reaches the profile list');
+    }
+  }
+  {
+    // the same for taking the decision BACK from the card
+    let pc2 = null;
+    try { pc2 = makeProfileContext({ autoload: false }); pc2.renderIntakePilot = () => {}; } catch (e) { pc2 = null; }
+    if (pc2) {
+      const reads2 = () => pc2.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc2.__s632.profileShortlistLoad('prof-A'); await flush();
+      const b2 = reads2();
+      pc2.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc2.__s632b.withdraw('prof-A', 1)); await flush();
+      psafe(() => pc2.__s632b.ensure('prof-A')); await flush();
+      softOk(reads2() === b2 + 1, 'No.632/7: withdrawing from the card invalidates it too — both writers, not one');
+    } else { softOk(false, 'No.632/7: withdrawing from the card invalidates it too'); }
+  }
+  {
+    // a decision about ANOTHER profile must not throw away this one's list
+    let pc3 = null;
+    try { pc3 = makeProfileContext({ autoload: false }); pc3.renderIntakePilot = () => {}; } catch (e) { pc3 = null; }
+    if (pc3) {
+      const reads3 = () => pc3.calls.filter((c) => c.command === 'crewing_intake_profile_shortlist').length;
+      await pc3.__s632.profileShortlistLoad('prof-A'); await flush();
+      const b3 = reads3();
+      pc3.state.intakePilot.detail = { intakeId: 'intake-1', generation: 0, attempts: [], attemptSeq: 0,
+        pending: false, facts: [], form: null, formError: null };
+      await psafe(() => pc3.__s632b.confirm('prof-OTHER', 1)); await flush();
+      psafe(() => pc3.__s632b.ensure('prof-A')); await flush();
+      softOk(reads3() === b3, 'No.632/7: a decision about a DIFFERENT profile leaves this list alone — the invalidation is keyed, not a broom');
+    } else { softOk(false, 'No.632/7: a decision about a different profile leaves this list alone'); }
+  }
+
+  // ---- 8. the row names the SAME addressee as the card ----------------------
+  // The card's resolver says in its own comment that two copies of the contact
+  // order are how "the card and the queue row end up naming two different
+  // addressees for one person". The shortlist row WAS the second copy: it read
+  // the fact map only, so an address the seafarer delivered WITH HIS RESPONSE
+  // was reported on the row as "no e-mail" while the card showed it.
+  {
+    const mk = (facts, rc) => {
+      const srv = makeProfileServer();
+      if (facts) srv.facts['intake-1'] = srv.facts['intake-1'].filter((f) => f.field !== 'contact:email');
+      srv.responseContacts = rc;
+      let c = null;
+      try { c = makeProfileContext({ server: srv }); } catch (e) { c = null; }
+      return c;
+    };
+    const delivered = mk(true, { 'intake-1': { value: 'ivan.delivered@example.com', is_email: true, offer_email: true } });
+    if (delivered) { await flush(); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*onclick/.test(prowOf(delivered, 'intake-1'))
+      && !/data-qa="profile-shortlist-email"[^>]*disabled/.test(prowOf(delivered, 'intake-1'))),
+      'No.632/8: an address the seafarer DELIVERED with his response makes the row\'s e-mail live — the row no longer says "none" over an address the card shows');
+    if (delivered) {
+      await psafe(() => delivered.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(delivered.calls.filter((c) => c.command === 'open_mailto').slice(-1)[0]?.args?.to === 'ivan.delivered@example.com',
+        'No.632/8: and the letter goes to THAT address, not to a second one resolved by a different order');
+    } else { softOk(false, 'No.632/8: the letter goes to the delivered address'); }
+
+    // calibration: a genuine absence must still say so
+    const none = mk(true, {});
+    if (none) { await flush(); await flush(); }
+    softOk(psafe(() => /data-qa="profile-shortlist-email"[^>]*disabled/.test(prowOf(none, 'intake-1'))),
+      'No.632/8: calibration — with no fact and no delivered contact the button is dark');
+
+    // a read that FAILED is not an absence (CANON (930) п.1, and the card already
+    // says so in words)
+    const failed = mk(true, { 'intake-1': 'failed' });
+    if (failed) { await flush(); await flush(); }
+    softOk(psafe(() => {
+      const m = /data-qa="profile-shortlist-email"[^>]*>([^<]*)</.exec(prowOf(failed, 'intake-1') || '');
+      return !!m && !/нет|none/i.test(m[1]);
+    }), 'No.632/8: a delivered contact that could NOT be read is never printed as "no e-mail"');
+
+    // delivered, but the server refuses to offer it: the address exists and the
+    // row must not call that an absence either, and must not write to it
+    const refused = mk(true, { 'intake-1': { value: 'crew@our-own-inbox.example', is_email: true, offer_email: false } });
+    if (refused) { await flush(); await flush(); }
+    softOk(psafe(() => {
+      const row = prowOf(refused, 'intake-1') || '';
+      const m = /data-qa="profile-shortlist-email"[^>]*>([^<]*)</.exec(row);
+      return /data-qa="profile-shortlist-email"[^>]*disabled/.test(row) && !!m && !/нет|none/i.test(m[1]);
+    }), 'No.632/8: an address the server will not write to is dark but NOT called absent');
+    if (refused) {
+      const beforeMail = refused.calls.filter((c) => c.command === 'open_mailto').length;
+      await psafe(() => refused.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(refused.calls.filter((c) => c.command === 'open_mailto').length === beforeMail,
+        'No.632/8: and no letter is prepared to it — the anti-loop of No.621 holds on this surface too');
+    } else { softOk(false, 'No.632/8: no letter is prepared to a refused address'); }
+
+    // the operator's own correction still outranks the delivered value
+    const bothSources = mk(false, { 'intake-1': { value: 'delivered@example.com', is_email: true, offer_email: true } });
+    if (bothSources) { await flush(); await flush(); }
+    if (bothSources) {
+      await psafe(() => bothSources.__s632.profileShortlistEmail('intake-1')); await flush();
+      softOk(bothSources.calls.filter((c) => c.command === 'open_mailto').slice(-1)[0]?.args?.to === 'ivan.petrenko@example.com',
+        'No.632/8: the operator\'s recorded fact still outranks the delivered value — the CARD\'s order, reused and not restated');
+    } else { softOk(false, 'No.632/8: the recorded fact outranks the delivered value'); }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// No.632/5 (OWNER 2026-10-01): the LETTER to the customer.
+//
+// The operator presses one button, the product builds an .eml with the
+// comparison table IN THE BODY and the chosen resumes attached, and the
+// OPERATOR'S OWN mail client opens on it. Crewing sends nothing: OWNER (739)
+// п.5 and the owner's own word of today — "use the existing mechanism for
+// preparing a letter with attachments, WITHOUT server-side sending".
+//
+// Five constraints, each bought by a finding, and each drilled below:
+//   1. sea time is counted for the rank of THIS profile, read out of the career
+//      map by EQUALITY — never the number the candidate's own response carried;
+//   2. an attachment is not a resume: the operator PICKS the file, and a
+//      candidate with no picked file does not go in the letter SILENTLY;
+//   3. a candidate set aside is out of the selection, and his absence is said;
+//   4. there is no customer address in the data — the operator types it, and it
+//      is on screen before the mail client is opened;
+//   5. the signature is the AGENCY's; "Skipi Crewing" as the sender would make
+//      Skipi the sender of the agency's letter.
+// ---------------------------------------------------------------------------
+console.log('# No.632/5: the letter to the customer — prepared, never sent');
+{
+  // ---- the fixture: one profile for Master / Crude Oil Tanker, five people
+  //
+  // The career maps are the point of the fixture, so each one is a different
+  // sentence the letter has to be able to say:
+  //   L1 Master in the map AND responded as Master      -> the number
+  //   L2 responded as Chief Officer, Master in the map  -> the MASTER number
+  //   L3 Master NOT in the map                          -> "not stated", and
+  //                                                        NOT the response pair
+  //   L4 Master present as a MEASURED ZERO              -> a zero, not "not stated"
+  //   L5 lowercase 'master' only                        -> "not stated" (No.622 shut)
+  //   L6 set aside                                      -> out of the selection
+  //   L7 the two numbers for Master DISAGREE            -> no number at all
+  //   L8 no attachments at all                          -> no resume to pick
+  function makeLetterServer() {
+    const card = (id, name, surname, extra, attachments) => ({
+      intake_id: id, receipt_id: 'r-' + id, crewing_id: 'crew-synthetic', source: 'response', source_id: 's-' + id,
+      event_id: 'e-' + id, primary_profile_id: null, content_sha256: 'x', content_bytes: 10,
+      content_type: 'application/pdf', state: 'ranked', source_trust: 'unverified', version: 1,
+      created_at: '2026-10-01T04:00:00', issued_at: '2026-10-01T04:00:00', objects: [],
+      attachments: attachments === undefined
+        ? [{ ordinal: 0, filename: name + '_CV.pdf', declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size: 1200, verdict: 'accepted', reason: 'clean', eligible: true }]
+        : attachments,
+      summary: { facts: 0, ranks: 1, ranks_stale: 0, active_confirmations: 1 },
+      response_summary: Object.assign({
+        rank: 'Master', rank_state: 'from_snapshot', first_name: name, surname: surname,
+        age_years: 43, age_precision: 'day', citizenship: 'Ukrainian', citizenship_code: 'UKR',
+        experience_rank: 'Master', experience_days: 520, experience_state: 'matches_response_rank',
+        experience_days_by_rank: { Master: 520 }, experience_days_for_rank: 520,
+        experience_days_for_rank_state: 'from_map',
+        last_vessel_name: 'MT Odesa Dawn', last_vessel_sign_off: '2026-07-01',
+      }, extra || {}),
+    });
+    const items = [
+      { intake_id: 'L1', on_hold: false, in_selection: true },
+      { intake_id: 'L2', on_hold: false, in_selection: true },
+      { intake_id: 'L3', on_hold: false, in_selection: true },
+      { intake_id: 'L4', on_hold: false, in_selection: true },
+      { intake_id: 'L5', on_hold: false, in_selection: true },
+      { intake_id: 'L6', on_hold: true, in_selection: false },
+      { intake_id: 'L7', on_hold: false, in_selection: true },
+      { intake_id: 'L8', on_hold: false, in_selection: true },
+    ].map((row, index) => ({
+      id: 'dec-' + row.intake_id, intake_id: row.intake_id, profile_version: 2,
+      confirmed_by: 'user-op-1', confirmed_at: '2026-10-01T05:0' + index + ':00',
+      on_hold: row.on_hold, held_by: row.on_hold ? 'user-op-1' : null,
+      held_at: row.on_hold ? '2026-10-01T06:00:00' : null,
+      in_selection: row.in_selection, needs_recompare: false,
+    }));
+    return {
+      user: 'user-op-1', profileVersion: 2, profileState: 'active', items,
+      // what the opener did, and what the .eml was asked to carry
+      prepared: [], downloads: [], openerFails: false, downloadFails: {},
+      cards: {
+        L1: card('L1', 'Ivan', 'Petrenko'),
+        L2: card('L2', 'Petro', 'Shevchuk', {
+          rank: 'Chief Officer', experience_rank: 'Chief Officer', experience_days: 999,
+          experience_state: 'matches_response_rank',
+          experience_days_by_rank: { Master: 365, 'Chief Officer': 999 },
+          experience_days_for_rank: 999, experience_days_for_rank_state: 'from_map',
+        }),
+        L3: card('L3', 'Mykola', 'Kravets', {
+          rank: 'Chief Officer', experience_rank: 'Chief Officer', experience_days: 888,
+          experience_days_by_rank: { 'Chief Officer': 888 },
+          experience_days_for_rank: 888, experience_days_for_rank_state: 'from_map',
+        }),
+        L4: card('L4', 'Taras', 'Bondar', {
+          experience_days: 0, experience_days_by_rank: { Master: 0 },
+          experience_days_for_rank: 0, experience_days_for_rank_state: 'from_map',
+        }),
+        L5: card('L5', 'Yurii', 'Lysenko', {
+          experience_days_by_rank: { master: 700 },
+          experience_days_for_rank: null, experience_days_for_rank_state: 'rank_not_in_map',
+        }),
+        L6: card('L6', 'Oleh', 'Marchenko'),
+        L7: card('L7', 'Dmytro', 'Sydorenko', {
+          experience_days: 548, experience_days_by_rank: { Master: 365 },
+          experience_days_for_rank: null,
+          experience_days_for_rank_state: 'disagrees_with_response_pair',
+        }),
+        L8: card('L8', 'Serhii', 'Tkachuk', undefined, []),
+      },
+      facts: {},
+      reject(status, detail) { return { kind: 'server', status, detail }; },
+      handle(command, args) {
+        const b = this;
+        switch (command) {
+          case 'crewing_intake_profile_shortlist': {
+            if (args.profileId !== 'prof-A') throw b.reject(404, 'matching profile not found');
+            return {
+              profile_id: 'prof-A', profile_version: b.profileVersion, profile_state: b.profileState,
+              items: b.items.map((i) => ({ ...i })),
+              counts: {
+                selected: b.items.length,
+                in_selection: b.items.filter((i) => i.in_selection).length,
+                on_hold: b.items.filter((i) => i.on_hold).length,
+              },
+            };
+          }
+          case 'crewing_intake_candidate_get': {
+            const found = b.cards[args.intakeId];
+            if (!found) throw b.reject(500, null);
+            return JSON.parse(JSON.stringify(found));
+          }
+          case 'crewing_intake_fact_list': return { items: (b.facts[args.intakeId] || []).map((r) => ({ ...r })) };
+          case 'crewing_intake_response_contact': throw b.reject(404, 'candidate intake not found');
+          case 'crewing_intake_attachment_download': {
+            if (b.downloadFails[args.intakeId]) throw b.reject(404, 'not_found');
+            b.downloads.push({ intakeId: args.intakeId, ordinal: args.ordinal });
+            return { path: '/home/op/Downloads/Skipi/Crewing/' + args.intakeId + '/attachment-' + args.ordinal + '.pdf', bytes: 1200, sha256: 'deadbeef' };
+          }
+          case 'crewing_customer_letter_prepare': {
+            b.prepared.push(JSON.parse(JSON.stringify(args)));
+            if (b.openerFails) {
+              return { path: '/home/op/Downloads/Skipi/Crewing/Letters/letter.eml', bytes: 4096, sha256: 'ab', opened: false, open_error: 'cannot_open_file' };
+            }
+            return { path: '/home/op/Downloads/Skipi/Crewing/Letters/letter.eml', bytes: 4096, sha256: 'ab', opened: true, open_error: null };
+          }
+          case 'open_mailto': return null;
+          default: throw new Error(`unexpected invoke ${command}`);
+        }
+      },
+    };
+  }
+
+  async function letterContext(opts = {}) {
+    const server = opts.server || makeLetterServer();
+    const ctx = makeProfileContext({
+      server,
+      language: opts.language || 'ru',
+      profileId: 'prof-A',
+    });
+    // the profile the letter is FOR: its rank is what the sea-time column counts
+    // No `version` here ON PURPOSE: the object this screen actually holds comes
+    // from the legacy /api/compliance-profiles route and has no such field. The
+    // stand printed "версия )" into a letter for a customer because the fixture
+    // had one and the product did not.
+    ctx.state.selectedComplianceProfile = Object.assign({
+      id: 'prof-A', name: 'Master — Crude Oil Tanker', status: 'active',
+      rank: 'Master', vessel_type: 'Crude Oil Tanker',
+    }, opts.profile || {});
+    ctx.state.settings.company_name = opts.company === undefined ? 'Marlow Crewing Ltd' : opts.company;
+    if (opts.webShell) ctx.window.__SKIPI_WEB_SHELL__ = true;
+    await flush();
+    // the host is re-rendered so the letter block sees the profile fields above
+    psafeL(() => ctx.__s632.profileShortlistRerender());
+    return ctx;
+  }
+  const psafeL = (fn) => { try { const v = fn(); return v === undefined ? false : v; } catch (e) { return false; } };
+  const lhtml = (c) => (c ? c.nodes.get('profile-shortlist-host').innerHTML : '');
+  const lfn = (c, name) => (c && c.__s632c ? c.__s632c[name] : null);
+  const segment = (c, qa, key, attr = 'data-intake') => lhtml(c).split(`data-qa="${qa}"`).slice(1)
+    .find((part) => part.startsWith(` ${attr}="${key}"`)) || null;
+  const bodyText = (c) => {
+    const m = /data-qa="profile-letter-body"[^>]*>([\s\S]*?)<\/pre>/.exec(lhtml(c));
+    return m ? m[1] : '';
+  };
+  // Picking a resume is the operator's explicit act; this is that act, for the
+  // people the test wants in the letter.
+  async function pick(c, ids) {
+    for (const id of ids) {
+      const fn = lfn(c, 'pick');
+      if (!fn) return false;
+      await psafeL(() => fn(id, 0));
+      await flush();
+    }
+    return true;
+  }
+  async function typeAddress(c, value) {
+    const fn = lfn(c, 'setTo');
+    if (!fn) return false;
+    await psafeL(() => fn(value));
+    await flush();
+    return true;
+  }
+
+  let L = null;
+  try { L = await letterContext(); } catch (e) { L = null; }
+
+  // ---- 5.1 the block exists, and it is a PREPARATION, not a send ----------
+  softOk(psafeL(() => /data-qa="profile-letter"/.test(lhtml(L))),
+    'No.632/5.1: the profile screen carries the "prepare a letter for the customer" block');
+  softOk(psafeL(() => typeof lfn(L, 'prepare') === 'function'),
+    'No.632/5.1: preparing the letter is a function of the block, reachable from the screen');
+  // The owner's word, as a sensor: the button says what it DOES.
+  softOk(psafeL(() => {
+    const m = /data-qa="profile-letter-prepare"[^>]*>([^<]*)</.exec(lhtml(L));
+    return !!m && /Подготовить письмо/.test(m[1]);
+  }), 'No.632/5.1: the button is called "Подготовить письмо" — not "Отправить", because the operator sends it');
+  softOk(psafeL(() => /data-qa="profile-letter-prepare"/.test(lhtml(L)) && !/Отправить заказчику/.test(lhtml(L))),
+    'No.632/5.1: nothing on the screen promises that Crewing sends the letter — calibrated: the button must be RENDERED, so an empty host cannot pass this');
+  softOk(s632Source !== '' && !/invoke\(\s*['"]send_mail['"]/.test(s632Source),
+    'No.632/5.1 (PRESERVE sentinel, green on the base too): the block never calls send_mail — the door the owner closed stays closed');
+  softOk(s632Source !== '' && !/smtp|sendmail|mail_accounts/i.test(s632Source),
+    'No.632/5.1 (PRESERVE sentinel, green on the base too): and it names no server-side mail transport at all');
+
+  // ---- 5.2 the address: it is not in the data, so the operator types it ----
+  softOk(psafeL(() => /data-qa="profile-letter-to"/.test(lhtml(L))),
+    'No.632/5.2: there is a field for the customer address — the profile carries only a NAME, never an address');
+  softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(L))),
+    'No.632/5.2: with no address typed the button is dark — calibrated below by the same button going live');
+  softOk(psafeL(() => {
+    const m = /data-qa="profile-letter-to-state"[^>]*>([^<]*)</.exec(lhtml(L));
+    return !!m && m[1].trim() !== '';
+  }), 'No.632/5.2: and it SAYS what is missing instead of being silently unusable');
+  if (L) {
+    await typeAddress(L, 'not-an-address');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(L))),
+      'No.632/5.2: an address the mail client would refuse keeps the button dark');
+    await typeAddress(L, 'crewing@oceanic.example.com');
+    softOk(psafeL(() => /data-qa="profile-letter-to"[^>]*value="crewing@oceanic\.example\.com"/.test(lhtml(L))),
+      'No.632/5.2: the typed address is ON SCREEN before any mail client is opened');
+  } else { softOk(false, 'No.632/5.2: address refusal'); softOk(false, 'No.632/5.2: address visible'); }
+
+  // ---- 5.2b typing an address must SURVIVE the re-render -----------------
+  //
+  // Found live on the stand, not here: the section repaints on every keystroke,
+  // the repaint replaces the <input> the operator is typing into, focus is lost
+  // and only the FIRST character of the address ever arrives. A test that calls
+  // the setter directly — as every check above does — cannot see that, because
+  // the setter is not the keyboard.
+  if (L) {
+    const beforeFocus = (L.nodes.get('__to_input') || {}).focused || 0;
+    await typeAddress(L, 'crewing@oceanic.example.com');
+    const input = L.nodes.get('__to_input');
+    softOk(!!input && input.focused > beforeFocus,
+      'No.632/5.2b: after the section repaints, the address field is focused again — otherwise the operator types one character and loses the field');
+    softOk(!!input && Array.isArray(input.caret) && input.caret.length > 0,
+      'No.632/5.2b: and the caret is put back where it was, so the address is not typed backwards');
+  } else { softOk(false, 'No.632/5.2b: focus survives the repaint'); softOk(false, 'No.632/5.2b: caret restored'); }
+
+  // ---- 5.3 the resume is PICKED. An attachment is not a resume ------------
+  softOk(psafeL(() => !!segment(L, 'profile-letter-pick-row', 'L1')),
+    'No.632/5.3: every candidate in the selection offers his files for the operator to pick the resume from');
+  softOk(psafeL(() => /data-qa="profile-letter-pick"[^>]*data-ordinal="0"/.test(segment(L, 'profile-letter-pick-row', 'L1') || '')),
+    'No.632/5.3: the pick names the FILE, by the ordinal the byte route is asked for');
+  // Structural, not a prose filter: the first version of this check searched the
+  // block for words like "recognise" and was promptly tripped by a COMMENT saying
+  // there is no recogniser. What carries the owner's rule is that a pick is
+  // recorded in exactly ONE place, and that place is the operator pressing a
+  // button — nothing in the block derives it from a file.
+  softOk(s632Source !== '' && (s632Source.match(/ls\.picks\[[a-z]+\] = /g) || []).length === 1,
+    'No.632/5.3: a resume is recorded in exactly ONE place — the operator\'s own press; nothing derives it (owner\'s word of 2026-10-01)');
+  softOk(s632Source !== '' && !/\b(classifyResume|detectResume|guessResume|isResumeFile|looksLikeCv)\b/.test(s632Source),
+    'No.632/5.3: and no classifier of attachments is introduced under any name');
+  if (L) {
+    const before = L.server.downloads.length;
+    await pick(L, ['L1']);
+    softOk(L.server.downloads.length === before + 1 && L.server.downloads.slice(-1)[0].intakeId === 'L1',
+      'No.632/5.3: picking a file fetches THOSE bytes through the existing audited byte route, not a new channel');
+    softOk(psafeL(() => /data-qa="profile-letter-file"[^>]*data-intake="L1"/.test(lhtml(L))),
+      'No.632/5.3: and the picked file is listed as an attachment of the letter, before it is built');
+  } else { softOk(false, 'No.632/5.3: pick downloads'); softOk(false, 'No.632/5.3: pick listed'); }
+
+  // ---- 5.4 who is IN the letter, and who is NAMED as out -----------------
+  if (L) {
+    await pick(L, ['L2', 'L3', 'L4', 'L5', 'L7']);
+    // L6 is set aside, L8 has no file at all, and nobody picked a file for them
+    const inLetter = (id) => !!segment(L, 'profile-letter-file', id);
+    softOk(['L1', 'L2', 'L3', 'L4', 'L5', 'L7'].every(inLetter),
+      'No.632/5.4: the people with a picked resume are in the letter');
+    softOk(inLetter('L1') && !inLetter('L6'),
+      'No.632/5.4: the candidate SET ASIDE is not in the letter while the others ARE — in_selection is the server\'s predicate and the screen keeps no second copy of it (calibrated: a letter with nobody in it cannot pass this)');
+    softOk(psafeL(() => (segment(L, 'profile-letter-excluded-item', 'L6') || '').length > 0),
+      'No.632/5.4: and he is NAMED as left out, with the reason — not silently missing');
+    softOk(psafeL(() => /data-reason="on_hold"/.test(segment(L, 'profile-letter-excluded-item', 'L6') || '')),
+      'No.632/5.4: the reason given for him is that he was set aside');
+    softOk(!inLetter('L8') && psafeL(() => /data-reason="no_attachments"/.test(segment(L, 'profile-letter-excluded-item', 'L8') || '')),
+      'No.632/5.4: a candidate with no files at all is left out AND the screen says it is files he lacks');
+    // the whole point of the owner's sentence: a missing resume is never silent
+    const noPick = await letterContext();
+    await typeAddress(noPick, 'crewing@oceanic.example.com');
+    softOk(psafeL(() => /data-reason="no_resume_picked"/.test(segment(noPick, 'profile-letter-excluded-item', 'L1') || '')),
+      'No.632/5.4: a candidate whose resume nobody picked is left out and SAID so — "не вошли и почему", not a quiet drop');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(noPick))),
+      'No.632/5.4: and with nobody left to send, the button is dark rather than building an empty letter');
+    // The numbers are read EXACTLY, and both of them. A check that only looked for
+    // "6" somewhere in this line stayed green under a mutation that printed the
+    // size of the whole shortlist (8) beside the six attachments — the envelope
+    // carried six while the screen said eight, which is the very thing the line
+    // exists to catch.
+    softOk(psafeL(() => {
+      const m = /data-qa="profile-letter-counts"[^>]*>([^<]*)</.exec(lhtml(L));
+      const digits = m ? (m[1].match(/\d+/g) || []) : [];
+      return digits.length === 2 && digits[0] === '6' && digits[1] === '6';
+    }), 'No.632/5.4: the line says exactly how many candidates are in the letter and how many files it carries — six and six, not the size of the shortlist');
+    // TWO guards keep the man who was set aside out of this letter — he is not in
+    // the selection AND nobody picked a resume for him (the screen offers no pick
+    // for a held row at all). A drill against the first guard would survive on the
+    // second, which is exactly the shape that let M5 of the server slice and M4 of
+    // the client slice live. So the second guard is REMOVED here: a resume is
+    // seeded for him directly, and `in_selection` is then the only thing standing
+    // between a held candidate and the customer.
+    const seeded = await letterContext();
+    await typeAddress(seeded, 'crewing@oceanic.example.com');
+    if (seeded && seeded.state.profileLetter) {
+      seeded.state.profileLetter.picks.L6 = { ordinal: 0, path: '/home/op/Downloads/Skipi/Crewing/L6/attachment-0.pdf', bytes: 1200 };
+      psafeL(() => seeded.__s632.profileShortlistRerender());
+    }
+    softOk(psafeL(() => !segment(seeded, 'profile-letter-file', 'L6')),
+      'No.632/5.4: with a resume ALREADY in hand for him, the man set aside is STILL out of the letter — in_selection alone holds him back');
+    softOk(psafeL(() => /data-reason="on_hold"/.test(segment(seeded, 'profile-letter-excluded-item', 'L6') || '')),
+      'No.632/5.4: and the reason stays "set aside" rather than turning into "no resume" (calibration of the check above)');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.4: selection membership (context absent)');
+  }
+
+  // ---- 5.5 SEA TIME: the rank of THIS profile, by equality ---------------
+  // The costliest cell in the letter: a number counted for another post, sent
+  // to a third party over the agency's name.
+  if (L) {
+    const b = bodyText(L);
+    softOk(/Стаж в должности Master/.test(b),
+      'No.632/5.5: the column NAMES the post it counts — the post of THIS profile');
+    softOk(/1 г\. 5 мес\./.test(b) && !/520/.test(b),
+      'No.632/5.5: the figure is rendered by the card\'s own duration helper (1 г. 5 мес.) and the raw day count never appears');
+    // L2 responded as Chief Officer with 999 days; the map says Master = 365
+    const l2 = /Petro Shevchuk[^\n]*/.exec(b);
+    softOk(!!l2 && /1 г\./.test(l2[0]) && !/999/.test(l2[0]) && !/2 г\./.test(l2[0]),
+      'No.632/5.5: a candidate who responded for ANOTHER post gets the number of THIS post out of the map — never his response figure');
+    // L3 has no Master key at all
+    const l3 = /Mykola Kravets[^\n]*/.exec(b);
+    softOk(!!l3 && /не указано/.test(l3[0]) && !/888/.test(l3[0]) && !/2 г\./.test(l3[0]),
+      'No.632/5.5: a post the map does not name is "не указано" — and the response pair is NOT borrowed for it');
+    // L4 is a measured zero
+    const l4 = /Taras Bondar[^\n]*/.exec(b);
+    softOk(!!l4 && !/не указано/.test(l4[0]) && /0/.test(l4[0]),
+      'No.632/5.5: a MEASURED zero is a zero, not "не указано" — `days || "не указано"` is the bug this forbids');
+    // L5 has only a lowercase spelling: No.622 is not open here
+    const l5 = /Yurii Lysenko[^\n]*/.exec(b);
+    softOk(!!l5 && /не указано/.test(l5[0]) && !/700/.test(l5[0]),
+      'No.632/5.5: spelling is compared by EQUALITY — "master" is not "Master" (No.622 is not opened here)');
+    // L7: two numbers that disagree are not a number
+    const l7 = /Dmytro Sydorenko[^\n]*/.exec(b);
+    softOk(!!l7 && !/365/.test(l7[0]) && !/548/.test(l7[0]) && !/1 г\./.test(l7[0]),
+      'No.632/5.5: when the two figures for this post DISAGREE the letter carries neither of them');
+    softOk(psafeL(() => /data-state="disagrees_with_response_pair"/.test(segment(L, 'profile-letter-pick-row', 'L7') || '')),
+      'No.632/5.5: and the operator is told WHY that cell is empty, beside the decision (CANON (930) п.1)');
+    softOk(psafeL(() => /data-qa="profile-letter-seatime"[^>]*data-intake="L3"[^>]*data-state="rank_not_in_map"/.test(lhtml(L))),
+      'No.632/5.5: each cell carries the state it was resolved from, so an absence is never mistaken for a zero');
+  } else {
+    for (let i = 0; i < 9; i += 1) softOk(false, 'No.632/5.5: sea time (context absent)');
+  }
+
+  // ---- 5.6 the body: the owner's own text, the table IN it, agency sign ---
+  if (L) {
+    const b = bodyText(L);
+    softOk(/заказчик/i.test(b), 'No.632/5.6: the letter greets the customer, in the owner\'s own words');
+    softOk(/Crude Oil Tanker/.test(b) && /Master/.test(b),
+      'No.632/5.6: it names the order — the post and the vessel type of this profile');
+    softOk(/Кандидат/.test(b) && /Возраст/.test(b) && /Гражданство/.test(b) && /Последнее судно/.test(b),
+      'No.632/5.6: the comparison TABLE is in the body of the letter — the customer sees the comparison at once');
+    softOk(/Ivan Petrenko/.test(b) && /43/.test(b) && /Ukrainian/.test(b) && /MT Odesa Dawn/.test(b),
+      'No.632/5.6: with the basic data of each candidate the owner asked for');
+    softOk(/Marlow Crewing Ltd/.test(b),
+      'No.632/5.6: the letter is signed by the AGENCY — it is the agency that sends it from its own client');
+    // Found on the stand: an unsubstituted slot went out in the letter itself.
+    softOk(!/версия\s*\)/.test(b) && !/version\s*\)/.test(b) && !/\{version\}/.test(b),
+      'No.632/5.6: the letter never carries an EMPTY version — the clause is dropped when the number is unknown, not printed hollow');
+    softOk(/версия 2/.test(b),
+      'No.632/5.6: and when the server named the profile version, the letter names it too (calibration of the check above)');
+    softOk(psafeL(() => {
+      const m = /data-qa="profile-letter-to-state"[^>]*>([^<]*)</.exec(lhtml(L));
+      return !!m && !/резюме/i.test(m[1]);
+    }), 'No.632/5.6: the hint under the ADDRESS field talks about the address, not about a resume');
+    softOk(/Marlow Crewing Ltd/.test(b) && !/Skipi/.test(b),
+      'No.632/5.6: and never by Skipi — calibrated against the agency name actually standing there: a Skipi signature would make Skipi the sender of the agency\'s letter');
+    const noCompany = await letterContext({ company: '' });
+    await typeAddress(noCompany, 'crewing@oceanic.example.com');
+    await pick(noCompany, ['L1']);
+    softOk(psafeL(() => /заказчик/i.test(bodyText(noCompany)) && !/Skipi/.test(bodyText(noCompany))),
+      'No.632/5.6: with no agency name recorded the signature is ABSENT, never substituted by ours — calibrated: the letter itself must have been composed');
+    softOk(psafeL(() => /data-qa="profile-letter-company-missing"/.test(lhtml(noCompany))),
+      'No.632/5.6: and the operator is told the agency name is not set, where he can fix it');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.6: letter body (context absent)');
+  }
+
+  // ---- 5.7 ONE composer: what is previewed is what is handed to the bridge -
+  if (L) {
+    const previewed = bodyText(L);
+    const before = L.server.prepared.length;
+    await psafeL(() => lfn(L, 'prepare')());
+    await flush(); await flush();
+    const call = L.server.prepared.slice(-1)[0] || null;
+    softOk(L.server.prepared.length === before + 1,
+      'No.632/5.7: pressing the button prepares exactly ONE letter');
+    softOk(!!call && String((call.intent || {}).to || call.to || '') === 'crewing@oceanic.example.com',
+      'No.632/5.7: and it is addressed to what the operator typed and saw');
+    const sent = call ? String((call.intent || {}).body || call.body || '') : '';
+    const decoded = previewed.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    softOk(sent !== '' && sent === decoded,
+      'No.632/5.7: the body handed to the bridge is the body on screen, character for character — one composer, not two');
+    const files = call ? ((call.intent || {}).attachments || call.attachments || []) : [];
+    softOk(Array.isArray(files) && files.length === 6,
+      'No.632/5.7: exactly the picked resumes are attached — the screen says six and the envelope carries six');
+    softOk(Array.isArray(files) && files.length === 6 && files.every((f) => /^\/home\/op\/Downloads\/Skipi\/Crewing\//.test(String(f.path || f))),
+      'No.632/5.7: and every attachment is a file this app itself saved, by the path the byte route returned (calibrated on the count: `every` over an empty list proves nothing)');
+    softOk(Array.isArray(files) && files.length === 6
+      && files.every((f) => /\.pdf$/i.test(String(f.name || '')) && !/^attachment-/.test(String(f.name || '')))
+      && new Set(files.map((f) => String(f.name || ''))).size === 6,
+      'No.632/5.7: the attachment reaching the customer is NAMED for its candidate, and the six names are SIX — not "attachment-0.pdf" six times over');
+    softOk(L.server.prepared.length === before + 1 && !L.calls.some((c) => c.command === 'send_mail'),
+      'No.632/5.7: nothing was SENT though a letter WAS prepared — the whole chain carries no send_mail (calibrated on the preparation having happened)');
+    softOk(psafeL(() => /data-qa="profile-letter-result"/.test(lhtml(L))),
+      'No.632/5.7: and the screen says where the draft is, so the operator can find it in his client');
+  } else {
+    for (let i = 0; i < 8; i += 1) softOk(false, 'No.632/5.7: one composer (context absent)');
+  }
+
+  // ---- 5.8 failures are LOUD: the opener, and the bytes -------------------
+  {
+    const failing = await letterContext();
+    if (failing) failing.server.openerFails = true;
+    await typeAddress(failing, 'crewing@oceanic.example.com');
+    await pick(failing, ['L1']);
+    await psafeL(() => lfn(failing, 'prepare')());
+    await flush(); await flush();
+    softOk(psafeL(() => /data-qa="profile-letter-error"/.test(lhtml(failing))),
+      'No.632/5.8: a mail client that did not open is SAID, never swallowed (the one honest defect of the Seafarer original)');
+    softOk(psafeL(() => /letter\.eml/.test(lhtml(failing))),
+      'No.632/5.8: and the file that WAS written is named, so the work is not lost with the failure');
+    const noBytes = await letterContext();
+    if (noBytes) noBytes.server.downloadFails = { L1: true };
+    await typeAddress(noBytes, 'crewing@oceanic.example.com');
+    await pick(noBytes, ['L1']);
+    if (noBytes) { await pick(noBytes, ['L2']); }
+    softOk(psafeL(() => !!segment(noBytes, 'profile-letter-file', 'L2') && !segment(noBytes, 'profile-letter-file', 'L1')),
+      'No.632/5.8: a resume whose bytes could not be fetched is NOT attached, while his neighbour\'s IS — calibrated, so an empty attachment list cannot pass');
+    softOk(psafeL(() => /data-reason="no_resume_picked"|data-reason="bytes_failed"/.test(segment(noBytes, 'profile-letter-excluded-item', 'L1') || '')),
+      'No.632/5.8: and that candidate is named among those left out, with his own reason');
+    softOk(psafeL(() => /data-qa="profile-letter-pick-error"[^>]*data-intake="L1"/.test(lhtml(noBytes))),
+      'No.632/5.8: the failure is shown on his own row too, not only in the summary');
+  }
+
+  // ---- 5.9 the shell and the archived vacancy ----------------------------
+  {
+    const web = await letterContext({ webShell: true });
+    softOk(psafeL(() => /data-qa="profile-letter-web-note"/.test(lhtml(web))),
+      'No.632/5.9: in the browser shell, where this app cannot write files, the block says so');
+    softOk(psafeL(() => /data-qa="profile-letter-prepare"[^>]*disabled/.test(lhtml(web))),
+      'No.632/5.9: and offers no button that could not work there');
+    const archived = await letterContext();
+    if (archived) { archived.server.profileState = 'archived'; await psafeL(() => archived.__s632.profileShortlistLoad('prof-A')); await flush(); await flush(); }
+    softOk(psafeL(() => /data-qa="profile-letter-archived"/.test(lhtml(archived))),
+      'No.632/5.9: an ARCHIVED vacancy is flagged beside the button — the operator decides, but he is not kept in the dark');
+  }
+
+  // ---- 5.10 RU and EN, both complete -------------------------------------
+  {
+    const keys = ['pl_title', 'pl_to', 'pl_to_empty', 'pl_to_bad', 'pl_subject', 'pl_greeting', 'pl_order',
+      'pl_table_candidate', 'pl_table_age', 'pl_table_citizenship', 'pl_table_seatime', 'pl_table_vessel',
+      'pl_attached_note', 'pl_sign', 'pl_prepare', 'pl_edit', 'pl_edit_done', 'pl_counts', 'pl_excluded',
+      'pl_reason_on_hold', 'pl_reason_no_resume', 'pl_reason_no_attachments', 'pl_reason_bytes', 'pl_reason_row_failed',
+      'pl_pick', 'pl_picked', 'pl_unpick', 'pl_not_stated', 'pl_result', 'pl_open_failed', 'pl_company_missing',
+      'pl_archived', 'pl_web_note', 'pl_empty', 'pl_seatime_reason', 'pl_order_version', 'pl_to_ok'];
+    const ru = (key) => psafeL(() => { L.getUiLang = () => 'ru'; return L.__s632.profileShortlistT(key); });
+    const en = (key) => psafeL(() => { L.getUiLang = () => 'en'; return L.__s632.profileShortlistT(key); });
+    for (const key of keys) {
+      const r = ru(key); const e = en(key);
+      softOk(e && e !== key, `No.632/5.10: EN text exists for ${key}`);
+      softOk(r && r !== key && r !== e && /[Ѐ-ӿ]/.test(r), `No.632/5.10: RU text exists for ${key} and is actually Russian`);
+    }
+    // a slot that is not substituted in one language is how a count turns back
+    // into a word
+    for (const key of ['pl_counts', 'pl_subject', 'pl_order']) {
+      const r = ru(key); const e = en(key);
+      softOk(/\{/.test(String(r)) && /\{/.test(String(e)), `No.632/5.10: both languages of ${key} carry their slots`);
+    }
+    if (L) L.getUiLang = () => 'ru';
+  }
+
+  // ---- 5.11 the bridge: the three map keys, the guard, the loud opener ----
+  //
+  // Scoped to the bodies of the new functions on purpose: `base64`, `saved_root`
+  // and `let _ =` all already exist in this module, so a file-wide search would
+  // be green over a letter builder that does none of it.
+  // `fn name<F>(` is a real signature in this module (the opener is passed in as a
+  // type parameter), and the first extractor written here missed exactly that —
+  // four checks then passed judgement on an EMPTY string. Calibrated below.
+  const rbody = (signature) => {
+    const m = new RegExp(`fn ${signature}(?:<[^>]*>)?\\(([\\s\\S]*?)\\n\\}`).exec(rust);
+    return m ? m[1] : '';
+  };
+  const letterFn = rbody('crewing_customer_letter_prepare');
+  const letterBuild = rbody('build_letter_eml');
+  const letterWith = rbody('prepare_letter_with');
+  // CALIBRATION of the extractor itself: each body must be non-empty AND must
+  // contain something only that function has. Without this, every check below is
+  // a verdict about an empty string.
+  softOk(letterFn !== '' && letterBuild !== '' && letterWith !== ''
+    && /multipart\/mixed/.test(letterBuild) && /opener\(/.test(letterWith) && /saved_root\(\)/.test(letterFn),
+    'No.632/5.11: calibration — the three function bodies were actually found (a missed signature would make every check below a verdict about an empty string)');
+  for (const field of ['experience_days_by_rank', 'experience_days_for_rank', 'experience_days_for_rank_state']) {
+    softOk(new RegExp(`pub ${field}:`).test(rust),
+      `No.632/5.11: the bridge DECLARES ${field} — an undeclared key is dropped by serde on the way to the webview`);
+  }
+  softOk(/pub\(crate\) async fn crewing_customer_letter_prepare\(/.test(rust),
+    'No.632/5.11: preparing the .eml is a fixed native command');
+  softOk(/crewing_intake::crewing_customer_letter_prepare,/.test(lib),
+    'No.632/5.11: and it is registered in the Tauri handler');
+  softOk(letterBuild !== '' || letterWith !== '',
+    'No.632/5.11: the .eml is built by a function of its own, so a unit test can hold it without a Tauri runtime');
+  softOk(/resolved_saved_path\(/.test(letterWith + letterBuild + letterFn),
+    'No.632/5.11: every attachment path is resolved INSIDE Downloads/Skipi/Crewing — this is not a "mail any file on this machine" command');
+  softOk(/checked_recipient\(/.test(letterWith + letterBuild + letterFn),
+    'No.632/5.11: the recipient passes the strict addr-spec check before a single header is written');
+  softOk(/BASE64_STANDARD|base64/.test(letterBuild),
+    'No.632/5.11: attachments are carried base64, as the Seafarer original does — mailto cannot carry a file');
+  softOk(letterWith !== '' && !/let _ = /.test(letterWith),
+    'No.632/5.11: the opener result is NOT discarded — the Seafarer original swallows it (`let _ = spawn()`) and that is the defect named in review');
+  softOk(/opened/.test(rust) && /pub opened:/.test(rust),
+    'No.632/5.11: whether the client actually opened is carried BACK to the screen as a field, not assumed');
+  softOk(/opener/.test(letterWith),
+    'No.632/5.11: the guard is separated from the opener, so a drill can measure it with the side effect STUBBED');
+  softOk(!/send_mail|smtp|sendmail/i.test(rust),
+    'No.632/5.11 (PRESERVE sentinel, green on the base too): this module still knows nothing about sending');
 }
 
 console.log('\n# control matrix');

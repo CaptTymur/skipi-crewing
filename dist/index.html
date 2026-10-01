@@ -4802,7 +4802,12 @@ function renderComplianceProfileDetail() {
     + '<details open style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;">Extras</summary>'+renderExtrasList(p.extra_requirements||[])+'</details>'
     + '<div style="margin-top:16px;color:var(--text2);font-size:12px;">Match-% per application will appear here after the seafarer client starts reporting local scores.</div>'
     + '<div style="margin-top:8px;color:var(--text2);font-size:12px;" data-qa="profile-publish-hint">'+escapeHtml(tr('profile.publish_hint'))+'</div>'
-    + '</div>';
+    + '</div>'
+    // No.632: WHO was chosen for this profile, under the requirements that
+    // decide it. Its own host element, so a list refresh repaints the list and
+    // not the requirements the operator is reading.
+    + '<div id="profile-shortlist-host">'+profileShortlistHostHtml()+'</div>';
+  profileShortlistEnsure(p.id);
 }
 
 // ------------------------- P2/S1: one button, two operations -------------------------
@@ -5753,9 +5758,72 @@ function renderCrewFlowHost() {
 //   list    — the list carried a name
 //   none    — the server answered that the facts hold no name (said out loud)
 //   unknown — this server build never sent the field: nothing is claimed
+// ===== No.623 (OWNER (943)/(944)): WHO responded, on the queue row ==========
+// `response_headline` rides the list answer the queue already fetches: four
+// values, no request per row. It is present ONLY on a row born of a Skipi
+// response. Measured on this product's own source table — inbound 9 ·
+// skipi_response 2 · synthetic 3 — NINE of fourteen pilot rows are e-mail and
+// will never carry it, so every branch below leaves those rows exactly as they
+// are today. An unconditional heading would make the majority of the queue
+// worse, which is the opposite of what was asked for.
+//
+// `rank_state` is read INSTEAD of guessing from `rank == null`: the server
+// distinguishes "the profile named no post", "the version answered was
+// overwritten by a republish" and "no readable snapshot", and (944) forbids
+// showing today's post to a seafarer who answered a different one. The codes
+// are the server's; the wording is ours, because the server holds no language.
+var CREW_FLOW_RANK_STATE_TEXT = {
+  from_snapshot:['должность не указана','post not stated'],
+  snapshot_superseded:['должность отклика не сохранена','post at the response not kept'],
+  snapshot_unavailable:['должность неизвестна','post unknown']
+};
+function crewFlowRankStateLabel(code) {
+  var pair = CREW_FLOW_RANK_STATE_TEXT[String(code == null ? '' : code)];
+  return pair ? pair[getUiLang() === 'ru' ? 0 : 1] : '';
+}
+function crewFlowResponseHeadline(item) {
+  var h = item && item.response_headline;
+  return (h && typeof h === 'object') ? h : null;
+}
+// First and surname as the seafarer's own vault holds them. Either half may be
+// absent; nothing is invented from the other, and an all-empty pair is NOT a
+// name — the row then keeps the title it has today.
+function crewFlowResponseName(o) {
+  if (!o) return '';
+  var first = String(o.first_name == null ? '' : o.first_name).replace(/^\s+|\s+$/g, '');
+  var last = String(o.surname == null ? '' : o.surname).replace(/^\s+|\s+$/g, '');
+  return (first + ' ' + last).replace(/\s\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+}
+// No.623/Б2. WHY THIS IS A SEPARATE STORE AND HOLDS A CODE.
+//
+// Same reasoning as No.621's contact cache, and the same door left shut:
+// everything in crewFlowFactCache() reaches the queue row through
+// crewFlowFactsFor AND reaches the IRREVERSIBLE seafarer database through
+// crewFlowSaveToSeafarers. A value parked there travels to both by the back
+// door. What the row needs in order to rank three transports of one name is not
+// a value at all — it is one word about where the recorded name came from.
+function crewFlowNameOriginCache() {
+  if (!state.crewFlowNameOrigin) state.crewFlowNameOrigin = {};
+  return state.crewFlowNameOrigin;
+}
+function crewFlowCacheNameOrigin(intakeId, code) {
+  try { crewFlowNameOriginCache()[String(intakeId)] = String(code == null ? '' : code); } catch(_) {}
+}
+function crewFlowNameOrigin(intakeId) {
+  try { return String(crewFlowNameOriginCache()[String(intakeId)] || ''); } catch(_) { return ''; }
+}
+// No.623/Б2: THREE transports of one name now, and the order is assigned, not
+// guessed — an OPERATOR's correction is a human act and is never overwritten by
+// a machine value; what the seafarer sent WITH THE RESPONSE outranks what a
+// parser read out of a CV. Two names for one candidate are still never shown
+// side by side: exactly one wins here and the others are not printed.
 function crewFlowRowNameState(item) {
-  var facts = crewFlowFactsFor(item && item.intake_id);
+  var intakeId = item && item.intake_id;
+  var facts = crewFlowFactsFor(intakeId);
   var fact = String((facts && facts.name) == null ? '' : facts.name).replace(/^\s+|\s+$/g, '');
+  if (fact && crewFlowNameOrigin(intakeId) === 'operator') return { kind:'fact', name:fact };
+  var delivered = crewFlowResponseName(crewFlowResponseHeadline(item));
+  if (delivered) return { kind:'response', name:delivered };
   if (fact) return { kind:'fact', name:fact };
   var summary = item && item.summary;
   if (!summary || !Object.prototype.hasOwnProperty.call(summary, 'candidate_name')) {
@@ -5815,7 +5883,24 @@ function crewFlowRowTitle(item) {
 function crewFlowRowTitleHtml(item) {
   var st = crewFlowRowNameState(item);
   var named = !!st.name;
-  var html = '<span data-qa="crew-flow-row-name" data-name="' + escapeAttr(st.kind) + '">'
+  var html = '';
+  // No.623: the post appears ONLY beside a name that was actually delivered with
+  // a response. A row with no such name keeps today's title, and a post standing
+  // alone in a name's place would be an identifier wearing a name's clothes —
+  // the very defect (929) removed from this heading.
+  if (st.kind === 'response') {
+    var head = crewFlowResponseHeadline(item);
+    var rank = String((head && head.rank) == null ? '' : head.rank).replace(/^\s+|\s+$/g, '');
+    if (rank) {
+      html += '<span data-qa="crew-flow-row-response-rank">' + escapeHtml(rank) + '</span> \u00b7 ';
+    } else {
+      // (944): no post is shown rather than the profile's CURRENT one, and the
+      // row says WHY instead of going quiet about it.
+      var caption = crewFlowRankStateLabel(head && head.rank_state);
+      if (caption) html += '<span class="meta" data-qa="crew-flow-row-rank-state">' + escapeHtml(caption) + '</span> \u00b7 ';
+    }
+  }
+  html += '<span data-qa="crew-flow-row-name" data-name="' + escapeAttr(st.kind) + '">'
     + escapeHtml(named ? st.name : crewFlowSourceLabel(item && item.source)) + '</span>';
   // Only the ANSWERED absence is spelled out. "This build never told us" stays
   // silent, because claiming there is no name would be a claim nobody made — so
@@ -7142,7 +7227,21 @@ var PILOT_CARD_TEXT = {
   en: {
     card_title:'Candidate card', back:'Back to queue', open:'Open', refresh:'Refresh this candidate',
     ident_unknown:'name not given', record_generic:'Record', fit_title:'Match against profiles',
+    // No.623 (OWNER (943)/(944)): the six elements of a response. The server
+    // holds no language -- it sends closed CODES and the wording lives here.
+    resp_age:'Age', resp_citizenship:'Citizenship', resp_experience:'Sea time in post', resp_vessel:'Last vessel',
+    resp_missing:'not given', resp_age_about:'about {years}',
+    resp_span_ym:'{y} yr {m} mo', resp_span_y:'{y} yr', resp_span_m:'{m} mo', resp_span_d:'{d} days',
+    resp_exp_label_rank:'Sea time as {rank}', resp_exp_other_rank:'{span} \u2014 a different post from the one responded on',
+    resp_exp_rank_unknown:'the post responded on is not known, so no sea time is counted for it',
+    resp_exp_not_provided:'no sea time was sent with the response',
+    resp_rank_absent:'the profile did not name a post', resp_rank_superseded:'the profile was republished; the post answered was not kept',
+    resp_rank_unavailable:'no readable snapshot of the profile answered',
+    identity_failed:'This card could not be loaded in full.',
     fit_none:'No stored comparison for this candidate yet.', fit_explain:'How the figure is counted',
+    // No.632: the add button lives on EVERY card of this block, so the two words
+    // it needs live beside the block's own vocabulary and not in a new place.
+    fit_on_shortlist:'already on the shortlist', fit_into:'into THIS profile, version {v}',
     fit_reasons:'Which checks', profile_unnamed:'Profile without a name',
     share_caption:'{met} of {total} checks met, by the stored evaluation',
     share_note:'The figure is the share of checks a stored comparison recorded as met, against one profile. Equal count, no weighting. It is not a probability, not a rating of the person, and it says nothing about whether the documents are current.',
@@ -7191,7 +7290,18 @@ var PILOT_CARD_TEXT = {
   ru: {
     card_title:'Карточка кандидата', back:'К очереди', open:'Открыть', refresh:'Обновить карточку',
     ident_unknown:'имя не указано', record_generic:'Запись', fit_title:'Соответствие профилям',
+    // No.623: те же шесть элементов по-русски. Коды -- с сервера, слова -- здесь.
+    resp_age:'Возраст', resp_citizenship:'Гражданство', resp_experience:'Стаж в должности', resp_vessel:'Последнее судно',
+    resp_missing:'не указано', resp_age_about:'около {years}',
+    resp_span_ym:'{y} г. {m} мес.', resp_span_y:'{y} г.', resp_span_m:'{m} мес.', resp_span_d:'{d} дн.',
+    resp_exp_label_rank:'Стаж в должности {rank}', resp_exp_other_rank:'{span} \u2014 не та, на которую отклик',
+    resp_exp_rank_unknown:'должность отклика неизвестна, стаж по ней не посчитан',
+    resp_exp_not_provided:'стаж с откликом не прислан',
+    resp_rank_absent:'в профиле должность не названа', resp_rank_superseded:'профиль перепубликован; должность на момент отклика не сохранена',
+    resp_rank_unavailable:'читаемого снимка профиля отклика нет',
+    identity_failed:'Карточка загружена не полностью.',
     fit_none:'Сохранённых сравнений по этому кандидату пока нет.', fit_explain:'Как считается число',
+    fit_on_shortlist:'уже в шортлисте', fit_into:'в этот профиль, версия {v}',
     fit_reasons:'Какие проверки', profile_unnamed:'Профиль без названия',
     share_caption:'выполнено {met} из {total} по сохранённой оценке',
     share_note:'Число — доля проверок, которые сохранённая оценка отметила выполненными, против одного профиля. Равный подсчёт, без весов. Это не вероятность, не оценка человека и ничего не говорит о том, действительны ли документы.',
@@ -7264,6 +7374,13 @@ var PILOT_CARD_REFUSAL_TEXT = {
   not_confirmed:['Этот кандидат не в шортлисте','Not on the shortlist'],
   already_withdrawn:['Уже снят из шортлиста','Already withdrawn'],
   withdraw_not_permitted:['Снять может автор подтверждения или администратор','Only the person who confirmed it, or an administrator, can withdraw'],
+  // No.632: the third state. `hold_not_permitted` is a word of its own standing
+  // behind the WITHDRAWAL's own check, so the wording says the same thing the
+  // withdrawal's does — a colleague who may not take the decision back may not
+  // park it either, because both move one person's decision.
+  already_on_hold:['Кандидат уже отложен','Already set aside'],
+  not_on_hold:['Этот кандидат не отложен','This candidate is not on hold'],
+  hold_not_permitted:['Отложить может автор подтверждения или администратор','Only the person who confirmed it, or an administrator, can set it aside'],
   fact_no_source_object:['Факт должен ссылаться на документ этого кандидата','A fact must cite a document of THIS candidate'],
   fact_no_uncertainty:['У факта нет ни уверенности, ни пометки неизвестности','A fact carries a confidence or an uncertainty'],
   fact_no_actor:['Правку вносит конкретный человек','A correction is made by somebody'],
@@ -7345,7 +7462,14 @@ async function pilotFactsLoad() {
   try {
     var result = await invoke('crewing_intake_fact_list', Object.assign(pilotExpected(token.context), {intakeId:d.intakeId}));
     if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
-    d.facts = Array.isArray(result.items) ? result.items : []; d.factsLoading = false; renderIntakePilot(); return true;
+    d.facts = Array.isArray(result.items) ? result.items : []; d.factsLoading = false;
+    // No.623/Б2: the row must be able to tell an operator's correction from a
+    // machine reading, or the delivered name would silently overwrite a human
+    // edit. It is handed ONE WORD about origin and never a value - guarded like
+    // crewFlowCacheRanks above, because this card renders in hosts where the
+    // Crew Flow block is not loaded at all.
+    try { crewFlowCacheNameOrigin(d.intakeId, pilotCardNameOrigin()); } catch(_){}
+    renderIntakePilot(); return true;
   } catch(error) {
     if (!pilotDetailStillCurrent(token) || requestId !== d.factsRequest) return false;
     d.factsLoading = false; d.factsError = error; renderIntakePilot(); return false;
@@ -7508,12 +7632,26 @@ async function pilotShortlistConfirm(profileId, profileVersion) {
   var version = Number(profileVersion);
   if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
   await pilotCardWrite('confirm', profileId+'@'+version, 'crewing_intake_shortlist_confirm', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+  pilotShortlistTouched(profileId);
 }
 async function pilotShortlistWithdraw(profileId, profileVersion) {
   var d = pilotDetail(); if (!d) return;
   var version = Number(profileVersion);
   if (!Number.isSafeInteger(version) || version < 1) { d.formError = 'invalid_form'; renderIntakePilot(); return; }
   await pilotCardWrite('withdraw', profileId+'@'+version, 'crewing_intake_shortlist_withdraw', {intakeId:d.intakeId, pair:{profile_id:String(profileId), profile_version:version}}, [pilotRanksLoad, pilotCardLoad]);
+  pilotShortlistTouched(profileId);
+}
+// Deliberately UNCONDITIONAL on the outcome. An acknowledged write obviously
+// moves the list; a REFUSED one may still have been applied (`unknown` is a
+// real outcome of pilotCardWrite, which is why that word exists), and an
+// unnecessary re-read costs one request while a stale "nobody" costs the
+// operator a wrong decision. Guarded by `typeof` for the same reason
+// crewFlowCacheResponseContact is: this card renders in hosts where the No.632
+// block is not loaded at all.
+function pilotShortlistTouched(profileId) {
+  try {
+    if (typeof profileShortlistInvalidate === 'function') profileShortlistInvalidate(profileId);
+  } catch (_) {}
 }
 // ===== OWNER 2026-09-30: one profile, ONE name, in every place it appears =====
 // The block heading, the "compare against" picker and the reasons disclosure must
@@ -8082,9 +8220,12 @@ function pilotCardAttachmentsHtml() {
 // ---- contacts --------------------------------------------------------------
 // R3: the recorded contact fact is the ONE addressee. The pre-S2 `email` field is
 // a fallback, and wherever it is used the screen says where it came from.
-function cardContactFacts() {
-  var d = pilotDetail();
-  var rows = (d && Array.isArray(d.facts)) ? d.facts : [];
+function cardContactFacts() { return cardContactFactsFrom((pilotDetail() || {}).facts); }
+// The SAME reader, given its rows instead of fetching them from the open card:
+// the profile's shortlist row has facts of its own and must not grow a second
+// copy of this order (see cardContactResolvedFrom below).
+function cardContactFactsFrom(factRows) {
+  var rows = Array.isArray(factRows) ? factRows : [];
   var pick = function(field){
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i] || {};
@@ -8131,8 +8272,15 @@ function cardSafeText(value) {
 // never reach draft.to: that is the second face of the anti-loop, and it is the
 // one the server-side check cannot see.
 function cardContactResolved() {
-  var facts = cardContactFacts();
-  var delivered = cardResponseContact();
+  return cardContactResolvedFrom((pilotDetail() || {}).facts, cardResponseContact());
+}
+// The order itself, given its two inputs. Every consumer — the card and the
+// profile's shortlist row — calls THIS, so there is one order and not two.
+// `delivered` carries the three states of No.621 ('have' / 'none' / 'failed')
+// and is passed through untouched, because "could not be read" is not "absent"
+// and the caller must still be able to tell them apart.
+function cardContactResolvedFrom(factRows, delivered) {
+  var facts = cardContactFactsFrom(factRows);
   var out = {
     email:'', source:'none', legacy:false, addressable:false,
     delivered:delivered, phone:facts.phone,
@@ -8452,25 +8600,210 @@ function pilotCardFactValue(field) {
   }
   return '';
 }
+// ===== No.623 (OWNER (943)/(944)): the six elements, on the card ============
+// `response_summary` arrives on the candidate GET. It is present ONLY on a card
+// born of a Skipi response — nine of the fourteen pilot cards are e-mail and
+// never carry it — so everything below is drawn only when it is actually there.
+function pilotCardResponseSummary() {
+  var d = pilotDetail();
+  var s = d && d.card && d.card.response_summary;
+  return (s && typeof s === 'object') ? s : null;
+}
+// The card block must not depend on the Crew Flow block being loaded at all
+// (this card renders in hosts where it is not), so the join lives here too.
+function pilotCardPersonName(o) {
+  if (!o) return '';
+  var first = String(o.first_name == null ? '' : o.first_name).replace(/^\s+|\s+$/g, '');
+  var last = String(o.surname == null ? '' : o.surname).replace(/^\s+|\s+$/g, '');
+  return (first + ' ' + last).replace(/\s\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+}
+// No.623/Б2: which hand wrote the recorded name. `corrected_by` is set by the
+// operator route and by nothing else, so its presence on the CURRENT version is
+// the honest test for "a person typed this". Absent = a machine read it out of a
+// document. The answer is a single word, and it is the only thing the queue row
+// is given (crewFlowCacheNameOrigin) — never the name itself.
+function pilotCardNameOrigin() {
+  var d = pilotDetail();
+  var list = (d && Array.isArray(d.facts)) ? d.facts : [];
+  for (var i = 0; i < list.length; i++) {
+    if (!list[i] || String(list[i].field) !== 'name') continue;
+    var versions = Array.isArray(list[i].versions) ? list[i].versions : [];
+    if (!versions.length) return '';
+    var v = versions[0];
+    return (v && v.corrected_by != null && String(v.corrected_by) !== '') ? 'operator' : 'machine';
+  }
+  return '';
+}
+// Age. `age_precision` is the whole point of the pair: a seafarer who recorded
+// only a year of birth has an age that is approximate, and printing it as a
+// bare number would be a precision the client never had. The server never sees
+// a date of birth — the number is computed once, on the seafarer's own device.
+function pilotCardAgeText(s) {
+  if (!s || s.age_years == null) return '';
+  var n = Number(s.age_years);
+  if (!isFinite(n)) return '';
+  return String(s.age_precision) === 'year'
+    ? cardT('resp_age_about').replace('{years}', String(n))
+    : String(n);
+}
+function pilotCardCitizenshipText(s) {
+  if (!s) return '';
+  var name = String(s.citizenship == null ? '' : s.citizenship).replace(/^\s+|\s+$/g, '');
+  var code = String(s.citizenship_code == null ? '' : s.citizenship_code).replace(/^\s+|\s+$/g, '');
+  if (name && code) return name + ' (' + code + ')';
+  return name || code;
+}
+// Whole years and months, and a component that is zero is simply not said:
+// "0 yr 5 mo" reads like a measurement, and the one number nobody may see by
+// accident here is a zero that was never measured.
+function pilotCardDurationText(days) {
+  var total = Number(days);
+  if (!isFinite(total) || total < 0) return '';
+  total = Math.floor(total);
+  var years = Math.floor(total / 365);
+  var months = Math.floor((total - years * 365) / 30);
+  if (years && months) return cardT('resp_span_ym').replace('{y}', String(years)).replace('{m}', String(months));
+  if (years) return cardT('resp_span_y').replace('{y}', String(years));
+  if (months) return cardT('resp_span_m').replace('{m}', String(months));
+  return cardT('resp_span_d').replace('{d}', String(total));
+}
+// Sea time ALWAYS names the post it was counted for. No.622 (matching a profile
+// rank to free text a seafarer typed) is NOT open, so the comparison behind
+// `experience_state` is byte equality: `MASTER` and `Master ` are different
+// posts here, and the screen says which post the figure belongs to rather than
+// implying it is the one responded on.
+function pilotCardExperienceText(s) {
+  if (!s) return '';
+  var state = String(s.experience_state == null ? '' : s.experience_state);
+  if (state === 'response_rank_unknown' || state === 'not_provided') return '';
+  var days = (s.experience_days == null) ? null : Number(s.experience_days);
+  if (days == null || !isFinite(days)) return '';
+  var span = pilotCardDurationText(days);
+  if (!span) return '';
+  var rank = String(s.experience_rank == null ? '' : s.experience_rank).replace(/^\s+|\s+$/g, '');
+  if (!rank || state !== 'other_rank') return span;
+  // The post is named by the LABEL now (`pilotCardExperienceLabel`), so the
+  // value carries only the figure and, when the days were counted for a
+  // different post, the warning that says so. Saying the post in both halves is
+  // what made one line read «Стаж в должности 9 мес. в должности Bosun».
+  return cardT('resp_exp_other_rank').replace('{span}', span);
+}
+// The label of the sea-time cell, and the ONE place the post is named in that
+// line. The wording is the letter's own `pl_table_seatime` — «Стаж в должности
+// {rank}» / «Sea time as {rank}» — reused rather than copied into a second
+// form, so the card, the row of the profile and the letter say it identically.
+function pilotCardExperienceLabel(s) {
+  var rank = String((s && s.experience_rank) == null ? '' : s.experience_rank).replace(/^\s+|\s+$/g, '');
+  if (!rank) return cardT('resp_experience');
+  return cardT('resp_exp_label_rank').replace('{rank}', rank);
+}
+// An absence is not one sentence. "The seafarer sent no sea time" and "we could
+// not tell which post to count" are different answers, and neither of them is
+// "0 days" — the distinction the owner asked for by name.
+function pilotCardExperienceMissingText(s) {
+  var state = String((s && s.experience_state) == null ? '' : s.experience_state);
+  if (state === 'response_rank_unknown') return cardT('resp_exp_rank_unknown');
+  if (state === 'not_provided') return cardT('resp_exp_not_provided');
+  return cardT('resp_missing');
+}
+function pilotCardVesselText(s) {
+  if (!s) return '';
+  var name = String(s.last_vessel_name == null ? '' : s.last_vessel_name).replace(/^\s+|\s+$/g, '');
+  if (!name) return '';
+  var off = String(s.last_vessel_sign_off == null ? '' : s.last_vessel_sign_off).replace(/^\s+|\s+$/g, '');
+  return off ? name + ' · ' + off : name;
+}
+function pilotCardSummaryCell(key, label, text, missingText, precision) {
+  var has = !!text;
+  return '<div class="cf-resp-cell" data-qa="pilot-response-' + key + '"'
+    + (precision ? ' data-precision="' + escapeAttr(String(precision)) + '"' : '') + '>'
+    + '<span class="cf-resp-k">' + escapeHtml(label) + '</span> '
+    + (has
+        ? '<span class="cf-resp-v">' + escapeHtml(text) + '</span>'
+        : '<span class="cf-resp-v muted" data-qa="pilot-response-missing">' + escapeHtml(missingText || cardT('resp_missing')) + '</span>')
+    + '</div>';
+}
+var PILOT_CARD_RANK_STATE_KEY = {
+  from_snapshot:'resp_rank_absent',
+  snapshot_superseded:'resp_rank_superseded',
+  snapshot_unavailable:'resp_rank_unavailable'
+};
+function pilotCardResponseSummaryHtml(s) {
+  var cells = ''
+    + pilotCardSummaryCell('age', cardT('resp_age'), pilotCardAgeText(s), cardT('resp_missing'), s.age_precision)
+    + pilotCardSummaryCell('citizenship', cardT('resp_citizenship'), pilotCardCitizenshipText(s), cardT('resp_missing'))
+    + pilotCardSummaryCell('experience', pilotCardExperienceLabel(s), pilotCardExperienceText(s), pilotCardExperienceMissingText(s))
+    + pilotCardSummaryCell('vessel', cardT('resp_vessel'), pilotCardVesselText(s), cardT('resp_missing'));
+  // (944): when the post is absent the card says WHY. It NEVER falls back to the
+  // profile's current post — a seafarer who answered "Master" was never shown
+  // "Chief Officer", and showing it here would put words in their mouth.
+  var stateHtml = '';
+  var rank = String(s.rank == null ? '' : s.rank).replace(/^\s+|\s+$/g, '');
+  if (!rank) {
+    var key = PILOT_CARD_RANK_STATE_KEY[String(s.rank_state == null ? '' : s.rank_state)];
+    if (key) stateHtml = '<div class="cf-resp-note"><span class="meta" data-qa="pilot-response-rank-state">' + escapeHtml(cardT(key)) + '</span></div>';
+  }
+  return '<div class="cf-resp" data-qa="pilot-response-summary">' + cells + '</div>' + stateHtml;
+}
+// The block that sits directly under the heading: what is known about the
+// person, and — CANON (930) п.1 — any failure to load it, stated HERE, beside
+// the decision, rather than folded into a collapsed disclosure further down.
+function pilotCardResponseBlockHtml() {
+  var d = pilotDetail(); if (!d) return '';
+  var out = '';
+  if (d.cardError || d.factsError) {
+    out += '<div class="pilot-status error" data-qa="pilot-identity-load-error">'
+      + escapeHtml(cardT('identity_failed')) + ' '
+      + pilotCardErrorMessage(d.cardError || d.factsError) + '</div>';
+  }
+  var s = pilotCardResponseSummary();
+  if (s) out += pilotCardResponseSummaryHtml(s);
+  return out ? '<section class="pilot-card" data-qa="pilot-response-block">' + out + '</section>' : '';
+}
 function pilotCardIdentityHtml() {
   var d = pilotDetail(); if (!d) return '';
-  // One candidate, one name. The recorded fact wins; the server's rendering of
-  // the same fact on the card summary fills in; the intake id is the last resort
-  // and is never dressed up as a person.
-  var name = pilotCardFactValue('name');
-  var answered = !!(d.facts && d.facts.length);
-  if (!name && d.card && d.card.summary && d.card.summary.candidate_name != null) {
-    name = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
-    answered = true;
+  // No.623/Б2: ONE candidate, ONE name, and now THREE transports carrying it.
+  // The order is assigned, not guessed: an operator's correction is a human act
+  // and must never be overwritten by a machine value; what the seafarer sent
+  // WITH THE RESPONSE outranks what a parser read out of a CV; the server's
+  // rendering of the recorded fact fills the rest. Exactly one wins, so two
+  // names for one candidate are still never shown side by side.
+  var summary = pilotCardResponseSummary();
+  var factName = pilotCardFactValue('name');
+  var delivered = pilotCardPersonName(summary);
+  var name = '', kind = '';
+  if (factName && pilotCardNameOrigin() === 'operator') { name = factName; kind = 'fact'; }
+  else if (delivered) { name = delivered; kind = 'response'; }
+  else if (factName) { name = factName; kind = 'fact'; }
+  else if (d.card && d.card.summary && d.card.summary.candidate_name != null) {
+    var listed = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
+    if (listed) { name = listed; kind = 'list'; }
   }
-  var kind = name ? 'fact' : (answered ? 'none' : 'unknown');
+  // No.623/Б3: THREE STATES, and this is where the contract was broken BEFORE
+  // this card. `answered` used to be `!!(d.facts && d.facts.length)` — "the
+  // question was answered" derived from "the answer was not empty". So a request
+  // that FAILED rendered as "name not given": an unasked question wearing the
+  // clothes of an answered absence, which CANON (930) п.1 forbids outright.
+  //
+  // Answered now means a response actually came back — an EMPTY facts list is an
+  // answer — and a request that did not come back is its own third state.
+  var loadFailed = !!(d.cardError || d.factsError);
+  var answered = Array.isArray(d.facts) || !!d.card;
+  if (!name) kind = loadFailed ? 'error' : (answered ? 'none' : 'unknown');
   // OWNER (929): the heading is never the intake_id. With no recorded name the
   // card is titled by where the record came from; the identifier itself is
   // printed in full, once, under "Source, identifiers and provenance".
   var source = d.card && d.card.source;
   var title = name || (typeof crewFlowSourceLabel === 'function'
     ? crewFlowSourceLabel(source) : cardT('record_generic'));
+  // Initials come from the PERSON's name only — never from the post beside it
+  // and never from an identifier: two letters of a UUID look like a person.
   var initials = pilotCardInitials(name);
+  // No.623: the post THEY RESPONDED ON, beside the name and only there. It is
+  // frozen at the version answered (944) and is absent rather than replaced when
+  // that version was overwritten; the reason is said in the summary below.
+  var headRank = '';
+  if (kind === 'response' && summary) headRank = String(summary.rank == null ? '' : summary.rank).replace(/^\s+|\s+$/g, '');
   var sub = [];
   var rank = pilotCardFactValue('rank');
   if (rank) sub.push(rank);
@@ -8488,7 +8821,9 @@ function pilotCardIdentityHtml() {
   return '<div class="cf-ident" data-qa="pilot-card-identity" data-name="' + escapeAttr(st.kind) + '">'
     + (initials ? '<div class="cf-ident-badge" aria-hidden="true">' + escapeHtml(initials) + '</div>' : '')
     + '<div style="min-width:0;"><div class="cf-ident-kicker">' + escapeHtml(cardT('card_title')) + '</div>'
-    + '<h1 class="cf-ident-name" data-qa="pilot-card-name">' + escapeHtml(title) + '</h1>'
+    + '<h1 class="cf-ident-name">'
+    +   (headRank ? '<span data-qa="pilot-card-response-rank">' + escapeHtml(headRank) + '</span> \u00b7 ' : '')
+    +   '<span data-qa="pilot-card-name">' + escapeHtml(title) + '</span></h1>'
     + (subHtml ? '<div class="cf-ident-sub">' + subHtml + '</div>' : '') + '</div></div>';
 }
 // One compact card per stored comparison: the figure (928) where the data earns
@@ -8532,6 +8867,23 @@ function pilotCardFitCardHtml(rank) {
     ? '<div class="cf-fitcard-sub" data-qa="pilot-fit-origin" data-origin="' + escapeAttr(cardResponseOrigin()) + '">'
       + escapeHtml(origin) + '</div>'
     : '';
+  // No.632 (OWNER (965)/(968)): the decision is taken HERE, beside the figure it
+  // is taken on. Two things this costs nothing and must not get wrong:
+  //
+  //   * the pair is THIS CARD's own — the profile it names and the version the
+  //     stored comparison was made against — so a press can never land on the
+  //     profile the operator was merely looking past;
+  //   * a candidate already on this profile's list is TOLD SO BEFORE the press.
+  //     The server refuses the duplicate with 409 either way; being told after
+  //     the fact is not the same product as seeing it beforehand, and the owner
+  //     asked for the second one.
+  var d = pilotDetail();
+  var onList = pilotCardActiveConfirmation({ profile_id: rank && rank.profile_id, profile_version: rank && rank.profile_version });
+  var jsPair = '\'' + escapeJsString(String(rank && rank.profile_id)) + '\',' + String(Number(rank && rank.profile_version));
+  var act = onList
+    ? '<span class="cf-fitcard-onlist" data-qa="pilot-fit-onlist">' + escapeHtml(cardT('fit_on_shortlist')) + '</span>'
+    : '<button data-qa="pilot-fit-confirm" onclick="pilotShortlistConfirm(' + jsPair + ')"' + ((d && d.pending) ? ' disabled' : '') + '>' + escapeHtml(cardT('op_confirm')) + '</button>'
+      + '<span class="cf-fitcard-into" data-qa="pilot-fit-into">' + escapeHtml(cardT('fit_into').replace('{v}', String(rank && rank.profile_version))) + '</span>';
   return '<div class="cf-fitcard ' + (complete ? 'complete ' : '') + ((rank && rank.primary) ? 'primary' : '') + '"'
     + ' data-qa="pilot-fit-card" data-profile="' + escapeAttr(String(rank && rank.profile_id))
     + '" data-fit="' + escapeAttr(share.reason) + '">'
@@ -8545,7 +8897,8 @@ function pilotCardFitCardHtml(rank) {
     // and present only when the stored comparison actually states them.
     + (wanted ? '<div class="cf-fitcard-sub" data-qa="pilot-fit-wanted">' + escapeHtml(wanted) + '</div>' : '')
     + originHtml + applic
-    + head + bar + counts + '</div>';
+    + head + bar + counts
+    + '<div class="cf-fitcard-act">' + act + '</div></div>';
 }
 function pilotCardFitSummaryHtml() {
   var d = pilotDetail(); if (!d) return '';
@@ -8579,6 +8932,9 @@ function pilotRenderCard(main, afterHeroHtml) {
     + '<div class="pilot-hero">'+pilotCardIdentityHtml()+'<div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCardRefreshAll()">'+escapeHtml(cardT('refresh'))+'</button><button data-qa="pilot-card-back" onclick="pilotCloseCard()">'+escapeHtml(cardT('back'))+'</button></div></div>'
     // The host (Crew Flow) puts its operator actions here: directly under the
     // name, above the fold, and after the answer to "whose card is this".
+    // 1b. No.623: WHAT IS KNOWN about that person, and any failure to load it,
+    //     directly under the heading and above every disclosure on the card.
+    + pilotCardResponseBlockHtml()
     + (afterHeroHtml || '')
     // 2. WHAT WAS COMPARED. Several profiles at once, each with its own figure and
     //    its own unmet/unconfirmed counts, above the source material.
@@ -8607,6 +8963,979 @@ function pilotCardKeydown(ev) {
 }
 if (typeof document !== 'undefined' && document && typeof document.addEventListener === 'function') document.addEventListener('keydown', pilotCardKeydown);
 // ================== C3b-2 CANDIDATE CARD END ==================
+
+// ================= No.632 PROFILE SHORTLIST START =================
+// OWNER (965)/(969): inside a matching profile, WHO was chosen for it — with the
+// facts that decide a shortlist, the ways this product already has of reaching a
+// person, and the third state "set aside".
+//
+// Why this is a block of its own and not more of the candidate card: it renders
+// on the matching-profile screen, which the card never enters, and it reads the
+// list FROM THE OTHER END — by profile, not by candidate. What it does NOT do is
+// grow a second set of renderers: age, citizenship, sea time and the last vessel
+// go through the very helpers No.623 built for the card, so one candidate reads
+// the same on both screens or neither.
+//
+// Three things this block must never do, each of them a STOP of the card:
+//   * write anything into the local seafarers table;
+//   * send mail (OWNER (739) п.5 — a draft is handed to the operator's client);
+//   * keep the list on the device. It is RE-READ from the server every time the
+//     profile is opened, and that is precisely what "survives a restart of the
+//     application" means. A cache here would make the screen survive a restart
+//     while the truth did not.
+var PROFILE_SHORTLIST_TEXT = {
+  ps_title:['Отобранные кандидаты','Shortlisted candidates'],
+  ps_counts:['отобрано {n} · в подборку войдут {m}','{n} selected · {m} will go in the selection'],
+  ps_loading:['Загружаю отобранных...','Loading the shortlist...'],
+  ps_empty:['В этот профиль пока никого не отобрали.','Nobody has been shortlisted for this profile yet.'],
+  ps_failed:['Список отобранных не загружен','The shortlist could not be read'],
+  ps_row_failed:['Сведения о кандидате не загрузились','This candidate’s details could not be read'],
+  ps_in_selection:['в подборке','in the selection'],
+  ps_on_hold:['отложен','set aside'],
+  ps_hold_note:['в подборку не войдёт','will not go in the selection'],
+  ps_hold:['Отложить','Set aside'],
+  ps_release:['Вернуть в подборку','Bring back'],
+  ps_remove:['Убрать из профиля','Remove from the profile'],
+  ps_email:['e-mail','e-mail'],
+  ps_phone:['Скопировать номер','Copy the number'],
+  ps_email_none:['e-mail — нет','e-mail — none'],
+  ps_email_unknown:['e-mail — не удалось получить','e-mail — could not be read'],
+  ps_email_not_usable:['e-mail — письмо не готовится','e-mail — no letter is prepared'],
+  ps_phone_none:['Номера нет','No number'],
+  ps_attachments:['вложений: {n}','attachments: {n}'],
+  ps_attachments_none:['вложений нет','no attachments'],
+  ps_recompare:['вакансия изменилась после этого решения — сравнить заново','the vacancy changed after this decision — compare again'],
+  ps_name_unknown:['имя не указано','name not given'],
+  ps_not_connected:['Компания не подключена — откройте Настройки → Подключение','Not connected — open Settings → Connection'],
+  ps_copied:['Номер скопирован','The number is copied'],
+  ps_copy_failed:['Скопировать не удалось','Could not copy'],
+  ps_email_failed:['Почтовый клиент не открылся','The mail client did not open'],
+  // The limit is NAMED rather than hidden: this build has no resume recogniser,
+  // so the row counts FILES and says so. Calling an attachment a resume would be
+  // a verdict the data never carried — the operator picks the resume himself
+  // when the letter is prepared.
+  ps_note:['«Убрать из профиля» рвёт связь только с ЭТИМ профилем — кандидат остаётся в очереди и в других профилях. Стаж — по должности, под которой он откликнулся, из его Experience. «вложений» — это сколько файлов пришло с откликом; какой из них резюме, продукт не определяет.',
+           'Removing him from the profile breaks the link with THIS profile only — he stays in the queue and in other profiles. Sea time is counted for the post he responded on, from his own Experience. "attachments" is how many files arrived with the response; which of them is a resume, this build does not decide.'],
+  // ---- No.632/S5: the letter to the customer ----
+  pl_title:['Финализировать — подготовить письмо заказчику','Finalise — prepare the letter for the customer'],
+  pl_to:['Кому (адрес заказчика)','To (the customer\u2019s address)'],
+  pl_to_empty:['Адреса заказчика нет в данных — впишите его','The customer\u2019s address is not in the data — type it in'],
+  pl_to_bad:['Такой адрес почтовый клиент не примет','The mail client will not accept this address'],
+  pl_subject:['Кандидаты по вашему заказу: {rank}, {vessel}','Candidates for your order: {rank}, {vessel}'],
+  pl_greeting:['Здравствуйте, уважаемый заказчик!','Dear customer,'],
+  pl_order:['По вашему заказу — {rank} на {vessel} (профиль «{profile}»{version}) — мы подобрали следующих кандидатов:',
+            'For your order — {rank} on {vessel} (profile \u201c{profile}\u201d{version}) — we have selected the following candidates:'],
+  // A separate fragment, so that an unknown version DROPS the clause instead of
+  // printing "версия )" into a letter to a customer — which is what the stand
+  // showed, because the object this screen holds carries no version at all.
+  pl_order_version:[', версия {n}',', version {n}'],
+  pl_to_ok:['адрес принят','the address is accepted'],
+  pl_table_candidate:['Кандидат','Candidate'],
+  pl_table_age:['Возраст','Age'],
+  pl_table_citizenship:['Гражданство','Citizenship'],
+  pl_table_seatime:['Стаж в должности {rank}','Sea time as {rank}'],
+  pl_table_vessel:['Последнее судно','Last vessel'],
+  pl_attached_note:['Резюме кандидатов — во вложении.','The candidates\u2019 resumes are attached.'],
+  pl_sign:['С уважением,','Kind regards,'],
+  pl_prepare:['Подготовить письмо','Prepare the letter'],
+  pl_edit:['Изменить текст','Edit the text'],
+  pl_edit_done:['Готово','Done'],
+  pl_edited:['Текст изменён вручную — таблица больше не обновляется сама','The text was edited by hand — the table no longer updates itself'],
+  pl_counts:['в письме кандидатов: {n} · вложений: {m}','candidates in the letter: {n} · attachments: {m}'],
+  pl_excluded:['Не вошли в подборку:','Not included in the selection:'],
+  pl_reason_on_hold:['отложен','set aside'],
+  pl_reason_no_resume:['резюме не выбрано','no resume picked'],
+  pl_reason_no_attachments:['вложений нет','no files at all'],
+  pl_reason_bytes:['файл не удалось получить','the file could not be fetched'],
+  pl_reason_row_failed:['сведения не загрузились','details could not be read'],
+  pl_pick:['Взять как резюме','Use as the resume'],
+  pl_picked:['резюме для письма','the resume for this letter'],
+  pl_unpick:['Убрать','Drop'],
+  pl_not_stated:['не указано','not stated'],
+  pl_result:['Письмо собрано и открыто в почтовом клиенте. Отправляете вы.','The letter is built and open in your mail client. You send it.'],
+  pl_open_failed:['Почтовый клиент не открылся. Письмо собрано и лежит здесь:','The mail client did not open. The letter is built and waiting here:'],
+  pl_company_missing:['Название агентства не заполнено — подписи в письме не будет. Настройки → Название организации','The agency name is not set — the letter will carry no signature. Settings → Organisation name'],
+  pl_archived:['Вакансия в архиве — проверьте, нужно ли посылать по ней подборку','This vacancy is archived — check whether a selection should go out for it'],
+  pl_web_note:['В браузере письмо не собрать: файлы сохраняет только приложение','In the browser the letter cannot be built: only the app can save files'],
+  pl_empty:['В подборке никого нет — письмо не из чего собрать','Nobody is in the selection — there is nothing to build a letter from'],
+  pl_seatime_reason:['стаж не показан: {reason}','sea time is not shown: {reason}'],
+  pl_seatime_disagrees:['два числа по этой должности расходятся','the two figures for this post disagree'],
+  pl_seatime_absent:['этой должности нет в его стаже','this post is not in his sea time'],
+  pl_seatime_unreadable:['стаж не прочитать','the sea time cannot be read'],
+  pl_seatime_none:['стаж не передан','no sea time was sent'],
+  pl_seatime_rank_missing:['у профиля не указана должность','the profile names no post'],
+  pl_note:['Письмо собирается ЗДЕСЬ и открывается в вашем почтовом клиенте — отправляете его вы. Стаж в таблице считается по должности ЭТОГО профиля; должности нет в стаже моряка — стоит «не указано», и чужое число не подставляется. Резюме выбираете вы: продукт не определяет, какой из присланных файлов резюме.',
+           'The letter is built HERE and opened in your own mail client — you are the one who sends it. Sea time in the table is counted for the post of THIS profile; a post his own sea time does not name reads \u201cnot stated\u201d, and no other figure is substituted for it. You pick the resume: this build does not decide which of the files that arrived is one.']
+};
+function profileShortlistT(key) {
+  var row = PROFILE_SHORTLIST_TEXT[key];
+  if (!row) return key;
+  return row[getUiLang() === 'ru' ? 0 : 1];
+}
+function profileShortlistStateFor(profileId) {
+  var id = String(profileId == null ? '' : profileId);
+  if (!state.profileShortlist || state.profileShortlist.profileId !== id) {
+    state.profileShortlist = { profileId:id, generation:0, loading:false, error:null, data:null, rows:{}, pending:false, actionError:null };
+  }
+  return state.profileShortlist;
+}
+// A surgical re-render when the host element is on screen, and the whole profile
+// screen only when it is not. The host is what keeps a list refresh from
+// repainting (and scrolling) the requirements the operator is reading.
+function profileShortlistRerender() {
+  if (typeof document === 'undefined' || !document) return;
+  var host = document.getElementById('profile-shortlist-host');
+  if (host) { host.innerHTML = profileShortlistHostHtml(); return; }
+  if (typeof renderComplianceProfileDetail === 'function' && state && state.view === 'compliance') renderComplianceProfileDetail();
+}
+// Called by the profile screen on every render; it loads once per profile and
+// does nothing on the repaints its own loading causes.
+// A decision about this profile's shortlist taken ELSEWHERE — on the candidate
+// card, which is where the owner's button lives — makes the answer this section
+// is holding false. Nothing here polls and nothing here guesses: the cached
+// answer is simply declared stale, and the next `profileShortlistEnsure` asks
+// the server once. The alternative that was in the build until now is the
+// screen printing "nobody has been shortlisted" over a list that holds him.
+function profileShortlistInvalidate(profileId) {
+  var st = state.profileShortlist;
+  if (!st) return;
+  var id = String(profileId == null ? '' : profileId);
+  // Keyed, not a broom: a decision about ANOTHER profile says nothing about the
+  // list this section is showing, and throwing it away would be a second read
+  // bought with nothing.
+  if (!id || st.profileId !== id) return;
+  // The generation is bumped FIRST, so a read already in flight cannot land
+  // after the invalidation and restore the very answer we just declared stale.
+  st.generation++;
+  st.loading = false; st.data = null; st.rows = {}; st.error = null; st.actionError = null;
+}
+function profileShortlistEnsure(profileId) {
+  var st = state.profileShortlist;
+  var id = String(profileId == null ? '' : profileId);
+  if (st && st.profileId === id && (st.loading || st.data !== null || st.error !== null)) return;
+  profileShortlistLoad(id);
+}
+async function profileShortlistLoad(profileId) {
+  var id = String(profileId == null ? '' : profileId);
+  var st = profileShortlistStateFor(id);
+  var generation = ++st.generation;
+  st.loading = true; st.error = null; st.actionError = null;
+  profileShortlistRerender();
+  var context = pilotContextSnapshot();
+  if (!pilotContextReady(context)) {
+    if (st.generation !== generation) return;
+    st.loading = false; st.data = null; st.error = { kind:'not_connected' };
+    profileShortlistRerender(); return;
+  }
+  try {
+    var result = await invoke('crewing_intake_profile_shortlist', Object.assign(pilotExpected(context), { profileId:id }));
+    if (st.generation !== generation) return;
+    // The rows of the PREVIOUS read are dropped with the list they belonged to:
+    // a row kept across a reload could outlive the decision it described.
+    st.data = result; st.rows = {}; st.loading = false; st.error = null;
+    profileShortlistRerender();
+    await profileShortlistLoadRows(id, generation, context);
+  } catch (error) {
+    if (st.generation !== generation) return;
+    // CANON (930) п.1 and the lesson of No.621: a read that FAILED is not an
+    // empty shortlist. `data` stays null precisely so the renderer below cannot
+    // print "nobody has been shortlisted" over a question nobody answered.
+    st.loading = false; st.data = null; st.error = error;
+    profileShortlistRerender();
+  }
+}
+// Who those decisions are ABOUT is read from the candidate surface that owns
+// that data — the reverse list carries ids, and a name on it would be a second
+// place where a candidate's identity lives. In parallel, because the pilot's
+// shortlist is a handful of people and a serial walk would make the screen
+// appear a row at a time.
+async function profileShortlistLoadRows(profileId, generation, context) {
+  var st = profileShortlistStateFor(profileId);
+  var items = (st.data && Array.isArray(st.data.items)) ? st.data.items : [];
+  items.forEach(function(item){
+    var key = String(item && item.intake_id);
+    st.rows[key] = { loading:true, error:null, card:null, facts:null, responseContact:null };
+  });
+  profileShortlistRerender();
+  await Promise.all(items.map(async function(item){
+    var key = String(item && item.intake_id);
+    var row = st.rows[key];
+    if (!row) return;
+    var cardResult = null, cardError = null, factsResult = null, factsError = null, contact = null;
+    await Promise.all([
+      (async function(){
+        try { cardResult = await invoke('crewing_intake_candidate_get', Object.assign(pilotExpected(context), { intakeId:key })); }
+        catch (e) { cardError = e; }
+      })(),
+      (async function(){
+        try { factsResult = await invoke('crewing_intake_fact_list', Object.assign(pilotExpected(context), { intakeId:key })); }
+        catch (e) { factsError = e; }
+      })(),
+      // The address the seafarer DELIVERED with his response, read exactly as the
+      // card reads it — same command, same three states, same 404 rule. Without
+      // it this row resolved contacts from the fact map alone and reported "no
+      // e-mail" over an address the card was showing.
+      (async function(){
+        try {
+          var rc = await invoke('crewing_intake_response_contact', Object.assign(pilotExpected(context), { intakeId:key }));
+          var value = (rc && rc.value != null) ? String(rc.value) : '';
+          // A 200 carrying no value is not an address and not an absence either.
+          contact = value
+            ? { state:'have', value:value, isEmail:!!(rc && rc.is_email), offerEmail:!!(rc && rc.offer_email) }
+            : { state:'failed' };
+        } catch (e) {
+          // 404 and ONLY 404 means "this letter carries no response binding".
+          // Everything else is an unknown, and CANON (930) п.1 forbids drawing an
+          // unknown as an absence.
+          var err = (typeof pilotParseError === 'function') ? pilotParseError(e) : null;
+          contact = (err && err.status === 404) ? { state:'none' } : { state:'failed' };
+        }
+      })()
+    ]);
+    if (st.generation !== generation) return;
+    row.card = cardResult; row.facts = factsResult; row.responseContact = contact;
+    // The delivered contact is NOT folded into row.error: a card and its facts
+    // that loaded fine still make a usable row, and the contact's own failure is
+    // said on the contact's own button.
+    row.error = cardError || factsError || null;
+    row.loading = false;
+  }));
+  if (st.generation !== generation) return;
+  profileShortlistRerender();
+}
+// The contacts THIS PRODUCT ALREADY HAS, resolved by the CARD's own resolver
+// rather than by a second copy of its order — the card's comment says plainly
+// that two copies are how the card and a row come to name two different
+// addressees for one person, and this row WAS the second copy.
+// No new channel is invented here: an address goes to the operator's own mail
+// client through `open_mailto`, a number goes to the clipboard this build
+// already uses for the draft, and there is no dialler because there is none.
+function profileShortlistContacts(row) {
+  var facts = (row && row.facts && Array.isArray(row.facts.items)) ? row.facts.items : [];
+  var delivered = (row && row.responseContact && row.responseContact.state) ? row.responseContact : null;
+  var r = cardContactResolvedFrom(facts, delivered);
+  return {
+    email: r.email,
+    phone: r.phone,
+    // `addressable` is the card's own word: an address that exists and that the
+    // server will NOT offer is shown, never written to, and never called absent.
+    addressable: !!r.addressable,
+    // 'have' | 'none' | 'failed' — three states, because "we could not find out"
+    // and "there is nobody to write to" are different sentences.
+    contactState: delivered ? delivered.state : (r.email ? 'have' : 'none')
+  };
+}
+// The order is the CARD's assigned order (No.623/Б2), reused rather than
+// restated: an operator's correction is a human act and is never overwritten by
+// a machine value; what the seafarer sent WITH THE RESPONSE outranks what a
+// parser read out of a document. Exactly one wins, so two names for one
+// candidate are never shown side by side.
+function profileShortlistPersonName(row) {
+  var items = (row && row.facts && Array.isArray(row.facts.items)) ? row.facts.items : [];
+  var nameFact = null;
+  for (var i = 0; i < items.length; i++) { if (items[i] && String(items[i].field) === 'name') { nameFact = items[i]; break; } }
+  var top = (nameFact && Array.isArray(nameFact.versions) && nameFact.versions.length) ? nameFact.versions[0] : null;
+  var typed = top ? String(top.value == null ? '' : top.value).replace(/^\s+|\s+$/g, '') : '';
+  if (typed && top.corrected_by != null && String(top.corrected_by) !== '') return typed;
+  var summary = row && row.card && row.card.response_summary;
+  var sent = summary ? pilotCardPersonName(summary) : '';
+  if (sent) return sent;
+  if (typed) return typed;
+  var listed = row && row.card && row.card.summary && row.card.summary.candidate_name;
+  return String(listed == null ? '' : listed).replace(/^\s+|\s+$/g, '');
+}
+// Three states, never two: a number, a stated zero, and — one level up, in the
+// row — a read that failed. `null` here means "the card was never read", and the
+// renderer must not let it fall into either of the other two.
+//
+// It counts FILES. It does not say which file is a resume, because nothing in
+// this build knows that: there is no resume recogniser and none is added here.
+function profileShortlistAttachmentCount(row) {
+  var atts = (row && row.card && Array.isArray(row.card.attachments)) ? row.card.attachments : null;
+  if (atts === null) return null;
+  return atts.length;
+}
+function profileShortlistCell(key, label, text, missingText) {
+  var has = !!text;
+  return '<span class="ps-cell" data-qa="profile-shortlist-' + key + '" data-state="' + (has ? 'have' : 'missing') + '">'
+    + '<span class="ps-k">' + escapeHtml(label) + '</span> '
+    + (has
+        ? '<span class="ps-v">' + escapeHtml(text) + '</span>'
+        : '<span class="ps-v muted" data-qa="profile-shortlist-missing">' + escapeHtml(missingText) + '</span>')
+    + '</span>';
+}
+function profileShortlistFactsHtml(row) {
+  // A card born of e-mail carries no response summary at all — nine of the
+  // fourteen pilot cards are — so NOTHING below is drawn unconditionally: each
+  // cell is asked for its own value and says so when it has none.
+  var s = (row && row.card && row.card.response_summary) ? row.card.response_summary : null;
+  var att = profileShortlistAttachmentCount(row);
+  // The cells are INLINE, so without something between them the row reads
+  // «Возраст 38Гражданство Spanish (ES)Стаж …» — which is what five live people
+  // on the stand showed and one did not. The separator is ' · ', the glyph this
+  // product already joins values with (`pilotCardVesselText`), and it is put in
+  // the MARKUP rather than in CSS so that what the operator reads is what a test
+  // can read: a `::before` would be invisible to the harness and to any check of
+  // the text itself. The last cell is conditional, so the parts are joined
+  // rather than concatenated — a separator must never dangle after nothing.
+  var parts = [
+    profileShortlistCell('age', cardT('resp_age'), s ? pilotCardAgeText(s) : '', cardT('resp_missing')),
+    profileShortlistCell('citizenship', cardT('resp_citizenship'), s ? pilotCardCitizenshipText(s) : '', cardT('resp_missing')),
+    profileShortlistCell('experience', s ? pilotCardExperienceLabel(s) : cardT('resp_experience'), s ? pilotCardExperienceText(s) : '',
+        s ? pilotCardExperienceMissingText(s) : cardT('resp_missing')),
+    profileShortlistCell('vessel', cardT('resp_vessel'), s ? pilotCardVesselText(s) : '', cardT('resp_missing'))
+  ];
+  if (att !== null) {
+    parts.push('<span class="ps-cell" data-qa="profile-shortlist-attachments" data-attachments="' + att + '">'
+      + '<span class="' + (att > 0 ? 'ps-v' : 'ps-v miss') + '">'
+      + escapeHtml(att > 0
+          ? profileShortlistT('ps_attachments').replace('{n}', String(att))
+          : profileShortlistT('ps_attachments_none')) + '</span></span>');
+  }
+  return '<div class="ps-facts">'
+    + parts.join('<span class="ps-sep" aria-hidden="true"> \u00b7 </span>')
+    + '</div>';
+}
+function profileShortlistContactButtonsHtml(intakeId, row) {
+  var c = profileShortlistContacts(row);
+  var js = '\'' + escapeJsString(String(intakeId)) + '\'';
+  var mailable = c.email && c.addressable && cardCheckedRecipient(c.email);
+  // A missing contact is a DARK BUTTON THAT SAYS WHAT IS MISSING. Hiding it
+  // would let the operator read "no button" as "not applicable" instead of
+  // "nobody gave us a number" (CANON (930) п.1).
+  // Four states, not two. Saying "e-mail — нет" over an address that exists, or
+  // over a question nobody answered, is exactly the lie this section is here to
+  // avoid: the operator would conclude "nobody left an address".
+  var emailDark = c.email
+    ? 'ps_email_not_usable'
+    : (c.contactState === 'failed' ? 'ps_email_unknown' : 'ps_email_none');
+  var email = mailable
+    ? '<button data-qa="profile-shortlist-email" onclick="profileShortlistEmail(' + js + ')">' + escapeHtml(profileShortlistT('ps_email')) + '</button>'
+    : '<button data-qa="profile-shortlist-email" disabled data-state="' + emailDark + '">' + escapeHtml(profileShortlistT(emailDark)) + '</button>';
+  // There is no dialler and no messenger transport in this build, and inventing
+  // either is outside this card. What exists is the clipboard, so the button is
+  // named for the clipboard: it copies the number. A button called "phone" would
+  // promise a call this product cannot place, and a second one called
+  // "messenger" would promise a channel it does not have — both were removed on
+  // the owner's word of 2026-10-01. One number, one button.
+  var phone = c.phone
+    ? '<button data-qa="profile-shortlist-phone" onclick="profileShortlistCopyPhone(' + js + ')">' + escapeHtml(profileShortlistT('ps_phone')) + '</button>'
+    : '<button data-qa="profile-shortlist-phone" disabled>' + escapeHtml(profileShortlistT('ps_phone_none')) + '</button>';
+  return email + phone;
+}
+function profileShortlistRowHtml(item) {
+  var st = state.profileShortlist;
+  var intakeId = String(item && item.intake_id);
+  var row = st.rows[intakeId] || null;
+  var js = '\'' + escapeJsString(intakeId) + '\'';
+  var onHold = !!(item && item.on_hold);
+  var tags = onHold
+    ? '<span class="tag ps-t-hold" data-qa="profile-shortlist-hold">' + escapeHtml(profileShortlistT('ps_on_hold')) + '</span>'
+    : (item && item.in_selection
+        ? '<span class="tag ok" data-qa="profile-shortlist-inselection">' + escapeHtml(profileShortlistT('ps_in_selection')) + '</span>'
+        : '');
+  var name = row ? profileShortlistPersonName(row) : '';
+  // A read that FAILED is its own state and stands beside the actions — never
+  // folded into a disclosure and never rendered as "not given" (CANON (930) п.1,
+  // and the defect No.621 was opened for).
+  var body = (row && row.error)
+    ? '<div class="pilot-status error" data-qa="profile-shortlist-row-error">' + escapeHtml(profileShortlistT('ps_row_failed')) + ' ' + pilotCardErrorMessage(row.error) + '</div>'
+    : ((row && row.loading)
+        ? '<div class="pilot-note" data-qa="profile-shortlist-row-loading">' + escapeHtml(profileShortlistT('ps_loading')) + '</div>'
+        : profileShortlistFactsHtml(row));
+  var actionError = (st.actionError && st.actionError.intakeId === intakeId)
+    ? '<div class="pilot-status error" data-qa="profile-shortlist-action-error">' + pilotCardErrorMessage(st.actionError.error) + '</div>'
+    : '';
+  // Every write quotes the version THE DECISION WAS TAKEN AGAINST — it is read
+  // off this row and never off the profile's current version. That is the whole
+  // reason `needs_recompare` exists: the decision stands at its own version.
+  return '<div class="ps-row" data-qa="profile-shortlist-row" data-intake="' + escapeAttr(intakeId) + '" data-hold="' + (onHold ? 'true' : 'false') + '">'
+    + '<div class="ps-head"><span class="ps-name">' + escapeHtml(name || profileShortlistT('ps_name_unknown')) + '</span>' + tags + '</div>'
+    + body
+    + (onHold ? '<div class="pilot-note" data-qa="profile-shortlist-hold-note">' + escapeHtml(profileShortlistT('ps_hold_note')) + '</div>' : '')
+    + ((item && item.needs_recompare) ? '<div class="pilot-note warn" data-qa="profile-shortlist-recompare">' + escapeHtml(profileShortlistT('ps_recompare')) + '</div>' : '')
+    + actionError
+    + '<div class="ps-act">' + profileShortlistContactButtonsHtml(intakeId, row)
+    + '<span class="ps-spacer"></span>'
+    + (onHold
+        ? '<button class="ghost" data-qa="profile-shortlist-release" onclick="profileShortlistRelease(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' + escapeHtml(profileShortlistT('ps_release')) + '</button>'
+        : '<button class="ghost" data-qa="profile-shortlist-hold-action" onclick="profileShortlistHold(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' + escapeHtml(profileShortlistT('ps_hold')) + '</button>')
+    + '<button class="ghost" data-qa="profile-shortlist-remove" onclick="profileShortlistRemove(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' + escapeHtml(profileShortlistT('ps_remove')) + '</button>'
+    + '</div></div>';
+}
+function profileShortlistSectionHtml() {
+  var st = state.profileShortlist;
+  if (!st) return '';
+  var counts = (st.data && st.data.counts) ? st.data.counts : null;
+  // The three numbers are the SERVER's, shown as they arrived. Recounting the
+  // rows on the screen would be a second place where "who goes to the customer"
+  // is decided, and that is exactly how a screen comes to say three while an
+  // envelope carries four.
+  var head = '<div class="pilot-card-head"><h2>' + escapeHtml(profileShortlistT('ps_title')) + '</h2>'
+    + (counts
+        ? '<span class="ps-counts" data-qa="profile-shortlist-counts">'
+          + escapeHtml(profileShortlistT('ps_counts').replace('{n}', String(counts.selected)).replace('{m}', String(counts.in_selection)))
+          + '</span>'
+        : '')
+    + '</div>';
+  var body;
+  if (st.error) {
+    // NOT an empty shortlist. Another agency's profile answers exactly as an
+    // absent one, and both are "could not be read" — never "nobody is on it".
+    body = '<div class="pilot-status error" data-qa="profile-shortlist-error">'
+      + escapeHtml(profileShortlistT('ps_failed')) + ' '
+      + (st.error && st.error.kind === 'not_connected' ? escapeHtml(profileShortlistT('ps_not_connected')) : pilotCardErrorMessage(st.error))
+      + '</div>';
+  } else if (st.data === null) {
+    body = '<div class="pilot-status" data-qa="profile-shortlist-loading">' + escapeHtml(profileShortlistT('ps_loading')) + '</div>';
+  } else {
+    var items = Array.isArray(st.data.items) ? st.data.items : [];
+    body = items.length
+      ? items.map(profileShortlistRowHtml).join('')
+      : '<div class="pilot-status" data-qa="profile-shortlist-empty">' + escapeHtml(profileShortlistT('ps_empty')) + '</div>';
+    if (st.actionError && !items.some(function(i){ return String(i.intake_id) === st.actionError.intakeId; })) {
+      body = '<div class="pilot-status error" data-qa="profile-shortlist-action-error">' + pilotCardErrorMessage(st.actionError.error) + '</div>' + body;
+    }
+  }
+  return '<section class="pilot-card" data-qa="profile-shortlist">' + head + body
+    + '<div class="pilot-note" data-qa="profile-shortlist-note">' + escapeHtml(profileShortlistT('ps_note')) + '</div></section>';
+}
+// ---- the three moves of one decision ---------------------------------------
+// All three quote the pair this row was decided on: the profile the list came
+// from and the version THAT DECISION carries. Taking the version from the
+// profile instead would send a pair the operator never looked at — and against a
+// vacancy that moved on, the server would either refuse it or, worse, accept it.
+function profileShortlistItemFor(intakeId) {
+  var st = state.profileShortlist;
+  var items = (st && st.data && Array.isArray(st.data.items)) ? st.data.items : [];
+  for (var i = 0; i < items.length; i++) { if (String(items[i].intake_id) === String(intakeId)) return items[i]; }
+  return null;
+}
+async function profileShortlistWrite(intakeId, command) {
+  var st = state.profileShortlist;
+  if (!st || st.pending) return;
+  var item = profileShortlistItemFor(intakeId);
+  if (!item) return;
+  var context = pilotContextSnapshot();
+  if (!pilotContextReady(context)) { st.error = { kind:'not_connected' }; profileShortlistRerender(); return; }
+  var profileId = st.profileId;
+  st.pending = true; st.actionError = null; profileShortlistRerender();
+  try {
+    await invoke(command, Object.assign(pilotExpected(context), {
+      intakeId: String(intakeId),
+      pair: { profile_id: String(st.data.profile_id), profile_version: Number(item.profile_version) }
+    }));
+    st.pending = false;
+    // The screen never shows its own guess about what the server now holds: the
+    // list is RE-READ after every write, and what it answers is what is drawn.
+    await profileShortlistLoad(profileId);
+  } catch (error) {
+    if (!state.profileShortlist || state.profileShortlist.profileId !== profileId) return;
+    st.pending = false;
+    // A refusal moves nothing. The row stays exactly where it was and the
+    // server's own word is shown beside it — including `hold_not_permitted`,
+    // which is the back door the server closed and the screen must not blur.
+    st.actionError = { intakeId: String(intakeId), error: error };
+    profileShortlistRerender();
+  }
+}
+async function profileShortlistHold(intakeId) { await profileShortlistWrite(intakeId, 'crewing_intake_shortlist_hold'); }
+async function profileShortlistRelease(intakeId) { await profileShortlistWrite(intakeId, 'crewing_intake_shortlist_release'); }
+// "Remove from the profile" is the EXISTING withdraw of exactly this pair: it
+// breaks the link with THIS profile and with no other, because the pair is what
+// the decision is keyed by. Nothing about the candidate is deleted.
+async function profileShortlistRemove(intakeId) { await profileShortlistWrite(intakeId, 'crewing_intake_shortlist_withdraw'); }
+
+// ---- reaching the person, through what this product already has ------------
+async function profileShortlistEmail(intakeId) {
+  var st = state.profileShortlist; if (!st) return;
+  var row = st.rows[String(intakeId)];
+  var c = profileShortlistContacts(row);
+  var email = c.email;
+  // The same grammar the card uses, not a second one: an address that Rust would
+  // refuse must not be reported here as a draft that opened — and an address the
+  // SERVER refuses to offer must not be written to either. That is the second
+  // face of the No.621 anti-loop, the one the server-side check cannot see.
+  if (!email || !c.addressable || !cardCheckedRecipient(email)) return;
+  var profile = state.selectedComplianceProfile || {};
+  var subject = String(profile.name == null ? '' : profile.name);
+  try {
+    // Crewing sends nothing. The draft is handed to the operator's own client,
+    // and the message leaves the machine only when they press send there.
+    await invoke('open_mailto', { to: email, subject: subject, body: '' });
+  } catch (error) {
+    showToast(profileShortlistT('ps_email_failed'), 'error');
+  }
+}
+async function profileShortlistCopyPhone(intakeId) {
+  var st = state.profileShortlist; if (!st) return;
+  var phone = profileShortlistContacts(st.rows[String(intakeId)]).phone;
+  if (!phone) return;
+  try { await navigator.clipboard.writeText(phone); }
+  catch (e) { showToast(profileShortlistT('ps_copy_failed'), 'error'); return; }
+  showToast(profileShortlistT('ps_copied'), 'success');
+}
+
+// ---- No.632/S5: the letter to the customer ---------------------------------
+//
+// The last step of the owner's path: the operator presses one button and lands
+// in HIS OWN mail client, on a complete draft — the comparison table in the body
+// of the letter, the picked resumes attached — and HE presses send.
+//
+// Crewing sends nothing. OWNER (739) п.5 says not to build a mail client and to
+// reuse what the Seafarer home already has; the owner's word of 2026-10-01 says
+// "prepare the letter with attachments, WITHOUT server-side sending"; and the
+// contract harness of this home holds the server-side dispatch door shut by exact
+// equality over the call sites — which is why its name is not written anywhere in
+// this block, not even to explain itself. The native side writes an .eml and hands
+// it to the OS. Nothing on this surface posts anything anywhere.
+//
+// Five things in here were each bought by a finding, and each has a drill:
+//
+//   1. SEA TIME IS COUNTED FOR THE POST OF THIS PROFILE. The figure the response
+//      carried belongs to the post he responded ON, which may be another one
+//      entirely; this letter is written for THIS vacancy. So the number comes out
+//      of the career map by EQUALITY, a post the map does not name is "not
+//      stated", and a post it names with 0 is a measured zero. The one thing that
+//      must never happen is a figure counted for another post travelling to a
+//      third party over the agency's name.
+//   2. AN ATTACHMENT IS NOT A RESUME. Nothing in this build can tell which file is
+//      one, and nothing here learns to: the operator PICKS the file. A candidate with
+//      nothing picked does not go in the letter, and he is NAMED as left out —
+//      the owner's "not included, and why", said here rather than discovered by
+//      the customer.
+//   3. SET ASIDE MEANS OUT. `in_selection` is the server's single predicate for
+//      who goes to the customer, and this screen keeps no second copy of it.
+//   4. THERE IS NO CUSTOMER ADDRESS IN THE DATA — the profile carries the
+//      customer's name at most. The operator types the address, and it is on the
+//      screen before any client opens.
+//   5. THE SIGNATURE IS THE AGENCY'S. The agency sends from its own client and
+//      its own address; "Skipi Crewing" under the letter would make us the sender
+//      of it. With no agency name recorded there is no signature at all.
+function profileLetterStateFor(profileId) {
+  var id = String(profileId == null ? '' : profileId);
+  if (!state.profileLetter || state.profileLetter.profileId !== id) {
+    // Keyed by profile, and deliberately NOT cleared when the list is re-read:
+    // a decision taken elsewhere must not swallow an address the operator typed.
+    state.profileLetter = { profileId:id, to:'', bodyOverride:null, editing:false,
+      picks:{}, pickErrors:{}, picking:{}, draft:null, error:null, pending:false };
+  }
+  return state.profileLetter;
+}
+// Sea time for the post of THIS profile, and the only place that decides it.
+//
+// Reads the career map the seafarer's own client merged (never summed) and the
+// server stored. Six states, because "we were sent nothing", "this post is not in
+// his record", "the record cannot be read" and "two figures disagree" are four
+// different sentences and NONE of them is a zero.
+function profileLetterSeaTime(profileRank, summary) {
+  var rank = String(profileRank == null ? '' : profileRank).replace(/^\s+|\s+$/g, '');
+  if (!rank) return { text:'', state:'profile_rank_missing' };
+  if (!summary) return { text:'', state:'not_provided' };
+  var pairRank = String(summary.experience_rank == null ? '' : summary.experience_rank).replace(/^\s+|\s+$/g, '');
+  var mapState = String(summary.experience_days_for_rank_state == null ? '' : summary.experience_days_for_rank_state);
+  // The server compares its two independent figures for the post the response was
+  // made on. When that post is the one this letter is about, two numbers that
+  // disagree are not a number — and the LARGER of them is exactly what would
+  // otherwise travel to the customer.
+  if (mapState === 'disagrees_with_response_pair' && pairRank === rank) {
+    return { text:'', state:'disagrees_with_response_pair' };
+  }
+  var map = summary.experience_days_by_rank;
+  if (!map || typeof map !== 'object') {
+    return { text:'', state: mapState === 'map_unreadable' ? 'map_unreadable' : 'not_provided' };
+  }
+  // The KEY is what is asked for, not the value's truthiness: `map[rank] || x`
+  // turns a measured zero into an absence, which is the one substitution the
+  // owner named by hand.
+  if (!Object.prototype.hasOwnProperty.call(map, rank)) return { text:'', state:'rank_not_in_map' };
+  var days = map[rank];
+  if (typeof days !== 'number' || !isFinite(days) || days < 0) return { text:'', state:'map_unreadable' };
+  var span = pilotCardDurationText(days);
+  if (!span) return { text:'', state:'map_unreadable' };
+  return { text:span, state:'from_map' };
+}
+function profileLetterSeaTimeReason(stateWord) {
+  if (stateWord === 'disagrees_with_response_pair') return profileShortlistT('pl_seatime_disagrees');
+  if (stateWord === 'rank_not_in_map') return profileShortlistT('pl_seatime_absent');
+  if (stateWord === 'map_unreadable') return profileShortlistT('pl_seatime_unreadable');
+  if (stateWord === 'profile_rank_missing') return profileShortlistT('pl_seatime_rank_missing');
+  return profileShortlistT('pl_seatime_none');
+}
+// The name the CUSTOMER will read on the attachment. The byte route names every
+// download `attachment-<ordinal>.<ext>` on purpose — the stranger's own filename
+// never reaches a header — which is right for one download and wrong for an
+// envelope carrying six of them: the customer would get `attachment-0.pdf` six
+// times over. Non-ASCII collapses, so a name that carries no letters at all falls
+// back to the intake rather than to a row of underscores.
+function profileLetterFileName(name, intakeId, path, taken) {
+  var ascii = String(name == null ? '' : name).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if ((ascii.match(/[A-Za-z0-9]/g) || []).length < 2) ascii = 'Resume_' + String(intakeId).slice(0, 8);
+  var ext = 'pdf';
+  var dot = String(path == null ? '' : path).lastIndexOf('.');
+  if (dot > -1) {
+    var tail = String(path).slice(dot + 1).replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    if (tail) ext = tail;
+  }
+  var base = ascii + '_CV';
+  var candidate = base + '.' + ext;
+  var n = 2;
+  while (taken[candidate]) { candidate = base + '_' + n + '.' + ext; n += 1; }
+  taken[candidate] = true;
+  return candidate;
+}
+// ONE composer. The preview on the screen and the bytes handed to the native side
+// come from this and from nothing else: two composers is exactly how a screen
+// comes to say three while an envelope carries four.
+function profileLetterCompose() {
+  var st = state.profileShortlist;
+  var profile = state.selectedComplianceProfile || {};
+  var ls = profileLetterStateFor(profile.id);
+  var rank = String(profile.rank == null ? '' : profile.rank).replace(/^\s+|\s+$/g, '');
+  var vessel = String(profile.vessel_type == null ? '' : profile.vessel_type).replace(/^\s+|\s+$/g, '');
+  var company = cardCompanyName();
+  // The version of THIS profile as the SERVER just stated it. The legacy object
+  // this screen holds has no `version` field, and reading one off it printed an
+  // empty clause into a real letter.
+  var version = (st && st.data && st.data.profile_version != null) ? st.data.profile_version : null;
+  var out = { ready:false, to:'', subject:'', body:'', rows:[], attachments:[], excluded:[],
+    company:company, rank:rank, vessel:vessel, listed:false };
+  if (!st || st.data === null || !Array.isArray(st.data.items)) return out;
+  out.listed = true;
+  var items = st.data.items;
+  var taken = {};
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i] || {};
+    var id = String(item.intake_id);
+    var row = (st.rows && st.rows[id]) ? st.rows[id] : null;
+    var name = row ? profileShortlistPersonName(row) : '';
+    if (!name) name = profileShortlistT('ps_name_unknown');
+    // The SERVER's predicate, read as it arrived. `on_hold` is not re-derived
+    // here, and neither is anything else about who goes out.
+    if (!item.in_selection) { out.excluded.push({ id:id, name:name, reason:'on_hold' }); continue; }
+    if (!row || row.loading || row.error || !row.card) {
+      out.excluded.push({ id:id, name:name, reason:'row_failed' }); continue;
+    }
+    var atts = Array.isArray(row.card.attachments) ? row.card.attachments : [];
+    if (!atts.length) { out.excluded.push({ id:id, name:name, reason:'no_attachments' }); continue; }
+    var pick = ls.picks[id] || null;
+    if (!pick || !pick.path) {
+      out.excluded.push({ id:id, name:name, reason: ls.pickErrors[id] ? 'bytes' : 'no_resume' });
+      continue;
+    }
+    var summary = row.card.response_summary || null;
+    var sea = profileLetterSeaTime(rank, summary);
+    out.rows.push({
+      id:id, name:name,
+      age: summary ? pilotCardAgeText(summary) : '',
+      citizenship: summary ? pilotCardCitizenshipText(summary) : '',
+      seaTime: sea.text, seaState: sea.state,
+      vessel: summary ? pilotCardVesselText(summary) : '',
+    });
+    out.attachments.push({ id:id, path:String(pick.path), bytes:Number(pick.bytes || 0),
+      name: profileLetterFileName(name, id, pick.path, taken) });
+  }
+  var none = profileShortlistT('pl_not_stated');
+  var head = [profileShortlistT('pl_table_candidate'), profileShortlistT('pl_table_age'),
+    profileShortlistT('pl_table_citizenship'),
+    profileShortlistT('pl_table_seatime').replace('{rank}', rank || none),
+    profileShortlistT('pl_table_vessel')];
+  var grid = [head];
+  for (var r = 0; r < out.rows.length; r++) {
+    var row2 = out.rows[r];
+    grid.push([row2.name, row2.age || none, row2.citizenship || none, row2.seaTime || none, row2.vessel || none]);
+  }
+  var widths = [];
+  for (var c = 0; c < head.length; c++) {
+    var w = 0;
+    for (var g = 0; g < grid.length; g++) { var cell = String(grid[g][c] == null ? '' : grid[g][c]); if (cell.length > w) w = cell.length; }
+    widths.push(w);
+  }
+  var lines = [];
+  for (var g2 = 0; g2 < grid.length; g2++) {
+    var parts = [];
+    for (var c2 = 0; c2 < head.length; c2++) {
+      var text = String(grid[g2][c2] == null ? '' : grid[g2][c2]);
+      parts.push(c2 === head.length - 1 ? text : (text + new Array(Math.max(1, widths[c2] - text.length + 1)).join(' ')));
+    }
+    lines.push(parts.join(' | '));
+  }
+  out.subject = profileShortlistT('pl_subject').replace('{rank}', rank || none).replace('{vessel}', vessel || none);
+  var body = [
+    profileShortlistT('pl_greeting'),
+    '',
+    profileShortlistT('pl_order').replace('{rank}', rank || none).replace('{vessel}', vessel || none)
+      .replace('{profile}', String(profile.name == null ? '' : profile.name))
+      .replace('{version}', version == null ? ''
+        : profileShortlistT('pl_order_version').replace('{n}', String(version))),
+    '',
+    lines.join('\n'),
+    '',
+    profileShortlistT('pl_attached_note'),
+  ];
+  // The signature is the agency's or there is none. Ours would make us the sender.
+  if (company) { body.push(''); body.push(profileShortlistT('pl_sign')); body.push(company); }
+  out.body = (ls.bodyOverride === null || ls.bodyOverride === undefined) ? body.join('\n') : String(ls.bodyOverride);
+  out.to = String(ls.to || '').replace(/^\s+|\s+$/g, '');
+  // Ready means: an address a mail client will take, somebody to write about, and
+  // a shell that can write files at all.
+  out.ready = !!(cardCheckedRecipient(out.to) && out.rows.length && !cardWebShell() && !ls.pending);
+  return out;
+}
+function profileLetterPickRowHtml(item, composed) {
+  var st = state.profileShortlist;
+  var id = String(item.intake_id);
+  var ls = profileLetterStateFor(st ? st.profileId : '');
+  var row = (st.rows && st.rows[id]) ? st.rows[id] : null;
+  var name = row ? profileShortlistPersonName(row) : '';
+  var summary = (row && row.card) ? (row.card.response_summary || null) : null;
+  var sea = profileLetterSeaTime(composed.rank, summary);
+  var atts = (row && row.card && Array.isArray(row.card.attachments)) ? row.card.attachments : [];
+  var pick = ls.picks[id] || null;
+  var js = '\'' + escapeJsString(id) + '\'';
+  var files = atts.map(function(a){
+    a = a || {};
+    var ordinal = Number(a.ordinal || 0);
+    var label = String(a.filename == null ? '' : a.filename) || ('#' + ordinal);
+    var size = ' · ' + humanSize(Number(a.byte_size || 0));
+    if (pick && Number(pick.ordinal) === ordinal) {
+      return '<span class="tag ok" data-qa="profile-letter-chosen" data-ordinal="' + escapeAttr(String(ordinal)) + '">'
+        + escapeHtml(label + size + ' — ' + profileShortlistT('pl_picked')) + '</span>'
+        + '<button class="ghost" data-qa="profile-letter-unpick" onclick="profileLetterUnpick(' + js + ')">'
+        + escapeHtml(profileShortlistT('pl_unpick')) + '</button>';
+    }
+    // An attachment the SERVER will not serve is shown, named and not offered:
+    // picking it would fail at the byte route, and a dark control that says why
+    // beats a live one that cannot work.
+    if (!a.eligible) {
+      return '<span class="pilot-note" data-qa="profile-letter-blocked" data-ordinal="' + escapeAttr(String(ordinal)) + '">'
+        + escapeHtml(label + size + ' — ' + cardT('attach_blocked')) + '</span>';
+    }
+    return '<button class="ghost" data-qa="profile-letter-pick" data-ordinal="' + escapeAttr(String(ordinal)) + '"'
+      + ' onclick="profileLetterPick(' + js + ',' + String(ordinal) + ')"'
+      + ((ls.picking[id] || cardWebShell()) ? ' disabled' : '') + '>'
+      + escapeHtml(label + size + ' — ' + profileShortlistT('pl_pick')) + '</button>';
+  }).join('');
+  var pickError = ls.pickErrors[id]
+    ? '<div class="pilot-status error" data-qa="profile-letter-pick-error" data-intake="' + escapeAttr(id) + '">'
+      + pilotCardErrorMessage(ls.pickErrors[id]) + '</div>'
+    : '';
+  return '<div class="ps-row" data-qa="profile-letter-pick-row" data-intake="' + escapeAttr(id) + '">'
+    + '<div class="ps-head"><span class="ps-name">' + escapeHtml(name || profileShortlistT('ps_name_unknown')) + '</span></div>'
+    + '<span class="ps-cell" data-qa="profile-letter-seatime" data-intake="' + escapeAttr(id) + '" data-state="' + escapeAttr(sea.state) + '">'
+    + '<span class="ps-k">' + escapeHtml(profileShortlistT('pl_table_seatime').replace('{rank}', composed.rank || profileShortlistT('pl_not_stated'))) + '</span> '
+    + (sea.text
+        ? '<span class="ps-v">' + escapeHtml(sea.text) + '</span>'
+        : '<span class="ps-v muted">' + escapeHtml(profileShortlistT('pl_not_stated')) + ' — '
+          + escapeHtml(profileLetterSeaTimeReason(sea.state)) + '</span>')
+    + '</span>'
+    + (atts.length
+        ? '<div class="ps-act">' + files + '</div>'
+        : '<div class="pilot-note" data-qa="profile-letter-no-files">' + escapeHtml(profileShortlistT('pl_reason_no_attachments')) + '</div>')
+    + pickError
+    + '</div>';
+}
+function profileLetterSectionHtml() {
+  var st = state.profileShortlist;
+  if (!st) return '';
+  var profile = state.selectedComplianceProfile || {};
+  var ls = profileLetterStateFor(profile.id);
+  var composed = profileLetterCompose();
+  if (!composed.listed) return '';
+  var items = st.data.items;
+  var head = '<div class="pilot-card-head"><h2>' + escapeHtml(profileShortlistT('pl_title')) + '</h2>'
+    + '<span class="ps-counts" data-qa="profile-letter-counts">'
+    + escapeHtml(profileShortlistT('pl_counts').replace('{n}', String(composed.rows.length)).replace('{m}', String(composed.attachments.length)))
+    + '</span></div>';
+  var notes = (cardWebShell()
+      ? '<div class="pilot-note warn" data-qa="profile-letter-web-note">' + escapeHtml(profileShortlistT('pl_web_note')) + '</div>' : '')
+    + ((st.data && String(st.data.profile_state || 'active') !== 'active')
+      ? '<div class="pilot-note warn" data-qa="profile-letter-archived">' + escapeHtml(profileShortlistT('pl_archived')) + '</div>' : '')
+    + (composed.company ? ''
+      : '<div class="pilot-note warn" data-qa="profile-letter-company-missing">' + escapeHtml(profileShortlistT('pl_company_missing')) + '</div>');
+  var toState = composed.to
+    ? (cardCheckedRecipient(composed.to) ? '' : profileShortlistT('pl_to_bad'))
+    : profileShortlistT('pl_to_empty');
+  var address = '<div class="ps-row">'
+    + '<span class="ps-k">' + escapeHtml(profileShortlistT('pl_to')) + '</span> '
+    + '<input type="text" data-qa="profile-letter-to" value="' + escapeAttr(composed.to) + '"'
+    + ' oninput="profileLetterSetTo(this.value)" style="min-width:260px">'
+    + '<span class="pilot-note" data-qa="profile-letter-to-state">' + escapeHtml(toState || profileShortlistT('pl_to_ok')) + '</span>'
+    + '</div>';
+  var picks = items.filter(function(i){ return i && i.in_selection; })
+    .map(function(i){ return profileLetterPickRowHtml(i, composed); }).join('');
+  var preview = '<div class="ps-row" data-qa="profile-letter-preview">'
+    + '<div class="pilot-note"><b>' + escapeHtml(profileShortlistT('pl_to')) + ':</b> ' + escapeHtml(composed.to || '—') + '</div>'
+    + '<div class="pilot-note" data-qa="profile-letter-subject"><b>' + escapeHtml(profileShortlistT('pl_subject').replace('{rank}', '').replace(',', '').replace('{vessel}', '').replace(/^\s+|\s+$/g, '')) + '</b></div>'
+    + (ls.editing
+        ? '<textarea data-qa="profile-letter-edit-area" rows="14" style="width:100%;font-family:monospace"'
+          + ' oninput="profileLetterSetBody(this.value)">' + escapeHtml(composed.body) + '</textarea>'
+        : '<pre class="pl-body" data-qa="profile-letter-body" style="white-space:pre-wrap;font-family:monospace;font-size:12.5px">'
+          + escapeHtml(composed.body) + '</pre>')
+    + (ls.bodyOverride === null || ls.bodyOverride === undefined ? ''
+        : '<div class="pilot-note warn" data-qa="profile-letter-edited">' + escapeHtml(profileShortlistT('pl_edited')) + '</div>')
+    + '<div class="ps-act">' + composed.attachments.map(function(a){
+        return '<span class="tag" data-qa="profile-letter-file" data-intake="' + escapeAttr(a.id) + '">'
+          + escapeHtml(a.name + ' · ' + humanSize(a.bytes)) + '</span>';
+      }).join('') + '</div>'
+    + '</div>';
+  // Who is NOT in the envelope, and why, said HERE rather than discovered by the
+  // customer. The owner's own sentence.
+  var excluded = composed.excluded.length
+    ? '<div class="pilot-note warn" data-qa="profile-letter-excluded">' + escapeHtml(profileShortlistT('pl_excluded')) + ' '
+      + composed.excluded.map(function(e){
+          return '<span data-qa="profile-letter-excluded-item" data-intake="' + escapeAttr(e.id) + '" data-reason="'
+            + escapeAttr(e.reason === 'no_resume' ? 'no_resume_picked' : (e.reason === 'bytes' ? 'bytes_failed' : e.reason)) + '">'
+            + escapeHtml(e.name + ' — ' + profileShortlistT(
+                e.reason === 'on_hold' ? 'pl_reason_on_hold'
+                : e.reason === 'no_attachments' ? 'pl_reason_no_attachments'
+                : e.reason === 'bytes' ? 'pl_reason_bytes'
+                : e.reason === 'row_failed' ? 'pl_reason_row_failed'
+                : 'pl_reason_no_resume')) + '</span>';
+        }).join(' · ')
+      + '</div>'
+    : '';
+  var result = '';
+  if (ls.error && ls.error.kind === 'open_failed') {
+    result = '<div class="pilot-status error" data-qa="profile-letter-error">'
+      + escapeHtml(profileShortlistT('pl_open_failed')) + ' ' + escapeHtml(String(ls.error.path || '')) + '</div>';
+  } else if (ls.error) {
+    result = '<div class="pilot-status error" data-qa="profile-letter-error">' + pilotCardErrorMessage(ls.error) + '</div>';
+  } else if (ls.draft && ls.draft.opened) {
+    result = '<div class="pilot-status" data-qa="profile-letter-result">'
+      + escapeHtml(profileShortlistT('pl_result')) + ' ' + escapeHtml(String(ls.draft.path || '')) + '</div>';
+  }
+  var buttons = '<div class="ps-act">'
+    + '<button data-qa="profile-letter-prepare" onclick="profileLetterPrepare()"' + (composed.ready ? '' : ' disabled') + '>'
+    + escapeHtml(profileShortlistT('pl_prepare')) + '</button>'
+    + '<button class="ghost" data-qa="profile-letter-edit" onclick="profileLetterEditToggle()">'
+    + escapeHtml(profileShortlistT(ls.editing ? 'pl_edit_done' : 'pl_edit')) + '</button>'
+    + (composed.rows.length ? '' : '<span class="pilot-note" data-qa="profile-letter-empty">' + escapeHtml(profileShortlistT('pl_empty')) + '</span>')
+    + '</div>';
+  return '<section class="pilot-card" data-qa="profile-letter">' + head + notes + address + picks + preview + excluded + buttons + result
+    + '<div class="pilot-note" data-qa="profile-letter-note">' + escapeHtml(profileShortlistT('pl_note')) + '</div></section>';
+}
+// The list and the letter built FROM it repaint together: a letter drawn over a
+// list that has moved on is the same defect as a list drawn over a decision that
+// has moved on, and that one cost this card a slice already.
+function profileShortlistHostHtml() {
+  return profileShortlistSectionHtml() + profileLetterSectionHtml();
+}
+// The address is typed into a field that the repaint below REPLACES, so the
+// focus and the caret are carried across by hand. Without this the operator types
+// one character, the section repaints, the element he was typing into no longer
+// exists, and the rest of the address goes nowhere — found on the stand, because
+// a test that calls this setter directly is not a keyboard.
+function profileLetterFocusTo(caret) {
+  if (typeof document === 'undefined' || !document || !document.querySelector) return null;
+  var el = null;
+  try { el = document.querySelector('[data-qa="profile-letter-to"]'); } catch (e) { return null; }
+  if (!el) return null;
+  if (caret === undefined) return (el.selectionStart == null) ? null : el.selectionStart;
+  try {
+    if (el.focus) el.focus();
+    if (caret != null && el.setSelectionRange) el.setSelectionRange(caret, caret);
+  } catch (e) { /* a shell without selection support still keeps the value */ }
+  return null;
+}
+function profileLetterSetTo(value) {
+  var st = state.profileShortlist; if (!st) return;
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  ls.to = String(value == null ? '' : value);
+  ls.draft = null; ls.error = null;
+  var caret = profileLetterFocusTo();
+  profileShortlistRerender();
+  profileLetterFocusTo(caret == null ? String(ls.to).length : caret);
+}
+function profileLetterSetBody(value) {
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  ls.bodyOverride = String(value == null ? '' : value);
+  ls.draft = null; ls.error = null;
+}
+function profileLetterEditToggle() {
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  if (!ls.editing) {
+    // Opening the editor FREEZES the text as it stands, so what he edits is what
+    // he was reading.
+    var composed = profileLetterCompose();
+    ls.bodyOverride = composed.body;
+    ls.editing = true;
+  } else {
+    ls.editing = false;
+  }
+  profileShortlistRerender();
+}
+function profileLetterUnpick(intakeId) {
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  delete ls.picks[String(intakeId)];
+  delete ls.pickErrors[String(intakeId)];
+  ls.draft = null; ls.error = null;
+  profileShortlistRerender();
+}
+// Picking a resume is an explicit act of the operator, and it fetches THOSE bytes
+// through the audited byte route this card already uses — no new channel, and no
+// verdict of ours about which of his files it is. This is the ONE place a pick is
+// recorded, which is what makes that claim structural rather than a promise.
+async function profileLetterPick(intakeId, ordinal) {
+  var st = state.profileShortlist; if (!st) return;
+  var id = String(intakeId);
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  if (ls.picking[id]) return;
+  var row = st.rows[id];
+  if (!row || !row.card) return;
+  var atts = Array.isArray(row.card.attachments) ? row.card.attachments : [];
+  var att = null;
+  for (var i = 0; i < atts.length; i++) { if (Number((atts[i] || {}).ordinal) === Number(ordinal)) { att = atts[i]; break; } }
+  if (!att || !att.eligible || cardWebShell()) return;
+  var context = pilotContextSnapshot();
+  if (!pilotContextReady(context)) { ls.pickErrors[id] = { kind:'not_connected' }; profileShortlistRerender(); return; }
+  ls.picking[id] = true; delete ls.pickErrors[id]; ls.draft = null; ls.error = null;
+  profileShortlistRerender();
+  try {
+    var result = await invoke('crewing_intake_attachment_download', Object.assign(pilotExpected(context), {
+      intakeId: id, ordinal: Number(ordinal), expectedBytes: (row.card && row.card.content_bytes) || null
+    }));
+    delete ls.picking[id];
+    if (!state.profileLetter || state.profileLetter !== ls) return;
+    if (!result || !result.path) { ls.pickErrors[id] = { kind:'invalid_request', detail:'letter_attachment_unreadable' }; }
+    else { ls.picks[id] = { ordinal:Number(ordinal), path:String(result.path), bytes:Number(result.bytes || 0) }; }
+  } catch (error) {
+    delete ls.picking[id];
+    // A file that did not arrive is NOT a resume we have. He drops out of the
+    // letter and is named among those left out, with his own reason.
+    delete ls.picks[id];
+    ls.pickErrors[id] = error;
+  }
+  profileShortlistRerender();
+}
+// One press, one letter. The native side writes the .eml and hands it to the
+// operator's own client; nothing here sends, and the screen never claims a draft
+// the client did not actually open.
+async function profileLetterPrepare() {
+  var ls = profileLetterStateFor((state.selectedComplianceProfile || {}).id);
+  if (ls.pending) return;
+  var composed = profileLetterCompose();
+  if (!composed.ready) return;
+  ls.pending = true; ls.error = null; ls.draft = null;
+  profileShortlistRerender();
+  try {
+    var draft = await invoke('crewing_customer_letter_prepare', { intent: {
+      to: composed.to, subject: composed.subject, body: composed.body,
+      attachments: composed.attachments.map(function(a){ return { path:a.path, name:a.name }; })
+    } });
+    ls.pending = false;
+    ls.draft = draft || null;
+    // `opened: false` is a real answer and is said out loud: the letter exists,
+    // the client did not come up, and the path is how he finds it.
+    if (draft && draft.opened === false) ls.error = { kind:'open_failed', path:String(draft.path || '') };
+  } catch (error) {
+    ls.pending = false;
+    ls.error = error;
+  }
+  profileShortlistRerender();
+}
+
+// ================== No.632 PROFILE SHORTLIST END ==================
 
 // ------------- mailing requests -------------
 async function renderMailingRequestsTree(opts) {

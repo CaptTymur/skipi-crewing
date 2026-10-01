@@ -330,6 +330,8 @@ function loadInlineModuleForCurrentStore() {
       + 'crewFlowSelectProfile: (typeof crewFlowSelectProfile === "function" ? crewFlowSelectProfile : null), '
       + 'crewFlowCacheRankSummary: (typeof crewFlowCacheRankSummary === "function" ? crewFlowCacheRankSummary : null), '
       + 'crewFlowRankCache: (typeof crewFlowRankCache === "function" ? crewFlowRankCache : null), '
+      + 'crewFlowCacheNameOrigin: (typeof crewFlowCacheNameOrigin === "function" ? crewFlowCacheNameOrigin : null), '
+      + 'crewFlowNameOrigin: (typeof crewFlowNameOrigin === "function" ? crewFlowNameOrigin : null), '
       + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
       + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
       + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '
@@ -1347,6 +1349,166 @@ section('No.621 response contact stays out of the demo host');
     'No.621/N17: that cache is handed a state CODE and never the address itself');
   ok(cache !== '' && !/crewFlowFactCache\(\)/.test(cache),
     'No.621/N17: and it is not the fact cache - the back door into the queue row and the save is closed by absence');
+}
+
+// ===== No.623 (OWNER (943)/(944)/(963)): the QUEUE ROW says who responded ====
+//
+// The row is the half of No.623 the owner sees first, and it is also the half
+// with the sharpest negative: measured on the product's own source table,
+// `inbound 9 · skipi_response 2 · synthetic 3` — NINE of fourteen pilot cards
+// are born of e-mail and will never carry `response_headline`. So the row that
+// must be proven is not the one with data; it is the one WITHOUT.
+section('No.623: the queue row says who responded, and only where it can');
+{
+  store.delete('skipi_crewing_demo');
+  elements.clear();
+  let M623 = null;
+  try { M623 = loadInlineModuleForCurrentStore(); } catch (e) { console.error('No.623 runtime load failed:', e); }
+  ok(!!M623, 'No.623/row: the non-demo inline script loads');
+
+  if (M623 && typeof M623.crewFlowLiveTreeHtml === 'function') {
+    const headline = (over) => Object.assign({
+      rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrov',
+    }, over || {});
+    const row = (id, source, head, candidateName) => {
+      const summary = { state: 'ranked', facts: 3, ranks: 0, ranks_stale: 0,
+        active_confirmations: 0, needs_review_reason: null, profile_ranks: [] };
+      if (candidateName !== undefined) summary.candidate_name = candidateName;
+      const item = { intake_id: id, receipt_id: 'receipt-' + id, crewing_id: 'crew-flow-demo-harness',
+        source, source_id: 'msg-' + id, event_id: 'event-' + id, primary_profile_id: 'p-main',
+        content_sha256: '0'.repeat(64), content_bytes: 14412, content_type: 'application/pdf',
+        state: 'ranked', source_trust: 'inbound_alias', version: 1,
+        created_at: '2026-09-29T01:10:00Z', issued_at: '2026-09-29T01:10:00Z',
+        objects: [], attachments: [], summary };
+      if (head !== undefined) item.response_headline = head;
+      return item;
+    };
+    R2_FIXTURES.list = { items: [
+      row('N-resp', 'skipi_response', headline()),                                   // a response, complete
+      row('N-mail', 'inbound', undefined, null),                                     // e-mail: nine of fourteen
+      row('N-gone', 'skipi_response', headline({ rank: null, rank_state: 'snapshot_superseded' })),
+      row('N-nosnap', 'skipi_response', headline({ rank: null, rank_state: 'snapshot_unavailable' })),
+      row('N-noname', 'skipi_response', headline({ first_name: null, surname: null }), null),
+    ], limit: 50, offset: 0, total: 5 };
+    R2_FIXTURES.profiles = { items: [{ id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' }] };
+    M623.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+      crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' } };
+    store.set('skipi-crewing-ui-language', 'en');
+
+    const from = calls.length;
+    M623.showView('crew_flow');
+    for (let i = 0; i < 8; i++) await Promise.resolve();
+    const cmds = calls.slice(from).map(([c]) => String(c));
+    const pick = (html, id) => {
+      const m = html.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|<button class="mobile-list-item|$)'));
+      return m ? m[0] : '';
+    };
+    const nameOf = (r) => (String(r).match(/data-qa="crew-flow-row-name"[^>]*>([^<]*)</) || ['', ''])[1];
+
+    // ---- 1. the headline rides the list already loaded, costing nothing -----
+    ok(cmds.filter((c) => c === 'crewing_intake_candidate_list').length === 1,
+      'No.623/row: the queue is still fetched exactly once');
+    ok(cmds.filter((c) => c === 'crewing_intake_response_contact').length === 0,
+      'No.623/row: naming the responder costs NO extra request per row — it rides the list answer (N+1 refused)');
+
+    const html = String(M623.crewFlowLiveTreeHtml('live'));
+
+    // ---- 2. a response row is named ----------------------------------------
+    ok(nameOf(pick(html, 'N-resp')) === 'Ivan Petrov',
+      'No.623/row: the responder’s name replaces the anonymous source label — got «' + nameOf(pick(html, 'N-resp')) + '»');
+    ok(/data-qa="crew-flow-row-response-rank"[^>]*>Master</.test(pick(html, 'N-resp')),
+      'No.623/row: and the post they responded ON stands beside it');
+    ok(/data-name="response"/.test(pick(html, 'N-resp')),
+      'No.623/row: the row records WHICH transport named the candidate');
+
+    // ---- 3. THE NEGATIVE THAT MATTERS: the e-mail row is untouched ----------
+    const mail = pick(html, 'N-mail');
+    ok(!/data-qa="crew-flow-row-response-rank"/.test(mail),
+      'No.623/row NEGATIVE: an e-mail row gets no response heading — an unconditional one would make nine of fourteen pilot rows worse');
+    ok(nameOf(mail) === 'E-mail',
+      'No.623/row NEGATIVE: it keeps exactly today’s title, its source — got «' + nameOf(mail) + '»');
+    ok(/data-qa="crew-flow-row-noname"/.test(mail),
+      'No.623/row NEGATIVE: and it still says out loud that no name was recorded');
+
+    // ---- 4. the frozen post, (944) -----------------------------------------
+    const gone = pick(html, 'N-gone');
+    ok(nameOf(gone) === 'Ivan Petrov', 'No.623/row: a superseded snapshot still names the person');
+    ok(!/data-qa="crew-flow-row-response-rank"[^>]*>[^<]/.test(gone) || !/Master/.test(gone.split('crew-flow-row-name')[0]),
+      'No.623/row (944): and shows NO post rather than the profile’s current one');
+    ok(/data-qa="crew-flow-row-rank-state"/.test(gone),
+      'No.623/row (944): it says why the post is absent instead of going quiet');
+    const goneCaption = (gone.match(/data-qa="crew-flow-row-rank-state"[^>]*>([^<]*)</) || ['', ''])[1];
+    const nosnapCaption = (pick(html, 'N-nosnap').match(/data-qa="crew-flow-row-rank-state"[^>]*>([^<]*)</) || ['', ''])[1];
+    ok(goneCaption !== '' && nosnapCaption !== '' && goneCaption !== nosnapCaption,
+      'No.623/row: «overwritten by a republish» and «no readable snapshot» are two different sentences — got «' + goneCaption + '» / «' + nosnapCaption + '»');
+
+    // ---- 5. a response that carried no name falls back, it does not invent --
+    const noname = pick(html, 'N-noname');
+    ok(nameOf(noname) === 'Skipi application',
+      'No.623/row: a nameless response keeps today’s source title rather than heading the row with a post — got «' + nameOf(noname) + '»');
+    // The TEXT alone cannot tell the two apart: a row that wrongly claimed the
+    // delivered transport would print the same source label (mutation M5 survived
+    // exactly so). What separates them is the state the row reports about itself.
+    ok(/data-name="none"/.test(noname),
+      'No.623/row: and it reports the honest state — a response that carried no name is not a row named BY the response');
+    ok(/data-qa="crew-flow-row-noname"/.test(noname),
+      'No.623/row: so it still says out loud that no name was recorded, instead of going quiet behind a delivered-looking title');
+
+    // ---- 6. Б1: nothing of the response enters the store that feeds the
+    //         IRREVERSIBLE seafarer save ------------------------------------
+    const factDump = JSON.stringify(M623.state.crewFlowFacts || {});
+    ok(!/Ivan|Petrov|Master/.test(factDump),
+      'No.623/Б1: not one delivered value entered crewFlowFactCache — that cache reaches both the row AND save_seafarer_from_bundle, so absence is the only real lock. Got: ' + factDump.slice(0, 200));
+    ok(!calls.some(([c]) => String(c) === 'save_seafarer_from_bundle'),
+      'No.623/Б1: loading and rendering the queue wrote nothing to the local seafarer database');
+
+    // ---- 7. both languages --------------------------------------------------
+    store.set('skipi-crewing-ui-language', 'ru');
+    const ru = String(M623.crewFlowLiveTreeHtml('live'));
+    ok(/Ivan Petrov/.test(ru), 'No.623/row: the name is a name in Russian too, not translated');
+    const ruGone = (pick(ru, 'N-gone').match(/data-qa="crew-flow-row-rank-state"[^>]*>([^<]*)</) || ['', ''])[1];
+    ok(/[Ѐ-ӿ]/.test(ruGone), 'No.623/row: the state caption is Russian in Russian — got «' + ruGone + '»');
+    ok(/Письмо/.test(pick(ru, 'N-mail')), 'No.623/row: and the e-mail row keeps its Russian source title');
+    store.set('skipi-crewing-ui-language', 'en');
+    const en = String(M623.crewFlowLiveTreeHtml('live'));
+    ok(!/[Ѐ-ӿ]/.test(en), 'No.623/row: no Cyrillic leaks into the English queue');
+
+    // ---- 8. name priority, Б2 ----------------------------------------------
+    // The operator's correction is a human act: it is never overwritten by a
+    // machine value, and the delivered value in turn outranks what was read out
+    // of a CV. Two names for one candidate are never shown side by side.
+    if (typeof M623.crewFlowCacheNameOrigin === 'function') {
+      M623.state.crewFlowFacts = M623.state.crewFlowFacts || {};
+      M623.state.crewFlowFacts['N-resp'] = { name: 'I. PETROV (OCR)' };
+      M623.crewFlowCacheNameOrigin('N-resp', 'machine');
+      const machineRow = pick(String(M623.crewFlowLiveTreeHtml('live')), 'N-resp');
+      ok(nameOf(machineRow) === 'Ivan Petrov',
+        'No.623/Б2: the value delivered WITH THE RESPONSE outranks a machine reading of a CV — got «' + nameOf(machineRow) + '»');
+      ok(!/OCR/.test(machineRow), 'No.623/Б2: and the two are never shown side by side');
+
+      M623.crewFlowCacheNameOrigin('N-resp', 'operator');
+      M623.state.crewFlowFacts['N-resp'] = { name: 'Ivan Petrov-Sydorenko' };
+      const operatorRow = pick(String(M623.crewFlowLiveTreeHtml('live')), 'N-resp');
+      ok(nameOf(operatorRow) === 'Ivan Petrov-Sydorenko',
+        'No.623/Б2: an OPERATOR correction is never overwritten by the delivered value — got «' + nameOf(operatorRow) + '»');
+      delete M623.state.crewFlowFacts['N-resp'];
+      M623.crewFlowCacheNameOrigin('N-resp', '');
+    } else {
+      ok(false, 'No.623/Б2: a name-origin helper exists so the row can tell an operator correction from a machine reading');
+      ok(false, 'No.623/Б2: (delivered beats CV — not reachable without it)');
+      ok(false, 'No.623/Б2: (operator beats delivered — not reachable without it)');
+    }
+
+    // ---- 9. the dead heading stays dead, and the origin store is its own ----
+    ok((HTML.match(/crewFlowRowTitle\(/g) || []).length <= 1,
+      'No.623/Б2: crewFlowRowTitle is still dead — a third independent title rule was explicitly forbidden');
+    const origin = (crewBlock.match(/function crewFlowCacheNameOrigin\([\s\S]*?\n\}/) || [''])[0];
+    ok(origin !== '' && !/crewFlowFactCache\(\)/.test(origin),
+      'No.623/Б1: the origin store is NOT the fact cache — same reasoning as No.621’s contact code, and the same door left shut');
+  }
+  R2_FIXTURES.list = null;
+  R2_FIXTURES.profiles = null;
+  store.set('skipi_crewing_demo', '1');
 }
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
