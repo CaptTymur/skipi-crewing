@@ -113,6 +113,24 @@ pub(crate) struct CandidateProfileRankSummary {
     pub unconfirmed: i64,
     pub total: i64,
     pub stale: bool,
+    /// No.622/No.637-S6: the professional-applicability verdict of THIS row, as
+    /// the queue's own producer computes it (`schemas.CandidateIntakeSummaryRank`).
+    /// One of `crewing_rank.VERDICTS`.
+    ///
+    /// `Option` with `#[serde(default)]` and NOT a plain `String`, although the
+    /// server declares it required: a pilot server from before No.622 sends no
+    /// such key, and a required field there would fail the parse of the WHOLE
+    /// queue row — the operator would lose the candidate rather than lose a
+    /// verdict. Absent is therefore `None`, and `cardApplicability` reads that
+    /// as `stated:false`: not a sixth verdict, not `same`, not
+    /// `not_applicable`; the row renders exactly as it did before No.622.
+    #[serde(default)]
+    pub applicability: Option<String>,
+    /// Only ever set beside an `unknown` verdict, one of `crewing_rank.REASONS`.
+    /// "He has no rank fact", "nobody could place the one he has" and "nobody
+    /// could place the PROFILE's wording" are three different next actions.
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -121,6 +139,13 @@ pub(crate) struct CandidateIntakeSummary {
     pub facts: i64,
     pub ranks: i64,
     pub ranks_stale: i64,
+    /// No.622/No.637-S6: active profiles this candidate was deliberately NOT
+    /// evaluated against. The row has to be able to say how many it is not
+    /// showing instead of implying it shows all (docs/CANON-ui-v1.md, principle
+    /// 1). `#[serde(default)]` for the same reason `written` carries it: an
+    /// older server sends no key and nothing was withheld as far as it knows.
+    #[serde(default)]
+    pub ranks_withheld: i64,
     pub active_confirmations: i64,
     pub needs_review_reason: Option<String>,
     /// R2: who the candidate is, rendered by the server from the SAME recorded
@@ -425,6 +450,13 @@ pub(crate) struct CandidateRankResponse {
     pub ranked: i64,
     #[serde(default)]
     pub written: i64,
+    /// No.622/No.637-S6: how many of the `ranked` profiles got NO evaluation
+    /// because the rank does not apply. Undeclared, the pair "3/1" read as two
+    /// silent failures — the attempt line could not say what it skipped.
+    /// Validated on the wire by `response_model=CandidateRankResponse`
+    /// (`routers/candidate_intake.py:1022`).
+    #[serde(default)]
+    pub withheld: i64,
     pub reason: String,
     #[serde(default)]
     pub profiles: Vec<String>,
@@ -453,12 +485,55 @@ pub(crate) struct CandidateProfileRank {
     pub stale: bool,
     #[serde(default)]
     pub stale_reason: Option<String>,
+    /// No.622/No.637-S6: the FRESH applicability verdict, computed at the read
+    /// and stored nowhere. One of `crewing_rank.VERDICTS`.
+    ///
+    /// It is NOT an entry of `reasons` — an extra outcome there would move the
+    /// card's `total` and make every ordinary percentage read as "оценка
+    /// распознана не полностью" — and it is NOT derivable on this side: the
+    /// server owns the rule.
+    ///
+    /// `Option` with `#[serde(default)]`, for the reason written in full on
+    /// `CandidateProfileRankSummary::applicability`: the server declares it
+    /// required, but a build from before No.622 does not send it, and a
+    /// required field here would fail the parse of the whole rank list and
+    /// empty the card of every evaluation it used to show.
+    #[serde(default)]
+    pub applicability: Option<String>,
+    /// Only beside an `unknown`, one of `crewing_rank.REASONS`.
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct UnrankedProfile {
     pub profile_id: String,
     pub name: String,
+}
+
+/// No.622/No.637-S6: an ACTIVE profile deliberately NOT evaluated, and why.
+///
+/// A sibling of `UnrankedProfile` and deliberately not the same type: that one
+/// is a GAP somebody can still close, this one is a profile the rank will never
+/// apply to. A count alone could not go on a screen honestly — "2 hidden, the
+/// rank does not apply" and "2 hidden, nobody could read his rank" are
+/// different sentences and different next actions — so the disclosure carries
+/// the NAME of each profile, which is what `cardWithheldHtml` renders.
+///
+/// Mirrors `schemas.WithheldProfilePublic`. `applicability` is `Option` here
+/// too, although the server declares it required: this list only exists on a
+/// No.622 server, so the absence would be a server defect — but answering a
+/// server defect by failing the parse of the whole rank list costs the operator
+/// the card, and the renderer already degrades an absent verdict to "nothing
+/// stated".
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct WithheldProfile {
+    pub profile_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub applicability: Option<String>,
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -567,6 +642,14 @@ pub(crate) struct CandidateRanksResponse {
     pub items: Vec<CandidateProfileRank>,
     #[serde(default)]
     pub unranked_active_profiles: Vec<UnrankedProfile>,
+    /// No.622/No.637-S6: the THIRD half of this body, and the one the bridge
+    /// used to drop on the floor. Without it the card cannot tell "compared
+    /// against everything" from "compared against what applies", and the
+    /// sentence it prints today — «сравниваются все активные профили» — is
+    /// simply false. `#[serde(default)]`, like its two neighbours: an older
+    /// server withholds nothing it can name, which is an empty disclosure.
+    #[serde(default)]
+    pub withheld_profiles: Vec<WithheldProfile>,
     #[serde(default)]
     pub confirmations: Vec<ShortlistHistory>,
 }
@@ -3355,4 +3438,218 @@ mod tests {
             assert_eq!(err.detail, Some("ordinal_out_of_range".to_string()));
         }
     }
+
+    // ================= No.637/S6: THE SEAM, ON SERVER BYTES =================
+    //
+    // Eight green checks watched `applicability`, `applicability_reason` and
+    // `withheld_profiles` never reach the screen. They stayed green because they
+    // hand their own fixtures straight to the renderer and never cross THIS
+    // boundary, where `serde` drops a key no field declares - silently, without
+    // failing the parse.
+    //
+    // So the fixtures below are not written here. They are the VERBATIM response
+    // bodies of the running pilot server, captured on 2026-10-02 from the S5
+    // stand (`GET /api/crewings/{crewing}/candidate-intake/{intake}/ranks` and
+    // the queue row of `GET .../candidate-intake`), pasted in by machine. A
+    // fixture typed by the hand that writes the struct is missing exactly the
+    // field that hand forgot; a fixture taken off the wire is not.
+    //
+    // And the assertion is a WALK, not a list of names, for the same reason: a
+    // list of names is written by that same hand. Every key the server put on
+    // the wire must still be there after the value has crossed the bridge, so a
+    // field added to the server tomorrow and forgotten here goes RED instead of
+    // silently becoming a no-op on a screen whose renderer tests stay green.
+
+    /// Rizal Santos: two evaluated profiles (`same` and `not_applicable`) and
+    /// THREE profiles withheld by rank. Verbatim server bytes.
+    const LIVE_RANKS_MIXED: &str = r#"{"items":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"primary":true,"met":[],"missing":["rank"],"unconfirmed":["certificate:Advanced Oil Tanker Operations","certificate:Bridge Resource Management","certificate:STCW II/2 Master"],"reasons":[{"requirement":"rank","outcome":"missing","wanted":"Master","found":"Able Seaman"},{"requirement":"certificate:STCW II/2 Master","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Advanced Oil Tanker Operations","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Bridge Resource Management","outcome":"unconfirmed_fact","wanted":"held","found":null}],"decided":false,"stale":false,"stale_reason":null,"applicability":"not_applicable","applicability_reason":null},{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"primary":false,"met":[],"missing":["rank"],"unconfirmed":["certificate:Basic Safety Training","certificate:STCW II/5","certificate:Tanker Familiarisation (Oil)"],"reasons":[{"requirement":"rank","outcome":"missing","wanted":"Able Seaman (AB)","found":"Able Seaman"},{"requirement":"certificate:STCW II/5","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Basic Safety Training","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Tanker Familiarisation (Oil)","outcome":"unconfirmed_fact","wanted":"held","found":null}],"decided":false,"stale":true,"stale_reason":"facts_changed","applicability":"same","applicability_reason":null}],"unranked_active_profiles":[],"withheld_profiles":[{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","name":"Chief Officer — Bulk Carrier (Panamax)","applicability":"not_applicable","applicability_reason":null},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","name":"2nd Engineer — Container 4500 TEU","applicability":"not_applicable","applicability_reason":null},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","name":"Bosun — Chemical Tanker","applicability":"not_applicable","applicability_reason":null}],"confirmations":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"confirmed_by":"stand637-operator","confirmed_at":"2026-10-02T11:15:24.218120","id":"6ee4211c-4cf0-4fe1-9fd1-bcda2a5ca7a6","withdrawn_by":"stand637-operator","withdrawn_at":"2026-10-02T11:22:28.318520"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"confirmed_by":"stand637-operator","confirmed_at":"2026-10-02T11:22:54.157699","id":"cad862d4-912c-4679-91f6-f02decd4d805","withdrawn_by":null,"withdrawn_at":null}]}"#;
+
+    /// Oleh Ivanenko: five rows whose rank nobody could read -- `unknown` with
+    /// `applicability_reason: "rank_absent"`, the case No.642 folds into one
+    /// block. Verbatim server bytes.
+    const LIVE_RANKS_UNREAD: &str = r#"{"items":[{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"}],"unranked_active_profiles":[],"withheld_profiles":[],"confirmations":[]}"#;
+
+    /// The QUEUE row of the same two candidates, as the list route emits it:
+    /// `summary.ranks_withheld` and `summary.profile_ranks[].applicability` are
+    /// the second surface of the same answer. Verbatim server bytes.
+    const LIVE_QUEUE_ROW_MIXED: &str = r#"{"intake_id":"bd58673d-ff38-4cce-b194-585d9f8d0bd3","receipt_id":"1f00cb62-db2c-46cd-b3be-d788c30e3862","crewing_id":"cd3e5f75-5a4b-4a43-8f97-137b6fee50c6","source":"skipi_response","source_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","event_id":"11ba6eb6-8b00-4797-ae8b-dfb13b0f3aec","primary_profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","content_sha256":"03d040b19259b380c5c78a33c3849036d48060ed9e3422fcbe259f8e76d3e874","content_bytes":3962,"content_type":"message/rfc822","state":"ranked","source_trust":"unverified","version":1,"created_at":"2026-10-02T11:02:12.203588","issued_at":"2026-10-02T11:02:12.203588","objects":[{"id":"98ec6bda-3b0d-47e3-beca-2a36afc124fc","content_type":"message/rfc822"}],"attachments":[],"summary":{"state":"ranked","facts":4,"ranks":2,"ranks_stale":1,"ranks_withheld":3,"active_confirmations":1,"needs_review_reason":null,"profile_ranks":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"met":0,"missing":1,"unconfirmed":3,"total":4,"stale":false,"applicability":"not_applicable","applicability_reason":null},{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"met":0,"missing":1,"unconfirmed":3,"total":4,"stale":true,"applicability":"same","applicability_reason":null}],"candidate_name":"Rizal Santos"},"response_headline":{"rank":"Master","rank_state":"from_snapshot","first_name":"Rizal","surname":"Santos"}}"#;
+    const LIVE_QUEUE_ROW_UNREAD: &str = r#"{"intake_id":"b80e281a-a3da-4690-93a8-74c047631f63","receipt_id":"2b60ea21-bacf-42a6-9988-357ddba7a569","crewing_id":"cd3e5f75-5a4b-4a43-8f97-137b6fee50c6","source":"synthetic","source_id":"stand637-ivanenko","event_id":"8c214142-c963-4291-9bd4-6949bdbd6fb8","primary_profile_id":null,"content_sha256":"b1b2d5838b4e2bdceb20827bf7168931d93da66b8b28234be8ec77309646d465","content_bytes":2276,"content_type":"application/pdf","state":"ranked","source_trust":"unverified","version":1,"created_at":"2026-10-02T11:01:20.818383","issued_at":"2026-10-02T11:01:20.818383","objects":[{"id":"b3c0d65d-4bc4-4458-a92a-38c9582153c0","content_type":"application/pdf"}],"attachments":[],"summary":{"state":"ranked","facts":6,"ranks":5,"ranks_stale":0,"ranks_withheld":0,"active_confirmations":0,"needs_review_reason":null,"profile_ranks":[{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"}],"candidate_name":"Oleh Ivanenko"},"response_headline":null}"#;
+
+    /// The ONLY keys allowed to leave the bridge absent, and ONLY when the
+    /// server sent them as `null`. Each one IS declared and carries
+    /// `skip_serializing_if = "Option::is_none"` deliberately, documented on its
+    /// struct: to a webview `undefined` and `null` are the same answer, and
+    /// `candidate_name` needs an absence to stay an absence.
+    ///
+    /// This is an EXEMPTION list, never a list of required names, and the
+    /// direction is the whole point: forget a name here and the test goes RED.
+    /// The old shape of this check - a hand-written list of names that must be
+    /// present - went green on everything its author forgot, which is how
+    /// `applicability` reached no screen while eight checks watched.
+    const NULL_MAY_VANISH: &[&str] = &["response_headline", "response_summary", "candidate_name"];
+
+    /// Every key of `sent` must be present in `arrived`, recursively, and the
+    /// scalar leaves must be EQUAL. Objects are compared by key; arrays element
+    /// by element. `arrived` may carry more (a client-side default is not a
+    /// defect); it may never carry less, and it may never carry a different
+    /// value under the same name.
+    fn assert_wire_survives(sent: &Value, arrived: &Value, path: &str) {
+        match sent {
+            Value::Object(keys) => {
+                let got = arrived.as_object().unwrap_or_else(|| {
+                    panic!("{path}: the server sent an object, the bridge produced {arrived}")
+                });
+                for (key, value) in keys {
+                    let next = format!("{path}.{key}");
+                    let seen = match got.get(key) {
+                        Some(seen) => seen,
+                        // a declared field that serialises its own `null` away
+                        None if value.is_null() && NULL_MAY_VANISH.contains(&key.as_str()) => {
+                            continue
+                        }
+                        None => panic!(
+                            "{next}: the server sent this key and the bridge DROPPED it. \
+                             Declare the field on the struct - serde discards what no field names."
+                        ),
+                    };
+                    assert_wire_survives(value, seen, &next);
+                }
+            }
+            Value::Array(items) => {
+                let got = arrived.as_array().unwrap_or_else(|| {
+                    panic!("{path}: the server sent an array, the bridge produced {arrived}")
+                });
+                assert_eq!(items.len(), got.len(), "{path}: the array changed length");
+                for (i, value) in items.iter().enumerate() {
+                    assert_wire_survives(value, &got[i], &format!("{path}[{i}]"));
+                }
+            }
+            leaf => assert_eq!(leaf, arrived, "{path}: the value changed across the bridge"),
+        }
+    }
+
+    #[test]
+    fn the_rank_list_carries_every_key_the_live_server_sent() {
+        for (label, body) in [("mixed", LIVE_RANKS_MIXED), ("unread", LIVE_RANKS_UNREAD)] {
+            let sent: Value = serde_json::from_str(body).unwrap();
+            let typed: CandidateRanksResponse = serde_json::from_str(body)
+                .unwrap_or_else(|e| panic!("{label}: the live body must parse: {e}"));
+            let arrived = serde_json::to_value(&typed).unwrap();
+            assert_wire_survives(&sent, &arrived, &format!("${label}"));
+        }
+    }
+
+    #[test]
+    fn the_three_fixes_read_their_values_off_the_live_body_not_a_fixture() {
+        // (a) No.642 / the unread fold: five rows, every one of them `unknown`
+        // WITH its reason. `cardApplicabilityRowSplit` folds on exactly this.
+        let unread: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_UNREAD).unwrap();
+        assert_eq!(unread.items.len(), 5);
+        for row in &unread.items {
+            assert_eq!(row.applicability.as_deref(), Some("unknown"), "{row:?}");
+            assert_eq!(row.applicability_reason.as_deref(), Some("rank_absent"));
+        }
+
+        // (b) No.644 / the honest sentence: a verdict that is NOT unknown reaches
+        // the screen as itself, and `not_applicable` is what hides a row.
+        let mixed: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_MIXED).unwrap();
+        let verdicts: Vec<&str> = mixed
+            .items
+            .iter()
+            .map(|row| row.applicability.as_deref().unwrap_or("<dropped>"))
+            .collect();
+        assert!(verdicts.contains(&"same"), "{verdicts:?}");
+        assert!(verdicts.contains(&"not_applicable"), "{verdicts:?}");
+
+        // (c) the withheld disclosure: NAMED profiles, not a count.
+        assert_eq!(mixed.withheld_profiles.len(), 3);
+        for withheld in &mixed.withheld_profiles {
+            assert!(!withheld.profile_id.is_empty());
+            assert!(!withheld.name.is_empty(), "the disclosure names the profile");
+            assert_eq!(withheld.applicability.as_deref(), Some("not_applicable"));
+        }
+        assert_eq!(unread.withheld_profiles.len(), 0, "nothing withheld for an unread rank");
+    }
+
+    #[test]
+    fn the_queue_row_carries_every_key_the_live_server_sent() {
+        for (label, body) in [
+            ("mixed", LIVE_QUEUE_ROW_MIXED),
+            ("unread", LIVE_QUEUE_ROW_UNREAD),
+        ] {
+            let sent: Value = serde_json::from_str(body).unwrap();
+            let typed: CandidateIntakeReceipt = serde_json::from_str(body)
+                .unwrap_or_else(|e| panic!("{label}: the live queue row must parse: {e}"));
+            let arrived = serde_json::to_value(&typed).unwrap();
+            assert_wire_survives(&sent, &arrived, &format!("${label}"));
+
+            // and the values the row itself renders
+            let summary = typed.summary.as_ref().expect("the queue row carries a summary");
+            for rank in summary.profile_ranks.as_ref().expect("stored evaluations ride along") {
+                assert!(
+                    rank.applicability.is_some(),
+                    "{label}: the row's own verdict was dropped on the way to the webview"
+                );
+            }
+        }
+        let mixed: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_MIXED).unwrap();
+        assert_eq!(mixed.summary.unwrap().ranks_withheld, 3);
+        let unread: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_UNREAD).unwrap();
+        assert_eq!(unread.summary.unwrap().ranks_withheld, 0);
+    }
+
+    /// The press of "Compare" answers with its own count of what it did NOT
+    /// evaluate. There is no GET for this body, so it is not captured from the
+    /// stand: it is the shape the route is VALIDATED against
+    /// (`response_model=CandidateRankResponse`, `routers/candidate_intake.py:1022`)
+    /// and asserted on a live HTTP response by the server's own suite
+    /// (`tests/test_crewing_p2_622_rank_applicability.py:1192`). Provenance is
+    /// named here rather than left to look like a capture.
+    #[test]
+    fn the_compare_press_keeps_the_count_of_what_it_withheld() {
+        let body = r#"{"ranked":2,"written":0,"withheld":2,"reason":"ranked","profiles":["p-1","p-2"]}"#;
+        let sent: Value = serde_json::from_str(body).unwrap();
+        let typed: CandidateRankResponse = serde_json::from_str(body).unwrap();
+        assert_eq!(typed.withheld, 2, "the screen says `2/0` and nothing about the two it skipped");
+        assert_wire_survives(&sent, &serde_json::to_value(&typed).unwrap(), "$rank");
+    }
+
+    /// THE COMPATIBILITY NEGATIVE. A pilot server from before No.622 sends none
+    /// of these keys. The parse must SUCCEED and every new field must come back
+    /// absent - not a default verdict, not a zero that reads as an answer.
+    /// `cardApplicability` turns that absence into `stated:false`, which renders
+    /// exactly as the card rendered before any of this existed.
+    #[test]
+    fn an_older_server_without_the_new_keys_still_parses() {
+        let old_ranks = r#"{"items":[{"profile_id":"p-1","profile_version":1,"primary":true,
+            "met":["rank"],"missing":[],"unconfirmed":[],
+            "reasons":[{"requirement":"rank","outcome":"met"}],
+            "decided":true,"stale":false}],
+            "unranked_active_profiles":[],"confirmations":[]}"#;
+        let ranks: CandidateRanksResponse = serde_json::from_str(old_ranks)
+            .expect("an older server must not fail the parse of the whole card");
+        assert_eq!(ranks.items[0].applicability, None, "absent is not a verdict");
+        assert_eq!(ranks.items[0].applicability_reason, None);
+        assert!(ranks.withheld_profiles.is_empty(), "absent is an empty disclosure");
+
+        let old_rank_press = r#"{"ranked":1,"written":1,"reason":"ranked","profiles":["p-1"]}"#;
+        let press: CandidateRankResponse = serde_json::from_str(old_rank_press).unwrap();
+        assert_eq!(press.withheld, 0, "absent is nothing withheld, and the screen prints no note");
+
+        let old_row = r#"{"intake_id":"i-1","receipt_id":"r-1","crewing_id":"c-1",
+            "source":"inbound","source_id":"m-1","event_id":"e-1","primary_profile_id":null,
+            "content_sha256":"abc","content_bytes":9,"content_type":"text/plain",
+            "state":"ranked","source_trust":"inbound_alias","version":1,
+            "created_at":"2026-10-02T00:00:00","issued_at":"2026-10-02T00:00:00",
+            "summary":{"state":"ranked","facts":1,"ranks":1,"ranks_stale":0,
+                "active_confirmations":0,"needs_review_reason":null,
+                "profile_ranks":[{"profile_id":"p-1","profile_version":1,"met":1,
+                    "missing":0,"unconfirmed":0,"total":1,"stale":false}]}}"#;
+        let row: CandidateIntakeReceipt = serde_json::from_str(old_row)
+            .expect("an older server must not fail the parse of a queue row");
+        let summary = row.summary.unwrap();
+        assert_eq!(summary.ranks_withheld, 0);
+        assert_eq!(summary.profile_ranks.unwrap()[0].applicability, None);
+    }
+    // =============== No.637/S6: THE SEAM, ON SERVER BYTES END ===============
 }
