@@ -3282,6 +3282,80 @@ console.log('\n# No.637/S1b: the post nobody could read - shown, explained, acti
   ctx.__pilot.renderIntakePilot();
 }
 
+// ===== No.637 / S1c: the FOURTH form of the figure leaves the card too ========
+//
+// S1b removed the percentage and the "M of N checks met" caption from a row
+// whose post nobody could read, and said so plainly: the counts line was LEFT
+// («Не выполнено: N · Не подтверждено: M»). Measured afterwards on the rendered
+// bytes: that line prints «Не выполнено: 0 · Не подтверждено: 0» right beside
+// the words "должность не установлена". Two zeros next to a sentence saying
+// nothing was established read as "he lacks nothing" — a measurement nobody
+// made, which is half of what the owner complained about in No.622.
+//
+// The counts have no honest value here in EITHER direction, and that is why the
+// block goes rather than its numbers:
+//   * from the server AFTER S1c the lists arrive EMPTY, so the line is zeros;
+//   * from a pilot server of an OLDER build they still arrive full, so the line
+//     is the original lie — "Not met: 0 · Unconfirmed: 1" about an unmeasured
+//     person. The client must refuse in both cases, and both are driven below.
+//
+// What stands in its place is NOT a blank: the applicability line, already
+// rendered and already asserted above, says which unknown it is next to the
+// button (930 principle 1 keeps unknowns beside the decision).
+console.log('\n# No.637/S1c: the counts block is not drawn for a post nobody could read');
+{
+  const ok1c = softOk;
+  // TWO servers in one block, because the skew is the point.
+  const scenarios = [
+    ['server AFTER S1c (lists emptied on the wire)', (row) => Object.assign({}, row, {
+      met: [], missing: [], unconfirmed: [], reasons: [], decided: false,
+    })],
+    ['an OLDER pilot server (lists still full)', (row) => row],
+  ];
+  for (const [label, shape] of scenarios) {
+    const verdicts = {
+      'prof-A': { applicability: 'unknown', applicability_reason: 'rank_absent' },
+      'prof-B': { applicability: 'same', applicability_reason: null },
+      'prof-C': { applicability: 'same', applicability_reason: null },
+    };
+    const srv = makeServer();
+    const baseView = srv.ranksView.bind(srv);
+    srv.ranksView = () => baseView().map((row) => {
+      const verdict = verdicts[row.profile_id];
+      if (!verdict) return row;
+      return Object.assign({}, shape(row), verdict);
+    });
+    const ctx = makeContext({ server: srv });
+    await positiveChainUntilRank(ctx);
+    const fitCard = (id) => main(ctx).split('data-qa="pilot-fit-card"').slice(1)
+      .find((part) => part.startsWith(` data-profile="${id}"`)) || null;
+    const unknownCard = fitCard('prof-A');
+    const knownCard = fitCard('prof-B');
+    ok1c(!!unknownCard && !!knownCard,
+      `No.637/S1c [${label}]: both cards are on the screen, so neither result can be reached by rendering nothing`);
+    if (!unknownCard || !knownCard) continue;
+
+    ok1c(!/class="cf-counts"/.test(unknownCard),
+      `No.637/S1c [${label}]: the counts block is NOT drawn on the unreadable-post card`);
+    ok1c(!/Not met:/.test(unknownCard) && !/Unconfirmed:/.test(unknownCard),
+      `No.637/S1c [${label}]: and neither counter word is printed on it in any other shape`);
+    // CALIBRATION, on the SAME screen and the SAME render: the readable card
+    // keeps the block with its real numbers. Without this the assertion above
+    // would also pass on a client that stopped drawing counts for everybody.
+    ok1c(/class="cf-counts"/.test(knownCard),
+      `No.637/S1c [${label}] CALIBRATION: the readable-post card still carries its counts block`);
+    ok1c(/Not met:/.test(knownCard) && /Unconfirmed:/.test(knownCard),
+      `No.637/S1c [${label}] CALIBRATION: with both counter words, in words`);
+    // and S1b's properties still hold on the very same card
+    ok1c(/data-qa="pilot-fit-applicability"[^>]*data-applicability="unknown"/.test(unknownCard),
+      `No.637/S1c [${label}]: the reason stays where the counts were — the card is not left blank`);
+    ok1c(/data-qa="pilot-fit-confirm"/.test(unknownCard),
+      `No.637/S1c [${label}]: and the button the owner accepted is still on it`);
+    ok1c(!/%/.test(unknownCard),
+      `No.637/S1c [${label}]: still no percentage either (S1b, re-checked on this render)`);
+  }
+}
+
 // ===== No.623 (OWNER (943)/(944)/(963)): after a response, the card says WHO ====
 //
 // Six elements reach the card through `response_summary` on the candidate GET.

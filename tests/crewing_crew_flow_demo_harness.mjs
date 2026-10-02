@@ -786,7 +786,11 @@ if (r2RuntimeReady) {
     summary: { state: 'ranked', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null },
   });
   MR2.state.intakePilot.queue = {
-    items: [qRow('i-met'), qRow('i-gap'), qRow('i-other'), qRow('i-cold')], limit: 50, offset: 0, total: 4,
+    // No.637/S1c adds the two unreadable-post rows. They sit at the END so every
+    // assertion written before them keeps reading the rows it was written for.
+    items: [qRow('i-met'), qRow('i-gap'), qRow('i-other'), qRow('i-cold'),
+            qRow('i-unknown'), qRow('i-unknown-old')],
+    limit: 50, offset: 0, total: 6,
   };
   MR2.state.intakePilot.queueLastUpdated = '2026-09-29T10:00:00Z';
 
@@ -814,6 +818,24 @@ if (r2RuntimeReady) {
     reasons: [{ requirement: 'rank', outcome: 'met', wanted: 'Second Engineer', found: 'Second Engineer' }],
   }]);
   // i-cold: nothing loaded for this candidate at all.
+  // No.637/S1c. TWO shapes of the same unreadable post, because the defect is a
+  // version skew and the client has to refuse under both of them:
+  //   i-unknown     — the server AFTER S1c: the lists arrive EMPTY;
+  //   i-unknown-old — a pilot server of an OLDER build: the lists arrive FULL,
+  //                   which is exactly the "Met 1 · Not met 0 · Unconfirmed 1"
+  //                   the supervisor rendered beside an unmeasured person.
+  MR2.crewFlowCacheRanks('i-unknown', [{
+    profile_id: 'p-main', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [], applicability: 'unknown', applicability_reason: 'rank_absent',
+  }]);
+  MR2.crewFlowCacheRanks('i-unknown-old', [{
+    profile_id: 'p-main', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [
+      { requirement: 'rank', outcome: 'unconfirmed_fact' },
+      { requirement: 'certificate:coc_master', outcome: 'met', wanted: 'held', found: 'held' },
+    ],
+    applicability: 'unknown', applicability_reason: 'rank_unreadable',
+  }]);
   MR2.crewFlowSelectProfile('p-main');
 
   const r2CallsBefore = calls.length;
@@ -972,6 +994,56 @@ if (r2RuntimeReady) {
       'No.637/S1b: and a Russian one — a missing key prints the wire code beside a person\'s name — got "' + ruWord + '"');
   }
 
+  // ---- No.637/S1c: the counts leave the ROW too, on both layouts ---------
+  //
+  // S1b took the percentage off this row and left the three counts, under a
+  // <details> on the desktop and INLINE on the phone (a <details> inside a
+  // <button> is invalid markup). "Met 1 · Not met 0 · Unconfirmed 1" beside a
+  // person whose post nobody could read is a measurement that was never made;
+  // with the S1c server the same line becomes "Met 0 · Not met 0 · Unconfirmed
+  // 0", which reads as "he lacks nothing" and is worse than the first. Both
+  // server shapes are in the fixture above, and the row must refuse both.
+  const unknownRow = rowOf('i-unknown');
+  const unknownOldRow = rowOf('i-unknown-old');
+  ok(!!unknownRow && !!unknownOldRow,
+    'No.637/S1c: both unreadable-post rows are IN the queue — the figure goes, the person does not (S1b)');
+  for (const [name, row] of [['i-unknown', unknownRow], ['i-unknown-old', unknownOldRow]]) {
+    const txt = r2MatchText(row);
+    ok(!/data-met=/.test(row) && !/data-missing=/.test(row) && !/data-unconfirmed=/.test(row),
+      'No.637/S1c (' + name + '): the row carries no count attributes a reader could turn into a figure');
+    ok(!/Met \d/.test(txt) && !/Not met \d/.test(txt) && !/Unconfirmed \d/.test(txt),
+      'No.637/S1c (' + name + '): and prints none of the three counts — got "' + txt + '"');
+    ok(/data-match="rank-unknown"/.test(row),
+      'No.637/S1c (' + name + '): the row says WHICH state it is in, machine-readably');
+    ok(/data-applicability="unknown"/.test(row),
+      'No.637/S1c (' + name + '): and carries the verdict itself');
+    ok(txt.indexOf('Master · Bulk Carrier') === 0 && txt.length > 'Master · Bulk Carrier'.length + 3,
+      'No.637/S1c (' + name + '): the profile is still named and a sentence follows it, not a blank — got "' + txt + '"');
+    const pct = r2Pct(row);
+    ok(pct && pct.attr === 'none' && !/%/.test(pct.text),
+      'No.637/S1c (' + name + '): and still no percentage (S1b, re-checked here)');
+  }
+  // CALIBRATION, same render: a readable row keeps every count. Without it the
+  // four assertions above pass on a client that stopped printing counts at all.
+  ok(/data-met="2"/.test(metRow) && r2MatchText(metRow).indexOf('Met 2') !== -1,
+    'No.637/S1c CALIBRATION: the readable row keeps its counts in the same tree');
+  // and the phone layout, where the same line is INLINE rather than disclosed
+  {
+    const mobile = String(MR2.crewFlowLiveMobileHtml('live'));
+    const mobileRow = (id) => {
+      const m = mobile.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<button class="mobile-list-item|$)'));
+      return m ? m[0] : '';
+    };
+    const mUnknown = mobileRow('i-unknown');
+    const mMet = mobileRow('i-met');
+    ok(!!mUnknown && /data-match="rank-unknown"/.test(mUnknown),
+      'No.637/S1c: the PHONE row refuses the counts too — this is the branch where they are inline, not under a disclosure');
+    ok(!/data-met=/.test(mUnknown) && !/Met \d/.test(mUnknown) && !/Unconfirmed \d/.test(mUnknown),
+      'No.637/S1c: and no count reaches the phone row in any shape');
+    ok(/data-met="2"/.test(mMet) && /Met 2/.test(mMet),
+      'No.637/S1c CALIBRATION: the readable phone row still shows its counts');
+  }
+
   // the two states must be readable, in both interface languages
   store.set('skipi-crewing-ui-language', 'ru');
   const r2TreeRu = String(MR2.crewFlowLiveTreeHtml('live'));
@@ -1088,8 +1160,16 @@ if (r3Ready) {
         { profile_id: 'p-main', profile_version: 1, met: 9, missing: 0, unconfirmed: 0, total: 9, stale: false },
         { profile_id: 'p-main', profile_version: 2, met: 1, missing: 2, unconfirmed: 0, total: 3, stale: false },
       ]),
+      // No.637/S1c. The SUMMARY surface — the queue's own producer, independent
+      // of the card's. This is the shape the S1c server sends for a post nobody
+      // could read: every counter zero, `total` zero, the verdict told plainly.
+      // Zero counters are not a result and must not be printed as one.
+      listItem('L-unknown', [{
+        profile_id: 'p-main', profile_version: 1, met: 0, missing: 0, unconfirmed: 0,
+        total: 0, stale: false, applicability: 'unknown', applicability_reason: 'rank_absent',
+      }], 'Petro H.'),
     ],
-    limit: 50, offset: 0, total: 11,
+    limit: 50, offset: 0, total: 12,
   };
   R2_FIXTURES.profiles = { items: [
     { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
@@ -1210,6 +1290,21 @@ if (r3Ready) {
     'R2/L: a row without total cannot prove full coverage, so it does not claim it');
   ok(/data-match="ranked"/.test(r3Row('L-met')) && !/data-match="partial"/.test(r3Row('L-met')),
     'R2/L (control): a row that does add up is NOT flagged — the check is not vacuous');
+
+  // ---- 3b-bis. No.637/S1c, on the SUMMARY surface -------------------------
+  // A zero denominator with a zero numerator is "nobody asked", not a result.
+  // The queue's producer is independent of the card's, so the refusal is
+  // measured here separately rather than inferred from the card passing.
+  ok(/data-match="rank-unknown"/.test(r3Row('L-unknown')),
+    'No.637/S1c: a summary row whose post nobody could read is its own state, not a "ranked" one');
+  ok(!/data-met=/.test(r3Row('L-unknown')) && !/data-total=/.test(r3Row('L-unknown')),
+    'No.637/S1c: and it carries no counters — three zeros read as "he lacks nothing"');
+  ok(!/Met \d/.test(r3Text(r3Row('L-unknown'))) && !/Unconfirmed \d/.test(r3Text(r3Row('L-unknown'))),
+    'No.637/S1c: nor prints them — got "' + r3Text(r3Row('L-unknown')) + '"');
+  ok(!/data-match="partial"/.test(r3Row('L-unknown')),
+    'No.637/S1c: and it is NOT reported as "outcomes not fully recognised" — the outcomes are not in doubt, the POST is');
+  ok(r3Row('L-unknown').indexOf('Petro H.') !== -1,
+    'No.637/S1c: the person is still in the queue under his own name (S1b: the figure goes, he does not)');
 
   // ---- 3c. two stored versions of one profile -----------------------------
   ok(/data-met="1"/.test(r3Row('L-versions')) && /data-missing="2"/.test(r3Row('L-versions'))

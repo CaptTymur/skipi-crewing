@@ -5649,6 +5649,30 @@ function crewFlowRowMatchHtml(item) {
     return badge('not-applicable', crewFlowProfileName(profileId) + ' — ' + cardApplicabilityLabel(fit),
       profileExtra + ' data-applicability="' + escapeAttr(String(fit.answer)) + '"');
   }
+  // No.637/S1c: the same FOURTH form of the figure as on the card, and this is
+  // the branch the phone shows INLINE — on the desktop the counts sit under a
+  // <details>, on mobile a <details> inside a <button> is invalid markup, so the
+  // row prints them outright. "Met 1 · Not met 0 · Unconfirmed 1" next to a
+  // person whose post nobody could read is a measurement that was never made;
+  // after the server safeguard the three numbers are zeros, which reads as "he
+  // lacks nothing" and is worse. The row keeps the sentence that IS true — which
+  // unknown it is — and keeps its place in the queue (S1b).
+  if (fit.stated && fit.answer === 'unknown') {
+    var unknownWhy = cardApplicabilityWhy(fit);
+    var unknownText = crewFlowProfileName(profileId) + ' — ' + cardApplicabilityLabel(fit)
+      + (unknownWhy ? ' (' + unknownWhy + ')' : '');
+    // Staleness is not a count and it is not swallowed here: a row can be both
+    // unreadable and out of date, and the operator needs both sentences.
+    if (row.stale) {
+      unknownText += ' · ' + (row.stale_reason
+        ? cardPair(PILOT_CARD_STALE_TEXT, row.stale_reason, 'unknown_outcome_code')
+        : crewFlowTr('match_stale'));
+    }
+    return badge('rank-unknown', unknownText, profileExtra
+      + ' data-applicability="' + escapeAttr(String(fit.answer)) + '"'
+      + (fit.reason ? ' data-applicability-reason="' + escapeAttr(String(fit.reason)) + '"' : '')
+      + (row.stale ? ' data-stale="1"' : ''));
+  }
   var counted = row.met + row.missing + row.unconfirmed;
   var covered = (typeof row.total === 'number' && isFinite(row.total) && row.total === counted);
   var text = crewFlowProfileName(profileId)
@@ -8874,10 +8898,21 @@ function pilotCardFitCardHtml(rank) {
     ? '<div class="cf-bar" aria-hidden="true"><i style="width:' + share.pct + '%;"></i></div>' : '';
   // missing and unconfirmed stay two different words: "he does not have it" and
   // "nobody entered it" are not the same statement about a person.
-  var counts = '<div class="cf-counts">' + escapeHtml(cardT('list_missing')) + ': ' + row.missing
+  //
+  // No.637/S1c: and NEITHER of them is printed when nobody could read the post.
+  // This block is the FOURTH form of the figure, and the half of the owner's
+  // original complaint S1b left standing: "Не выполнено: 0 · Не подтверждено: 0"
+  // beside the words "должность не установлена" reads as a measurement, and
+  // there was none. Zero here never meant "he lacks nothing" - after the server
+  // safeguard it means "the question was never asked" - and two sentences that
+  // look identical and mean opposite things are exactly what (930) forbids next
+  // to a decision. What stands in its place is already rendered below: the
+  // applicability line, which says WHICH unknown it is and what to do about it.
+  var countsHidden = (rank && String(rank.applicability) === 'unknown');
+  var counts = countsHidden ? '' : ('<div class="cf-counts">' + escapeHtml(cardT('list_missing')) + ': ' + row.missing
     + ' \u00b7 ' + escapeHtml(cardT('list_unconfirmed')) + ': ' + row.unconfirmed
     + (g.unknown.length ? ' \u00b7 ' + escapeHtml(cardT('list_unknown')) + ': ' + g.unknown.length : '')
-    + '</div>';
+    + '</div>');
   var wanted = cardProfileWantedLine(rank);
   // No.622: the professional verdict, next to the figure and never instead of
   // it. `alternative` is labelled as an alternative and not as a match, and an
