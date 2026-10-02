@@ -784,6 +784,28 @@ async function s4DraftBody(ctx, { skew = false } = {}) {
   const m = main(ctx).match(/data-qa="pilot-draft-body"[^>]*>([\s\S]*?)<\/textarea>/);
   return m ? m[1] : '';
 }
+async function s4DraftPanel(ctx) {
+  ctx.__pilot.pilotDraftOpen('intake-A', 'reply');
+  await flush();
+  const src = main(ctx), i = src.indexOf('data-qa="pilot-draft"');
+  return i < 0 ? '' : src.slice(i);
+}
+const s4WarnText = (panel) => {
+  const m = String(panel).match(/data-qa="pilot-draft-rank-warning"[^>]*>([\s\S]*?)<\/div>/);
+  return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+};
+// The unread group of one section, so a verdict line is read off the row it
+// belongs to and not off the first row in the document.
+const s4GroupOf = (src, sectionQa, nextQa) => {
+  const i = src.indexOf(`<section class="pilot-card" data-qa="${sectionQa}"`);
+  if (i < 0) return '';
+  const j = src.indexOf(`<section class="pilot-card" data-qa="${nextQa}"`, i);
+  const sec = j < 0 ? src.slice(i) : src.slice(i, j);
+  const g = sec.indexOf('data-qa="pilot-rank-unread"');
+  if (g < 0) return '';
+  const rest = sec.slice(g), e = rest.indexOf('</details>');
+  return e < 0 ? rest : rest.slice(0, e);
+};
 const controls = [
   {
     id: 'M01', defect: 'after rerank UNKNOWN freshness replaced by "current"',
@@ -1074,6 +1096,45 @@ const controls = [
       assert.ok(!/data-pct="\d/.test(s4Inside(fit)), 'not one percentage inside the block');
       assert.ok(!/%/.test(s4Inside(fit)), 'and not a per-cent sign either');
       assert.ok(!/checks met, by the stored evaluation/.test(s4Inside(fit)), 'nor the caption, which is the same claim in words');
+    },
+  },
+  {
+    id: 'S4b-WARN', defect: 'No.637/S4b: the draft sends an offer against a rank that did not pass, with nothing said beside the button',
+    edits: [["    + rankWarning\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_NA, 'prof-B': S4C_NA, 'prof-C': S4C_SAME }, source: 'skipi_response', chosen: 'prof-A' });
+      const panel = await s4DraftPanel(ctx);
+      assert.ok(/data-qa="pilot-draft-rank-warning"/.test(panel), 'the warning stands in the draft panel');
+      assert.ok(/check before sending/.test(s4WarnText(panel)), 'and names the action before the press - got "' + s4WarnText(panel) + '"');
+      assert.ok(panel.indexOf('pilot-draft-rank-warning') > panel.indexOf('pilot-draft-body'),
+        'between the letter and the control that sends it');
+      // It WARNS and does not block: the letter and the way out stay.
+      assert.ok(/data-qa="pilot-draft-body"/.test(panel), 'the letter itself is untouched by the warning');
+    },
+  },
+  {
+    id: 'S4b-WORD', defect: 'No.637/S4b: two words for one state back on the same screen',
+    edits: [["  unknown:['должность не прочитана', 'the rank was not read'],",
+      "  unknown:['должность не установлена', 'the rank could not be established'],"]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_UNKNOWN, 'prof-B': S4C_UNKNOWN, 'prof-C': S4C_SAME }, source: 'inbound' });
+      for (const language of ['en', 'ru']) {
+        ctx.setLang(language);
+        ctx.__pilot.renderIntakePilot();
+        const src = main(ctx);
+        const fitGroup = s4GroupOf(src, 'pilot-section-fit', 'pilot-section-source');
+        const ranksGroup = s4GroupOf(src, 'pilot-section-ranks', 'pilot-section-history');
+        assert.ok(/data-profile="prof-A"/.test(fitGroup) && !/data-profile="prof-C"/.test(fitGroup),
+          '[' + language + '] calibration: the scope holds the unread rows and not the applicable one');
+        const want = language === 'ru' ? /не прочитана/ : /was not read/;
+        const old = language === 'ru' ? /не установлена/ : /not be established/;
+        for (const [name, re] of [['fit card', /data-qa="pilot-fit-applicability"[^>]*>([\s\S]*?)<\/div>/], ['detailed row', /data-qa="pilot-rank-applicability"[^>]*>([\s\S]*?)<\/span>/]]) {
+          const text = ((name === 'fit card' ? fitGroup : ranksGroup).match(re) || [])[1] || '';
+          assert.ok(text.length > 5, '[' + language + '] the ' + name + ' verdict line was found');
+          assert.ok(want.test(text), '[' + language + '] the ' + name + ' uses the one word - got "' + text + '"');
+          assert.ok(!old.test(text), '[' + language + '] and not the old one - got "' + text + '"');
+        }
+      }
     },
   },
   {
@@ -5445,6 +5506,159 @@ console.log('\n# No.637/S4: the unread post stops lying, stops repeating itself,
         `[${language}] No.637/S4 (647) branch C: a payload that still carries reasons on an unread post does NOT get its post into the letter — the property stops depending on the server having emptied them. Got "${skew.replace(/\s+/g, ' ').slice(0, 140)}"`);
       okS4(hedged.test(skew),
         `[${language}] No.637/S4 (647) branch C: and the hedged sentence stands there too`);
+    }
+  }
+}
+
+// ===========================================================================
+// No.637 / S4b — two decisions taken by the manager on the S4 report (02.10).
+//
+//   (1) THE WARNING BESIDE THE DRAFT. No.650 made the draft default to the
+//       vacancy he responded to even when the rank does not apply to it - which
+//       is right, because he applied to it ((975) p.5) - and that put the
+//       operator one press away from an offer our own comparison disagrees
+//       with. docs/CANON-ui-v1.md principle 1: a missing or failed check stands
+//       NEXT TO the decision and the button. It WARNS and does not block: the
+//       send control stays, because blocking would undo (975) p.5.
+//   (2) ONE VOCABULARY. The product said «должность не установлена» in four
+//       places and «не прочитана» in the two S4 added. «Не установлена» reads
+//       as "he did not state one"; «не прочитана» says what actually happened
+//       and joins up with the next action. The OLD strings move to the new
+//       word, not the other way round, and this block is what stops the two
+//       from drifting apart again.
+// ===========================================================================
+console.log('\n# No.637/S4b: the warning beside the send button, and one word for one state');
+{
+  const okS4b = softOk;
+  const U = { applicability: 'unknown', applicability_reason: 'rank_unreadable' };
+  const SAME = { applicability: 'same', applicability_reason: null };
+  const NA = { applicability: 'not_applicable', applicability_reason: null };
+  async function build({ verdicts = {}, chosen = 'prof-A', source = 'skipi_response', language = 'en' } = {}) {
+    const srv = makeServer();
+    srv.card.source = source;
+    srv.card.primary_profile_id = chosen;
+    const baseView = srv.ranksView.bind(srv);
+    srv.ranksView = () => baseView().map((row) => {
+      const v = verdicts[row.profile_id] || SAME;
+      const out = Object.assign({}, row, v);
+      if (v.applicability === 'unknown') return Object.assign(out, { met: [], missing: [], unconfirmed: [], reasons: [], decided: false });
+      return out;
+    });
+    const ctx = makeContext({ server: srv, language });
+    await positiveChainUntilRank(ctx);
+    ctx.__pilot.pilotDraftOpen('intake-A', 'reply');
+    await flush();
+    return ctx;
+  }
+  const draftOf = (ctx) => {
+    const src = main(ctx), i = src.indexOf('data-qa="pilot-draft"');
+    return i < 0 ? '' : src.slice(i);
+  };
+  const warnOf = (src) => {
+    const m = String(src).match(/data-qa="pilot-draft-rank-warning"[^>]*>([\s\S]*?)<\/div>/);
+    return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+  };
+
+  // ---- (1) the warning ---------------------------------------------------
+  {
+    // CALIBRATION FIRST, on a fact known before this change: an APPLICABLE
+    // profile draws no warning. Without it, a renderer that printed the line
+    // unconditionally would pass every assertion below.
+    const fine = await build({ verdicts: { 'prof-A': SAME, 'prof-B': SAME, 'prof-C': SAME } });
+    okS4b(!!draftOf(fine) && /data-qa="pilot-draft-body"/.test(draftOf(fine)),
+      'CALIBRATION of the probe: the draft panel renders at all, with its body - every check below reads this fragment');
+    okS4b(warnOf(draftOf(fine)) === '',
+      `CALIBRATION: an applicable profile draws NO warning - the line is a verdict, not decoration. Got "${warnOf(draftOf(fine))}"`);
+
+    const bad = await build({ verdicts: { 'prof-A': NA, 'prof-B': NA, 'prof-C': SAME } });
+    const d = draftOf(bad);
+    okS4b(/data-qa="pilot-draft-rank-warning"/.test(d),
+      'No.637/S4b: the draft for a vacancy the rank does NOT apply to carries the warning');
+    okS4b(/data-applicability="not_applicable"/.test(d.slice(d.indexOf('pilot-draft-rank-warning'))),
+      'No.637/S4b: machine-readable, so it cannot drift from the verdict it reports');
+    okS4b(/check before sending/.test(warnOf(d)),
+      `No.637/S4b: it tells the operator what to do BEFORE the press — got "${warnOf(d)}"`);
+    okS4b(/was not matched|did not pass/.test(warnOf(d)) && /the rank does not apply/.test(warnOf(d)),
+      `No.637/S4b: and WHICH problem it is, in the vocabulary the rest of the card already uses — got "${warnOf(d)}"`);
+    // IT WARNS AND DOES NOT BLOCK. (975) p.5: he applied to this vacancy.
+    okS4b(/data-qa="pilot-draft-body"/.test(d) && /data-qa="pilot-draft-subject"/.test(d),
+      'No.637/S4b: the letter itself is still there - this is a warning, not a refusal');
+    okS4b(/data-qa="pilot-draft-need-contact"/.test(d) || /data-qa="pilot-draft-open-client"/.test(d) || /data-qa="pilot-draft-mailto"/.test(d) || /data-qa="pilot-draft-copy"/.test(d),
+      'No.637/S4b: and the way out of the draft is still offered - blocking would undo (975) p.5, which put him on this profile deliberately');
+    okS4b(d.indexOf('pilot-draft-rank-warning') > d.indexOf('pilot-draft-body'),
+      'No.637/S4b: the warning stands AFTER the letter text, i.e. between what he would send and the control that sends it - "рядом с решением и с кнопкой" literally');
+
+    // the unknown gets the same line, and says which unknown it is
+    const unread = await build({ verdicts: { 'prof-A': U, 'prof-B': U, 'prof-C': SAME } });
+    const du = draftOf(unread);
+    okS4b(/data-qa="pilot-draft-rank-warning"/.test(du),
+      'No.637/S4b: an UNREAD rank warns too - (930) names неизвестность beside the decision in the same breath as errors');
+    okS4b(/the rank was not read/.test(warnOf(du)) && /nobody could place it/.test(warnOf(du)),
+      `No.637/S4b: and it names WHICH unknown - "no rank recorded" and "nobody could place the one he has" are different next actions. Got "${warnOf(du)}"`);
+
+    // both shipped languages, on the rendered bytes
+    for (const language of ['ru', 'en']) {
+      const lctx = await build({ verdicts: { 'prof-A': NA, 'prof-B': NA, 'prof-C': SAME }, language });
+      const text = warnOf(draftOf(lctx));
+      const cyrillic = /[Ѐ-ӿ]/.test(text);
+      okS4b(text.length > 20 && (language === 'ru' ? cyrillic : !cyrillic),
+        `[${language}] No.637/S4b: the warning exists in this language — got "${text}"`);
+      okS4b(language === 'ru' ? /проверьте перед отправкой/.test(text) : /check before sending/.test(text),
+        `[${language}] No.637/S4b: with the action named in this language`);
+    }
+  }
+
+  // ---- (2) one vocabulary, on the RENDERED bytes of every surface ---------
+  {
+    const WORD = { ru: /не прочитана/, en: /was not read/ };
+    const OLD = { ru: /не установлена/, en: /(was|be) not established|not be established/ };
+    for (const language of ['ru', 'en']) {
+      const ctx = await build({ verdicts: { 'prof-A': U, 'prof-B': U, 'prof-C': SAME }, chosen: null, source: 'inbound', language });
+      const src = main(ctx);
+      // THE PROBE IS SCOPED, and the first version of it was not. Reading the
+      // FIRST match in the document returned the APPLICABLE profile's row
+      // («должность совпадает»), which carries neither the old word nor the new
+      // one - so every assertion under it would have been a verdict about the
+      // wrong node, and after the change it would have gone quietly green for
+      // the wrong reason. Caught by the red output before anything was
+      // concluded; the two calibrations below are what keep it caught.
+      const groupOf = (sectionQa, nextQa) => {
+        const i = src.indexOf(`<section class="pilot-card" data-qa="${sectionQa}"`);
+        if (i < 0) return '';
+        const j = src.indexOf(`<section class="pilot-card" data-qa="${nextQa}"`, i);
+        const sec = j < 0 ? src.slice(i) : src.slice(i, j);
+        const g = sec.indexOf('data-qa="pilot-rank-unread"');
+        if (g < 0) return '';
+        const rest = sec.slice(g), e = rest.indexOf('</details>');
+        return e < 0 ? rest : rest.slice(0, e);
+      };
+      const fitGroup = groupOf('pilot-section-fit', 'pilot-section-source');
+      const ranksGroup = groupOf('pilot-section-ranks', 'pilot-section-history');
+      okS4b(/data-profile="prof-A"/.test(fitGroup) && /data-profile="prof-B"/.test(fitGroup),
+        `[${language}] CALIBRATION of the probe: the two UNREAD profiles are the ones inside the scope`);
+      okS4b(!/data-profile="prof-C"/.test(fitGroup),
+        `[${language}] CALIBRATION of the probe: and the APPLICABLE profile is NOT - that row is what the unscoped probe was reading`);
+      const pieces = {
+        'the verdict line on the fit card': (fitGroup.match(/data-qa="pilot-fit-applicability"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || '',
+        'the caption where the figure is refused': (fitGroup.match(/data-qa="pilot-fit-pct" data-pct="none">[\s\S]*?<div class="cf-fitcard-cap">([\s\S]*?)<\/div>/) || [])[1] || '',
+        'the verdict line on the detailed row': (ranksGroup.match(/data-qa="pilot-rank-applicability"[^>]*>([\s\S]*?)<\/span>/) || [])[1] || '',
+        'the sentence replacing "comparison incomplete"': (ranksGroup.match(/data-qa="pilot-rank-decided"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || '',
+        'the summary of the folded block': (ranksGroup.match(/data-qa="pilot-rank-unread"[^>]*>\s*<summary>([\s\S]*?)<\/summary>/) || [])[1] || '',
+      };
+      for (const [name, text] of Object.entries(pieces)) {
+        okS4b(text.length > 5, `[${language}] CALIBRATION: ${name} was actually found in the rendered markup`);
+        okS4b(WORD[language].test(text), `[${language}] No.637/S4b: ${name} uses the one word — got "${text.replace(/\s+/g, ' ').trim()}"`);
+        okS4b(!OLD[language].test(text), `[${language}] No.637/S4b: and not the old one — got "${text.replace(/\s+/g, ' ').trim()}"`);
+      }
+      // the two surfaces that do NOT render in this sandbox, read from the file
+      const stale = ctx.__pilot.PILOT_CARD_STALE_TEXT.rank_unknown[language === 'ru' ? 0 : 1];
+      okS4b(WORD[language].test(stale) && !OLD[language].test(stale),
+        `[${language}] No.637/S4b: the stale stamp says the same thing — got "${stale}"`);
+      const queueLine = html.split('\n').filter((line) => line.includes("'crew_flow.fit_rank_unknown'"))[language === 'ru' ? 1 : 0] || '';
+      const queueText = (new RegExp("'crew_flow\\.fit_rank_unknown':'([^']+)'").exec(queueLine) || [])[1] || '';
+      okS4b(queueText.length > 5, `[${language}] CALIBRATION: the QUEUE wording was found in the file`);
+      okS4b(WORD[language].test(queueText.replace(/\\u2014/g, '—')) && !OLD[language].test(queueText),
+        `[${language}] No.637/S4b: and so does the Crew Flow queue row, which is the OTHER screen the owner walks through — got "${queueText}"`);
     }
   }
 }
