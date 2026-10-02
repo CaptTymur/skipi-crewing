@@ -943,6 +943,34 @@ if (r2RuntimeReady) {
   ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false}).reason === 'complete'
     && share({met:2,missing:0,unconfirmed:1,total:3,stale:false}).reason !== 'complete',
     'R2/928: unconfirmed keeps a comparison out of "all met" even though it is not a failure');
+  // No.637/S1b. The QUEUE row reads the same function the candidate card reads,
+  // and after S1b it receives rows it never used to: the server now writes an
+  // evaluation for a candidate whose post nobody could read (before, there was
+  // no row and the man was off the screen entirely — and the accepted shortlist
+  // answered 404). Those counts DIVIDE, so without this refusal the list would
+  // print a percentage beside the name of a person nobody measured. (939): "ни
+  // совпадение, ни 0 %".
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false,applicability:'unknown'}).pct === null,
+    'No.637/S1b: an unestablished post produces no figure in the queue row either, though its counts divide perfectly');
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false,applicability:'unknown'}).reason === 'rank_unknown',
+    'No.637/S1b: and the row says WHICH question is open rather than going blank');
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false,applicability:'unknown'}).met === 0
+    && share({met:2,missing:0,unconfirmed:0,total:2,stale:false,applicability:'unknown'}).total === 0,
+    'No.637/S1b: and hands back no met/total, so the "2 of 2" caption cannot be built from them either');
+  ok(share({met:2,missing:0,unconfirmed:0,total:2,stale:false,applicability:'same'}).pct === 100,
+    'CALIBRATION: the same counts with a readable post still produce 100% — the refusal is the verdict, not the arithmetic');
+  {
+    const word = (lang) => {
+      store.set('skipi-crewing-ui-language', lang);
+      return String(MR2.tr('crew_flow.fit_rank_unknown'));
+    };
+    const enWord = word('en'), ruWord = word('ru');
+    store.set('skipi-crewing-ui-language', 'en');
+    ok(enWord && enWord !== 'crew_flow.fit_rank_unknown' && !/[Ѐ-ӿ]/.test(enWord),
+      'No.637/S1b: the queue has an EN word for the refused figure — got "' + enWord + '"');
+    ok(ruWord && ruWord !== 'crew_flow.fit_rank_unknown' && ruWord !== enWord && /[Ѐ-ӿ]/.test(ruWord),
+      'No.637/S1b: and a Russian one — a missing key prints the wire code beside a person\'s name — got "' + ruWord + '"');
+  }
 
   // the two states must be readable, in both interface languages
   store.set('skipi-crewing-ui-language', 'ru');
