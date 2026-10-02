@@ -4824,6 +4824,143 @@ console.log('# No.632/5: the letter to the customer — prepared, never sent');
     'No.632/5.11 (PRESERVE sentinel, green on the base too): this module still knows nothing about sending');
 }
 
+// ===== No.637 / S2: the profile a PERSON CHOSE keeps its button ================
+//
+// The owner's word, DECISIONS (975) point 5: a response from Skipi is a pair
+// TWO SIDES ALREADY AGREED ON, because `GET /published-profiles` delivers a
+// vacancy to a seafarer only when his own rank matches it ("боцману боцманские,
+// капитанские не доставляются"). The server of S2 therefore stops refusing the
+// shortlist for that one profile and stops calling its row out of date.
+//
+// The client re-implemented the refusal independently (N21 of No.622: `fit.hidden`
+// -> "По этому профилю в шортлист не добавляем"), so a server-only change would
+// have left the operator looking at a note where the button belongs - the same
+// "two truths, two screens" this family of cards exists to remove.
+//
+// WHAT IS NOT CHANGED, and it is asserted rather than promised: the verdict is
+// still rendered next to the button. Protection means "not hidden and not
+// devalued", never "declared a match" (docs/CANON-ui-v1.md, principle 1: a
+// mismatch stands BESIDE the decision). A profile NOBODY chose keeps every
+// behaviour it has: out of the main list, into the withheld disclosure, no
+// button at all. And the SOURCE decides: a letter's first context is not a
+// choice, so an `inbound` card keeps the blocked note.
+console.log('\n# No.637/S2: the vacancy he actually applied to - visible, honest, and still pressable');
+{
+  const ok637s2 = softOk;
+  const verdicts = {
+    'prof-A': { applicability: 'not_applicable', applicability_reason: null },
+    'prof-B': { applicability: 'not_applicable', applicability_reason: null },
+    'prof-C': { applicability: 'same', applicability_reason: null },
+  };
+  const build = async (source) => {
+    const srv = makeServer();
+    srv.card.source = source;
+    srv.card.primary_profile_id = 'prof-A';
+    const baseView = srv.ranksView.bind(srv);
+    // The S2 server: the CHOSEN row is not stale, the one nobody chose is.
+    srv.ranksView = () => baseView().map((row) => Object.assign({}, row, verdicts[row.profile_id] || {}, {
+      stale: row.profile_id === 'prof-B',
+      stale_reason: row.profile_id === 'prof-B' ? 'rank_not_applicable' : null,
+    }));
+    const ctx = makeContext({ server: srv });
+    await positiveChainUntilRank(ctx);
+    return ctx;
+  };
+  // THE EXTRACTOR, and it is calibrated below before anything is concluded from
+  // it. The first version cut the fragment at `</div></div>`, which is the end
+  // of the FIRST requirement list inside the row - so the actions never reached
+  // the regex and every button assertion was a verdict about a truncated string.
+  // It read red for the right reason by accident; "а потом проверь зонд на
+  // заведомо известном факте" is the rule that caught it.
+  const wholeRow = (ctx, id) => {
+    const parts = main(ctx).split('<div class="pilot-rank-row" data-qa="pilot-rank-row"');
+    const part = parts.slice(1).find((p) => p.startsWith(` data-profile="${id}"`));
+    if (!part) return null;
+    const cut = part.indexOf('<details class="cf-brk"');
+    return cut === -1 ? part : part.slice(0, cut);
+  };
+
+  const ctx = await build('skipi_response');
+  const chosenRow = wholeRow(ctx, 'prof-A');
+  const controlRow = wholeRow(ctx, 'prof-C');
+  const strangerRow = wholeRow(ctx, 'prof-B');
+
+  ok637s2(!!chosenRow,
+    'No.637/S2: the vacancy he responded to HAS a detailed row even though the rank does not apply - hiding what a person asked for is worse than showing an evaluation he must read carefully');
+  ok637s2(!!controlRow,
+    'CALIBRATION: an applicable profile is on the same screen, so none of this can be passed by rendering nothing');
+  ok637s2(strangerRow === null,
+    'CALIBRATION: a profile NOBODY chose and the rank does not apply to is still out of the main list - S2 lifts the rule for ONE row, not for everybody');
+
+  // CALIBRATION OF THE EXTRACTOR ITSELF, on a fact that is already known: an
+  // APPLICABLE profile has carried "Добавить в шортлист" since No.622 and
+  // carries it on the base of this slice. If this is false the extractor is
+  // broken and every assertion under it is a verdict about a cut string.
+  ok637s2(!!controlRow && /data-qa="pilot-confirm"/.test(controlRow),
+    'CALIBRATION of the probe: the APPLICABLE row carries the add button (true on the base too) - without this the button checks below would pass or fail on a truncated fragment');
+
+  if (chosenRow && controlRow) {
+    // ---- 1. the button is back, and it is wired to ITS OWN pair ----------
+    ok637s2(/data-qa="pilot-confirm"/.test(chosenRow),
+      'No.637/S2: the chosen row offers "Добавить в шортлист" - (975) p.5, the server accepts this exact pair now');
+    ok637s2(!/data-qa="pilot-confirm-blocked"/.test(chosenRow),
+      'No.637/S2: and NOT the "cannot be shortlisted" note - a note where the owner asked for a button is the client contradicting the server');
+    ok637s2(/data-qa="pilot-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-A',1\)"/.test(chosenRow),
+      'No.637/S2: wired to the pair of ITS OWN row, never to the profile the operator was looking past');
+
+    // ---- 2. and the mismatch is READ, right there (930 principle 1) ------
+    ok637s2(/data-qa="pilot-rank-applicability"[^>]*data-applicability="not_applicable"/.test(chosenRow),
+      'No.637/S2: the verdict is rendered on the same row - protection is "not hidden and not devalued", NEVER "declared a match"');
+    const applicText = (row) => {
+      const m = String(row).match(/data-qa="pilot-rank-applicability"[^>]*>([\s\S]*?)<\/span>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    ok637s2(applicText(chosenRow).length > 5 && !/^[a-z_]+$/.test(applicText(chosenRow)),
+      `No.637/S2: and it is a sentence for a person, not the wire code - got "${applicText(chosenRow)}"`);
+    ok637s2(!/data-qa="pilot-rank-stale"/.test(chosenRow),
+      'No.637/S2: the row is not stamped "должность не подходит - оценка сохранена как история" either: the server stopped sending that reason for this row');
+    ok637s2(/data-qa="pilot-rank-origin"[^>]*data-origin="response"/.test(chosenRow),
+      'No.637/S2: and the row says WHY it is first - he responded to it');
+
+    // ---- 3. the withheld disclosure still names the one nobody chose -----
+    const withheldIds = (main(ctx).match(/data-qa="pilot-withheld-row" data-profile="([^"]+)"/g) || [])
+      .map((m) => m.replace(/.*data-profile="/, '').replace(/"$/, ''));
+    ok637s2(withheldIds.includes('prof-B'),
+      'No.637/S2: the profile nobody chose is NAMED in the withheld disclosure - a counter with no names cannot be acted on');
+    ok637s2(!withheldIds.includes('prof-A'),
+      'No.637/S2: and the chosen one is not in it, on either side of the union');
+  }
+
+  // ---- 4. BOTH shipped languages, on the rendered bytes ------------------
+  for (const lang of ['ru', 'en']) {
+    const lctx = await build('skipi_response');
+    lctx.setLang(lang);
+    lctx.__pilot.renderIntakePilot();
+    const row = wholeRow(lctx, 'prof-A');
+    const m = row && row.match(/data-qa="pilot-rank-applicability"[^>]*>([\s\S]*?)<\/span>/);
+    const text = m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    const cyrillic = /[Ѐ-ӿ]/.test(text);
+    ok637s2(!!row && /data-qa="pilot-confirm"/.test(row),
+      `[${lang}] No.637/S2: the button is there in this language too`);
+    ok637s2(text.length > 5 && (lang === 'ru' ? cyrillic : !cyrillic),
+      `[${lang}] No.637/S2: the mismatch is spelled out in this language - got "${text}"`);
+  }
+
+  // ---- 5. THE BOUNDARY OF THE SOURCE, measured and not promised ----------
+  // `primary_profile_id` is the same value on a letter, and it means something
+  // else there: the FIRST CONTEXT of the alias, which nobody chose. The client
+  // already tells the two apart (`cardResponseOrigin`), and S2 must ask THAT
+  // question rather than the bare id - otherwise the fix walks onto the post.
+  const mailCtx = await build('inbound');
+  const mailRow = wholeRow(mailCtx, 'prof-A');
+  ok637s2(!!mailRow,
+    'a letter\'s first-context profile is still shown (that behaviour predates S2 and is untouched)');
+  ok637s2(!!mailRow && /data-qa="pilot-confirm-blocked"/.test(mailRow),
+    'No.637/S2 BOUNDARY: on a LETTER the blocked note stays - the alias\' first context is "a label, not an authority" and the server still answers 409 for it');
+  ok637s2(!!mailRow && !/data-qa="pilot-confirm"/.test(mailRow),
+    'No.637/S2 BOUNDARY: and no button that would lead to a refusal');
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);

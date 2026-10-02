@@ -7192,6 +7192,20 @@ function cardOriginLabel(profileId) {
   if (String(profileId) !== cardResponseProfileId()) return '';
   return cardApplicabilityPair(CARD_ORIGIN_TEXT, origin);
 }
+// No.637/S2: the profile a PERSON CHOSE, which is NARROWER than
+// `cardResponseProfileId()`. The id is the same value on a letter, and there it
+// means the FIRST CONTEXT of the alias - a label nobody picked. The SOURCE is
+// the other half of the answer, and the client already tells the two apart.
+// This is the client's twin of `crewing_rank.chosen_profile_id`: the two have to
+// answer the same question, because the server stops refusing exactly this pair
+// and a client that still refuses it is the second truth these cards exist to
+// remove. It is deliberately NOT used by `cardApplicabilityVisibleRows` or by
+// `cardWithheldProfiles`: those predate S2, they treat a letter's first context
+// the way they always have, and narrowing them is a product change nobody asked
+// for.
+function cardChosenProfileId() {
+  return cardResponseOrigin() === 'response' ? cardResponseProfileId() : '';
+}
 function cardApplicabilityRows() {
   var d = pilotDetail();
   var items = (d && d.ranks && Array.isArray(d.ranks.items)) ? d.ranks.items : [];
@@ -7919,14 +7933,27 @@ function pilotCardRankRowHtml(rank) {
     ? '<span data-qa="pilot-rank-origin" data-origin="'+escapeAttr(cardResponseOrigin())+'">'+escapeHtml(originName)+'</span>'
     : '';
   // N21: a seafarer does not reach a shortlist he cannot hold. The server
-  // refuses `not_applicable` (including the profile he responded to, because the
-  // harm is an outgoing letter and that letter does not care how he arrived), and
-  // a button that leads to a refusal is a worse screen than no button plus the
-  // reason. `unknown` KEEPS its button: (939) calls it an honest manual check,
-  // and the person pressing it is that check.
+  // refuses `not_applicable`, and a button that leads to a refusal is a worse
+  // screen than no button plus the reason. `unknown` KEEPS its button: (939)
+  // calls it an honest manual check, and the person pressing it is that check.
+  //
+  // No.637/S2 (OWNER (975) p.5): and so does THE PROFILE HE CHOSE. The clause
+  // that used to stand here - "including the profile he responded to, because
+  // the harm is an outgoing letter and that letter does not care how he
+  // arrived" - was right for the evidence of No.622 and wrong for the evidence
+  // the owner added: Jobs delivers a vacancy to a seafarer ONLY when his own
+  // rank matches it, so a response is a pair two sides already agreed on, and
+  // refusing it told the operator that the one vacancy a person actually
+  // applied to is the one he may not be put forward for. The server lifts the
+  // same refusal for the same single pair; a client that kept the note would be
+  // the second truth. The mismatch is NOT swallowed: `applicHtml` above renders
+  // "должность не подходит" on this very row, beside this very button
+  // (docs/CANON-ui-v1.md principle 1).
+  var chosenHere = !!cardChosenProfileId()
+    && String(rank.profile_id) === cardChosenProfileId();
   var action = active
     ? '<button class="ghost" data-qa="pilot-withdraw" onclick="pilotShortlistWithdraw('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_withdraw'))+'</button><span class="pilot-note">'+escapeHtml(cardT('active_decision'))+': '+escapeHtml(cardMember(active.confirmed_by))+' · '+escapeHtml(pilotFormatTime(active.confirmed_at))+'</span>'
-    : (fit.hidden
+    : ((fit.hidden && !chosenHere)
       ? '<span class="pilot-note" data-qa="pilot-confirm-blocked">'+escapeHtml(cardApplicabilityUi('shortlist_blocked'))+'</span>'
       : '<button data-qa="pilot-confirm" onclick="pilotShortlistConfirm('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_add'))+'</button>');
   return '<div class="pilot-rank-row" data-qa="pilot-rank-row" data-profile="'+escapeAttr(String(rank.profile_id))+'" data-version="'+escapeAttr(String(rank.profile_version))+'">'
