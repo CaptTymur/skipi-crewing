@@ -315,9 +315,14 @@ const bootIndex = script.indexOf('// ------------- boot -------------');
 const scriptNoBoot = bootIndex > 0 ? script.slice(0, bootIndex) : script;
 
 let M = null;
-function loadInlineModuleForCurrentStore() {
+// No.637/S7: the one parameter is the REMOVAL CALIBRATION of this file. Every
+// "no number is printed" assertion below can also pass on a client that stopped
+// printing numbers at all, so each one is paired with the same render over a
+// source whose fix line is deleted — and that mutant must print the 0% back.
+// Default argument, so every existing call site is byte-for-byte unchanged.
+function loadInlineModuleForCurrentStore(sourceOverride) {
   return new Function(
-    scriptNoBoot
+    (sourceOverride == null ? scriptNoBoot : sourceOverride)
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__CREW_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
       + '\nreturn { state, showView, renderCrewFlowView, refreshCrewFlowRankings, crewFlowState, crewFlowReadInfo, crewFlowIsRead, crewFlowFindSignal, crewFlowAddSignal, crewFlowIgnoreSignal, saveCurrentBundleSeafarer, track1CandidateIntakePanelHtml, track1CandidateAction, invoke, mobileShow, mobileBack, mobileState, mobileOpenCrewFlowSignal, renderCrewFlowTreeBody, crewFlowLiveTreeHtml, tr, escapeHtml, escapeAttr, '
@@ -783,14 +788,28 @@ if (r2RuntimeReady) {
   };
   const qRow = (id) => ({
     intake_id: id, content_type: 'application/pdf', created_at: '2026-09-29T10:00:00Z', state: 'ranked',
-    summary: { state: 'ranked', facts: 3, ranks: 1, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null },
+    summary: { state: 'ranked', facts: 3, ranks: 1, ranks_stale: 0, ranks_withheld: 0, active_confirmations: 0, needs_review_reason: null },
   });
+  // No.637/S7: the same row with profiles the server withheld by rank. This is
+  // the shape S8 will produce for most people — nothing stored to compare, and
+  // a count of the active profiles his rank does not reach.
+  const qWithheld = (id, n) => {
+    const row = qRow(id);
+    row.summary.ranks = 0;
+    row.summary.ranks_withheld = n;
+    return row;
+  };
   MR2.state.intakePilot.queue = {
     // No.637/S1c adds the two unreadable-post rows. They sit at the END so every
     // assertion written before them keeps reading the rows it was written for.
     items: [qRow('i-met'), qRow('i-gap'), qRow('i-other'), qRow('i-cold'),
-            qRow('i-unknown'), qRow('i-unknown-old')],
-    limit: 50, offset: 0, total: 6,
+            qRow('i-unknown'), qRow('i-unknown-old'),
+            // No.637/S7 adds four more, also at the END for the same reason.
+            // `ranks_withheld` is the summary field the bridge already carries
+            // (No.637/S6): active profiles this candidate was deliberately not
+            // compared against, every one of them because the rank does not apply.
+            qRow('i-na'), qRow('i-nofit'), qWithheld('i-nofit-w', 3), qRow('i-nothing')],
+    limit: 50, offset: 0, total: 10,
   };
   MR2.state.intakePilot.queueLastUpdated = '2026-09-29T10:00:00Z';
 
@@ -836,6 +855,48 @@ if (r2RuntimeReady) {
     ],
     applicability: 'unknown', applicability_reason: 'rank_unreadable',
   }]);
+  // ===== No.637/S7 fixtures ================================================
+  // i-na — RIZAL SANTOS'S EXACT SHAPE, off the live stand. The bytes are in
+  //   src-tauri/src/crewing_intake.rs::LIVE_QUEUE_ROW_MIXED (captured verbatim
+  //   by S6): the selected profile answers `not_applicable` and still carries
+  //   four recognised outcomes that divide perfectly, met 0 of 4. That is the
+  //   `0 %` and the «выполнено 0 из 4» the owner saw on 02.10. He DOES fit a
+  //   second profile, so this row must not be mistaken for "fits nothing".
+  MR2.crewFlowCacheRanks('i-na', [{
+    profile_id: 'p-main', profile_version: 1, primary: true, stale: false, decided: false,
+    reasons: [
+      { requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Able Seaman' },
+      { requirement: 'certificate:stcw_ii_2', outcome: 'unconfirmed_fact' },
+      { requirement: 'certificate:oil_tanker_adv', outcome: 'unconfirmed_fact' },
+      { requirement: 'certificate:brm', outcome: 'unconfirmed_fact' },
+    ],
+    applicability: 'not_applicable', applicability_reason: null,
+  }, {
+    profile_id: 'p-side', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [{ requirement: 'rank', outcome: 'met', wanted: 'Second Engineer', found: 'Second Engineer' }],
+    applicability: 'same', applicability_reason: null,
+  }]);
+  // i-nofit — every profile the screen holds for him answers `not_applicable`.
+  //   OWNER 02.10: «вполне нормально если кандидат не подошел ни под один
+  //   профиль соответствия, такого можно отмаркировать серым цветом в левой
+  //   колонке». A calm state, not an error and not a zero.
+  MR2.crewFlowCacheRanks('i-nofit', [{
+    profile_id: 'p-main', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [{ requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Cook' }],
+    applicability: 'not_applicable', applicability_reason: null,
+  }, {
+    profile_id: 'p-side', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [{ requirement: 'rank', outcome: 'missing', wanted: 'Second Engineer', found: 'Cook' }],
+    applicability: 'not_applicable', applicability_reason: null,
+  }]);
+  // i-nofit-w — the SAME answer in the shape S8 produces: nothing stored at all,
+  //   and the count of profiles withheld by rank on the summary.
+  MR2.crewFlowCacheRanks('i-nofit-w', []);
+  // i-nothing — THE CALIBRATION OF THE COUNT. Same empty list, `ranks_withheld`
+  //   zero: nobody has answered anything about this man, which is not the same
+  //   statement as "he fits nothing". Without this row the state above could be
+  //   produced by an empty list alone and the count would be decoration.
+  MR2.crewFlowCacheRanks('i-nothing', []);
   MR2.crewFlowSelectProfile('p-main');
 
   const r2CallsBefore = calls.length;
@@ -1042,6 +1103,224 @@ if (r2RuntimeReady) {
       'No.637/S1c: and no count reaches the phone row in any shape');
     ok(/data-met="2"/.test(mMet) && /Met 2/.test(mMet),
       'No.637/S1c CALIBRATION: the readable phone row still shows its counts');
+  }
+
+  // ===== No.637/S7: «0 %» where nothing was measured, and the calm grey state =
+  //
+  // TWO owner words, one surface, and they are deliberately kept apart because
+  // they are two different sentences about a person:
+  //
+  //   (939)  «неизвестный ранг — ни совпадение, ни 0 %, а честная ручная
+  //          проверка». S1b closed the `unknown` half. The OTHER half is
+  //          `not_applicable`: against a profile his rank does not reach,
+  //          nothing was measured either, and `floor(100 * 0 / 4)` printed `0 %`
+  //          beside «Нужна проверка» on the stand on 02.10. A zero is an answer;
+  //          there was no question.
+  //
+  //   OWNER 02.10: «вполне нормально если кандидат не подошел ни под один
+  //          профиль соответствия, такого можно отмаркировать серым цветом в
+  //          левой колонке». Not fitting anything is a NORMAL outcome — so the
+  //          row gets a calm state of its own, grey, with no figure, and it is
+  //          NOT the same state as «должность не прочитана», where the operator
+  //          still has something to do.
+  {
+    const naRow = rowOf('i-na');
+    const nofitRow = rowOf('i-nofit');
+    const nofitWRow = rowOf('i-nofit-w');
+    const nothingRow = rowOf('i-nothing');
+    ok(!!naRow && !!nofitRow && !!nofitWRow && !!nothingRow,
+      'No.637/S7: all four new rows are IN the queue — a candidate is never removed from the left column by any of this');
+
+    // ---- 1. the share function itself, directly ---------------------------
+    const na = { met: 0, missing: 1, unconfirmed: 3, total: 4, stale: false, applicability: 'not_applicable' };
+    ok(share(na).pct === null,
+      'No.637/S7: crewFlowMatchShare refuses a figure when the rank does not apply — got ' + JSON.stringify(share(na)));
+    ok(share(na).reason === 'rank_not_applicable',
+      'No.637/S7: and it is its OWN refusal, not the unread one — got "' + share(na).reason + '"');
+    ok(share(na).reason !== share(Object.assign({}, na, { applicability: 'unknown' })).reason,
+      'No.637/S7: «не подходит» and «не прочитана» never collapse into one reason — two different next actions for an operator');
+    ok(share(na).met === 0 && share(na).total === 0,
+      'No.637/S7: and no met/total come back, so «выполнено 0 из 4» cannot be built from them either');
+    ok(share(Object.assign({}, na, { applicability: 'same' })).pct === 0,
+      'CALIBRATION: the SAME counts with an applicable rank still produce their honest 0% — the refusal is the answer, not the arithmetic');
+    ok(share({ met: 2, missing: 0, unconfirmed: 0, total: 2, stale: false, applicability: 'alternative' }).pct === 100,
+      'CALIBRATION: an alternative rank keeps its figure too — only one answer loses it');
+
+    // ---- 2. the rendered bytes of the QUEUE row ---------------------------
+    const naPct = r2Pct(naRow);
+    ok(naPct && naPct.attr === 'none' && !/%/.test(naPct.text),
+      'No.637/S7: the row prints no percentage at all — got ' + JSON.stringify(naPct));
+    ok(!/data-pct="\d/.test(naRow),
+      'No.637/S7: and no data-pct carrying a number anywhere in the row');
+    ok(!/checks met, by the stored evaluation/.test(naRow) && !/из \d+ по сохранённой оценке/.test(naRow),
+      'No.637/S7: nor the «выполнено M из N» caption — "0 из 4" is the same false claim written in words');
+    ok(/data-fit="rank_not_applicable"/.test(naRow),
+      'No.637/S7: the row names WHICH refusal it is, machine-readably');
+    const naWord = r2FitText(naRow);
+    ok(naWord.length > 5 && !/rank_not_applicable/.test(naWord),
+      'No.637/S7: and prints a sentence for a person, not the wire code — got "' + naWord + '"');
+
+    // ---- 3. NO MERGE with the unread post (mandatory negative) ------------
+    const unknownWord = r2FitText(rowOf('i-unknown'));
+    ok(/data-fit="rank_unknown"/.test(rowOf('i-unknown')),
+      'CALIBRATION: the unread row still reports its own state — so the comparison below is between two live states');
+    ok(naWord !== unknownWord,
+      'No.637/S7: «должность не подходит» and «должность не прочитана» are DIFFERENT sentences on the row — got "' + naWord + '" vs "' + unknownWord + '"');
+    ok(!/data-fit="rank_unknown"/.test(naRow) && !/data-fit="rank_not_applicable"/.test(rowOf('i-unknown')),
+      'No.637/S7: and different machine states — one word for both would send the operator to the wrong next action');
+
+    // ---- 4. the control pair: an applicable rank keeps its honest number ---
+    ok(r2Pct(metRow) && r2Pct(metRow).attr === '100' && /100%/.test(metRow),
+      'No.637/S7 CONTROL: the applicable pair KEEPS its figure in the same render — the fix hits one answer, not every number');
+    ok(/2 of 2 checks met, by the stored evaluation/.test(r2FitText(metRow)),
+      'No.637/S7 CONTROL: and keeps its mandatory caption (928)');
+    ok(r2Pct(gapRow) && r2Pct(gapRow).attr === '33',
+      'No.637/S7 CONTROL: and the partial pair still floors to 33%');
+
+    // ---- 5. OWNER 02.10: the calm grey state ------------------------------
+    for (const [name, row] of [['i-nofit', nofitRow], ['i-nofit-w', nofitWRow]]) {
+      ok(/data-fit="no_profile_fit"/.test(row),
+        'OWNER 02.10 (' + name + '): fitting no profile at all is a state of its OWN, machine-readably');
+      ok(/cf-fit-nofit/.test(row),
+        'OWNER 02.10 (' + name + '): and it carries its own grey marking class in the left column');
+      const pct = r2Pct(row);
+      ok(pct && pct.attr === 'none' && !/%/.test(pct.text),
+        'OWNER 02.10 (' + name + '): with no figure — «не подошёл» is not a zero');
+      ok(!/checks met, by the stored evaluation/.test(row) && !/из \d+ по сохранённой оценке/.test(row),
+        'OWNER 02.10 (' + name + '): and no «выполнено M из N» caption either');
+      const word = r2FitText(row);
+      ok(/[Ff]its none of the profiles/.test(word),
+        'OWNER 02.10 (' + name + '): and a calm, honest sentence — got "' + word + '"');
+    }
+    // not the unread state, and not any of the three it had to be told apart from
+    ok(!/cf-fit-nofit/.test(rowOf('i-unknown')) && !/data-fit="no_profile_fit"/.test(rowOf('i-unknown')),
+      'OWNER 02.10: an unread post is NOT the grey state — there the operator still has something to do');
+    ok(!/cf-fit-nofit/.test(metRow) && !/cf-fit-nofit/.test(gapRow),
+      'OWNER 02.10 CONTROL: a candidate who DOES fit a profile never turns grey');
+    ok(!/cf-fit-nofit/.test(naRow) && !/data-fit="no_profile_fit"/.test(naRow),
+      'OWNER 02.10 CONTROL: and neither does the man whose SELECTED profile does not fit but who fits another one — "this vacancy" and "no vacancy" are two statements');
+    ok(!/cf-fit-nofit/.test(nothingRow) && !/data-fit="no_profile_fit"/.test(nothingRow),
+      'OWNER 02.10 CALIBRATION: an empty evaluation list with NOTHING withheld is not an answer — silence never becomes «не подошёл ни под один профиль»');
+    ok(!/cf-fit-nofit/.test(coldRow),
+      'OWNER 02.10 CALIBRATION: nor is a candidate whose evaluations were never loaded');
+
+    // ---- 6. the marking is its own, in CSS, and serves both themes --------
+    {
+      const css = HTML.slice(0, HTML.indexOf('</style>'));
+      const rule = (css.match(/\n\.cf-fit-nofit \.cf-dot \{[^}]*\}/) || [''])[0];
+      ok(rule !== '',
+        'OWNER 02.10: the grey state has a mark of its own in CSS, not a shade inherited from «нужна проверка»');
+      ok(/var\(--/.test(rule),
+        'OWNER 02.10: painted from a theme token, so the light theme is served too — got "' + rule.trim() + '"');
+      ok(!/border-radius:\s*50%/.test(rule),
+        'OWNER 02.10: and it is not the same round dot every other state uses — colour alone is never the carrier here');
+      for (const other of ['.cf-fit-complete .cf-dot', '.cf-fit-stale .cf-dot']) {
+        const o = (css.match(new RegExp('\\n' + other.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\{[^}]*\\}')) || [''])[0];
+        ok(o !== '' && o.replace(other, '') !== rule.replace('.cf-fit-nofit .cf-dot', ''),
+          'OWNER 02.10: distinguishable from ' + other + ' — got "' + o.trim() + '"');
+      }
+    }
+
+    // ---- 7. both shipped languages, on the rendered bytes -----------------
+    for (const lang of ['ru', 'en']) {
+      store.set('skipi-crewing-ui-language', lang);
+      const tree = String(MR2.crewFlowLiveTreeHtml('live'));
+      const grab = (id) => {
+        const m = tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+        if (!m) return '';
+        const f = String(m[0]).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+        return f ? f[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+      };
+      const naText = grab('i-na'), nofitText = grab('i-nofit'), unreadText = grab('i-unknown');
+      const cyr = (t) => /[Ѐ-ӿ]/.test(t);
+      ok(naText.length > 5 && (lang === 'ru' ? cyr(naText) : !cyr(naText)),
+        '[' + lang + '] No.637/S7: the refusal is spelled out in this language — got "' + naText + '"');
+      ok(nofitText.length > 5 && (lang === 'ru' ? cyr(nofitText) : !cyr(nofitText)),
+        '[' + lang + '] OWNER 02.10: and so is the calm state — got "' + nofitText + '"');
+      ok(naText !== unreadText && nofitText !== unreadText && naText !== nofitText,
+        '[' + lang + '] No.637/S7: the three states stay three sentences in this language too');
+      ok(!/%/.test(naText) && !/%/.test(nofitText),
+        '[' + lang + '] No.637/S7: and neither of them carries a figure');
+    }
+    store.set('skipi-crewing-ui-language', 'en');
+
+    // ---- 8. the dictionary keys, so a missing one cannot print a wire code -
+    for (const key of ['crew_flow.fit_rank_not_applicable', 'crew_flow.fit_no_profile_fit']) {
+      const lines = HTML.split('\n').filter((line) => line.includes("'" + key + "'"));
+      ok(lines.length === 2, key + ': exactly one EN and one RU entry — got ' + lines.length);
+      const val = (i) => (new RegExp("'" + key.replace('.', '\\.') + "':'([^']+)'").exec(lines[i] || '') || [])[1] || '';
+      ok(val(0) !== '' && !/[Ѐ-ӿ]/.test(val(0)), key + ': the EN wording exists — got "' + val(0) + '"');
+      ok(val(1) !== '' && /[Ѐ-ӿ]/.test(val(1)), key + ': and a Russian one — a missing key prints the wire code beside a person\'s name — got "' + val(1) + '"');
+    }
+
+    // ---- 9. THE PHONE, where the same left column is a list ---------------
+    {
+      const mobile = String(MR2.crewFlowLiveMobileHtml('live'));
+      const mRow = (id) => {
+        const m = mobile.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<button class="mobile-list-item|$)'));
+        return m ? m[0] : '';
+      };
+      ok(/data-fit="rank_not_applicable"/.test(mRow('i-na')) && !/data-pct="\d/.test(mRow('i-na')),
+        'No.637/S7: the PHONE row refuses the figure too — same function, same answer');
+      ok(/cf-fit-nofit/.test(mRow('i-nofit')),
+        'OWNER 02.10: and the calm grey state reaches the phone list, which is the same left column');
+      ok(/data-pct="100"/.test(mRow('i-met')),
+        'No.637/S7 CONTROL: while the applicable phone row keeps its figure');
+    }
+
+    // ---- 10. REMOVAL CALIBRATION, and the TYPE of the failure is recorded --
+    //
+    // Everything above can also pass on a client that stopped printing numbers
+    // altogether, so each refusal is re-measured on a source whose fix line is
+    // DELETED. Two things are instrumented rather than assumed:
+    //   * the mutant actually BUILT — a mutant killed by the parser proves the
+    //     parser, not the check (the one property this series keeps buying);
+    //   * a known-good row still renders its number inside that same mutant.
+    {
+      const MUTATIONS = [
+        { id: 'S7-PCT', anchor: "  if (row.applicability === 'not_applicable') { out.reason = 'rank_not_applicable'; return out; }\n",
+          what: 'the refusal of a figure for a rank that does not apply' },
+        { id: 'S7-NOFIT', anchor: "  if (crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; } else if (!profileId) {",
+          replacement: '  if (!profileId) {',
+          what: 'the calm grey state for a candidate who fits no profile' },
+      ];
+      for (const mut of MUTATIONS) {
+        const occurrences = scriptNoBoot.split(mut.anchor).length - 1;
+        ok(occurrences === 1,
+          mut.id + ': the line this calibration removes occurs exactly once in the shipped script — got ' + occurrences);
+        if (occurrences !== 1) continue;
+        const mutantSource = scriptNoBoot.replace(mut.anchor, mut.replacement == null ? '' : mut.replacement);
+        let MX = null, buildError = null;
+        try { MX = loadInlineModuleForCurrentStore(mutantSource); } catch (e) { buildError = e; }
+        ok(MX !== null,
+          mut.id + ': the mutant BUILDS — otherwise what goes red is the parser and not ' + mut.what
+            + (buildError ? ' (' + buildError.name + ': ' + buildError.message + ')' : ''));
+        if (!MX) continue;
+        MX.state.settings = MR2.state.settings;
+        MX.state.intakePilot = MR2.state.intakePilot;
+        MX.state.crewFlowRanks = MR2.state.crewFlowRanks;
+        MX.state.crewFlowProfiles = MR2.state.crewFlowProfiles;
+        MX.crewFlowSelectProfile('p-main');
+        const mutantTree = String(MX.crewFlowLiveTreeHtml('live'));
+        const mutantRow = (id) => {
+          const m = mutantTree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+          return m ? m[0] : '';
+        };
+        ok(/data-pct="100"/.test(mutantRow('i-met')),
+          mut.id + ' CALIBRATION OF THE MUTANT: a known-good row still renders its figure inside it, so the mutant is a working client and not a blank page');
+        if (mut.id === 'S7-PCT') {
+          ok(/data-qa="crew-flow-row-pct" data-pct="0"/.test(mutantRow('i-na')),
+            'S7-PCT KILLED: with the refusal removed the row prints the 0% back — the assertion above reddens on the defect and not on an empty render');
+          ok(/0 of 4 checks met/.test(mutantRow('i-na')),
+            'S7-PCT KILLED: and «выполнено 0 из 4» comes back with it');
+        } else {
+          ok(!/cf-fit-nofit/.test(mutantRow('i-nofit')),
+            'S7-NOFIT KILLED: with the state removed the grey marking is gone from the left column');
+          ok(/data-fit="rank_not_applicable"/.test(mutantRow('i-nofit')),
+            'S7-NOFIT KILLED: and the row falls back to the per-profile sentence, which is what the owner asked to replace for this case');
+        }
+      }
+    }
   }
 
   // the two states must be readable, in both interface languages

@@ -1155,13 +1155,70 @@ const controls = [
       "  if (!ev || ev.key !== 'Escape' || state.view !== 'intake_pilot' || !pilotDetail()) return;"]],
     async sensor(ctx) { await mobileCardChain(mobilize(ctx)); },
   },
+  // ===================== No.637/S7 drills (removal-calibrated) =============
+  // Each `edits` pair puts the PRE-S7 bytes back on the card surface. The row
+  // these protect is the one a person RESPONDED to and whose rank does not
+  // apply — the only `not_applicable` that reaches a fit card, and the one that
+  // printed `0 %` on the stand.
+  {
+    id: 'S7-PCT', defect: 'No.637/S7: a figure on a profile the rank does not reach (the stand printed 0%)',
+    edits: [["  if (row.applicability === 'not_applicable') { out.reason = 'rank_not_applicable'; return out; }\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_NA, 'prof-B': S4C_NA, 'prof-C': S4C_SAME }, source: 'skipi_response', chosen: 'prof-A' });
+      const card = s7FitCard(main(ctx), 'prof-A');
+      assert.ok(card !== '', 'the responded-to card is on the screen at all');
+      assert.ok(/data-qa="pilot-fit-pct" data-pct="none"/.test(card), 'no percentage on it - got ' + (card.match(/data-pct="[^"]*"/) || [''])[0]);
+      assert.ok(!/%/.test(card), 'and not a per-cent sign anywhere on that card');
+      assert.ok(!/checks met, by the stored evaluation/.test(card), 'nor the "M of N checks met" caption, which is the same claim in words');
+      assert.ok(!/<div class="cf-bar"/.test(card), 'and no progress bar - a bar is a figure drawn instead of printed');
+      // CALIBRATION inside the same render: the applicable card keeps everything.
+      const control = s7FitCard(main(ctx), 'prof-C');
+      assert.ok(/data-pct="\d+"/.test(control) && /%/.test(control), 'CALIBRATION: the applicable card keeps its figure');
+    },
+  },
+  {
+    id: 'S7-COUNTS', defect: 'No.637/S7: «Не выполнено: 1 · Не подтверждено: 0» beside a comparison nobody made',
+    edits: [["  var countsHidden = (rank && (String(rank.applicability) === 'unknown' || String(rank.applicability) === 'not_applicable'));",
+      "  var countsHidden = (rank && String(rank.applicability) === 'unknown');"]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_NA, 'prof-B': S4C_NA, 'prof-C': S4C_SAME }, source: 'skipi_response', chosen: 'prof-A' });
+      const card = s7FitCard(main(ctx), 'prof-A');
+      assert.ok(card !== '', 'the responded-to card is on the screen at all');
+      assert.ok(!/<div class="cf-counts">/.test(card), 'the counts line is gone with the figure - got ' + (card.match(/<div class="cf-counts">[\s\S]*?<\/div>/) || [''])[0]);
+      const control = s7FitCard(main(ctx), 'prof-C');
+      assert.ok(/<div class="cf-counts">/.test(control), 'CALIBRATION: the applicable card keeps its counts');
+    },
+  },
 ];
+// The ONE extractor both S7 controls and the S7 section below read through, so
+// a card is never asserted about by reading the rest of the document after it
+// (the probe defect No.637/S1b was caught on).
+function s7FitCard(html, id) {
+  const part = String(html).split('data-qa="pilot-fit-card"').slice(1)
+    .find((p) => p.startsWith(` data-profile="${id}"`));
+  if (!part) return '';
+  const stops = [part.indexOf('data-qa="pilot-rank-unread"'), part.indexOf('data-qa="pilot-withheld"'), part.indexOf('</section>')].filter((i) => i >= 0);
+  return stops.length ? part.slice(0, Math.min.apply(null, stops)) : part;
+}
 
 // Runner: known-good → mutant → restore. The mutation itself is applied OUTSIDE the
 // sensor try: an anchor that does not occur exactly once is a runner failure
 // (ANCHOR_MISSING), never a "mutant RED".
+// No.637/S7: WHAT killed the mutant, not just that something did. A mutant the
+// parser rejects proves the parser; a mutant a ReferenceError kills proves the
+// loader. Only an AssertionError proves the assertion the control is written
+// for. The field is recorded for every control and printed in the matrix; the
+// S7 controls assert on it.
+function mutantFailureKind(error) {
+  if (!error) return 'none';
+  const name = (error && error.name) || '';
+  if (error instanceof assert.AssertionError || name === 'AssertionError') return 'assertion';
+  if (error instanceof SyntaxError || name === 'SyntaxError') return 'compiler';
+  if (name === 'ReferenceError' || name === 'TypeError' || name === 'RangeError') return 'runtime';
+  return 'other';
+}
 async function runControl(control) {
-  let cleanBefore = false, mutantRed = false, cleanAfter = false, mutantMessage = '';
+  let cleanBefore = false, mutantRed = false, cleanAfter = false, mutantMessage = '', mutantKind = 'none';
   try { await control.sensor(makeContext()); cleanBefore = true; } catch (error) { mutantMessage = `known-good failed: ${error.message}`; }
   let anchorMissing = false;
   if (cleanBefore) {
@@ -1169,12 +1226,12 @@ async function runControl(control) {
     const block = control.block === 'c3b1' ? c3b1Source : c3b2Source;
     try { mutantSource = mutate(block, control.edits); } catch (error) { anchorMissing = true; mutantMessage = `ANCHOR_MISSING: ${error.message}`; }
     if (mutantSource !== null) {
-      try { await control.sensor(makeContext(control.block === 'c3b1' ? { c3b1: mutantSource } : { source: mutantSource })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; }
+      try { await control.sensor(makeContext(control.block === 'c3b1' ? { c3b1: mutantSource } : { source: mutantSource })); mutantMessage = 'mutant survived'; } catch (error) { mutantRed = true; mutantMessage = error.message; mutantKind = mutantFailureKind(error); }
     }
     try { await control.sensor(makeContext()); cleanAfter = true; } catch (error) { mutantMessage += ` / restore failed: ${error.message}`; }
   }
   const verdict = anchorMissing ? 'ANCHOR_MISSING' : (cleanBefore && mutantRed && cleanAfter ? 'KILLED' : 'FAIL');
-  return { id: control.id, defect: control.defect, cleanBefore, mutantRed, cleanAfter, anchorMissing, verdict, detail: mutantMessage };
+  return { id: control.id, defect: control.defect, cleanBefore, mutantRed, cleanAfter, anchorMissing, verdict, mutantKind, detail: mutantMessage };
 }
 
 console.log('# runner self-check: a mutant whose anchor does not exist must never count as KILLED');
@@ -1189,7 +1246,14 @@ const controlResults = [];
 for (const control of controls) {
   const result = await runControl(control);
   controlResults.push(result);
-  softOk(result.verdict === 'KILLED', `${result.id} ${result.defect}: clean=${result.cleanBefore ? 'GREEN' : 'RED'} mutant=${result.mutantRed ? 'RED' : 'GREEN'} restore=${result.cleanAfter ? 'GREEN' : 'RED'} (${result.detail.slice(0, 90)})`);
+  softOk(result.verdict === 'KILLED', `${result.id} ${result.defect}: clean=${result.cleanBefore ? 'GREEN' : 'RED'} mutant=${result.mutantRed ? 'RED' : 'GREEN'}/${result.mutantKind} restore=${result.cleanAfter ? 'GREEN' : 'RED'} (${result.detail.slice(0, 90)})`);
+  // No.637/S7: a control whose mutant died of a SyntaxError or a ReferenceError
+  // measured the parser, not the product. Named as its own line so it cannot
+  // hide inside a KILLED.
+  if (result.mutantRed) {
+    softOk(result.mutantKind === 'assertion',
+      `${result.id}: the mutant died of an ASSERTION, not of the compiler or the loader — got ${result.mutantKind} (${result.detail.slice(0, 70)})`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3510,8 +3574,22 @@ console.log('\n# No.637/S1b: the post nobody could read - shown, explained, acti
     'No.637/S1b: it hands back no met/total either — the caption is built from those two, so leaving them would print "выполнено 1 из 1"');
   ok637(shareOf(Object.assign({}, counts, { applicability: 'same' })).pct === 100,
     'CALIBRATION: the same counts with a readable post still produce 100% — the refusal is the verdict, not the arithmetic');
-  ok637(shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).pct === 100,
-    'not_applicable is NOT handled here: it never reaches a card at all (the adapter hides the row), and quietly suppressing it here would hide a rendering bug instead of failing on it');
+  // No.637/S7 INVERTS THIS ASSERTION, and says why rather than quietly flipping
+  // it. Its premise — "it never reaches a card at all (the adapter hides the
+  // row)" — was true the day S1b was written and was made FALSE by S2:
+  // `cardApplicabilityVisibleRows` keeps the profile a person RESPONDED to
+  // whatever its verdict ((975) п.5). So a `not_applicable` fit card is exactly
+  // what the stand rendered on 02.10, with `0 %` and «выполнено 0 из 4» printed
+  // on it. The premise is measured dead; the assertion resting on it goes with
+  // it. This is a change of PLACE, not of meaning: the figure is still refused
+  // where it was never measured — now on one more verdict.
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).pct === null,
+    'No.637/S7: a rank that does not apply yields NO figure either — nothing was measured against this profile, and 0% is the other end of the invented 50%');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).reason === 'rank_not_applicable',
+    'No.637/S7: and it is a refusal of its OWN — «не подходит» and «не прочитана» are two different next actions for an operator');
+  ok637(shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).met === 0
+    && shareOf(Object.assign({}, counts, { applicability: 'not_applicable' })).total === 0,
+    'No.637/S7: and hands back no met/total, so «выполнено M из N» cannot be built from them');
   ok637(shareOf(counts).pct === 100,
     'a row from a server that does not speak this contract keeps rendering exactly as before');
 
@@ -5663,7 +5741,118 @@ console.log('\n# No.637/S4b: the warning beside the send button, and one word fo
   }
 }
 
+// ===== No.637/S7: the OTHER end of the invented 50 % — «0 %» on a card ======
+//
+// OWNER (939), verbatim and standing: «неизвестный ранг — ни совпадение, ни
+// 0 %, а честная ручная проверка». S1b closed the `unknown` half of that
+// sentence. This closes the other: a profile whose rank does NOT APPLY was
+// never measured against this person either, so `floor(100 * 0 / 4)` is not a
+// result — it is an unasked question printed as a zero.
+//
+// WHY IT REACHES A CARD AT ALL, since S1b said it never could: S2 ((975) п.5)
+// made `cardApplicabilityVisibleRows` keep the profile a person RESPONDED to
+// whatever its verdict. That is the row the owner saw on the stand on 02.10:
+// «Chief Officer · Mykola Shevchuk» and «Master · Rizal Santos», `0 %` and
+// «выполнено 0 из 4» under the words «Нужна проверка».
+//
+// Written against the RENDERED MARKUP, in both shipped languages, with a
+// control pair on the same screen so "no figure" cannot pass on a blank card.
+console.log('\n# No.637/S7: a rank that does not apply carries no figure, and keeps its own words');
+{
+  const ok637s7 = softOk;
+  const build = async (lang) => {
+    const ctx = makeContext();
+    await s4ControlSetup(ctx, {
+      verdicts: { 'prof-A': S4C_NA, 'prof-B': S4C_NA, 'prof-C': S4C_SAME },
+      source: 'skipi_response', chosen: 'prof-A',
+    });
+    if (lang) { ctx.setLang(lang); ctx.__pilot.renderIntakePilot(); }
+    return ctx;
+  };
+  const ctx = await build(null);
+  const naCard = s7FitCard(main(ctx), 'prof-A');
+  const okCard = s7FitCard(main(ctx), 'prof-C');
+
+  ok637s7(naCard !== '',
+    'No.637/S7: the vacancy he responded to HAS a fit card even though the rank does not apply — S2 put it there and this slice does not take it away');
+  ok637s7(okCard !== '',
+    'CALIBRATION: an applicable profile has a card on the SAME screen, so nothing below can pass by rendering nothing');
+
+  if (naCard && okCard) {
+    // ---- 1. every form of the figure is gone ----------------------------
+    ok637s7(/data-qa="pilot-fit-pct" data-pct="none"/.test(naCard),
+      'No.637/S7: no percentage — got ' + (naCard.match(/data-pct="[^"]*"/) || ['<none found>'])[0]);
+    ok637s7(!/%/.test(naCard),
+      'No.637/S7: and not a per-cent sign anywhere on that card');
+    ok637s7(!/checks met, by the stored evaluation/.test(naCard) && !/из \d+ по сохранённой оценке/.test(naCard),
+      'No.637/S7: nor the «выполнено M из N» caption — «0 из 4» is the same false claim written in words');
+    ok637s7(!/<div class="cf-bar"/.test(naCard),
+      'No.637/S7: and no progress bar — a bar is a figure drawn instead of printed');
+    ok637s7(!/<div class="cf-counts">/.test(naCard),
+      'No.637/S7: and no «Не выполнено: N · Не подтверждено: M» either — three numbers about a comparison nobody made read as a measurement, which is the half S1c removed one verdict over — got '
+        + (naCard.match(/<div class="cf-counts">[\s\S]*?<\/div>/) || ['<none>'])[0]);
+    ok637s7(/data-fit="rank_not_applicable"/.test(naCard),
+      'No.637/S7: the card names WHICH refusal it is, machine-readably');
+
+    // ---- 2. the control pair keeps its honest numbers -------------------
+    ok637s7(/data-qa="pilot-fit-pct" data-pct="\d+"/.test(okCard) && /%/.test(okCard),
+      'No.637/S7 CONTROL: the applicable card keeps its percentage — the fix hits one verdict, not every number on the screen');
+    ok637s7(/checks met, by the stored evaluation/.test(okCard),
+      'No.637/S7 CONTROL: and its mandatory caption (928)');
+    ok637s7(/<div class="cf-counts">/.test(okCard),
+      'No.637/S7 CONTROL: and its counts line');
+
+    // ---- 3. NO MERGE with «не прочитана» (mandatory negative) -----------
+    const unreadCtx = makeContext();
+    await s4ControlSetup(unreadCtx, {
+      verdicts: { 'prof-A': S4C_UNKNOWN, 'prof-B': S4C_UNKNOWN, 'prof-C': S4C_SAME },
+      source: 'skipi_response', chosen: 'prof-A',
+    });
+    const unreadCard = s7FitCard(main(unreadCtx), 'prof-A');
+    const word = (card) => {
+      const m = String(card).match(/data-qa="pilot-fit-pct" data-pct="none">[\s\S]*?<div class="cf-fitcard-cap">([\s\S]*?)<\/div>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    const applic = (card) => {
+      const m = String(card).match(/data-qa="pilot-fit-applicability"[^>]*>([\s\S]*?)<\/div>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    ok637s7(unreadCard !== '' && /data-fit="rank_unknown"/.test(unreadCard),
+      'CALIBRATION: the unread card still reports its own state — so what follows compares two live states, not one state with itself');
+    ok637s7(word(naCard).length > 5 && word(unreadCard).length > 5,
+      'CALIBRATION: both cards print a word where the figure is refused — got "' + word(naCard) + '" and "' + word(unreadCard) + '"');
+    ok637s7(word(naCard) !== word(unreadCard),
+      'No.637/S7: «не подходит» and «не прочитана» are DIFFERENT sentences where the figure used to be — got "' + word(naCard) + '" vs "' + word(unreadCard) + '"');
+    ok637s7(applic(naCard) !== applic(unreadCard) && applic(naCard).length > 5,
+      'No.637/S7: and the line beneath keeps saying which of the two it is — got "' + applic(naCard) + '" vs "' + applic(unreadCard) + '"');
+    ok637s7(!/data-fit="rank_unknown"/.test(naCard) && !/data-fit="rank_not_applicable"/.test(unreadCard),
+      'No.637/S7: different machine states too — one code for both would send the operator to the wrong next action');
+    // The button is NOT taken away by any of this: (975) п.5 stands.
+    ok637s7(/data-qa="pilot-fit-confirm"/.test(naCard),
+      'PRESERVE (975 п.5 / S2): the shortlist button stays on the vacancy he applied to — this slice removes a number, not a person');
+
+    // ---- 4. the two wordings exist in both shipped languages ------------
+    for (const lang of ['en', 'ru']) {
+      const lctx = await build(lang);
+      const card = s7FitCard(main(lctx), 'prof-A');
+      const text = word(card);
+      const cyr = /[Ѐ-ӿ]/.test(text);
+      ok637s7(text.length > 5 && (lang === 'ru' ? cyr : !cyr),
+        '[' + lang + '] No.637/S7: the refusal is a sentence in this language — got "' + text + '"');
+      ok637s7(!/%/.test(card),
+        '[' + lang + '] No.637/S7: and the card carries no figure in this language either');
+      const key = (lctx.setLang(lang), lctx.__pilot.cardT('share_rank_not_applicable'));
+      ok637s7(key !== 'share_rank_not_applicable' && (lang === 'ru' ? /[Ѐ-ӿ]/.test(key) : !/[Ѐ-ӿ]/.test(key)),
+        '[' + lang + '] No.637/S7: PILOT_CARD_TEXT carries the wording — a missing key prints the wire code — got "' + key + '"');
+      const unread = lctx.__pilot.cardT('share_rank_unknown');
+      ok637s7(key !== unread,
+        '[' + lang + '] No.637/S7: and it is not the unread wording wearing a second key');
+    }
+    ctx.setLang('en');
+  }
+}
+
 console.log('\n# control matrix');
-for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} restore=${row.cleanAfter} — ${row.defect}`);
+for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} kind=${row.mutantKind} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);
 if (failed !== 0) process.exit(1);
