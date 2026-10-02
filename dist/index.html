@@ -7131,7 +7131,15 @@ var CARD_APPLICABILITY_UI_TEXT = {
   withheld_title:['Не оценивались по должности: {n}', 'Not evaluated by rank: {n}'],
   withheld_note:['Должность кандидата к этим активным профилям не относится, поэтому автоматической оценки по ним нет. Сохранённые ранее оценки не удалены — они ниже, с пометкой.', 'The candidate’s rank does not apply to these active profiles, so no automatic evaluation was produced. Evaluations stored earlier are not deleted — they are below, marked.'],
   no_origin:['Исходного профиля у этой записи нет: она пришла не откликом на профиль.', 'This record has no originating profile: it did not arrive as a response to one.'],
-  shortlist_blocked:['По этому профилю в шортлист не добавляем: должность не подходит.', 'This profile cannot take him onto a shortlist: the rank does not apply.']
+  shortlist_blocked:['По этому профилю в шортлист не добавляем: должность не подходит.', 'This profile cannot take him onto a shortlist: the rank does not apply.'],
+  // No.637/S4 (No.642). The title lives in the <summary>, which needs NO click
+  // to read: the unknown itself, the count and the next action are on the main
+  // screen, and only the REPETITION of them is folded. That is the line
+  // docs/CANON-ui-v1.md draws - an unknown may never be hidden from the person
+  // taking the decision, and twenty copies of one unknown are not twenty
+  // unknowns. The wording is the owner's own: «должность не прочитана».
+  unread_title:['Должность не прочитана \u2014 нужна ручная проверка: {n}', 'The rank was not read \u2014 needs a manual check: {n}'],
+  unread_note:['Эти активные профили не сравнивались: должность кандидата прочитать не удалось. Профили и кнопка «Добавить в шортлист» \u2014 здесь же; никто не убран с экрана и ничто не засчитано как выполненное.', 'These active profiles were not compared: the candidate\u2019s rank could not be read. The profiles and the “Add to shortlist” button are here; nobody is dropped and nothing is counted as met.']
 };
 function cardApplicabilityPair(table, key) {
   var pair = table[String(key)];
@@ -7229,6 +7237,44 @@ function cardApplicabilityVisibleRows() {
     return a - b;
   });
 }
+// No.637/S4 (No.642). ONE predicate, and it is used by BOTH surfaces that
+// render these rows - the fit cards and the detailed comparisons. An unreadable
+// CV now produces a row against every active profile (S1b/S1c made sure the
+// person is never off the screen), and with twenty active profiles that was
+// twenty cards carrying the SAME sentence: cognitive rubbish of exactly the
+// kind docs/CANON-ui-v1.md keeps off the main screen. What is folded is the
+// repetition; the unknown, its count and its next action stay in the <summary>,
+// unfolded, beside the decision.
+//
+// TWO rows never fold, and both are somebody's standing word:
+//   * the profile HE RESPONDED TO ((975) p.5 and S2) - it is the headline row,
+//     with its own button, whatever its verdict;
+//   * anything that is not `unknown` - `not_applicable` is handled by the
+//     withheld disclosure, which predates this and is untouched.
+function cardApplicabilityRowSplit() {
+  var originId = cardResponseProfileId();
+  var shown = [], unread = [];
+  cardApplicabilityVisibleRows().forEach(function(row){
+    var id = String(row && row.profile_id);
+    if (originId && id === originId) { shown.push(row); return; }
+    if (cardApplicability(row).answer === 'unknown') { unread.push(row); return; }
+    shown.push(row);
+  });
+  return { shown: shown, unread: unread };
+}
+// The block itself. `render` is the surface's own row renderer, so neither
+// surface gets a second way of drawing a profile - the two could then disagree
+// about the same person, which is the drift this whole card exists to remove.
+function cardRankUnreadHtml(rows, where, render) {
+  if (!rows.length) return '';
+  var title = cardApplicabilityUi('unread_title').replace('{n}', String(rows.length));
+  var body = rows.map(render).join('');
+  return '<details class="cf-brk" data-qa="pilot-rank-unread" data-where="'+escapeAttr(String(where))+'" data-count="'+escapeAttr(String(rows.length))+'">'
+    + '<summary>'+escapeHtml(title)+'</summary>'
+    + '<div class="pilot-note">'+escapeHtml(cardApplicabilityUi('unread_note'))+'</div>'
+    + (where === 'fit' ? '<div class="cf-fitcards">'+body+'</div>' : body)
+    + '</details>';
+}
 // What the screen is NOT showing as current, by profile and with a reason -
 // because docs/CANON-ui-v1.md requires the number to be NAMED, and because
 // "2 hidden, the rank does not apply" and "2 hidden, nobody could read his
@@ -7299,6 +7345,12 @@ var PILOT_CARD_TEXT = {
     facts_empty:'No facts have been recorded yet.', facts_failed:'Facts could not be loaded.', ranks_empty:'No stored comparisons.', ranks_failed:'Comparisons could not be loaded.', card_failed:'Card could not be loaded.', history_empty:'No decisions yet.', profiles_failed:'Compliance profile names are unavailable; ids are shown.',
     stored_comparison:'Stored comparison', freshness_unverified:'Fact freshness for this comparison is unverified', profile_version_used:'Profile version used', name_unavailable:'name unavailable', profile:'Profile', profile_current:'current version', profile_state:'state', primary:'primary profile',
     decided_yes:'Every stated requirement is compared; this is not a suitability or verification badge.', decided_no:'Comparison is incomplete: some requirements are not met or not confirmed.',
+    // No.637/S4 (No.644): the sentence that stands where `decided_no` used to.
+    // `decided_no` names requirements that are not met or not confirmed; on an
+    // unread post there are none of either, because NOTHING was compared. The
+    // row is not blanked - a blank is not an honest answer - it is told the
+    // truth it can stand behind, and the next action with it.
+    decided_rank_unknown:'The rank was not read, so no comparison was run \u2014 check by hand.',
     entered_by_member:'Entered by a team member', member:'Team member', confidence:'confidence', confidence_unknown:'confidence unknown', version:'version', page:'page', span:'span', source_object:'source object', recorded:'recorded',
     add_fact:'Add fact', correct_fact:'Correct', correcting:'Correcting field', cancel_correction:'Cancel correction', field:'Field', value:'Value', page_optional:'Page (optional)', span_optional:'Span (optional)',
     rank_now:'Compare against the active compliance profiles', rank_note:'Explicit action. The active compliance profiles the rank applies to are compared; the rest are named below but not evaluated. The request completing does not make facts current.', rank_done:'Ranking request completed', rank_ranked:'Ranking completed', rank_no_active:'No active compliance profiles',
@@ -7360,6 +7412,7 @@ var PILOT_CARD_TEXT = {
     facts_empty:'Сведений пока нет.', facts_failed:'Сведения не загружены.', ranks_empty:'Сохранённых оценок нет.', ranks_failed:'Оценки не загружены.', card_failed:'Карточка не загружена.', history_empty:'Решений пока нет.', profiles_failed:'Названия профилей соответствия недоступны; показаны идентификаторы.',
     stored_comparison:'Сохранённая оценка', freshness_unverified:'Актуальность фактов для этой оценки не подтверждена', profile_version_used:'Версия профиля в оценке', name_unavailable:'название недоступно', profile:'Профиль', profile_current:'текущая версия', profile_state:'состояние', primary:'основной профиль',
     decided_yes:'Все заявленные требования сопоставлены; это не признак пригодности или проверки.', decided_no:'Сопоставление не завершено: есть невыполненные или неподтверждённые требования.',
+    decided_rank_unknown:'Должность не прочитана, сопоставление не выполнялось \u2014 нужна ручная проверка.',
     entered_by_member:'Введено сотрудником', member:'Сотрудник', confidence:'уверенность', confidence_unknown:'уверенность неизвестна', version:'версия', page:'страница', span:'фрагмент', source_object:'объект-источник', recorded:'записано',
     add_fact:'Добавить сведения', correct_fact:'Исправить', correcting:'Исправление поля', cancel_correction:'Отменить исправление', field:'Поле', value:'Значение', page_optional:'Страница (необязательно)', span_optional:'Фрагмент (необязательно)',
     rank_now:'Пересчитать сравнения с активными профилями соответствия', rank_note:'Явное действие. Сравниваются активные профили соответствия, подходящие по должности; остальные названы ниже, но не оцениваются. Выполнение запроса не делает сведения актуальными.', rank_done:'Запрос пересчёта выполнен', rank_ranked:'Оценка выполнена', rank_no_active:'Нет активных профилей соответствия',
@@ -7961,7 +8014,14 @@ function pilotCardRankRowHtml(rank) {
     + '<div class="pilot-queue-title">'+pilotCardProfileLabel(rank.profile_id)+'</div>'
     + '<div class="pilot-note" data-qa="pilot-rank-version">'+escapeHtml(cardT('profile_version_used'))+': '+escapeHtml(String(rank.profile_version))+'</div>'
     + pilotCardFreshnessHtml(rank)
-    + '<div class="pilot-note" data-qa="pilot-rank-decided">'+escapeHtml(rank.decided ? cardT('decided_yes') : cardT('decided_no'))+'</div>'
+    // No.637/S4 (No.644): `decided_no` is a statement ABOUT REQUIREMENTS -
+    // «есть невыполненные или неподтверждённые» - and on an unread post it is
+    // false rather than imprecise: the lists are empty because the comparison
+    // never ran (S1c), not because everything passed. The verdict decides
+    // which sentence is true, exactly as it decides whether a figure may be
+    // printed; `rank.decided` is the wrong oracle here because `false` is
+    // what an unrun comparison and an incomplete one both look like.
+    + '<div class="pilot-note" data-qa="pilot-rank-decided">'+escapeHtml(fit.answer === 'unknown' ? cardT('decided_rank_unknown') : (rank.decided ? cardT('decided_yes') : cardT('decided_no')))+'</div>'
     + listHtml('met', groups.met)+listHtml('missing', groups.missing)+listHtml('unconfirmed', groups.unconfirmed)+listHtml('unknown', groups.unknown)
     + '<div class="pilot-note">'+escapeHtml(cardT('shortlist_note'))+'</div><div class="pilot-actions">'+action+'</div></div>';
 }
@@ -7976,8 +8036,13 @@ function pilotCardRanksHtml() {
   // нерелевантные сравнения не выдавать за актуальные"), and this section used
   // to print every row it received, so hiding a captain's evaluation in one
   // block and printing it in the other was two screens and two truths (N13).
-  var rows = cardApplicabilityVisibleRows().map(pilotCardRankRowHtml).join('');
-  if (!rows) rows = '<div class="pilot-status" data-qa="pilot-ranks-empty">'+escapeHtml(cardT('ranks_empty'))+'</div>';
+  // No.637/S4 (No.642): the same rows, with the unread ones gathered once.
+  var split = cardApplicabilityRowSplit();
+  var rows = split.shown.map(pilotCardRankRowHtml).join('');
+  // «Сохранённых оценок нет» over a block holding twenty of them would be the
+  // same false sentence No.644 removes one line below, written in the negative.
+  if (!rows && !split.unread.length) rows = '<div class="pilot-status" data-qa="pilot-ranks-empty">'+escapeHtml(cardT('ranks_empty'))+'</div>';
+  rows += cardRankUnreadHtml(split.unread, 'ranks', pilotCardRankRowHtml);
   var unranked = d.ranks.unranked_active_profiles.length ? '<div class="pilot-note" data-qa="pilot-unranked"><strong>'+escapeHtml(cardT('unranked'))+':</strong> '+d.ranks.unranked_active_profiles.map(function(u){ return escapeHtml(String(u.name || u.profile_id))+' ('+escapeHtml(String(u.profile_id))+')'; }).join(', ')+'</div>' : '';
   return errorHtml+profilesNote+rows+cardWithheldHtml('ranks')+unranked;
 }
@@ -8438,6 +8503,18 @@ function cardDraftProfileId() {
     // absent verdict is not a refusal: the behaviour stays what it was.
     return true;
   };
+  // No.637/S4 (No.650), OWNER 02.10 and (975) p.5 - the same word that fixed the
+  // shortlist in S2, applied to the surface it was never applied to. Jobs hands a
+  // vacancy to a seafarer only when his own rank matches it, so a RESPONSE is a
+  // pair both sides already agreed on; skipping it meant that the operator put a
+  // man on the shortlist of the vacancy he applied for (S2) and the draft then
+  // offered him a DIFFERENT one, silently. `cardChosenProfileId()` is the same
+  // predicate S2 introduced, so the two surfaces cannot drift apart: it is empty
+  // on a letter, where the id is the alias' first context and nobody chose it,
+  // and there N21 stands untouched. The rank in the letter is still gated by
+  // `cardDraftRequirements` below, so this never names a post nobody read.
+  var chosen = cardChosenProfileId();
+  if (chosen) return chosen;
   if (d.card && d.card.primary_profile_id && applicable(d.card.primary_profile_id)) return String(d.card.primary_profile_id);
   for (var i = 0; i < ranks.length; i++) {
     if (ranks[i] && ranks[i].profile_id && !cardApplicability(ranks[i]).hidden) return String(ranks[i].profile_id);
@@ -8451,6 +8528,15 @@ function cardDraftRequirements(profileId) {
   var ranks = (d.ranks && Array.isArray(d.ranks.items)) ? d.ranks.items : [];
   for (var i = 0; i < ranks.length; i++) {
     if (String(ranks[i].profile_id) !== String(profileId)) continue;
+    // No.637/S4 (No.647). The letter stopped naming the post on 01.10 - not by
+    // decision but as a SIDE EFFECT of S1c emptying `reasons` on an unread row.
+    // The direction was right and the mechanism was not: the client was naming
+    // a post whenever the payload happened to carry one, and a payload that
+    // still carries reasons (an older build, a cached row, another deployment)
+    // would put «предложение на позицию Master» in front of a man whose post
+    // nobody could read. The VERDICT decides, exactly as it decides whether a
+    // figure may be printed; the hedged sentence takes over by itself.
+    if (cardApplicability(ranks[i]).answer === 'unknown') return [];
     return (Array.isArray(ranks[i].reasons) ? ranks[i].reasons : []).filter(function(r){ return r && r.wanted != null; });
   }
   return [];
@@ -8998,7 +9084,6 @@ function pilotCardFitSummaryHtml() {
   // No.622: what the rank does not apply to is NOT current, so it does not stand
   // among the current evaluations - but the count is on the screen and the names
   // are one click away (docs/CANON-ui-v1.md, principle 1: never silently).
-  var visible = cardApplicabilityVisibleRows();
   var withheld = cardWithheldProfiles();
   if (!items.length && !withheld.length) return '<div class="pilot-status" data-qa="pilot-fit-empty">' + escapeHtml(cardT('fit_none')) + '</div>';
   // The arithmetic is available, not permanently on display (OWNER 2026-09-30).
@@ -9008,10 +9093,14 @@ function pilotCardFitSummaryHtml() {
   var noOrigin = cardResponseOrigin() === 'none'
     ? '<div class="pilot-note" data-qa="pilot-fit-no-origin">' + escapeHtml(cardApplicabilityUi('no_origin')) + '</div>'
     : '';
-  var cards = visible.length
-    ? '<div class="cf-fitcards">' + visible.map(pilotCardFitCardHtml).join('') + '</div>'
-    : '<div class="pilot-status" data-qa="pilot-fit-none-applicable">' + escapeHtml(cardT('fit_none')) + '</div>';
-  return explain + noOrigin + cards + cardWithheldHtml('fit');
+  // No.637/S4 (No.642): the SAME split as the detailed section below, from the
+  // same predicate. Fixing one surface and not the other is the two-oracle
+  // defect this card has already paid for twice.
+  var split = cardApplicabilityRowSplit();
+  var cards = split.shown.length
+    ? '<div class="cf-fitcards">' + split.shown.map(pilotCardFitCardHtml).join('') + '</div>'
+    : (split.unread.length ? '' : '<div class="pilot-status" data-qa="pilot-fit-none-applicable">' + escapeHtml(cardT('fit_none')) + '</div>');
+  return explain + noOrigin + cards + cardRankUnreadHtml(split.unread, 'fit', pilotCardFitCardHtml) + cardWithheldHtml('fit');
 }
 function pilotRenderCard(main, afterHeroHtml) {
   var d = pilotDetail();

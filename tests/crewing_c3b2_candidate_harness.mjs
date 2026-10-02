@@ -244,7 +244,7 @@ function makeContext({ source = c3b2Source, c3b1 = c3b1Source, server = makeServ
     setTimeout, clearTimeout, queueMicrotask,
   };
   vm.createContext(context);
-  vm.runInContext(`${c3b1}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT };`, context);
+  vm.runInContext(`${c3b1}\n${source}\nthis.__pilot = { pilotEnter, pilotLeave, renderIntakePilot, pilotLoadQueue, pilotOpenCard, pilotCloseCard, pilotCardRefreshAll, pilotCardLoad, pilotFactsLoad, pilotRanksLoad, pilotFactSubmit, pilotFactStartCorrection, pilotRankNow, pilotShortlistConfirm, pilotShortlistWithdraw, pilotCardKeydown, pilotDetail, cardT, PILOT_CARD_TEXT, PILOT_CARD_REFUSAL_TEXT, PILOT_CARD_OUTCOME_TEXT, PILOT_CARD_STALE_TEXT, pilotDraftOpen, pilotDraftProfile, cardDraftProfileId, cardDraftText };`, context);
   return context;
 }
 // ===========================================================================
@@ -736,6 +736,54 @@ function mutate(source, edits) {
   assert.notEqual(out, source, 'mutant differs from the clean source');
   return out;
 }
+// ---------------------------------------------------------------------------
+// No.637/S4 — fixtures shared by the S4 mutation controls below. The controls
+// are CALIBRATED BY REMOVAL in the literal sense the card asks for: each one's
+// `edits` put the pre-S4 bytes back, and the sensor must go red on them. A
+// check that cannot go red is the defect this series has paid for eight times.
+// ---------------------------------------------------------------------------
+const S4C_UNKNOWN = { applicability: 'unknown', applicability_reason: 'rank_unreadable' };
+const S4C_SAME = { applicability: 'same', applicability_reason: null };
+const S4C_NA = { applicability: 'not_applicable', applicability_reason: null };
+async function s4ControlSetup(ctx, { profiles = 3, verdicts = {}, source = 'skipi_response', chosen = null } = {}) {
+  for (let i = ctx.server.profiles.length; i < profiles; i += 1) {
+    const letter = String.fromCharCode(65 + i);
+    ctx.server.profiles.push({ id: `prof-${letter}`, crewing_id: 'crew-synthetic', name: `Master · ${letter}`, version: 1, state: 'active', rank: 'Master', certs: ['coc_master'] });
+  }
+  ctx.server.card.source = source;
+  ctx.server.card.primary_profile_id = chosen;
+  const baseView = ctx.server.ranksView.bind(ctx.server);
+  // The shape S1c ships: an `unknown` row carries no figures and no reasons.
+  ctx.server.ranksView = () => baseView().map((row) => {
+    const v = verdicts[row.profile_id] || S4C_SAME;
+    const out = Object.assign({}, row, v);
+    if (v.applicability === 'unknown') return Object.assign(out, { met: [], missing: [], unconfirmed: [], reasons: [], decided: false });
+    return out;
+  });
+  await positiveChainUntilRank(ctx);
+  return ctx;
+}
+const s4Section = (html, qa, nextQa) => {
+  const s = html.indexOf(`<section class="pilot-card" data-qa="${qa}"`);
+  if (s < 0) return '';
+  const e = html.indexOf(`<section class="pilot-card" data-qa="${nextQa}"`, s);
+  return e < 0 ? html.slice(s) : html.slice(s, e);
+};
+const s4Before = (src) => { const i = String(src).indexOf('data-qa="pilot-rank-unread"'); return i < 0 ? String(src) : String(src).slice(0, i); };
+const s4Inside = (src) => {
+  const i = String(src).indexOf('data-qa="pilot-rank-unread"');
+  if (i < 0) return '';
+  const rest = String(src).slice(i), e = rest.indexOf('</details>');
+  return e < 0 ? rest : rest.slice(0, e);
+};
+const s4Count = (src, re) => (String(src).match(re) || []).length;
+async function s4DraftBody(ctx, { skew = false } = {}) {
+  if (skew) ctx.__pilot.pilotDetail().ranks.items[0].reasons = [{ requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Qwerty' }];
+  ctx.__pilot.pilotDraftOpen('intake-A', 'reply');
+  await flush();
+  const m = main(ctx).match(/data-qa="pilot-draft-body"[^>]*>([\s\S]*?)<\/textarea>/);
+  return m ? m[1] : '';
+}
 const controls = [
   {
     id: 'M01', defect: 'after rerank UNKNOWN freshness replaced by "current"',
@@ -912,6 +960,120 @@ const controls = [
       assert.equal(attempts(ctx)[0].outcome, 'unknown');
       await ctx.__pilot.pilotCardRefreshAll(); await flush();
       assert.equal(mutationCalls(ctx).length, 1, 'exactly one mutation dispatch; refresh adds none');
+    },
+  },
+  // ===================== No.637/S4 drills (removal-calibrated) =============
+  // Each `edits` pair puts the PRE-S4 bytes back. KILLED therefore means: with
+  // the fix removed, the check goes red — the one property eight checks in this
+  // series turned out not to have.
+  {
+    id: 'S4-644', defect: 'No.644: the unread row claims there ARE unmet or unconfirmed requirements',
+    edits: [["escapeHtml(fit.answer === 'unknown' ? cardT('decided_rank_unknown') : (rank.decided ? cardT('decided_yes') : cardT('decided_no')))",
+      "escapeHtml(rank.decided ? cardT('decided_yes') : cardT('decided_no'))"]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_UNKNOWN, 'prof-B': S4C_SAME, 'prof-C': S4C_SAME } });
+      const row = s4Inside(s4Section(main(ctx), 'pilot-section-ranks', 'pilot-section-history'));
+      const m = row.match(/data-qa="pilot-rank-decided"[^>]*>([\s\S]*?)<\/div>/);
+      const text = m ? m[1] : '';
+      assert.ok(text.length > 10, 'the unread row still says something about the state of the comparison');
+      assert.ok(!/not met or not confirmed/.test(text), 'no claim about requirements nobody compared - got "' + text + '"');
+      assert.ok(/not read/.test(text) && /by hand/.test(text), 'the honest sentence and the next action - got "' + text + '"');
+    },
+  },
+  {
+    id: 'S4-642a', defect: 'No.642: twenty identical cards loose on the main screen again',
+    edits: [["    if (cardApplicability(row).answer === 'unknown') { unread.push(row); return; }\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { profiles: 20, verdicts: Object.fromEntries(Array.from({ length: 20 }, (_, i) => ['prof-' + String.fromCharCode(65 + i), S4C_UNKNOWN])), source: 'inbound' });
+      const fit = s4Section(main(ctx), 'pilot-section-fit', 'pilot-section-source');
+      const ranks = s4Section(main(ctx), 'pilot-section-ranks', 'pilot-section-history');
+      assert.equal(s4Count(s4Before(fit), /data-qa="pilot-fit-card"/g), 0, 'no loose copies on the main screen');
+      assert.equal(s4Count(s4Before(ranks), /data-qa="pilot-rank-row"/g), 0, 'and none in the detailed section either');
+      assert.equal(s4Count(s4Inside(fit), /data-qa="pilot-fit-card"/g), 20, 'all twenty are inside the one block');
+    },
+  },
+  {
+    id: 'S4-642b', defect: "No.642 tidied the screen by DROPPING the people (the owner's standing refusal)",
+    edits: [["    if (cardApplicability(row).answer === 'unknown') { unread.push(row); return; }",
+      "    if (cardApplicability(row).answer === 'unknown') { return; }"]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { profiles: 20, verdicts: Object.fromEntries(Array.from({ length: 20 }, (_, i) => ['prof-' + String.fromCharCode(65 + i), S4C_UNKNOWN])), source: 'inbound' });
+      const fit = s4Section(main(ctx), 'pilot-section-fit', 'pilot-section-source');
+      const ranks = s4Section(main(ctx), 'pilot-section-ranks', 'pilot-section-history');
+      for (let i = 0; i < 20; i += 1) {
+        const id = 'prof-' + String.fromCharCode(65 + i);
+        assert.ok(s4Inside(fit).includes('data-profile="' + id + '"'), id + ' is still NAMED on the screen');
+      }
+      assert.equal(s4Count(s4Inside(ranks), /data-qa="pilot-confirm"/g), 20, 'and each of them is still reachable by the shortlist button');
+    },
+  },
+  {
+    id: 'S4-642c', defect: 'PRESERVE (S2/975 p.5): the vacancy he responded to folded away with the rest',
+    edits: [["    if (originId && id === originId) { shown.push(row); return; }\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { profiles: 20, verdicts: Object.fromEntries(Array.from({ length: 20 }, (_, i) => ['prof-' + String.fromCharCode(65 + i), S4C_UNKNOWN])), source: 'skipi_response', chosen: 'prof-A' });
+      const fit = s4Section(main(ctx), 'pilot-section-fit', 'pilot-section-source');
+      assert.ok(/data-qa="pilot-fit-card" data-profile="prof-A"/.test(s4Before(fit)), 'his own vacancy is the headline card, unfolded');
+      assert.equal(s4Count(s4Before(fit), /data-qa="pilot-fit-card"/g), 1, 'and exactly his own stands loose');
+      assert.ok(/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-A',1\)"/.test(s4Before(fit)), 'with the button wired to his own pair');
+    },
+  },
+  {
+    id: 'S4-650', defect: 'No.650: the draft walks past the vacancy he responded to',
+    edits: [["  var chosen = cardChosenProfileId();\n  if (chosen) return chosen;\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_NA, 'prof-B': S4C_NA, 'prof-C': S4C_SAME }, source: 'skipi_response', chosen: 'prof-A' });
+      assert.equal(ctx.__pilot.cardDraftProfileId(), 'prof-A', 'the draft defaults to his own vacancy');
+      const body = await s4DraftBody(ctx);
+      assert.ok(/Master · A/.test(body), 'the RENDERED letter names it - got "' + body.replace(/\s+/g, ' ').slice(0, 130) + '"');
+      assert.ok(!/Master · C/.test(body), 'and not the one the client picked for him');
+    },
+  },
+  {
+    id: 'S4-647a', defect: 'No.647: a payload that still carries reasons puts an unread post into the letter',
+    edits: [["    if (cardApplicability(ranks[i]).answer === 'unknown') return [];\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_UNKNOWN, 'prof-B': S4C_UNKNOWN, 'prof-C': S4C_UNKNOWN }, source: 'skipi_response', chosen: 'prof-A' });
+      const body = await s4DraftBody(ctx, { skew: true });
+      assert.ok(!/an opening for/.test(body), 'no post is named when none was read - got "' + body.replace(/\s+/g, ' ').slice(0, 140) + '"');
+      assert.ok(/an opening that may fit your documents/.test(body), 'and the hedged sentence stands instead');
+    },
+  },
+  {
+    id: 'S4-647b', defect: 'No.647: the two offer sentences swapped (branch A silent, branch B inventing a post)',
+    edits: [["  lines.push((rank ? cardT('draft_offer_rank').replace('{rank}', rank) : cardT('draft_offer'))",
+      "  lines.push((rank ? cardT('draft_offer') : cardT('draft_offer_rank').replace('{rank}', 'Master'))"]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { verdicts: { 'prof-A': S4C_SAME, 'prof-B': S4C_UNKNOWN, 'prof-C': S4C_SAME }, source: 'skipi_response', chosen: 'prof-A' });
+      const read = await s4DraftBody(ctx);
+      assert.ok(/an opening for Master/.test(read), 'branch A: the post WAS read, so the letter names it - got "' + read.replace(/\s+/g, ' ').slice(0, 140) + '"');
+      ctx.__pilot.pilotDraftProfile('prof-B');
+      await flush();
+      const m = main(ctx).match(/data-qa="pilot-draft-body"[^>]*>([\s\S]*?)<\/textarea>/);
+      const unread = m ? m[1] : '';
+      assert.ok(!/an opening for/.test(unread), 'branch B: the post was NOT read, so none is named - got "' + unread.replace(/\s+/g, ' ').slice(0, 140) + '"');
+      assert.ok(/an opening that may fit your documents/.test(unread), 'branch B: and the hedged sentence stands instead');
+    },
+  },
+  {
+    id: 'S4-PCT', defect: 'PRESERVE (939/975): a figure reappears on an unread post once the rows are grouped',
+    edits: [["  if (row.applicability === 'unknown') { out.reason = 'rank_unknown'; return out; }\n", ""]],
+    async sensor(ctx) {
+      await s4ControlSetup(ctx, { profiles: 20, verdicts: Object.fromEntries(Array.from({ length: 20 }, (_, i) => ['prof-' + String.fromCharCode(65 + i), S4C_UNKNOWN])), source: 'inbound' });
+      // THE SKEW, deliberately: a payload whose verdict says the post was never
+      // read while its counts divide perfectly. On the shipping server S1c
+      // empties them, so without this the client guard could be deleted and
+      // nothing would go red - the exact "check that cannot redden" this card
+      // was written against.
+      ctx.__pilot.pilotDetail().ranks.items.forEach((r) => {
+        r.met = ['rank']; r.missing = []; r.unconfirmed = [];
+        r.reasons = [{ requirement: 'rank', outcome: 'met', wanted: 'Master', found: 'Master' }];
+      });
+      ctx.__pilot.renderIntakePilot();
+      const fit = s4Section(main(ctx), 'pilot-section-fit', 'pilot-section-source');
+      assert.ok(!/data-pct="\d/.test(s4Inside(fit)), 'not one percentage inside the block');
+      assert.ok(!/%/.test(s4Inside(fit)), 'and not a per-cent sign either');
+      assert.ok(!/checks met, by the stored evaluation/.test(s4Inside(fit)), 'nor the caption, which is the same claim in words');
     },
   },
   {
@@ -3124,8 +3286,20 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
       if (!ok622(at > 0, name + ' (' + fn + ') exists')) continue;
       const body = html.slice(at, html.indexOf('\nfunction ', at + 10));
       ok622(/cardWithheldHtml\(/.test(body), name + ' emits the withheld disclosure');
-      ok622(/cardApplicabilityVisibleRows\(\)/.test(body), name + ' lists only the rows that stayed');
+      // No.637/S4 (No.642): the call MOVED behind `cardApplicabilityRowSplit`,
+      // which partitions exactly what `cardApplicabilityVisibleRows` returns.
+      // The PLACE changed, the property did not - and the three lines below pin
+      // the derivation, so this retarget cannot become a loophole.
+      ok622(/cardApplicabilityVisibleRows\(\)/.test(body) || /cardApplicabilityRowSplit\(\)/.test(body),
+        name + ' lists only the rows that stayed');
     }
+    const splitAt = html.indexOf('function cardApplicabilityRowSplit(');
+    ok622(splitAt > 0, 'No.637/S4: the ONE split both surfaces now use exists');
+    const splitBody = splitAt > 0 ? html.slice(splitAt, html.indexOf('\nfunction ', splitAt + 10)) : '';
+    ok622(/cardApplicabilityVisibleRows\(\)/.test(splitBody),
+      'No.637/S4: and it is built ON cardApplicabilityVisibleRows - what the rank does not apply to can never re-enter through the split');
+    ok622(/cardApplicability\(row\)\.answer === 'unknown'/.test(splitBody),
+      'No.637/S4: it folds ONE verdict, and asks the same adapter every other surface asks');
     // N11: the agency that HAS profiles is never told to create one.
     const fitAt = html.indexOf('function pilotCardFitSummaryHtml(');
     const fitBody = html.slice(fitAt, html.indexOf('\nfunction ', fitAt + 10));
@@ -3137,7 +3311,14 @@ console.log('\n# No.622 - applicability: one answer, said the same way in all th
   console.log('# N21 - a seafarer does not reach a shortlist or a letter he cannot hold');
   const draftAt = html.indexOf('function cardDraftProfileId()');
   const draftBody = draftAt > 0 ? html.slice(draftAt, html.indexOf('\nfunction ', draftAt + 10)) : '';
-  ok622(/cardApplicability\s*\(/.test(draftBody), 'the draft never picks a profile the rank does not apply to');
+  // No.637/S4 (No.650) CHANGES THIS ONE, and it is a change of MEANING, named
+  // rather than quietly re-passed: OWNER 02.10 and (975) p.5 exempt exactly one
+  // pair - the vacancy he responded to - as S2 already exempted it for the
+  // shortlist. Everything N21 refused besides that, it still refuses; both
+  // halves are drilled behaviourally in the No.637/S4 block below.
+  ok622(/cardApplicability\s*\(/.test(draftBody), 'the draft still refuses a profile the rank does not apply to');
+  ok622(/cardChosenProfileId\(\)/.test(draftBody),
+    'No.637/S4 (650): except the one he responded to, through the SAME predicate S2 used - a second way of asking "which profile did he choose" is the drift this card removes');
   const rowAt = html.indexOf('function pilotCardRankRowHtml(');
   const rowBody = rowAt > 0 ? html.slice(rowAt, html.indexOf('\nfunction ', rowAt + 10)) : '';
   ok622(/not_applicable|\.hidden/.test(rowBody), 'the shortlist button is refused on an inapplicable row, on the screen and not only on the server');
@@ -3177,8 +3358,18 @@ console.log('\n# No.637/S1b: the post nobody could read - shown, explained, acti
   const ctx = makeContext({ server: srv });
   await positiveChainUntilRank(ctx);
 
-  const fitCard = (id) => main(ctx).split('data-qa="pilot-fit-card"').slice(1)
-    .find((part) => part.startsWith(` data-profile="${id}"`)) || null;
+  // BOUND THE LAST CARD. `split` ends every fragment at the next card except the
+  // final one, which ran to the end of the DOCUMENT - so anything asserted about
+  // "this card" was in fact asserted about the whole rest of the page. Harmless
+  // until No.637/S4 put a disclosure further down, and the same class of probe
+  // defect the S2 extractor was already caught on. Calibrated two lines below.
+  const fitCard = (id) => {
+    const part = main(ctx).split('data-qa="pilot-fit-card"').slice(1)
+      .find((p) => p.startsWith(` data-profile="${id}"`));
+    if (!part) return null;
+    const stops = [part.indexOf('data-qa="pilot-rank-unread"'), part.indexOf('</section>')].filter((i) => i >= 0);
+    return stops.length ? part.slice(0, Math.min.apply(null, stops)) : part;
+  };
   const unknownCard = fitCard('prof-A');
   const knownCard = fitCard('prof-B');
   ok637(!!unknownCard, 'the candidate whose post nobody could read HAS a card at all — before S1b the server wrote no row and he was off the screen entirely');
@@ -3215,8 +3406,19 @@ console.log('\n# No.637/S1b: the post nobody could read - shown, explained, acti
     };
     ok637(applicText(unknownCard).length > 10 && !/^[a-z_]+$/.test(applicText(unknownCard)),
       'No.637/S1b: the line is a sentence for a person, not the wire code — got "' + applicText(unknownCard) + '"');
+    // No.637/S4 (No.642) CHANGED THIS PROPERTY, and it is named here rather than
+    // left to re-pass quietly. Twenty active profiles produced twenty copies of
+    // this very card, so the REPETITION is folded into one disclosure - while
+    // the unknown ITSELF is not folded: it stands in the <summary>, unopened,
+    // with its count and its next action. docs/CANON-ui-v1.md forbids hiding an
+    // unknown from the person deciding; it does not ask for one unknown printed
+    // twenty times. Manager's decision on the owner's standing word that nobody
+    // disappears - and the second assertion is what keeps the first honest.
     ok637(!/<details|<summary/.test(unknownCard),
-      'No.637/S1b: and it is NOT under a disclosure — docs/CANON-ui-v1.md principle 1 keeps unknowns next to the decision and the button');
+      'No.637/S1b: the card itself folds nothing - its verdict, its reason and its button are in the open wherever the card stands');
+    const unreadSummary = (main(ctx).match(/data-qa="pilot-rank-unread"[^>]*>\s*<summary>([\s\S]*?)<\/summary>/) || [])[1] || '';
+    ok637(/not read/.test(unreadSummary) && /manual check/.test(unreadSummary) && /\b1\b/.test(unreadSummary),
+      `No.637/S4: and the unknown is announced on the main screen, in the summary, with no click at all — got "${unreadSummary}"`);
 
     // ---- 3. the BUTTON. The harm was a man who could not be shortlisted. --
     ok637(/data-qa="pilot-fit-confirm"/.test(unknownCard),
@@ -4959,6 +5161,292 @@ console.log('\n# No.637/S2: the vacancy he actually applied to - visible, honest
     'No.637/S2 BOUNDARY: on a LETTER the blocked note stays - the alias\' first context is "a label, not an authority" and the server still answers 409 for it');
   ok637s2(!!mailRow && !/data-qa="pilot-confirm"/.test(mailRow),
     'No.637/S2 BOUNDARY: and no button that would lead to a refusal');
+}
+
+// ===========================================================================
+// No.637 / S4 — FOUR screen defects of the unreadable post, one candidate.
+//
+//   No.644  the detailed row printed "Сопоставление не завершено: есть
+//           невыполненные или неподтверждённые требования" over a row where
+//           NOTHING was measured. Not an imprecision: a statement about
+//           requirements nobody compared.
+//   No.642  every active profile got its own card, so twenty profiles meant
+//           twenty identical cards saying the same unknown twenty times.
+//           The group below is ONE disclosure — and the sentence it is folded
+//           under is ON the main screen, in the <summary>, with the count and
+//           the next action, because docs/CANON-ui-v1.md forbids hiding the
+//           unknown ITSELF. What is folded is the REPETITION.
+//   No.650  the draft letter skipped the profile the seafarer responded to
+//           whenever the rank did not apply to it, and quietly offered him a
+//           different vacancy — after S2 put him on the shortlist of the one
+//           he chose.
+//   No.647  the offer sentence changed as a SIDE EFFECT of S1c emptying
+//           `reasons`. Both branches are pinned here, and the client stops
+//           depending on the server having emptied them.
+//
+// Everything below reads the RENDERED markup. The one place a function is
+// called directly (`cardDraftProfileId`) is also asserted through the rendered
+// draft, because No.640 and the S2 extractor both proved that a check on an
+// adapter's input is not a check on what a person sees.
+// ===========================================================================
+console.log('\n# No.637/S4: the unread post stops lying, stops repeating itself, and stops writing the wrong letter');
+{
+  const okS4 = softOk;
+  const S4_UNKNOWN = { applicability: 'unknown', applicability_reason: 'rank_unreadable' };
+  const S4_SAME = { applicability: 'same', applicability_reason: null };
+  const S4_NA = { applicability: 'not_applicable', applicability_reason: null };
+  const s4Profiles = (n) => Array.from({ length: n }, (_, i) => {
+    const letter = String.fromCharCode(65 + i);
+    return { id: `prof-${letter}`, crewing_id: 'crew-synthetic', name: `Master · ${letter}`, version: 1, state: 'active', rank: 'Master', certs: ['coc_master'] };
+  });
+  // The S1c server, in the shape it actually ships: an `unknown` row carries
+  // no figures and no reasons. A fixture that kept them would be testing a
+  // server nobody runs — and branch C below tests exactly that skew, on purpose.
+  async function s4Build({ profiles = 3, verdicts = {}, source = 'skipi_response', chosen = null, language = 'en' } = {}) {
+    const srv = makeServer({ profiles: s4Profiles(profiles) });
+    srv.card.source = source;
+    srv.card.primary_profile_id = chosen;
+    const baseView = srv.ranksView.bind(srv);
+    srv.ranksView = () => baseView().map((row) => {
+      const v = verdicts[row.profile_id] || S4_SAME;
+      const out = Object.assign({}, row, v);
+      if (v.applicability === 'unknown') return Object.assign(out, { met: [], missing: [], unconfirmed: [], reasons: [], decided: false });
+      return out;
+    });
+    const ctx = makeContext({ server: srv, language });
+    await positiveChainUntilRank(ctx);
+    return ctx;
+  }
+  const allUnknown = (n) => Object.fromEntries(s4Profiles(n).map((p) => [p.id, S4_UNKNOWN]));
+  // Section cutters: the card holds TWO surfaces that render the same rows, and
+  // the whole point of No.642 is that a fix on one of them is not a fix.
+  const section = (html, qa, nextQa) => {
+    const s = html.indexOf(`<section class="pilot-card" data-qa="${qa}"`);
+    if (s < 0) return null;
+    const e = html.indexOf(`<section class="pilot-card" data-qa="${nextQa}"`, s);
+    return e < 0 ? html.slice(s) : html.slice(s, e);
+  };
+  const fitSection = (ctx) => section(main(ctx), 'pilot-section-fit', 'pilot-section-source');
+  const ranksSection = (ctx) => section(main(ctx), 'pilot-section-ranks', 'pilot-section-history');
+  // What stands BEFORE the group opens — i.e. what the operator sees without
+  // clicking anything. Cutting at the group's own marker, not at a generic tag.
+  const beforeGroup = (src) => {
+    const i = String(src || '').indexOf('data-qa="pilot-rank-unread"');
+    return i < 0 ? String(src || '') : String(src).slice(0, i);
+  };
+  const insideGroup = (src) => {
+    const i = String(src || '').indexOf('data-qa="pilot-rank-unread"');
+    if (i < 0) return '';
+    const rest = String(src).slice(i);
+    const e = rest.indexOf('</details>');
+    return e < 0 ? rest : rest.slice(0, e);
+  };
+  const count = (src, re) => (String(src || '').match(re) || []).length;
+
+  // ---- CALIBRATION of the cutters themselves, on facts known before S4 ----
+  // Three applicable profiles: three cards, three rows, and no group at all.
+  {
+    const ctx = await s4Build({ profiles: 3 });
+    okS4(count(fitSection(ctx), /data-qa="pilot-fit-card"/g) === 3,
+      'CALIBRATION of the probe: three APPLICABLE profiles still render three fit cards (true on the base) — without this every count below is a verdict about a mis-cut string');
+    okS4(count(ranksSection(ctx), /data-qa="pilot-rank-row"/g) === 3,
+      'CALIBRATION of the probe: and three detailed rows');
+    okS4(count(main(ctx), /data-qa="pilot-rank-unread"/g) === 0,
+      'CALIBRATION: no group is drawn when there is nothing unread — S4 adds a block for ONE verdict, not a wrapper around everything');
+    okS4(/data-qa="pilot-fit-pct" data-pct="\d+"/.test(fitSection(ctx)),
+      'CALIBRATION: the applicable profiles keep their figure — S4 changes no arithmetic at all');
+  }
+
+  // =========================== No.644 ====================================
+  {
+    const verdicts = { 'prof-A': S4_UNKNOWN, 'prof-B': S4_SAME, 'prof-C': S4_SAME };
+    const ctx = await s4Build({ profiles: 3, verdicts });
+    const rowOf = (ctx2, id) => {
+      const parts = main(ctx2).split('<div class="pilot-rank-row" data-qa="pilot-rank-row"');
+      const part = parts.slice(1).find((p) => p.startsWith(` data-profile="${id}"`));
+      if (!part) return null;
+      const cut = part.indexOf('<div class="pilot-rank-row" data-qa="pilot-rank-row"');
+      return cut === -1 ? part : part.slice(0, cut);
+    };
+    const decidedOf = (row) => {
+      const m = String(row || '').match(/data-qa="pilot-rank-decided"[^>]*>([\s\S]*?)<\/div>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    const unknownRow = rowOf(ctx, 'prof-A');
+    okS4(!!unknownRow, 'No.637/S4 (644): the unread row is still rendered somewhere — the sentence is replaced, the person is not removed');
+    okS4(!!unknownRow && decidedOf(unknownRow).length > 0,
+      'No.637/S4 (644): and it still carries a sentence about the state of the comparison — a blank is not an honest answer either');
+    okS4(!/невыполненные или неподтверждённые/.test(decidedOf(unknownRow)) && !/not met or not confirmed/.test(decidedOf(unknownRow)),
+      `No.637/S4 (644): the row no longer claims there ARE unmet or unconfirmed requirements — nothing was measured. Got: "${decidedOf(unknownRow)}"`);
+    okS4(/not read|не прочитана/.test(decidedOf(unknownRow)) && /by hand|ручная проверка/.test(decidedOf(unknownRow)),
+      `No.637/S4 (644): it says the post was not read and names the next action. Got: "${decidedOf(unknownRow)}"`);
+    // CALIBRATION on the same screen: the sentence that is TRUE stays.
+    const openRow = rowOf(ctx, 'prof-B');
+    okS4(!!openRow && /Every stated requirement is compared/.test(decidedOf(openRow)),
+      `CALIBRATION: a row that WAS compared keeps its own sentence — 644 replaces one sentence for one verdict, not the vocabulary. Got: "${decidedOf(openRow)}"`);
+    // ---- both shipped languages, on the rendered bytes ----
+    for (const language of ['ru', 'en']) {
+      const lctx = await s4Build({ profiles: 3, verdicts, language });
+      const text = decidedOf(rowOf(lctx, 'prof-A'));
+      const cyrillic = /[Ѐ-ӿ]/.test(text);
+      okS4(text.length > 10 && (language === 'ru' ? cyrillic : !cyrillic),
+        `[${language}] No.637/S4 (644): the honest sentence exists in this language — got "${text}"`);
+      okS4(!/невыполненные или неподтверждённые/.test(text) && !/not met or not confirmed/.test(text),
+        `[${language}] No.637/S4 (644): and the false one is gone in this language too`);
+    }
+  }
+
+  // =========================== No.642 ====================================
+  {
+    const N = 20;
+    const ctx = await s4Build({ profiles: N, verdicts: allUnknown(N), source: 'inbound', chosen: null });
+    const fit = fitSection(ctx), ranks = ranksSection(ctx);
+    okS4(count(main(ctx), /data-qa="pilot-rank-unread"/g) === 2,
+      `No.637/S4 (642): the unread profiles are gathered into ONE block on EACH of the two surfaces that used to repeat them — got ${count(main(ctx), /data-qa="pilot-rank-unread"/g)}`);
+    okS4(count(beforeGroup(fit), /data-qa="pilot-fit-card"/g) === 0,
+      `No.637/S4 (642): not one of the ${N} identical cards is left loose on the main screen — got ${count(beforeGroup(fit), /data-qa="pilot-fit-card"/g)}`);
+    okS4(count(beforeGroup(ranks), /data-qa="pilot-rank-row"/g) === 0,
+      `No.637/S4 (642): and none of the ${N} identical detailed rows either — got ${count(beforeGroup(ranks), /data-qa="pilot-rank-row"/g)}`);
+    // THE OWNER'S REQUIREMENT, and it is the one that may never be traded for
+    // a tidier screen: nobody disappears.
+    okS4(count(insideGroup(fit), /data-qa="pilot-fit-card"/g) === N,
+      `No.637/S4 (642): all ${N} profiles are INSIDE the block — got ${count(insideGroup(fit), /data-qa="pilot-fit-card"/g)}`);
+    okS4(count(insideGroup(ranks), /data-qa="pilot-rank-row"/g) === N,
+      `No.637/S4 (642): and all ${N} detailed rows — got ${count(insideGroup(ranks), /data-qa="pilot-rank-row"/g)}`);
+    const named = s4Profiles(N).every((p) => insideGroup(fit).includes(`data-profile="${p.id}"`));
+    okS4(named, 'No.637/S4 (642): every one of them is NAMED, by profile id — a counter with no names is the defect this card already removed once');
+    okS4(count(insideGroup(fit), /data-qa="pilot-fit-confirm"/g) === N
+      && count(insideGroup(ranks), /data-qa="pilot-confirm"/g) === N,
+      'No.637/S4 (642): and the "Add to shortlist" button is reachable for each of them inside the block');
+    okS4(!/data-qa="pilot-ranks-empty"/.test(ranks) && !/data-qa="pilot-fit-none-applicable"/.test(fit),
+      'No.637/S4 (642): and the screen never says "no stored comparisons" over a block that holds twenty of them');
+    // The unknown ITSELF is not hidden: it is in the <summary>, which no click
+    // is needed to read. docs/CANON-ui-v1.md principle 1, kept rather than traded.
+    const summaryOf = (src) => {
+      const m = String(src || '').match(/data-qa="pilot-rank-unread"[^>]*>\s*<summary>([\s\S]*?)<\/summary>/);
+      return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+    };
+    okS4(summaryOf(fit).length > 10 && /20/.test(summaryOf(fit)),
+      `No.637/S4 (642): the count is on the main screen, in the summary, with no click — got "${summaryOf(fit)}"`);
+    okS4(/not read|не прочитана/.test(summaryOf(fit)) && /manual check|ручная проверка/.test(summaryOf(fit)),
+      `No.637/S4 (642): and so are the unknown and the next action — what is folded is the REPETITION, never the unknown. Got: "${summaryOf(fit)}"`);
+    okS4(count(fit, /data-count="20"/g) >= 1 && count(ranks, /data-count="20"/g) >= 1,
+      'No.637/S4 (642): the number is machine-readable on both surfaces, so the two can never drift apart silently');
+    // PRESERVE, asserted on the rendered bytes of the group: nothing unread is
+    // counted, and no percentage appears in any form.
+    okS4(!/data-pct="\d/.test(insideGroup(fit)) && !/%/.test(insideGroup(fit)),
+      'PRESERVE: not one percentage inside the block — folding the repetition must not smuggle a figure back');
+    okS4(!/checks met, by the stored evaluation/.test(insideGroup(fit)) && !/из \d+ по сохранённой оценке/.test(insideGroup(fit)),
+      'PRESERVE: nor the "M of N checks met" caption, which is the same claim written differently');
+    // ---- both shipped languages ----
+    for (const language of ['ru', 'en']) {
+      const lctx = await s4Build({ profiles: N, verdicts: allUnknown(N), source: 'inbound', chosen: null, language });
+      const s = summaryOf(fitSection(lctx));
+      const cyrillic = /[Ѐ-ӿ]/.test(s);
+      okS4(s.length > 10 && (language === 'ru' ? cyrillic : !cyrillic) && /20/.test(s),
+        `[${language}] No.637/S4 (642): the block announces itself in this language — got "${s}"`);
+    }
+  }
+
+  // ---- No.642 meets S2: the profile HE CHOSE is not folded away ----------
+  {
+    const N = 20;
+    const ctx = await s4Build({ profiles: N, verdicts: allUnknown(N), source: 'skipi_response', chosen: 'prof-A' });
+    const fit = fitSection(ctx), ranks = ranksSection(ctx);
+    okS4(/data-qa="pilot-fit-card" data-profile="prof-A"/.test(beforeGroup(fit)),
+      'PRESERVE (S2): the vacancy he responded to stays the headline card on the main screen, unread post or not');
+    okS4(/data-qa="pilot-rank-row" data-profile="prof-A"/.test(beforeGroup(ranks)),
+      'PRESERVE (S2): and the headline detailed row');
+    okS4(count(beforeGroup(fit), /data-qa="pilot-fit-card"/g) === 1,
+      `PRESERVE (S2): exactly ONE card stands loose — his own; the other ${N - 1} are folded — got ${count(beforeGroup(fit), /data-qa="pilot-fit-card"/g)}`);
+    okS4(/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-A',1\)"/.test(beforeGroup(fit)),
+      'PRESERVE (S2): with the add button wired to his own pair, right there');
+    okS4(/data-origin="response"/.test(beforeGroup(fit)),
+      'PRESERVE (S2): and the row still says WHY it is first — he responded to it');
+    okS4(count(insideGroup(fit), /data-qa="pilot-fit-card"/g) === N - 1
+      && !insideGroup(fit).includes('data-profile="prof-A"'),
+      'No.637/S4 (642): the block holds the other nineteen and not him');
+    // The accepted shortlist chain, LIVE, on the chosen unread profile: add,
+    // then the repeat is refused before the press rather than after it.
+    await ctx.__pilot.pilotShortlistConfirm('prof-A', 1); await flush();
+    okS4(/data-qa="pilot-fit-onlist"/.test(beforeGroup(fitSection(ctx))),
+      'PRESERVE (632/975): "already on the shortlist" appears on his card after the add — the accepted chain still runs through an unread post');
+    okS4(!/data-qa="pilot-fit-confirm"[^>]*onclick="pilotShortlistConfirm\('prof-A',1\)"/.test(beforeGroup(fitSection(ctx))),
+      'PRESERVE (632): and the duplicate press is removed BEFORE it is made, not refused after it');
+  }
+
+  // =========================== No.650 ====================================
+  {
+    const verdicts = { 'prof-A': S4_NA, 'prof-B': S4_NA, 'prof-C': S4_SAME };
+    const ctx = await s4Build({ profiles: 3, verdicts, source: 'skipi_response', chosen: 'prof-A' });
+    okS4(ctx.__pilot.cardDraftProfileId() === 'prof-A',
+      `No.637/S4 (650): the draft defaults to the vacancy he responded to, applicable or not — got "${ctx.__pilot.cardDraftProfileId()}"`);
+    // ...and the same answer READ OFF THE RENDERED DRAFT, because a function
+    // returning the right id proves nothing about the letter a person sends.
+    ctx.__pilot.pilotDraftOpen('intake-A', 'reply'); await flush();
+    const draft = main(ctx).slice(main(ctx).indexOf('data-qa="pilot-draft"'));
+    const bodyOf = (src) => {
+      const m = String(src || '').match(/data-qa="pilot-draft-body"[^>]*>([\s\S]*?)<\/textarea>/);
+      return m ? m[1] : '';
+    };
+    const subjectOf = (src) => {
+      const m = String(src || '').match(/data-qa="pilot-draft-subject"[^>]*value="([^"]*)"/);
+      return m ? m[1] : '';
+    };
+    okS4(/Master · A/.test(bodyOf(draft)) && !/Master · C/.test(bodyOf(draft)),
+      `No.637/S4 (650): the RENDERED letter names his own vacancy and not the one the client picked for him — got "${bodyOf(draft).replace(/\s+/g, ' ').slice(0, 160)}"`);
+    okS4(/Master · A/.test(subjectOf(draft)),
+      `No.637/S4 (650): and so does the subject line — got "${subjectOf(draft)}"`);
+    okS4(/<option value="prof-A" selected>/.test(draft),
+      'No.637/S4 (650): the profile selector opens on his vacancy, so the operator sees which one the letter is about');
+    // THE BOUNDARY, measured rather than promised: on a LETTER the same id means
+    // the first context of an alias, which nobody chose, and the old rule holds.
+    const mail = await s4Build({ profiles: 3, verdicts, source: 'inbound', chosen: 'prof-A' });
+    okS4(mail.__pilot.cardDraftProfileId() === 'prof-C',
+      `No.637/S4 (650) BOUNDARY: a letter still skips a profile the rank does not apply to — "a label, not an authority". Got "${mail.__pilot.cardDraftProfileId()}"`);
+    // And the operator's own choice still wins over both.
+    ctx.__pilot.pilotDraftProfile('prof-C'); await flush();
+    okS4(ctx.__pilot.cardDraftProfileId() === 'prof-C',
+      'No.637/S4 (650): an operator who switches the profile by hand keeps his choice — the default is a default');
+  }
+
+  // =========================== No.647 ====================================
+  {
+    const bodyRendered = async (verdicts, opts = {}) => {
+      const ctx = await s4Build(Object.assign({ profiles: 1, verdicts, source: 'skipi_response', chosen: 'prof-A' }, opts));
+      if (opts.skew) {
+        // A server that still sends reasons on an `unknown` row: an older build,
+        // a cached row, another deployment. The client must not read a post out
+        // of a payload whose own verdict says the post was never read.
+        ctx.__pilot.pilotDetail().ranks.items[0].reasons = [
+          { requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Qwerty' },
+        ];
+      }
+      ctx.__pilot.pilotDraftOpen('intake-A', 'reply'); await flush();
+      const src = main(ctx);
+      const m = src.match(/data-qa="pilot-draft-body"[^>]*>([\s\S]*?)<\/textarea>/);
+      return m ? m[1] : '';
+    };
+    const namesRank = (body, language) => (language === 'ru' ? /на позицию Master/ : /an opening for Master/).test(body);
+    for (const language of ['ru', 'en']) {
+      const hedged = language === 'ru' ? /может подойти по вашим документам/ : /an opening that may fit your documents/;
+      const read = await bodyRendered({ 'prof-A': S4_SAME }, { language });
+      okS4(namesRank(read, language),
+        `[${language}] No.637/S4 (647) branch A: the post WAS read, so the letter names it — got "${read.replace(/\s+/g, ' ').slice(0, 140)}"`);
+      const unread = await bodyRendered({ 'prof-A': S4_UNKNOWN }, { language });
+      okS4(!namesRank(unread, language),
+        `[${language}] No.637/S4 (647) branch B: the post was NOT read, so the letter does not name one — got "${unread.replace(/\s+/g, ' ').slice(0, 140)}"`);
+      okS4(hedged.test(unread),
+        `[${language}] No.637/S4 (647) branch B: and what it says instead is hedged and true — got "${unread.replace(/\s+/g, ' ').slice(0, 140)}"`);
+      okS4(!/rank — |rank —/.test(unread),
+        `[${language}] No.637/S4 (647) branch B: the requirements line does not reintroduce the post through the back door`);
+      const skew = await bodyRendered({ 'prof-A': S4_UNKNOWN }, { language, skew: true });
+      okS4(!namesRank(skew, language),
+        `[${language}] No.637/S4 (647) branch C: a payload that still carries reasons on an unread post does NOT get its post into the letter — the property stops depending on the server having emptied them. Got "${skew.replace(/\s+/g, ' ').slice(0, 140)}"`);
+      okS4(hedged.test(skew),
+        `[${language}] No.637/S4 (647) branch C: and the hedged sentence stands there too`);
+    }
+  }
 }
 
 console.log('\n# control matrix');
