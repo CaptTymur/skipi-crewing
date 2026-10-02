@@ -820,3 +820,55 @@ sides; failing-first measured 99 red on the base; 15 mutations on the NEW sha,
 all killed — four of them only after the drills that let them through were
 repaired, including a cargo probe that ended in a pipe and could therefore never
 report a failure at all.
+
+## No.637 — S6, the bridge stops dropping the keys the fixes stand on (2026-10-02T11:48Z)
+
+**The defect was measured on a live stand, not deduced.** Three finished fixes —
+the honest sentence of No.644, the folded "rank not read" block of No.642 and
+the warning beside the draft letter — produced nothing on screen, while the same
+server answered `GET …/candidate-intake/{id}/ranks` with `applicability`,
+`applicability_reason` on every item and `withheld_profiles` at the top level.
+The calibration that settled it needed no new tooling: on the SAME payload the
+DECLARED fields (`stale`, `primary`) were visible on screen and the UNDECLARED
+ones were visible nowhere. `serde` discards a key no field names, silently,
+without failing the parse.
+
+**Enumerating the structures found two more than the three reported.** The rule
+of the штаб is that a conclusion about a system follows a list of its
+mechanisms, so every bridge struct carrying a rank row or a queue summary was
+diffed field-by-field against the server model that produces it. Beyond
+`CandidateProfileRank`, `CandidateProfileRankSummary` and
+`CandidateRanksResponse`, two more were dropping a key: `CandidateRankResponse`
+lost `withheld` (the attempt line printed "3/1" and said nothing about what it
+skipped) and `CandidateIntakeSummary` lost `ranks_withheld`. The compliance
+route `rank_compliance_candidate` is typed `serde_json::Value` and can drop
+nothing — a clean verdict, not an unchecked one.
+
+**Everything new is `#[serde(default)]`, including the two the server declares
+required.** `applicability` as a plain `String` would make an older pilot server
+fail the parse of a whole card or a whole queue row: the operator would lose the
+candidate in order not to lose a verdict. Absent therefore stays `None`, which
+`cardApplicability` already reads as `stated:false` — not a sixth verdict, not
+`same`, not `not_applicable`, and the row renders exactly as it did before
+No.622.
+
+**The test crosses the seam, because that is where the defect lived.** Eight
+green checks watched this bug: they hand their own fixtures straight to the
+renderer and never pass through Rust. So the fixtures here are the VERBATIM
+response bodies of the running pilot server, captured and pasted in by machine —
+a fixture typed by the hand that writes the struct is missing exactly the field
+that hand forgot. And the assertion is a WALK over every key the server sent,
+not a list of names: a list of names is written by that same hand. The only
+exemption is an explicit list of three fields that serialise their own `null`
+away by design, and its direction is deliberate — forget a name there and the
+test goes red, never green.
+
+Numbers: `cargo test` 50 → 55 passed, 0 failed; the seven guard harnesses green
+and UNCHANGED on both sides (1496 + 352 + 274 + 153 + 61 + 27 = 2363 passed, 0
+failed, plus the CSP check). Failing-first on the base: 16 compile errors, all
+`E0609 no field`, naming exactly the five structs — 4 on `CandidateRanksResponse`,
+3 on `CandidateIntakeSummary`, 2 on `CandidateProfileRank`, 2 on
+`CandidateRankResponse`, 1 on `CandidateProfileRankSummary`. Twelve mutations on
+the new sha, all killed: `#[serde(skip)]` on each of the eleven new fields turns
+the walk red at runtime, and so does an exempt name carrying a value — the
+exemption hides nothing it was not written to hide.
