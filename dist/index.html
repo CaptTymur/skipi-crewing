@@ -6372,9 +6372,9 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
 }
 // The irreversible write, keyed by the PERSON (crewFlowPersonIdentity above).
 // db.rs:739-1029 accepts an empty extracted_to / cv_path (attachments are slice
-// S3 of №664); it upserts by the id sent here. The application id stays
-// `intake:<id>` on purpose: it is what the receiver reads to retire the legacy
-// letter-keyed row of this very intake (Г1а, slice S2b). The write is confirmed first — and
+// S3 of №664); it upserts by the id sent here and, for an `intake:`-born
+// application saved under a person key, retires the legacy `intake:<this
+// intake>` row of the same human (Г1а). The write is confirmed first — and
 // refused out loud BEFORE the question when it cannot be the save of a person:
 // no loaded card (unknown key), or no name at all (the receiver falls back to
 // the id for display_name and would rename the person into «PR-…»).
@@ -6402,10 +6402,12 @@ async function crewFlowSaveToSeafarers(intakeId) {
     // the seafarer screens keep showing the row as it was before the write.
     if (saved && saved.id) {
       if (!Array.isArray(state.seafarers)) state.seafarers = [];
-      // Г1а is the RECEIVER's step (db.rs, slice S2b: the letter-keyed row of
-      // this very intake is retired in the same transaction). Until that lands
-      // the row stays in the base, so it is NOT hidden here: the list shows what
-      // the base holds.
+      // Г1а: the letter-keyed row of THIS intake is retired by the receiver when
+      // the save went under the person key (db.rs, same transaction); it leaves
+      // the client list the same way. (The receiver keeps a letter-keyed row that
+      // holds document rows — none ever came through this path — and the next
+      // list load shows it.)
+      if (identity.kind === 'person') state.seafarers = state.seafarers.filter(function(s){ return !(s && s.id === legacyId); });
       var idx = state.seafarers.findIndex(function(s){ return s && s.id === saved.id; });
       if (idx >= 0) state.seafarers[idx] = saved; else state.seafarers.unshift(saved);
       state.selectedSeafarer = saved;

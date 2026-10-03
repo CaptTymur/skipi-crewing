@@ -1984,11 +1984,7 @@ console.log('# K2 modules/crew-flow');
       // invalidation, as the bundle path does it (dist: saveCurrentBundleSeafarer)
       const ids = ctx.state.seafarers.map((r) => r.id);
       softOk(ids.includes(PR) && ctx.state.seafarers.find((r) => r.id === PR).display_name === 'Ivan Petrenko', 'Г2 invalidation: state.seafarers holds the saved row — got [' + ids.join(',') + ']');
-      // Г1а is the receiver's step (db.rs, slice S2b — blocked on a guard route for
-      // db.rs at the time of this commit). Until it lands the letter-keyed row of
-      // this intake STAYS in the base, and the client list must say so rather
-      // than hide it. This line flips when S2b lands.
-      softOk(ids.includes('intake:intake-1'), 'Г1а boundary (S2b pending): the legacy intake:<this intake> row is still listed — the client does not hide what the base holds');
+      softOk(!ids.includes('intake:intake-1'), 'Г1а invalidation: the legacy intake:<this intake> row leaves the client list too (the receiver retired it in the same transaction)');
       softOk(ids.includes(PR_B) && ctx.state.seafarers.find((r) => r.id === PR_B).notes === 'keep', 'Г1б: the OTHER person’s row is untouched in the client list');
       softOk(ctx.state.selectedSeafarer && ctx.state.selectedSeafarer.id === PR, 'Г2 invalidation: selectedSeafarer is the saved row');
       softOk(!(PR in ctx.state.seafarerDocsById) && Array.isArray(ctx.state.seafarerDocsById[PR_B]), 'Г2 invalidation: seafarerDocsById[saved.id] is dropped, the other person’s cache is not');
