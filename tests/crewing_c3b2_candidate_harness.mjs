@@ -1907,7 +1907,7 @@ console.log('# K2 modules/crew-flow');
       softOk(b && b.kind === 'intake' && b.id === 'intake:intake-9', 'chooser: null (a letter without a response) → kind intake, id intake:<id>');
       const c = pick(null, 'intake-9');
       softOk(c && c.kind === 'unknown', 'chooser: no card at all → kind unknown — NOT intake: an unloaded card is not a card without a key (CANON (930) п.1)');
-      for (const bad of ['', 'PR-xyz', 'PR-0123456789ABCDEF', 'SKP-SF-AVKF-GNRH', 'intake:intake-9', 'PR-0123456789abcdef0', 12345, {}]) {
+      for (const bad of ['', 'PR-xyz', 'PR-0123456789ABCDEF', 'SKP-SF-TEST-0001', 'intake:intake-9', 'PR-0123456789abcdef0', 12345, {}]) {
         const r = pick({ person_ref: bad }, 'intake-9');
         softOk(r && r.kind === 'intake' && r.id === 'intake:intake-9', 'chooser Г1б: ' + JSON.stringify(bad) + ' is not a key → intake:, never the value itself and never ""');
       }
@@ -1989,6 +1989,13 @@ console.log('# K2 modules/crew-flow');
         const rs = JSON.parse(ctx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
         softOk(!(rs['intake-1'] && rs['intake-1'].saved_to_db), 'Г1б (' + lang + '): nothing is marked as saved');
       }
+      // LOW-2 (Supervisor): the heading has FOUR tiers (…, then the name the
+      // queue LISTED); a writer with three would say «no name» under a heading
+      // that shows one. The listed name is the only one here — it must save.
+      const listedOnly = await openSave({ cardFields: { 'intake-1': { person_ref: PR, summary: { state: 'quarantined', facts: 0, ranks: 0, ranks_stale: 0, active_confirmations: 0, needs_review_reason: null, candidate_name: 'Listed Name' } } }, factRows: { 'intake-1': nameless } });
+      softOk(/data-qa="pilot-card-name"[^>]*>Listed Name</.test(listedOnly.main()), 'Г1б/LOW-2 calibration: the heading shows the listed name');
+      softOk(!!listedOnly.save && listedOnly.save.args.applicantSummary.name === 'Listed Name' && !/data-qa="crew-flow-name-hint"/.test(listedOnly.main()),
+        'Г1б/LOW-2: a name the heading shows is a name the save accepts — the writer and the heading read ONE order (pilotCardResolvedName)');
       // calibration: the same facts WITH a delivered name save fine
       const ok1 = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, factRows: { 'intake-1': nameless } });
       softOk(!!ok1.save && ok1.save.args.applicantSummary.name === 'Ivan Petrenko' && !/disabled/.test(saveBtn(ok1)) && !/data-qa="crew-flow-name-hint"/.test(ok1.main()),
@@ -2044,9 +2051,15 @@ console.log('# K2 modules/crew-flow');
       const helper = (k2crew.match(/function crewFlowApplicantSummary\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
       softOk(save !== '' && helper !== '', 'No.664/S2 static: the writer and its details helper are in the Crew Flow block');
       softOk(!/facts\.nationality|facts\.email\b/.test(save + helper), 'Г2 static: the two ghost keys facts.nationality / facts.email are gone');
-      softOk(/first_name/.test(helper) && /surname/.test(helper) && /citizenship/.test(helper), 'Г2 static: the helper reads the delivered summary by its own field names');
+      softOk(/citizenship/.test(helper) && /pilotCardResolvedName\(/.test(helper) && /first_name/.test(html.match(/function pilotCardPersonName\([^)]*\) \{[\s\S]*?\n\}/)[0]),
+        'Г2 static: the helper reads citizenship by its own field name and the name through the card’s own resolver (first_name/surname live in pilotCardPersonName, once)');
       softOk(!/crewFlowFactCache\(\)\[[^\]]*\]\s*=/.test(save + helper), 'No.621 N17 static: neither writes into the fact cache');
       softOk(/crewFlowPersonIdentity\(/.test(save) && !/seafarerUserId: ''/.test(save), 'Г1 static: the writer keys by the chooser and never sends an empty seafarerUserId');
+      // LOW-2 static: one order of the name, read by both. The heading and the
+      // helper call pilotCardResolvedName; the helper holds no tier chain of its own.
+      const heading = (html.match(/function pilotCardIdentityHtml\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
+      softOk(/pilotCardResolvedName\(/.test(helper) && /pilotCardResolvedName\(/.test(heading) && !/pilotCardNameOrigin|first_name|candidate_name/.test(helper),
+        'LOW-2 static: the heading and the writer read the name through pilotCardResolvedName, and the writer keeps no copy of the order');
     }
 
     const matchCtx = makeCrewContext({});

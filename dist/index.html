@@ -6259,10 +6259,10 @@ function crewFlowDeliveredContact(intakeId) {
   return d.responseContact || null;
 }
 // Г2: the standardised details of the person, in the order the card itself
-// shows them. NAME: an operator's correction is a human act and outranks what
-// was delivered (No.623/Б2 — the same rule as the heading, so the base stores
-// the name the operator sees); the delivered name outranks what a parser read
-// out of a CV. RANK: delivered, then the recorded fact. NATIONALITY: delivered
+// shows them. NAME: exactly what the heading shows — pilotCardResolvedName, the
+// ONE order (operator correction > delivered > recorded fact > listed name);
+// no copy of that order lives here, so the base cannot disagree with the
+// screen. RANK: delivered, then the recorded fact. NATIONALITY: delivered
 // citizenship only — the fact dictionary has no such key (`facts.nationality`
 // never existed). EMAIL: the address DELIVERED WITH THE RESPONSE when it is one
 // (state have + isEmail), else the recorded `contact:email` fact. Four keys and
@@ -6273,10 +6273,9 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
   var facts = crewFlowFactsFor(intakeId);
   var rs = (card && card.response_summary && typeof card.response_summary === 'object') ? card.response_summary : null;
   var clean = function(v){ return String(v == null ? '' : v).replace(/^\s+|\s+$/g, '').replace(/\s\s+/g, ' '); };
-  var delivered = rs ? clean(clean(rs.first_name) + ' ' + clean(rs.surname)) : '';
-  var factName = clean(facts.name);
-  var operatorName = (factName && typeof pilotCardNameOrigin === 'function' && pilotCardNameOrigin() === 'operator') ? factName : '';
-  var name = operatorName || delivered || factName;
+  // The card block is always loaded where this writer can be reached (the
+  // panel renders inside the card); without it there is no name — and no save.
+  var name = (typeof pilotCardResolvedName === 'function') ? clean(pilotCardResolvedName(rs).name) : '';
   var rank = clean(rs && rs.rank) || clean(facts.rank);
   var nationality = clean(rs && rs.citizenship) || clean(rs && rs.citizenship_code);
   var email = '';
@@ -8959,6 +8958,27 @@ function pilotCardResponseSummary() {
   var s = d && d.card && d.card.response_summary;
   return (s && typeof s === 'object') ? s : null;
 }
+// No.623/Б2 + No.664/S2: THE ONE ORDER OF THE NAME, for the heading and for the
+// seafarer database alike. An operator's correction is a human act and must
+// never be overwritten by a machine value; what the seafarer sent WITH THE
+// RESPONSE outranks what a parser read out of a CV; the server's rendering of
+// the recorded fact fills the rest; and the name the queue LISTED is the last
+// word. Exactly one wins. The writer (crewFlowSaveToSeafarers) reads THIS
+// function, not a copy of its order: a second copy is how «the heading shows a
+// name, the save says there is none» happens (Supervisor, No.664/S2 LOW-2).
+function pilotCardResolvedName(summary) {
+  var d = pilotDetail();
+  var factName = pilotCardFactValue('name');
+  var delivered = pilotCardPersonName(summary === undefined ? pilotCardResponseSummary() : summary);
+  if (factName && pilotCardNameOrigin() === 'operator') return { name: factName, kind: 'fact' };
+  if (delivered) return { name: delivered, kind: 'response' };
+  if (factName) return { name: factName, kind: 'fact' };
+  if (d && d.card && d.card.summary && d.card.summary.candidate_name != null) {
+    var listed = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
+    if (listed) return { name: listed, kind: 'list' };
+  }
+  return { name: '', kind: '' };
+}
 // The card block must not depend on the Crew Flow block being loaded at all
 // (this card renders in hosts where it is not), so the join lives here too.
 function pilotCardPersonName(o) {
@@ -9119,16 +9139,8 @@ function pilotCardIdentityHtml() {
   // rendering of the recorded fact fills the rest. Exactly one wins, so two
   // names for one candidate are still never shown side by side.
   var summary = pilotCardResponseSummary();
-  var factName = pilotCardFactValue('name');
-  var delivered = pilotCardPersonName(summary);
-  var name = '', kind = '';
-  if (factName && pilotCardNameOrigin() === 'operator') { name = factName; kind = 'fact'; }
-  else if (delivered) { name = delivered; kind = 'response'; }
-  else if (factName) { name = factName; kind = 'fact'; }
-  else if (d.card && d.card.summary && d.card.summary.candidate_name != null) {
-    var listed = String(d.card.summary.candidate_name).replace(/^\s+|\s+$/g, '');
-    if (listed) { name = listed; kind = 'list'; }
-  }
+  var resolved = pilotCardResolvedName(summary);
+  var name = resolved.name, kind = resolved.kind;
   // No.623/Б3: THREE STATES, and this is where the contract was broken BEFORE
   // this card. `answered` used to be `!!(d.facts && d.facts.length)` — "the
   // question was answered" derived from "the answer was not empty". So a request
