@@ -307,6 +307,17 @@ pub(crate) struct CandidateIntakeReceipt {
     pub response_headline: Option<CandidateResponseHeadline>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub response_summary: Option<CandidateResponseSummary>,
+    /// No.664/S2: the stable key of the PERSON who responded, for THIS crewing
+    /// only (`PR-` + 16 hex — an HMAC the server derives from the seafarer's
+    /// identity; the public `SKP-SF` id itself is not disclosed and cannot be
+    /// recovered from it). The card is the only route that carries it; it is
+    /// `None` for a letter without a response and on every other route.
+    /// Declared for the same reason as the two above: serde drops an undeclared
+    /// key silently, and the seafarer database would go on being keyed by the
+    /// LETTER (`intake:<id>`) while every renderer test stayed green. The
+    /// webview validates the shape before it keys anything by it.
+    #[serde(default)]
+    pub person_ref: Option<String>,
 }
 
 /// One attachment row exactly as `candidate_intake_service.public_attachments_for`

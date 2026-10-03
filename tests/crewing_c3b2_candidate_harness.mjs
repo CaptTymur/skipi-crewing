@@ -1627,7 +1627,11 @@ console.log('# K2 modules/crew-flow');
     // No.621. `undefined` is the server's 404 (this intake carries no binding);
     // an object is the 200 body; `{ __throw: err }` is any OTHER failure, which
     // the screen must not confuse with an absence (N14).
-    responseContact } = {}) {
+    responseContact,
+    // No.664/S2: fields merged INTO the card answer per intake (person_ref,
+    // response_summary); `null` makes that card's GET fail (card not loaded).
+    // `factRows` replaces the fact list of an intake wholesale.
+    cardFields = {}, factRows = {} } = {}) {
     const srv = k2Server({ contactMode, attachments, contactEmail });
     const nodes = new Map();
     for (const id of ['main', 'mobile-main', 'left-panel', 'crew-flow-tree']) nodes.set(id, { id, innerHTML: '', style: {}, classList: { toggle() {}, add() {}, remove() {}, contains: () => false } });
@@ -1684,8 +1688,12 @@ console.log('# K2 modules/crew-flow');
         if (command === 'crewing_intake_matching_profile_list' && noProfiles) return { items: [] };
         if (command === 'crewing_intake_candidate_list') return { items: srv.items, limit: 50, offset: 0, total: srv.items.length };
         if (command === 'crewing_intake_alias_list') return { items: [] };
-        if (command === 'crewing_intake_candidate_get') return srv.items.find((i) => i.intake_id === args.intakeId) || srv.items[0];
-        if (command === 'crewing_intake_fact_list') return { items: srv.facts[args.intakeId] || [] };
+        if (command === 'crewing_intake_candidate_get') {
+          if (cardFields[args.intakeId] === null) throw { kind: 'server', status: 500, detail: null, ambiguous: false };
+          const base = srv.items.find((i) => i.intake_id === args.intakeId) || srv.items[0];
+          return Object.assign({}, base, cardFields[args.intakeId] || {});
+        }
+        if (command === 'crewing_intake_fact_list') return { items: factRows[args.intakeId] || srv.facts[args.intakeId] || [] };
         if (command === 'crewing_intake_rank_list') return { items: [], unranked_active_profiles: [{ profile_id: 'p1', name: 'Master · Alpha' }, { profile_id: 'p2', name: 'Master · Beta' }], confirmations: [] };
         if (command === 'crewing_intake_matching_profile_list') return { items: [{ id: 'p1', crewing_id: 'crew-synthetic', name: 'Master · Alpha', version: 1, state: 'active' }, { id: 'p2', crewing_id: 'crew-synthetic', name: 'Master · Beta', version: 1, state: 'active' }] };
         if (command === 'crewing_intake_candidate_rank') {
@@ -1694,7 +1702,9 @@ console.log('# K2 modules/crew-flow');
             ? { ranked: 0, written: 0, reason: 'no_active_profiles', profiles: [] }
             : { ranked: 2, written: 2, reason: 'ranked', profiles: ['p1', 'p2'] };
         }
-        if (command === 'save_seafarer_from_bundle') return { id: 'sf-1', display_name: 'Oleh V.' };
+        // No.664/S2: the stub answers with the row the receiver would return — keyed
+        // by what was SENT, so the invalidation checks can see which id came back.
+        if (command === 'save_seafarer_from_bundle') return { id: (args && args.seafarerUserId) || 'sf-1', display_name: (args && args.applicantSummary && args.applicantSummary.name) || 'Oleh V.', doc_count: 0 };
         // K2.1 byte routes: one audited request per press; 404 is the server's
         // answer for an ineligible/absent part and must reach the operator as a
         // human sentence, not as a silent nothing.
@@ -1839,10 +1849,205 @@ console.log('# K2 modules/crew-flow');
     await tryRun(saveCtx, "crewFlowSaveToSeafarers('intake-1');");
     await flush();
     const saveCall = saveCtx.calls.find((c) => c.command === 'save_seafarer_from_bundle');
-    softOk(!!saveCall && saveCall.args.applicationId === 'intake:intake-1', 'K2-5: "save to seafarers DB" uses application_id intake:<intake_id>');
+    softOk(!!saveCall && saveCall.args.applicationId === 'intake:intake-1', 'K2-5: "save to seafarers DB" names the intake as the application (source_application_id)');
     softOk(!!saveCall && saveCall.args.applicantSummary && saveCall.args.applicantSummary.rank === 'Master', 'K2-5: the saved applicant summary carries the rank fact');
-    softOk(!!saveCall && saveCall.args.manifest && saveCall.args.manifest.exported_by && saveCall.args.manifest.exported_by.messaging_user_id === 'intake:intake-1',
-      'K2-5/U1: the manifest messaging_user_id is the intake: namespace');
+    // No.664/S2 (OWNER (985)): a card WITHOUT a person key (an older server, a
+    // letter) still saves — under the legacy intake: key, and the panel says so.
+    softOk(!!saveCall && saveCall.args.manifest && saveCall.args.manifest.exported_by && saveCall.args.manifest.exported_by.messaging_user_id === 'intake:intake-1'
+      && saveCall.args.seafarerUserId === 'intake:intake-1',
+      'K2-5/U1 → No.664: without person_ref the key is the intake: namespace, explicitly, in both places');
+    softOk(/data-qa="crew-flow-person-hint"/.test(saveCtx.nodes.get('main').innerHTML),
+      'No.664/S2 Г1: and the panel SAYS the identity is not established (the row may double)');
+
+    // ===== No.664/S2 (OWNER (985)): the save writes the PERSON, not the letter =====
+    //
+    // What is drilled: the row is keyed by the server's stable person key
+    // (`person_ref`, `^PR-[0-9a-f]{16}$`) when the card carries one; the details
+    // are the standardised ones (delivered summary first, recorded facts after);
+    // the three outcomes stay three (person / intake / unknown); a save without a
+    // name is refused out loud and never renames a person into a key; and after a
+    // save the seafarer screens are invalidated like the bundle path does.
+    console.log('\n# No.664/S2: the save writes the person');
+    const PR = 'PR-0123456789abcdef';
+    // Own fixtures: the No.621 constants of the same name live further down this file (TDZ).
+    const RC664_HAVE = { value: 'delivered-664@example.test', is_email: true, offer_email: true };
+    const RC664_PHONE = { value: '+995 555 12 34 56', is_email: false, offer_email: false };
+    const PR_B = 'PR-ffffffffffffffff';
+    const RS664 = { rank: 'Master', rank_state: 'from_snapshot', first_name: 'Ivan', surname: 'Petrenko', age_years: 43, age_precision: 'day',
+      citizenship: 'Ukrainian', citizenship_code: 'UKR', experience_rank: 'Master', experience_days: 520, experience_state: 'in_rank',
+      last_vessel_name: 'MT Odesa Dawn', last_vessel_sign_off: '2026-07-01' };
+    const openSave = async (opts, intake = 'intake-1', press = true) => {
+      const ctx = makeCrewContext(opts);
+      ctx.state.seafarers = Array.isArray(opts && opts.seafarers) ? opts.seafarers : [];
+      ctx.state.seafarerDocsById = (opts && opts.seafarerDocsById) || {};
+      ctx.__crew.renderCrewFlowView(); await flush();
+      ctx.__crew.pilotOpenCard(intake); await flush(10);
+      if (press) { await tryRun(ctx, "crewFlowSaveToSeafarers('" + intake + "');"); await flush(10); }
+      ctx.save = ctx.calls.find((c) => c.command === 'save_seafarer_from_bundle') || null;
+      ctx.main = () => ctx.nodes.get('main').innerHTML;
+      return ctx;
+    };
+    const saveBtn = (ctx) => (ctx.main().match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>/) || [''])[0];
+    const k2str = (ctx, key) => vm.runInContext('tr(' + JSON.stringify('crew_flow.' + key) + ')', ctx);
+
+    // ---- bridge: the key must survive serde, or the webview never sees it ----
+    softOk(/#\[serde\(default[^\]]*\)\]\s*\n\s*pub person_ref: Option<String>/.test(rust),
+      'No.664/S2 bridge: CandidateIntakeReceipt declares person_ref with #[serde(default)] — undeclared, serde drops the key and every test below passes over a client that cannot see it');
+
+    // ---- the pure chooser, drilled without invoke ----------------------------
+    {
+      const ctx = makeCrewContext({});
+      // A missing chooser is a RED line, not a crash that hides every later check.
+      const pick = (card, id) => { try { return vm.runInContext('crewFlowPersonIdentity(' + JSON.stringify(card) + ',' + JSON.stringify(id) + ')', ctx); } catch (_) { return null; } };
+      softOk(vm.runInContext('typeof crewFlowPersonIdentity', ctx) === 'function',
+        'No.664/S2 Г1: the key is chosen by one pure function, crewFlowPersonIdentity(card, intakeId)');
+      const a = pick({ person_ref: PR }, 'intake-9');
+      softOk(a && a.kind === 'person' && a.id === PR, 'chooser: a well-formed person_ref → kind person, id = the ref');
+      const b = pick({ person_ref: null }, 'intake-9');
+      softOk(b && b.kind === 'intake' && b.id === 'intake:intake-9', 'chooser: null (a letter without a response) → kind intake, id intake:<id>');
+      const c = pick(null, 'intake-9');
+      softOk(c && c.kind === 'unknown', 'chooser: no card at all → kind unknown — NOT intake: an unloaded card is not a card without a key (CANON (930) п.1)');
+      for (const bad of ['', 'PR-xyz', 'PR-0123456789ABCDEF', 'SKP-SF-AVKF-GNRH', 'intake:intake-9', 'PR-0123456789abcdef0', 12345, {}]) {
+        const r = pick({ person_ref: bad }, 'intake-9');
+        softOk(r && r.kind === 'intake' && r.id === 'intake:intake-9', 'chooser Г1б: ' + JSON.stringify(bad) + ' is not a key → intake:, never the value itself and never ""');
+      }
+    }
+
+    // ---- 1. keyed by the person, details from the delivered summary ----------
+    {
+      const ctx = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } },
+        seafarers: [{ id: 'intake:intake-1', display_name: 'intake:intake-1' }, { id: PR_B, display_name: 'B. Other', notes: 'keep' }],
+        seafarerDocsById: { [PR]: [{ id: 'stale' }], [PR_B]: [{ id: 'b-doc' }] } });
+      softOk(!!ctx.save && ctx.save.args.seafarerUserId === PR,
+        'No.664/S2 Г1: the row is keyed by person_ref — seafarerUserId === PR-… — got ' + (ctx.save && JSON.stringify(ctx.save.args.seafarerUserId)));
+      softOk(!!ctx.save && ctx.save.args.manifest.exported_by.messaging_user_id === PR, 'Г1: and the manifest names the same key');
+      softOk(!!ctx.save && ctx.save.args.applicationId === 'intake:intake-1',
+        'Г1а: the application id stays intake:<id> — it is what the receiver reads to retire the legacy intake: row of this very intake');
+      const s = ctx.save && ctx.save.args.applicantSummary;
+      softOk(!!s && s.name === 'Ivan Petrenko', 'Г2: name = first name + surname of the delivered summary (beats the machine-read fact «Oleh V.») — got ' + (s && JSON.stringify(s.name)));
+      softOk(!!s && s.rank === 'Master', 'Г2: rank from the delivered summary');
+      softOk(!!s && s.nationality === 'Ukrainian', 'Г2: nationality = citizenship of the delivered summary — got ' + (s && JSON.stringify(s.nationality)));
+      softOk(!!s && s.email === 'oleh@example.test', 'Г2: with no delivered contact (404) the email is the recorded contact:email FACT');
+      softOk(!!s && Object.keys(s).sort().join(',') === 'email,name,nationality,rank', 'Г2: exactly four keys — no facts.nationality / facts.email ghosts — got ' + (s && Object.keys(s).join(',')));
+      softOk(!!ctx.save && ctx.save.args.manifest.exported_by.name === 'Ivan Petrenko' && ctx.save.args.manifest.exported_by.rank === 'Master', 'Г2: manifest.exported_by carries the same name and rank');
+      softOk(!!ctx.save && ctx.save.args.extractedTo === '' && ctx.save.args.cvPath === '' && Array.isArray(ctx.save.args.manifest.documents) && ctx.save.args.manifest.documents.length === 0,
+        'S2 boundary: no attachments travel in this slice — extractedTo/cvPath empty, documents [] (Г3/Г4 = S3)');
+      // invalidation, as the bundle path does it (dist: saveCurrentBundleSeafarer)
+      const ids = ctx.state.seafarers.map((r) => r.id);
+      softOk(ids.includes(PR) && ctx.state.seafarers.find((r) => r.id === PR).display_name === 'Ivan Petrenko', 'Г2 invalidation: state.seafarers holds the saved row — got [' + ids.join(',') + ']');
+      // Г1а is the receiver's step (db.rs, slice S2b — blocked on a guard route for
+      // db.rs at the time of this commit). Until it lands the letter-keyed row of
+      // this intake STAYS in the base, and the client list must say so rather
+      // than hide it. This line flips when S2b lands.
+      softOk(ids.includes('intake:intake-1'), 'Г1а boundary (S2b pending): the legacy intake:<this intake> row is still listed — the client does not hide what the base holds');
+      softOk(ids.includes(PR_B) && ctx.state.seafarers.find((r) => r.id === PR_B).notes === 'keep', 'Г1б: the OTHER person’s row is untouched in the client list');
+      softOk(ctx.state.selectedSeafarer && ctx.state.selectedSeafarer.id === PR, 'Г2 invalidation: selectedSeafarer is the saved row');
+      softOk(!(PR in ctx.state.seafarerDocsById) && Array.isArray(ctx.state.seafarerDocsById[PR_B]), 'Г2 invalidation: seafarerDocsById[saved.id] is dropped, the other person’s cache is not');
+      softOk(!/data-qa="crew-flow-person-hint"/.test(ctx.main()), 'Г1: with a stable key the panel carries NO duplication warning');
+      softOk(ctx.toasts.some((t) => t[1] === 'success'), 'the operator is told it worked');
+      const rs = JSON.parse(ctx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+      softOk(rs['intake-1'] && rs['intake-1'].saved_to_db === true, 'the review state records the save');
+      softOk(!JSON.stringify(ctx.state.crewFlowFacts || {}).includes('Ukrainian') && !JSON.stringify(ctx.state.crewFlowFacts || {}).includes('Petrenko'),
+        'No.621 N17 stays: nothing of the delivered summary enters crewFlowFactCache');
+    }
+
+    // ---- 2. the delivered contact, by the one named route -------------------
+    {
+      const have = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, contactMode: 'none', responseContact: RC664_HAVE });
+      softOk(!!have.save && have.save.args.applicantSummary.email === RC664_HAVE.value, 'Г2: a delivered address (state have + isEmail) is the saved email');
+      softOk(!!have.save && JSON.stringify(have.save.args).split(RC664_HAVE.value).length === 2, 'Г2: and it appears ONCE in the payload — applicantSummary.email, nowhere else');
+      const phone = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, responseContact: RC664_PHONE });
+      softOk(!!phone.save && phone.save.args.applicantSummary.email === 'oleh@example.test' && !JSON.stringify(phone.save.args).includes(RC664_PHONE.value),
+        'Г2: a delivered contact that is NOT an email is never written as one — the recorded fact is used, the phone goes nowhere');
+      const failed = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, contactMode: 'none', responseContact: { __throw: { kind: 'server', status: 500, detail: null, ambiguous: false } } });
+      softOk(!!failed.save && failed.save.args.applicantSummary.email === '', 'Г2: a contact request that FAILED yields an empty email, not an invented one');
+    }
+
+    // ---- 3. the name: operator correction > delivered > machine-read fact ----
+    {
+      const corrected = [{ field: 'name', versions: [{ field: 'name', value: 'Ivan Petrenko-Sydorenko', version: 2, corrected_by: 'user-op-1', created_at: '2026-09-24T09:09:00' }] },
+        { field: 'rank', versions: [{ field: 'rank', value: 'Master', version: 1, source_object: 'o1', created_at: '2026-09-24T09:06:00' }] }];
+      const ctx = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, factRows: { 'intake-1': corrected } });
+      softOk(!!ctx.save && ctx.save.args.applicantSummary.name === 'Ivan Petrenko-Sydorenko',
+        'Г2/Б2: an OPERATOR’s correction outranks the delivered name in the database exactly as it does in the heading — the base stores what the operator sees');
+      const noSummary = await openSave({ cardFields: { 'intake-1': { person_ref: PR } } });
+      softOk(!!noSummary.save && noSummary.save.args.applicantSummary.name === 'Oleh V.' && noSummary.save.args.applicantSummary.nationality === '',
+        'Г2: without a delivered summary the recorded facts fill name and rank; nationality stays empty rather than invented');
+    }
+
+    // ---- 4. NO NAME: visible refusal, never a person renamed into a key ------
+    {
+      const nameless = [{ field: 'rank', versions: [{ field: 'rank', value: 'Master', version: 1, source_object: 'o1', created_at: '2026-09-24T09:06:00' }] }];
+      for (const lang of ['en', 'ru']) {
+        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': { person_ref: PR, response_summary: Object.assign({}, RS664, { first_name: null, surname: '  ' }) } }, factRows: { 'intake-1': nameless } });
+        softOk(ctx.save === null, 'Г1б (' + lang + '): a save without any name writes NOTHING — the receiver would have renamed the person into «' + PR + '»');
+        const word = k2str(ctx, 'save_no_name');
+        softOk(word !== 'crew_flow.save_no_name' && ctx.toasts.some((t) => t[0] === word && t[1] === 'error'), 'Г1б (' + lang + '): the refusal is said in the operator’s words, from the dictionary');
+        softOk(/data-qa="crew-flow-name-hint"/.test(ctx.main()) && ctx.main().includes(esc(word)), 'Г1б (' + lang + '): and the same sentence stands in the panel beside the button');
+        softOk(/disabled/.test(saveBtn(ctx)), 'Г1б (' + lang + '): the button itself is disabled while there is no name');
+        softOk(!ctx.timeline.some((e) => e.startsWith('confirm:')), 'Г1б (' + lang + '): no confirmation dialog is raised for a save that cannot happen');
+        const rs = JSON.parse(ctx.store.get('skipi_crewing_crew_flow_read_state_v2') || '{}');
+        softOk(!(rs['intake-1'] && rs['intake-1'].saved_to_db), 'Г1б (' + lang + '): nothing is marked as saved');
+      }
+      // calibration: the same facts WITH a delivered name save fine
+      const ok1 = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, factRows: { 'intake-1': nameless } });
+      softOk(!!ok1.save && ok1.save.args.applicantSummary.name === 'Ivan Petrenko' && !/disabled/.test(saveBtn(ok1)) && !/data-qa="crew-flow-name-hint"/.test(ok1.main()),
+        'Г1б calibration: with a delivered name the same card saves, the button is live and no name sentence is shown');
+    }
+
+    // ---- 5. the duplication warning, RU and EN, and the third state ----------
+    {
+      for (const lang of ['en', 'ru']) {
+        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': { person_ref: null, response_summary: RS664 } } });
+        const word = k2str(ctx, 'person_unknown');
+        softOk(word !== 'crew_flow.person_unknown' && ctx.main().includes('data-qa="crew-flow-person-hint"') && ctx.main().includes(esc(word)),
+          'Г1 (' + lang + '): the panel says, in the dictionary’s words, that the identity is not established and the row may double');
+        softOk(!!ctx.save && ctx.save.args.seafarerUserId === 'intake:intake-1', 'Г1 (' + lang + '): and the save still happens — under intake:, by the operator’s decision');
+        softOk(!/disabled/.test(saveBtn(ctx)), 'Г1 (' + lang + '): the button stays live — a warning is not a refusal');
+      }
+      const ru = await openSave({ language: 'ru', cardFields: { 'intake-1': { person_ref: null } } }, 'intake-1', false);
+      const en = await openSave({ language: 'en', cardFields: { 'intake-1': { person_ref: null } } }, 'intake-1', false);
+      softOk(k2str(ru, 'person_unknown') !== k2str(en, 'person_unknown') && /задво/i.test(k2str(ru, 'person_unknown')) && /duplicat|double/i.test(k2str(en, 'person_unknown')),
+        'Г1: RU and EN sentences are two different sentences, each saying the row may double');
+      // UNKNOWN is the third state: the card did not load. Nothing is known about
+      // the key, so nothing is written under a guess — and no "not established"
+      // sentence is shown either (that sentence is an ANSWER).
+      const unk = await openSave({ cardFields: { 'intake-1': null } });
+      softOk(unk.save === null, 'Г1 unknown: a card that did not load is NOT saved under intake: — an unloaded card is not a card without a key');
+      const word = k2str(unk, 'save_card_not_loaded');
+      softOk(word !== 'crew_flow.save_card_not_loaded' && unk.toasts.some((t) => t[0] === word), 'Г1 unknown: the operator is told the card has not loaded, in the dictionary’s words');
+      softOk(!/data-qa="crew-flow-person-hint"/.test(unk.main()), 'Г1 unknown: and the «not established» sentence is NOT shown for an unloaded card');
+    }
+
+    // ---- 6. the KNOWN boundary: one human, two paths, two rows (BACKLOG №667) --
+    {
+      // The bundle path keys the row by the MESSAGING user id of the application;
+      // the Crew Flow path by person_ref. The two namespaces cannot collide, and
+      // nothing here joins them: the same human saved by both paths is TWO rows.
+      // Documented as the boundary of this card, fixed by №667 (the server knows
+      // vault_user_id ↔ public id), not here.
+      softOk(/var seafarerId = data\.counterpartId \|\| app\.seafarer_user_id \|\| sUidOf\(app\) \|\| '';/.test(html),
+        '№667 boundary: the bundle path still keys by the messaging user id — byte for byte what it was');
+      const ctx = makeCrewContext({});
+      let r = null;
+      try { r = vm.runInContext('crewFlowPersonIdentity({ person_ref: ' + JSON.stringify(PR) + ' }, "intake-1")', ctx); } catch (_) { r = null; }
+      softOk(r && r.id === PR && !/^PR-/.test('a1b2c3d4e5f60718') && !/^PR-[0-9a-f]{16}$/.test('demo-sf1'),
+        '№667 boundary: the Crew Flow key is PR-…, a messaging id never is — the same person through both paths lands in two rows (known, not closed here)');
+      const bundleSave = (html.match(/async function saveCurrentBundleSeafarer\(\) \{[\s\S]*?\n\}/) || [''])[0];
+      softOk(bundleSave !== '' && !/person_ref|crewFlowPersonIdentity|intake:/.test(bundleSave),
+        '№667 boundary / PRESERVE: the bundle writer knows nothing of person_ref — it is not changed by this card');
+    }
+
+    // ---- 7. static: what the writer may and may not read --------------------
+    {
+      const save = (k2crew.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+      const helper = (k2crew.match(/function crewFlowApplicantSummary\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
+      softOk(save !== '' && helper !== '', 'No.664/S2 static: the writer and its details helper are in the Crew Flow block');
+      softOk(!/facts\.nationality|facts\.email\b/.test(save + helper), 'Г2 static: the two ghost keys facts.nationality / facts.email are gone');
+      softOk(/first_name/.test(helper) && /surname/.test(helper) && /citizenship/.test(helper), 'Г2 static: the helper reads the delivered summary by its own field names');
+      softOk(!/crewFlowFactCache\(\)\[[^\]]*\]\s*=/.test(save + helper), 'No.621 N17 static: neither writes into the fact cache');
+      softOk(/crewFlowPersonIdentity\(/.test(save) && !/seafarerUserId: ''/.test(save), 'Г1 static: the writer keys by the chooser and never sends an empty seafarerUserId');
+    }
 
     const matchCtx = makeCrewContext({});
     matchCtx.__crew.renderCrewFlowView(); await flush();
@@ -2884,10 +3089,14 @@ console.log('# K2 modules/crew-flow');
     // he answers it, this function is byte for byte what it was.
     const save = (k2crew.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
     softOk(save !== '', 'No.621: the seafarer-save path is found in the shipped bytes');
-    softOk(!/response|resolved|delivered|offer_email/i.test(save),
-      'No.621/N8: crewFlowSaveToSeafarers mentions nothing of the delivered contact — the irreversible copy is NOT in this card');
-    softOk(/email: facts\.email \|\| ''/.test(save),
-      'No.621/N8: it still writes only the legacy `email` FACT, exactly as before this card');
+    // No.664/S2 (OWNER (985)) lifted the N8 freeze: the delivered contact now
+    // reaches the irreversible copy by ONE named route — the card's own
+    // responseContact, and only a delivered ADDRESS (state have + isEmail). It
+    // still never travels through the fact cache (N17 below is unchanged).
+    softOk(/crewFlowDeliveredContact\(|responseContact/.test(save) && !/crewFlowFactsFor\([^)]*\)\s*\[\s*['"]?email/.test(save),
+      'No.621/N8 → No.664/Г2: crewFlowSaveToSeafarers reads the delivered contact by the named route (crewFlowDeliveredContact), not through the fact cache');
+    softOk(!/facts\.email\b/.test(save),
+      'No.621/N8 → No.664/Г2: the legacy `email` FACT key is gone from the writer');
     const cache = (k2crew.match(/function crewFlowFactsFor\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
     softOk(cache !== '' && !/response|resolved|delivered/i.test(cache),
       'No.621/N17: the fact cache is never fed the delivered contact — the back door into the queue row and the save is closed by ABSENCE, not by a promise');
@@ -3035,10 +3244,12 @@ console.log('# K2 modules/crew-flow');
     await flush();
     const saves = ctx.calls.filter((c) => c.command === 'save_seafarer_from_bundle');
     softOk(saves.length === 1, 'No.621 R8/N17: the save was actually pressed — ' + saves.length + ' call(s)');
-    softOk(saves.length === 1 && !JSON.stringify(saves[0].args).includes(RC_ADDRESSABLE.value),
-      'No.621 R8/N17: and the delivered value is absent from what went to the seafarer database');
-    softOk(saves.length === 1 && saves[0].args.applicantSummary.email === '',
-      'No.621 R8/N17: the saved email is what it was before this card — empty, because no email FACT exists');
+    // No.664/S2 (OWNER (985)): the delivered address now reaches the seafarer
+    // database — by the ONE named route (applicantSummary.email) and by it only.
+    softOk(saves.length === 1 && saves[0].args.applicantSummary.email === RC_ADDRESSABLE.value,
+      'No.621 R8 → No.664/Г2: the delivered address is the saved email');
+    softOk(saves.length === 1 && JSON.stringify(saves[0].args).split(RC_ADDRESSABLE.value).length === 2,
+      'No.621 R8 → No.664/Г2: and it is in the payload exactly once — the named route, no back door');
   }
   {
     // R9 — N12: a bidi override must not be handed to the markup verbatim.
@@ -3948,12 +4159,14 @@ console.log('\n# No.623: the card says who responded');
   {
     const save = (html.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
     softOk(save !== '', 'No.623/Б1 (control): the irreversible writer is still where it was');
-    softOk(!/response_summary|response_headline|responseSummary|responseHeadline/.test(save),
-      'No.623/Б1: crewFlowSaveToSeafarers does not read a single one of the six — the local export is OUT OF SCOPE for No.623');
-    const applicant = (save.match(/applicantSummary: \{[\s\S]*?\}/) || [''])[0];
-    softOk(/name: facts\.name \|\| ''/.test(applicant) && /rank: facts\.rank \|\| ''/.test(applicant)
-      && /nationality: facts\.nationality \|\| ''/.test(applicant) && /email: facts\.email \|\| ''/.test(applicant),
-      'No.623/Б1: what it writes is byte-for-byte what it wrote before — four recorded facts, nothing delivered');
+    // No.664/S2 (OWNER (985)): the owner answered the question Б1 held open —
+    // the local export DOES carry the standardised details. They are read by one
+    // named helper from the loaded card, never through the fact cache.
+    const helper664 = (html.match(/function crewFlowApplicantSummary\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
+    softOk(helper664 !== '' && /response_summary/.test(helper664) && /crewFlowApplicantSummary\(/.test(save),
+      'No.623/Б1 → No.664/Г2: the writer reads the delivered summary through crewFlowApplicantSummary, by the owner’s word (985)');
+    softOk(!/facts\.nationality|facts\.email\b/.test(save + helper664),
+      'No.623/Б1 → No.664/Г2: the two keys that never existed in the fact dictionary are gone');
     softOk(!/crewFlowFactCache\(\)\[[^\]]*\]\s*=\s*[^;]*response/i.test(html),
       'No.623/Б1: nothing from the response is ever put into the fact cache, which is the door to that writer');
   }
