@@ -880,6 +880,22 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
    unstyled -- the word still turns green there. */
 .badge.saved { color:#34d399; font-weight:650; }
 :root[data-theme="light"] .badge.saved { color:#1f7a45; }
+/* No.675 (manager's frame of 97de0389, 2026-10-04): ON THE SELECTED ROW THE
+   PILLS DISAPPEARED. `.tree-item.active` and `.tree-item:hover` paint with
+   `--panel2`, and so does `.cf-chips .badge` — same token, so the chip ground
+   equalled the row ground and «Записано; ожидает проверки», «На момент отклика
+   соответствий нет» and «в базе моряков» read as loose words while the chip one
+   row below still looked like a pill. The owner asked for pills.
+
+   The fix is ONE STEP FURTHER ALONG THE LADDER THE CHIPS ALREADY USE, not a new
+   colour: on a `--panel` ground a chip is `--panel2`; on a `--panel2` ground it
+   is `--border`. That moves the right way in both themes — dark #232932 ->
+   #2a313c (lighter), light #eef0f4 -> #d8dde5 (darker) — and the hover state is
+   included because it is the identical collision, not a second defect.
+   `.badge.saved` sets colour only, so the green chip takes this ground too and
+   keeps its green text. */
+.tree-item.active .cf-chips .badge,
+.tree-item:hover .cf-chips .badge { background:var(--border); }
 .cf-panel-note { padding:4px 12px 6px 16px; font-size:11px; color:var(--text2); overflow-wrap:anywhere; }
 .cf-panel-note.err { color:var(--err); }
 /* The candidate card: who this is, then what was compared, then what to do. */

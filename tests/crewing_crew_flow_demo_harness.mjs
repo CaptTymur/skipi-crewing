@@ -2134,5 +2134,87 @@ section('No.675: the grey chip is the queue grey, the green chip is the queue gr
     '992: the rule is not scoped to the desktop tree — the word turns green in the phone chip row as well');
 }
 
+// ============================================================================
+// No.675 (manager's frame of 97de0389, 2026-10-04): A CHIP ON THE SELECTED ROW
+// MUST STILL LOOK LIKE A CHIP.
+//
+// `.tree-item.active` paints with `--panel2` and `.cf-chips .badge` painted
+// with `--panel2` as well, so on the open row the pills had the same ground as
+// the row and read as loose text — «Записано; ожидает проверки», «На момент
+// отклика соответствий нет» and «в базе моряков» all lost their shape, while
+// the row below still showed one. Colour names prove nothing here: the tokens
+// are RESOLVED to their hex per theme and compared, so a future rename or a
+// re-pointing of either token reddens this instead of silently repeating the
+// collision.
+// ============================================================================
+section('No.675: pills keep their shape on the selected row (both themes)');
+{
+  const css = HTML.slice(0, HTML.indexOf('</style>'));
+  const varsOf = (block) => {
+    const out = {};
+    const re = /(--[a-z0-9-]+):\s*([^;]+);/g;
+    let m;
+    while ((m = re.exec(block))) out[m[1]] = m[2].trim().toLowerCase();
+    return out;
+  };
+  const dark = varsOf((css.match(/:root \{([\s\S]*?)\n\}/) || ['', ''])[1]);
+  const light = Object.assign({}, dark, varsOf((css.match(/:root\[data-theme="light"\] \{([\s\S]*?)\n\}/) || ['', ''])[1]));
+  const tokenIn = (rule, prop) => {
+    const m = String(rule).match(new RegExp(prop + ':\\s*var\\((--[a-z0-9-]+)\\)'));
+    return m ? m[1] : '';
+  };
+  const ruleFor = (selector) => {
+    const i = css.indexOf('\n' + selector);
+    if (i < 0) return '';
+    const j = css.indexOf('}', i);
+    return j < 0 ? '' : css.slice(i, j + 1);
+  };
+
+  const activeRule = ruleFor('.tree-item.active {');
+  const chipRule = ruleFor('.cf-chips .badge {');
+  const overrideRule = ruleFor('.tree-item.active .cf-chips .badge,');
+  ok(activeRule !== '' && chipRule !== '' && overrideRule !== '',
+    'SEL CALIBRATION: all three rules this test reasons about are found in the shipped stylesheet');
+
+  const rowTok = tokenIn(activeRule, 'background');
+  const chipTok = tokenIn(chipRule, 'background');
+  const overTok = tokenIn(overrideRule, 'background');
+  ok(rowTok !== '' && chipTok !== '' && overTok !== '',
+    'SEL CALIBRATION: each of the three grounds is a theme token, so it can be resolved — got row '
+      + rowTok + ', chip ' + chipTok + ', override ' + overTok);
+  ok(overTok !== '' && /^--/.test(overTok),
+    'SEL: the selected-row ground for a chip is an EXISTING token, not a fresh hex — got ' + overTok);
+
+  // The resolver has to be able to tell two tokens apart before it is trusted.
+  ok(dark['--panel2'] && light['--panel2'] && dark['--panel2'] !== light['--panel2'],
+    'SEL CALIBRATION: the token resolver really reads two different theme tables — --panel2 is '
+      + dark['--panel2'] + ' / ' + light['--panel2']);
+
+  for (const [name, table] of [['dark', dark], ['light', light]]) {
+    const rowBg = table[rowTok] || '';
+    const overBg = table[overTok] || '';
+    ok(rowBg !== '' && overBg !== '',
+      '[' + name + '] SEL CALIBRATION: both grounds resolve to a value — row "' + rowBg + '", chip "' + overBg + '"');
+    // Both halves must be present: with no override rule at all `overBg` is the
+    // empty string, and `rowBg !== ''` would then pass this on the very build
+    // that has the defect. Measured — it did, on 7833b165.
+    ok(rowBg !== '' && overBg !== '' && rowBg !== overBg,
+      '[' + name + '] SEL: a chip inside the SELECTED row has a ground of its own and it is NOT the row ground, so the pill shape survives — row "'
+        + rowBg + '" vs chip "' + overBg + '"');
+    // the defect itself, stated so the override cannot be deleted as redundant
+    ok((table[chipTok] || '') === rowBg,
+      '[' + name + '] SEL CALIBRATION: without the override the chip ground WOULD equal the row ground ('
+        + (table[chipTok] || '') + ') — that is the collision the owner saw, and why this rule exists');
+  }
+
+  // Hover is the identical collision, not a second defect.
+  ok(/\.tree-item:hover \.cf-chips \.badge/.test(css),
+    'SEL: the hovered row is covered by the same rule — it paints with the same --panel2 and would blend the same way');
+  // The green chip takes the ground and keeps the green: the override must not
+  // exclude it, and `.badge.saved` must not re-introduce a ground of its own.
+  ok(!/\.badge\.saved \{[^}]*background/.test(css) && !/:not\(\.saved\)/.test(overrideRule),
+    'SEL: the green chip gets the same ground and keeps only its green text — it is not excluded from the rule');
+}
+
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
