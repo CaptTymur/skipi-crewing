@@ -2213,8 +2213,8 @@ console.log('# K2 modules/crew-flow');
         const docs = docsOf(ctx);
         softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-1/attachment-1.pdf', '[' + lang + '] S3a-2 bin: and it is not placed — one document, the pdf');
         const word = k2str(ctx, 'doc_bin_skipped');
-        softOk(word !== 'crew_flow.doc_bin_skipped' && /\{n\}/.test(word) && toastWith(ctx, word.replace('{n}', '0')),
-          '[' + lang + '] S3a-2 bin (930): the operator is told, in the dictionary’s words, WHICH attachment was not placed — "' + word.replace('{n}', '0') + '"');
+        softOk(word !== 'crew_flow.doc_bin_skipped' && /\{n\}/.test(word) && /\{name\}/.test(word) && toastWith(ctx, word.replace('{n}', '0').replace('{name}', 'photo.jpg')),
+          '[' + lang + '] S3a-2 bin (930): the operator is told, in the dictionary’s words, WHICH attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'photo.jpg') + '"');
         softOk(!!ctx.save, '[' + lang + '] S3a-2 bin: the person is still saved — a photo is not a reason to lose the CV');
       }
 

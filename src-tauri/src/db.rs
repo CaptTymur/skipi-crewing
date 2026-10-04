@@ -677,6 +677,27 @@ fn safe_relative_path(value: &str) -> Option<PathBuf> {
     }
 }
 
+/// No.664/S3. A recursive copy of `from` into `to` (which exists), every step
+/// `?`: a file that cannot be copied is a failed save, never a row without a
+/// file. Only files and folders — the receiver never wrote anything else here.
+fn seed_staging_from_existing(from: &Path, to: &Path) -> Result<(), String> {
+    for entry in std::fs::read_dir(from).map_err(|e| format!("read seafarer dir: {e}"))? {
+        let entry = entry.map_err(|e| format!("read seafarer dir entry: {e}"))?;
+        let kind = entry
+            .file_type()
+            .map_err(|e| format!("stat seafarer file: {e}"))?;
+        let src = entry.path();
+        let dest = to.join(entry.file_name());
+        if kind.is_dir() {
+            std::fs::create_dir_all(&dest).map_err(|e| format!("create seafarer sub dir: {e}"))?;
+            seed_staging_from_existing(&src, &dest)?;
+        } else if kind.is_file() {
+            std::fs::copy(&src, &dest).map_err(|e| format!("seed seafarer file: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
 fn json_str<'a>(value: &'a serde_json::Value, path: &[&str]) -> Option<&'a str> {
     let mut cur = value;
     for key in path {
@@ -768,7 +789,7 @@ pub fn save_seafarer_from_bundle(
     vault_path: &str,
     mode: Option<&str>,
 ) -> Result<SavedSeafarer, String> {
-    let _mode = SaveMode::parse(mode);
+    let mode = SaveMode::parse(mode);
     let manifest_user_id = json_str(manifest, &["skipi_identity", "messaging_user_id"])
         .or_else(|| json_str(manifest, &["exported_by", "messaging_user_id"]))
         .or_else(|| json_str(manifest, &["exported_by", "user_id"]));
@@ -795,8 +816,13 @@ pub fn save_seafarer_from_bundle(
     // `intake:` application id, so it never reaches this branch. What the
     // operator wrote on the old row (status, notes, ex-crew, first seen) moves
     // to the new one when the new one is created.
+    // No.669 (S3): and only when the NEW key is a person's — a save under another
+    // letter's `intake:` key never retires a letter-keyed row.
     let legacy_intake_id: Option<String> =
-        if application_id.starts_with("intake:") && application_id != seafarer_id {
+        if application_id.starts_with("intake:")
+            && application_id != seafarer_id
+            && !seafarer_id.starts_with("intake:")
+        {
             Some(application_id.to_string())
         } else {
             None
@@ -851,6 +877,13 @@ pub fn save_seafarer_from_bundle(
     let prepared = (|| -> Result<(Option<String>, Vec<PreparedDoc>), String> {
         std::fs::create_dir_all(&staging_dir)
             .map_err(|e| format!("create seafarer staging dir: {e}"))?;
+        // No.664/S3 merge: the staging folder starts as a copy of what the person
+        // already has, so the swap below (docs_dir → backup, staging → docs_dir)
+        // and its rollback stay exactly what they were; this save's files then
+        // land on top — a same-named file replaced, everything else kept.
+        if mode == SaveMode::Merge && docs_dir.exists() {
+            seed_staging_from_existing(&docs_dir, &staging_dir)?;
+        }
 
         let mut saved_cv_path: Option<String> = None;
         if let Some(path) = cv_path.filter(|p| !p.trim().is_empty()) {
@@ -909,7 +942,13 @@ pub fn save_seafarer_from_bundle(
                     }
                     std::fs::copy(&src, &stage_dest).map_err(|e| format!("copy document: {e}"))?;
                     stored_file_path = Some(final_dest.to_string_lossy().to_string());
+                } else if mode == SaveMode::Merge {
+                    // A row with has_file = 0 cannot be keyed by file_path and would
+                    // double on every repeat; in a merge a listed file must exist.
+                    return Err(format!("merge: document file missing: {}", rel.display()));
                 }
+            } else if mode == SaveMode::Merge {
+                return Err(format!("merge: document without a usable file_path: {title}"));
             }
 
             prepared_docs.push(PreparedDoc {
@@ -992,8 +1031,14 @@ pub fn save_seafarer_from_bundle(
                 None => Err(rusqlite::Error::QueryReturnedNoRows),
             })
             .unwrap_or_else(|_| now.clone());
+        // No.664/S3: in a merge a save without a cvPath keeps the cv_path the row
+        // already had; in a replace the column follows this manifest, as before.
+        let cv_clause = match mode {
+            SaveMode::Replace => "cv_path = excluded.cv_path",
+            SaveMode::Merge => "cv_path = COALESCE(excluded.cv_path, seafarers.cv_path)",
+        };
         tx.execute(
-            "INSERT INTO seafarers
+            &format!("INSERT INTO seafarers
                 (id, display_name, rank, position, nationality, available_from,
                  source_application_id, first_seen_at, last_received_at, ex_crew,
                  status, notes, summary_json, manifest_json, docs_dir, cv_path)
@@ -1016,7 +1061,7 @@ pub fn save_seafarer_from_bundle(
                  summary_json = excluded.summary_json,
                  manifest_json = excluded.manifest_json,
                  docs_dir = excluded.docs_dir,
-                 cv_path = excluded.cv_path",
+                 {cv_clause}"),
             params![
                 &seafarer_id,
                 &display_name,
@@ -1044,13 +1089,28 @@ pub fn save_seafarer_from_bundle(
             tx.execute("DELETE FROM seafarers WHERE id = ?1", params![lid])
                 .map_err(|e| e.to_string())?;
         }
-        tx.execute(
-            "DELETE FROM seafarer_documents WHERE seafarer_id = ?1",
-            params![&seafarer_id],
-        )
-        .map_err(|e| e.to_string())?;
+        if mode == SaveMode::Replace {
+            tx.execute(
+                "DELETE FROM seafarer_documents WHERE seafarer_id = ?1",
+                params![&seafarer_id],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        // No.664/S3 merge: a row with the same file_path is replaced (the repeat
+        // of one response, the same CV again); rows with other paths stay.
+        let replace_by_path = |path: &str| -> Result<(), String> {
+            if mode == SaveMode::Merge {
+                tx.execute(
+                    "DELETE FROM seafarer_documents WHERE seafarer_id = ?1 AND file_path = ?2",
+                    params![&seafarer_id, path],
+                )
+                .map_err(|e| e.to_string())?;
+            }
+            Ok(())
+        };
 
         if let Some(cv_file) = saved_cv_path.as_deref() {
+            replace_by_path(cv_file)?;
             tx.execute(
                 "INSERT INTO seafarer_documents
                     (id, seafarer_id, title, category, file_path, file_name, has_file, received_at)
@@ -1071,6 +1131,9 @@ pub fn save_seafarer_from_bundle(
 
         for doc in prepared_docs {
             let has_file = doc.file_path.is_some() as i64;
+            if let Some(path) = doc.file_path.as_deref() {
+                replace_by_path(path)?;
+            }
             tx.execute(
                 "INSERT INTO seafarer_documents
                     (id, seafarer_id, title, category, template_id, file_path, file_name,
