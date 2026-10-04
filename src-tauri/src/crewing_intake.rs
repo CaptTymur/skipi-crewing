@@ -80,14 +80,187 @@ pub(crate) struct CandidateIntakeObject {
     pub content_type: String,
 }
 
+/// Distinguishes "the field was not sent" from "the field was sent as null".
+/// With `#[serde(default)]` the absent field yields the outer `None`, while an
+/// explicit `null` deserializes into `Some(None)` — the only way a three-state
+/// answer survives a two-state type.
+fn double_option<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
+
+/// R2 (OWNER 2026-09-29): one stored evaluation, reduced to what a queue row can
+/// state — counts, never text and never a score. The server holds no locales, so
+/// every word on the row is produced client-side from these numbers.
+///
+/// `total` is not symmetry with the other three. The candidate card keeps an
+/// `unknown` bucket (dist/index.html:6816) precisely so an outcome CODE this build
+/// does not recognise is never silently counted as met. A row carries numbers
+/// rather than codes, so `total` is the only thing that can carry that refusal
+/// across: when `met + missing + unconfirmed` differs from `total`, the row says
+/// the outcomes are not fully recognised instead of under-counting in silence.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateProfileRankSummary {
+    pub profile_id: String,
+    pub profile_version: i64,
+    pub met: i64,
+    pub missing: i64,
+    /// Both `unconfirmed_requirement` and `unconfirmed_fact`, grouped exactly as
+    /// the card groups them. Never folded into `met`.
+    pub unconfirmed: i64,
+    pub total: i64,
+    pub stale: bool,
+    /// No.622/No.637-S6: the professional-applicability verdict of THIS row, as
+    /// the queue's own producer computes it (`schemas.CandidateIntakeSummaryRank`).
+    /// One of `crewing_rank.VERDICTS`.
+    ///
+    /// `Option` with `#[serde(default)]` and NOT a plain `String`, although the
+    /// server declares it required: a pilot server from before No.622 sends no
+    /// such key, and a required field there would fail the parse of the WHOLE
+    /// queue row — the operator would lose the candidate rather than lose a
+    /// verdict. Absent is therefore `None`, and `cardApplicability` reads that
+    /// as `stated:false`: not a sixth verdict, not `same`, not
+    /// `not_applicable`; the row renders exactly as it did before No.622.
+    #[serde(default)]
+    pub applicability: Option<String>,
+    /// Only ever set beside an `unknown` verdict, one of `crewing_rank.REASONS`.
+    /// "He has no rank fact", "nobody could place the one he has" and "nobody
+    /// could place the PROFILE's wording" are three different next actions.
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateIntakeSummary {
     pub state: String,
     pub facts: i64,
     pub ranks: i64,
     pub ranks_stale: i64,
+    /// No.622/No.637-S6: active profiles this candidate was deliberately NOT
+    /// evaluated against. The row has to be able to say how many it is not
+    /// showing instead of implying it shows all (docs/CANON-ui-v1.md, principle
+    /// 1). `#[serde(default)]` for the same reason `written` carries it: an
+    /// older server sends no key and nothing was withheld as far as it knows.
+    #[serde(default)]
+    pub ranks_withheld: i64,
     pub active_confirmations: i64,
     pub needs_review_reason: Option<String>,
+    /// R2: who the candidate is, rendered by the server from the SAME recorded
+    /// fact the card loads, so the queue row can say whom to open without a card.
+    ///
+    /// Three states, deliberately, and `Option<Option<String>>` is what keeps them
+    /// apart: the outer `None` means this server build does not carry the field
+    /// and nothing can be claimed; `Some(None)` means the server answered that the
+    /// recorded facts hold no name; `Some(Some(s))` is the name. A plain
+    /// `Option<String>` collapses the first two, and the row would then announce
+    /// "no name recorded" about a server that was never asked. `skip_serializing_if`
+    /// carries the same three states across to the webview: absent stays absent
+    /// there instead of arriving as `null`.
+    #[serde(
+        default,
+        deserialize_with = "double_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub candidate_name: Option<Option<String>>,
+    /// R2: the stored per-profile outcome, riding along with the list so the queue
+    /// row is filled the moment Crew Flow opens — no card opened and no request
+    /// per row.
+    ///
+    /// Deliberately `Option`, not a defaulted `Vec`: `None` means this server build
+    /// does not carry the field and the question is UNANSWERED (the row says "not
+    /// loaded"); `Some([])` means the server answered that there are no stored
+    /// evaluations (the row says "no comparison"). Collapsing the two into `[]`
+    /// would make an unanswered question look like an answer on the operator's
+    /// screen. A missing field never fails the parse.
+    #[serde(default)]
+    pub profile_ranks: Option<Vec<CandidateProfileRankSummary>>,
+}
+
+/// No.623 (OWNER (943)/(944)): WHO responded, on the queue row.
+///
+/// Four values and no more. The card shape must not ride the list: the server
+/// deliberately answers the queue with this narrow object, and the client type
+/// mirrors that narrowness so a later hand cannot widen the row by accident.
+///
+/// `rank_state` exists ALONGSIDE `rank` on purpose, and is not derived from
+/// `rank.is_none()`: "the profile did not name a post", "the version you
+/// responded to was overwritten by a republish" and "there is no readable
+/// snapshot at all" are three different sentences, and only the server knows
+/// which one is true. The screen holds the wording; the server holds the code.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseHeadline {
+    #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
+    pub rank_state: Option<String>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub surname: Option<String>,
+}
+
+/// No.623: the six elements of the compact summary, as the CARD route answers
+/// them. Thirteen names, frozen by the card: a fourteenth would be a field about
+/// a person that nobody agreed to.
+///
+/// Every field is `Option` with `#[serde(default)]`, for the reason already
+/// written on `profile_ranks` above: a pilot server that does not carry a key
+/// must not fail the parse of the whole card. A value that is absent is not a
+/// zero and not an empty string -- the screen says "not given", and
+/// `experience_state` is what keeps "no data" apart from "no sea time".
+///
+/// `age_years` is a NUMBER and there is deliberately no date of birth here: the
+/// server neither accepts nor stores one, and `age_precision` is what stops the
+/// screen from claiming a to-the-day age it was never given.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseSummary {
+    #[serde(default)]
+    pub rank: Option<String>,
+    #[serde(default)]
+    pub rank_state: Option<String>,
+    #[serde(default)]
+    pub first_name: Option<String>,
+    #[serde(default)]
+    pub surname: Option<String>,
+    #[serde(default)]
+    pub age_years: Option<i64>,
+    #[serde(default)]
+    pub age_precision: Option<String>,
+    #[serde(default)]
+    pub citizenship: Option<String>,
+    #[serde(default)]
+    pub citizenship_code: Option<String>,
+    #[serde(default)]
+    pub experience_rank: Option<String>,
+    #[serde(default)]
+    pub experience_days: Option<i64>,
+    #[serde(default)]
+    pub experience_state: Option<String>,
+    /// No.632/S5: the career as `{rank: days}`, exactly as the seafarer's own
+    /// client merged it (never summed) and the server stored it.
+    ///
+    /// The letter of THIS slice is written for a profile the candidate may never
+    /// have responded to, and then the pair above is about a DIFFERENT post. So
+    /// the map is the only thing the letter may read, and it is read by EQUALITY:
+    /// a post the map does not name is "not stated", and a post it names with `0`
+    /// is a MEASURED zero. `days || "not stated"` turns the second into the first
+    /// and is the bug the drills of this card forbid.
+    #[serde(default)]
+    pub experience_days_by_rank: Option<std::collections::BTreeMap<String, i64>>,
+    /// The server's own answer for the post of the response's OWN profile, and
+    /// the state word that goes with it. Declared because the card shows them;
+    /// the letter of another profile reads the map above instead.
+    #[serde(default)]
+    pub experience_days_for_rank: Option<i64>,
+    #[serde(default)]
+    pub experience_days_for_rank_state: Option<String>,
+    #[serde(default)]
+    pub last_vessel_name: Option<String>,
+    #[serde(default)]
+    pub last_vessel_sign_off: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -117,6 +290,34 @@ pub(crate) struct CandidateIntakeReceipt {
     #[serde(default)]
     pub attachments: Vec<CandidateIntakeAttachment>,
     pub summary: Option<CandidateIntakeSummary>,
+    /// No.623: WHO responded. Declared on this struct because `send` decodes
+    /// BOTH the card and the rows of the queue into it -- and serde drops a key
+    /// no field declares, silently and without failing the parse. Undeclared,
+    /// the six elements would never leave Rust, the webview would render exactly
+    /// what it renders today, and every renderer test would stay green over it.
+    ///
+    /// The routes stay narrow on the wire: the queue answers `response_headline`
+    /// only, the card answers `response_summary` only. Each is therefore `None`
+    /// on the other route, which is the same `None` an older pilot server
+    /// produces -- and both mean the same thing to the screen ("no response
+    /// fields here"), so one `Option` carries the distinction without the
+    /// `Option<Option<_>>` that `candidate_name` needs. There the three states
+    /// differ ON SCREEN; here they do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_headline: Option<CandidateResponseHeadline>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_summary: Option<CandidateResponseSummary>,
+    /// No.664/S2: the stable key of the PERSON who responded, for THIS crewing
+    /// only (`PR-` + 16 hex — an HMAC the server derives from the seafarer's
+    /// identity; the public `SKP-SF` id itself is not disclosed and cannot be
+    /// recovered from it). The card is the only route that carries it; it is
+    /// `None` for a letter without a response and on every other route.
+    /// Declared for the same reason as the two above: serde drops an undeclared
+    /// key silently, and the seafarer database would go on being keyed by the
+    /// LETTER (`intake:<id>`) while every renderer test stayed green. The
+    /// webview validates the shape before it keys anything by it.
+    #[serde(default)]
+    pub person_ref: Option<String>,
 }
 
 /// One attachment row exactly as `candidate_intake_service.public_attachments_for`
@@ -159,6 +360,36 @@ pub(crate) struct CandidateIntakeListResponse {
     pub limit: u32,
     pub offset: u32,
     pub total: u64,
+}
+
+/// No.621 (OWNER (938)): the contact a seafarer chose to expose when he RESPONDED
+/// to a published profile, and the two verdicts the SERVER made about it.
+///
+/// A shape of its own for a route of its own, and it is not a field on
+/// `CandidateIntakeReceipt` on purpose: that struct parses BOTH the card and the
+/// rows of the queue (`CandidateIntakeListResponse`), so a field there would have
+/// put an address on every row of the queue rather than on the card that was
+/// opened.
+///
+/// All three fields are `Option` with `#[serde(default)]`, for the reason written
+/// on `profile_ranks` above: a server that does not carry a key must not fail the
+/// parse. `value` absent is not "no contact" - the ROUTE says that, with a 404 -
+/// it is "this build was told nothing", and the screen keeps those apart.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct CandidateResponseContact {
+    #[serde(default)]
+    pub value: Option<String>,
+    /// Is this string, on its own, one e-mail address? The grammar is the
+    /// server's (`crewing_contacts.email_is_plausible`); the webview is given no
+    /// address grammar of its own, because two graders are two answers.
+    #[serde(default)]
+    pub is_email: Option<bool>,
+    /// May a letter be PREPARED to it? False for the agency's own confirmed
+    /// address and for anything at our own inbound domain: one click of "Write
+    /// email" there would post the offer into our own queue as a new document,
+    /// scanned, parsed and paid for.
+    #[serde(default)]
+    pub offer_email: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -230,6 +461,13 @@ pub(crate) struct CandidateRankResponse {
     pub ranked: i64,
     #[serde(default)]
     pub written: i64,
+    /// No.622/No.637-S6: how many of the `ranked` profiles got NO evaluation
+    /// because the rank does not apply. Undeclared, the pair "3/1" read as two
+    /// silent failures — the attempt line could not say what it skipped.
+    /// Validated on the wire by `response_model=CandidateRankResponse`
+    /// (`routers/candidate_intake.py:1022`).
+    #[serde(default)]
+    pub withheld: i64,
     pub reason: String,
     #[serde(default)]
     pub profiles: Vec<String>,
@@ -258,12 +496,55 @@ pub(crate) struct CandidateProfileRank {
     pub stale: bool,
     #[serde(default)]
     pub stale_reason: Option<String>,
+    /// No.622/No.637-S6: the FRESH applicability verdict, computed at the read
+    /// and stored nowhere. One of `crewing_rank.VERDICTS`.
+    ///
+    /// It is NOT an entry of `reasons` — an extra outcome there would move the
+    /// card's `total` and make every ordinary percentage read as "оценка
+    /// распознана не полностью" — and it is NOT derivable on this side: the
+    /// server owns the rule.
+    ///
+    /// `Option` with `#[serde(default)]`, for the reason written in full on
+    /// `CandidateProfileRankSummary::applicability`: the server declares it
+    /// required, but a build from before No.622 does not send it, and a
+    /// required field here would fail the parse of the whole rank list and
+    /// empty the card of every evaluation it used to show.
+    #[serde(default)]
+    pub applicability: Option<String>,
+    /// Only beside an `unknown`, one of `crewing_rank.REASONS`.
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct UnrankedProfile {
     pub profile_id: String,
     pub name: String,
+}
+
+/// No.622/No.637-S6: an ACTIVE profile deliberately NOT evaluated, and why.
+///
+/// A sibling of `UnrankedProfile` and deliberately not the same type: that one
+/// is a GAP somebody can still close, this one is a profile the rank will never
+/// apply to. A count alone could not go on a screen honestly — "2 hidden, the
+/// rank does not apply" and "2 hidden, nobody could read his rank" are
+/// different sentences and different next actions — so the disclosure carries
+/// the NAME of each profile, which is what `cardWithheldHtml` renders.
+///
+/// Mirrors `schemas.WithheldProfilePublic`. `applicability` is `Option` here
+/// too, although the server declares it required: this list only exists on a
+/// No.622 server, so the absence would be a server defect — but answering a
+/// server defect by failing the parse of the whole rank list costs the operator
+/// the card, and the renderer already degrades an absent verdict to "nothing
+/// stated".
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct WithheldProfile {
+    pub profile_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub applicability: Option<String>,
+    #[serde(default)]
+    pub applicability_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -287,11 +568,99 @@ pub(crate) struct ShortlistHistory {
     pub withdrawn_at: Option<String>,
 }
 
+/// No.632: ONE shortlist decision carrying its THIRD state.
+///
+/// `on_hold` is not derived from `held_at.is_some()` on this side: the server
+/// computes it from the live row and the two can only disagree if one of them
+/// is wrong, so the client reads the answer rather than recomputing it.
+///
+/// Every field is declared. That sentence is the whole point of this struct and
+/// it is written again because No.623 paid for it twice: `serde` DROPS a key no
+/// field declares, silently and without failing the parse — the webview would
+/// then render exactly what it renders today and every renderer test would stay
+/// green over the hole.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ShortlistHold {
+    pub id: String,
+    pub intake_id: String,
+    pub profile_id: String,
+    pub profile_version: i64,
+    pub confirmed_by: String,
+    pub confirmed_at: String,
+    pub on_hold: bool,
+    #[serde(default)]
+    pub held_by: Option<String>,
+    #[serde(default)]
+    pub held_at: Option<String>,
+    #[serde(default)]
+    pub withdrawn_by: Option<String>,
+    #[serde(default)]
+    pub withdrawn_at: Option<String>,
+}
+
+/// No.632: one shortlisted candidate as the PROFILE's own list shows him.
+///
+/// It carries `intake_id` and NOT the person: the reverse list is a list of
+/// DECISIONS, and who those decisions are about is read from the candidate
+/// surface that already owns that data. A name on this row would be a second
+/// place where a candidate's identity lives.
+///
+/// `in_selection` and `needs_recompare` are both computed by the server and
+/// both arrive here rather than being re-derived: `in_selection` is the single
+/// predicate that decides who goes to the customer, and a second copy of that
+/// rule on the screen is how a screen comes to say three while an envelope
+/// carries four.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistItem {
+    pub id: String,
+    pub intake_id: String,
+    /// The version the DECISION was taken against — not the profile's current
+    /// one. Every move of this decision must quote this number back.
+    pub profile_version: i64,
+    pub confirmed_by: String,
+    pub confirmed_at: String,
+    pub on_hold: bool,
+    #[serde(default)]
+    pub held_by: Option<String>,
+    #[serde(default)]
+    pub held_at: Option<String>,
+    pub in_selection: bool,
+    pub needs_recompare: bool,
+}
+
+/// Three numbers from one read, and the server's own invariant between them:
+/// `selected == in_selection + on_hold`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistCounts {
+    pub selected: i64,
+    pub in_selection: i64,
+    pub on_hold: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct ProfileShortlistResponse {
+    pub profile_id: String,
+    /// The version the profile is on NOW, beside the version each decision was
+    /// taken against, so the screen can say "decided on v1, the vacancy is v3".
+    pub profile_version: i64,
+    pub profile_state: String,
+    pub items: Vec<ProfileShortlistItem>,
+    pub counts: ProfileShortlistCounts,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct CandidateRanksResponse {
     pub items: Vec<CandidateProfileRank>,
     #[serde(default)]
     pub unranked_active_profiles: Vec<UnrankedProfile>,
+    /// No.622/No.637-S6: the THIRD half of this body, and the one the bridge
+    /// used to drop on the floor. Without it the card cannot tell "compared
+    /// against everything" from "compared against what applies", and the
+    /// sentence it prints today — «сравниваются все активные профили» — is
+    /// simply false. `#[serde(default)]`, like its two neighbours: an older
+    /// server withholds nothing it can name, which is an empty disclosure.
+    #[serde(default)]
+    pub withheld_profiles: Vec<WithheldProfile>,
     #[serde(default)]
     pub confirmations: Vec<ShortlistHistory>,
 }
@@ -454,6 +823,13 @@ fn safe_detail(value: &Value) -> Option<String> {
         "not_confirmed",
         "already_withdrawn",
         "withdraw_not_permitted",
+        // No.632 domain codes: the third state. `hold_not_permitted` carries a
+        // word of its own while standing behind the WITHDRAWAL's own check —
+        // a colleague refused the undo who could set the candidate aside
+        // instead would reach the identical outcome through an unguarded door.
+        "already_on_hold",
+        "not_on_hold",
+        "hold_not_permitted",
         // P2/S1 publication. Two refusals that share a 422 and differ only by
         // their words, so the card can tell the operator WHICH field is
         // missing instead of "something is wrong".
@@ -904,6 +1280,25 @@ pub(crate) async fn crewing_intake_rank_list(
 }
 
 #[tauri::command]
+pub(crate) async fn crewing_intake_response_contact(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<CandidateResponseContact, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    without_blocking_ui(move || {
+        let url = intake_url(&context, &intake_id, &["response-contact"])?;
+        // `ambiguous_on_network: false` - a GET that failed changed nothing, so
+        // the screen may say plainly that it could not read the contact instead of
+        // holding the outcome UNKNOWN. What it may NOT do is call that an absence,
+        // and that is the screen's half (N14).
+        let (_, response) = send(&context, Method::GET, url, None, false)?;
+        Ok(response)
+    })
+    .await
+}
+
+#[tauri::command]
 pub(crate) async fn crewing_intake_shortlist_confirm(
     expected_context: PilotExpectedContext,
     intake_id: String,
@@ -937,6 +1332,95 @@ pub(crate) async fn crewing_intake_shortlist_withdraw(
             &["shortlist", profile_id.as_str(), version.as_str()],
         )?;
         send_no_content(&context, Method::DELETE, url)
+    })
+    .await
+}
+
+/// No.632: set this candidate aside WITHOUT taking the decision back.
+///
+/// He stays in the profile, he can be brought back, and he is out of the
+/// selection that goes to the customer by default. The server owns all three of
+/// those sentences; this is a typed pipe to them.
+///
+/// `ambiguous_on_network = true`, like every other write in this file: a request
+/// that died on the wire may or may not have been applied, and the screen has to
+/// say UNKNOWN rather than pick an answer for the operator.
+#[tauri::command]
+pub(crate) async fn crewing_intake_shortlist_hold(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    pair: ShortlistPair,
+    state: tauri::State<'_, AppState>,
+) -> Result<ShortlistHold, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let (profile_id, version) = checked_pair(&pair)?;
+    without_blocking_ui(move || {
+        let url = intake_url(
+            &context,
+            &intake_id,
+            &["shortlist", profile_id.as_str(), version.as_str(), "hold"],
+        )?;
+        let (_, response) = send(&context, Method::POST, url, None, true)?;
+        Ok(response)
+    })
+    .await
+}
+
+/// No.632: bring a candidate who was set aside back into the selection.
+///
+/// A 204 with an empty body is the ONLY success, through `send_no_content` — the
+/// same policy the withdrawal already follows, and for the same reason: an
+/// undocumented 200 is not an acknowledgement and must leave the outcome
+/// UNKNOWN rather than be reported as a release that may not have happened.
+#[tauri::command]
+pub(crate) async fn crewing_intake_shortlist_release(
+    expected_context: PilotExpectedContext,
+    intake_id: String,
+    pair: ShortlistPair,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let (profile_id, version) = checked_pair(&pair)?;
+    without_blocking_ui(move || {
+        let url = intake_url(
+            &context,
+            &intake_id,
+            &["shortlist", profile_id.as_str(), version.as_str(), "hold"],
+        )?;
+        send_no_content(&context, Method::DELETE, url)
+    })
+    .await
+}
+
+/// No.632: who is shortlisted FOR THIS PROFILE — the list read from the other
+/// end.
+///
+/// The first read of this subsystem that does not start from a candidate, so it
+/// is the first whose isolation does not rest on a candidate predicate. The
+/// server says so in its own docstring and carries the tenant on both tables;
+/// nothing on this side may compensate for that and nothing here tries to.
+///
+/// `ambiguous_on_network = false`: a GET that failed changed nothing, so the
+/// screen may say plainly that it could not read the list. What it may NOT do is
+/// call that an empty shortlist — and that half belongs to the screen.
+#[tauri::command]
+pub(crate) async fn crewing_intake_profile_shortlist(
+    expected_context: PilotExpectedContext,
+    profile_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<ProfileShortlistResponse, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    let profile_id = profile_id.trim().to_string();
+    if profile_id.is_empty() || profile_id.chars().count() > PROFILE_ID_MAX_CHARS {
+        return Err(invalid_request("invalid_profile_id"));
+    }
+    without_blocking_ui(move || {
+        let url = fixed_url(
+            &context,
+            &["matching-profiles", profile_id.as_str(), "shortlist"],
+        )?;
+        let (_, response) = send(&context, Method::GET, url, None, false)?;
+        Ok(response)
     })
     .await
 }
@@ -1260,9 +1744,629 @@ pub(crate) async fn crewing_intake_open_saved(path: String) -> Result<(), PilotB
     .await
 }
 
+// ---------- No.632/S5: the letter to the customer (OWNER 2026-10-01) --------
+//
+// The operator presses one button; this writes a complete `.eml` next to the
+// copies it already writes, and hands it to the mail client he already uses. He
+// reads it there and HE presses send.
+//
+// Crewing sends nothing, and that is not a preference. OWNER (739) п.5: "check
+// and REUSE the existing mechanism of the Seafarer home. DO NOT build your own
+// mail client"; and the owner's word of 2026-10-01: "use the existing mechanism
+// for preparing a letter with attachments, WITHOUT server-side sending". The
+// contract harness of this home holds that door shut by exact equality over the
+// call sites, and this code does not go near it.
+//
+// Why an `.eml` and not `mailto:` — measured, not preferred: `contact.rs` opens
+// a `mailto:` draft and says in its own header that nothing can be attached,
+// because `mailto:` cannot carry a file. The resumes ARE the point here.
+//
+// The shape is the Seafarer original (`skipi-public
+// src-tauri/src/commands/mail_intent.rs:169-200`): multipart MIME, base64 parts,
+// handed to the OS opener. Two deliberate differences:
+//
+//   * the Seafarer original discards the result of the opener (`let _ =
+//     spawn()`), so a client that never came up is indistinguishable from one
+//     that did. Here the outcome is carried back to the screen in `opened`, and
+//     the guard is separated from the opener so a drill can measure it with the
+//     side effect stubbed.
+//   * no `From:` and no "Sent via Skipi" footer. The sender is the AGENCY, from
+//     its own client and its own address; a Skipi line in the agency's letter to
+//     its customer would make us the sender of it.
+
+/// Where the drafts go, inside the folder this module already owns.
+const LETTER_FOLDER: &str = "Letters";
+/// A mail client has to open this file. The ceiling is the same one the byte
+/// routes use for a single download, applied here to the WHOLE letter.
+const LETTER_CEILING_BYTES: u64 = DOWNLOAD_CEILING_BYTES;
+
+/// One resume, as the screen hands it over: a file THIS APP wrote (the path the
+/// audited byte route returned) and the name the customer is to see.
+///
+/// The name is a separate field because the byte route deliberately names every
+/// download `attachment-<ordinal>.<ext>` — the letter's own filename never
+/// reaches a header, which is right for a download and wrong for an envelope
+/// carrying six of them: the customer would receive `attachment-0.pdf` six
+/// times. The screen names each one for its candidate; this side sanitises it
+/// again, because a name that came out of a stranger's letter is hostile input
+/// even after a screen has shown it.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct CustomerLetterAttachment {
+    pub path: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct CustomerLetterIntent {
+    pub to: String,
+    pub subject: String,
+    pub body: String,
+    #[serde(default)]
+    pub attachments: Vec<CustomerLetterAttachment>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct CustomerLetterDraft {
+    pub path: String,
+    pub bytes: u64,
+    pub sha256: String,
+    /// Whether the operator's mail client actually came up. `Ok` with
+    /// `opened: false` is a real and common answer (a machine with no handler for
+    /// `message/rfc822`), and it is NOT a failure of the letter: the file is
+    /// written and named, so the screen can tell him where it is instead of
+    /// claiming a draft he never saw.
+    pub opened: bool,
+    pub open_error: Option<String>,
+}
+
+/// RFC 2047 encoded-word for a header that is not pure ASCII. Cyrillic subjects
+/// are the normal case here, not the exception.
+fn letter_header_value(value: &str) -> String {
+    let clean: String = value
+        .chars()
+        .filter(|c| *c != '\r' && *c != '\n' && *c != '\0')
+        .collect();
+    if clean.is_ascii() {
+        return clean;
+    }
+    format!("=?UTF-8?B?{}?=", BASE64_STANDARD.encode(clean.as_bytes()))
+}
+
+fn letter_html_escape(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+/// The type is read off the extension of the file WE wrote, which the byte route
+/// chose from its own closed set. Unknown stays `application/octet-stream`: the
+/// attachment still opens, it just carries no preview hint.
+fn letter_attachment_mime(name: &str) -> &'static str {
+    let lower = name.to_ascii_lowercase();
+    if lower.ends_with(".pdf") {
+        "application/pdf"
+    } else if lower.ends_with(".docx") {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    } else if lower.ends_with(".eml") {
+        "message/rfc822"
+    } else if lower.ends_with(".txt") {
+        "text/plain"
+    } else {
+        "application/octet-stream"
+    }
+}
+
+/// The body is carried TWICE and both copies are the same characters: once as
+/// `text/plain`, once as `text/html` inside a `<pre>`.
+///
+/// That is the whole reason there is an HTML part at all. The comparison table
+/// is a table of columns, and a proportional font turns it into a paragraph; a
+/// `<pre>` keeps it aligned in a client that prefers HTML. Deriving the HTML
+/// from the SAME text rather than rendering a second table from the data is the
+/// point: two renderers of one table is how a screen comes to show one thing and
+/// an envelope to carry another.
+fn build_letter_eml(
+    intent: &CustomerLetterIntent,
+    recipient: &str,
+    parts: &[(String, Vec<u8>)],
+    stamp: &str,
+    boundary_seed: u128,
+) -> Result<String, PilotBridgeError> {
+    let outer = format!("=_skipi_crewing_{:x}", boundary_seed);
+    let inner = format!("=_skipi_crewing_alt_{:x}", boundary_seed);
+    // A boundary that occurs in the body ends the part early and the letter
+    // arrives truncated. It cannot happen with the seed above, and it is still
+    // refused rather than assumed away.
+    if intent.body.contains(&outer) || intent.body.contains(&inner) {
+        return Err(invalid_request("letter_boundary_collision"));
+    }
+    let body_crlf = intent.body.replace("\r\n", "\n").replace('\n', "\r\n");
+
+    let mut out = String::new();
+    // No `From:`. The operator's client fills in its own identity, which is the
+    // agency's — exactly the point of handing the draft over instead of sending.
+    out.push_str(&format!("To: {}\r\n", recipient));
+    out.push_str(&format!(
+        "Subject: {}\r\n",
+        letter_header_value(&intent.subject)
+    ));
+    out.push_str(&format!("Date: {}\r\n", stamp));
+    out.push_str("MIME-Version: 1.0\r\n");
+    out.push_str(&format!(
+        "Content-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n",
+        outer
+    ));
+    out.push_str("This is a multi-part message in MIME format.\r\n");
+
+    out.push_str(&format!("--{}\r\n", outer));
+    out.push_str(&format!(
+        "Content-Type: multipart/alternative; boundary=\"{}\"\r\n\r\n",
+        inner
+    ));
+
+    out.push_str(&format!("--{}\r\n", inner));
+    out.push_str("Content-Type: text/plain; charset=utf-8\r\n");
+    out.push_str("Content-Transfer-Encoding: 8bit\r\n\r\n");
+    out.push_str(&body_crlf);
+    out.push_str("\r\n");
+
+    out.push_str(&format!("--{}\r\n", inner));
+    out.push_str("Content-Type: text/html; charset=utf-8\r\n");
+    out.push_str("Content-Transfer-Encoding: 8bit\r\n\r\n");
+    out.push_str("<html><body><pre style=\"font-family:monospace;font-size:13px\">\r\n");
+    out.push_str(&letter_html_escape(&body_crlf));
+    out.push_str("\r\n</pre></body></html>\r\n");
+    out.push_str(&format!("--{}--\r\n", inner));
+
+    for (name, bytes) in parts {
+        let mime = letter_attachment_mime(name);
+        let encoded = BASE64_STANDARD.encode(bytes);
+        out.push_str(&format!("--{}\r\n", outer));
+        out.push_str(&format!("Content-Type: {}; name=\"{}\"\r\n", mime, name));
+        out.push_str("Content-Transfer-Encoding: base64\r\n");
+        out.push_str(&format!(
+            "Content-Disposition: attachment; filename=\"{}\"\r\n\r\n",
+            name
+        ));
+        for chunk in encoded.as_bytes().chunks(76) {
+            out.push_str(&String::from_utf8_lossy(chunk));
+            out.push_str("\r\n");
+        }
+    }
+    out.push_str(&format!("--{}--\r\n", outer));
+    Ok(out)
+}
+
+/// The whole operation as ONE sync function with the opener passed IN, for the
+/// same reason `open_saved_with` is shaped that way: the guard can then be
+/// measured with the side effect STUBBED, so a drill that removes a check fails
+/// a test instead of opening a mail client on the machine running the drill
+/// (skipi-ops AGENTS, «Субагенты» п.6).
+fn prepare_letter_with<F>(
+    root: &std::path::Path,
+    intent: &CustomerLetterIntent,
+    stamp: &str,
+    boundary_seed: u128,
+    opener: F,
+) -> Result<CustomerLetterDraft, PilotBridgeError>
+where
+    F: Fn(&str) -> Result<(), String>,
+{
+    use sha2::{Digest, Sha256};
+    // The recipient is a stranger's address typed by hand, and it is about to be
+    // written into a header. The strict ASCII addr-spec check of `contact.rs` is
+    // reused rather than restated — a second grammar for one address is how two
+    // screens come to accept two different things.
+    let recipient = crate::contact::checked_recipient(&intent.to)
+        .map_err(|_| invalid_request("letter_recipient_shape"))?;
+
+    // Every attachment must be a file THIS APP wrote, under
+    // Downloads/Skipi/Crewing. Without this the command would be "attach any
+    // file on this machine and mail it", reachable by whoever reaches the
+    // bridge — and the one thing this letter does is leave the building.
+    let mut parts: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut total: u64 = 0;
+    for (index, attachment) in intent.attachments.iter().enumerate() {
+        let resolved = resolved_saved_path(root, &attachment.path)?;
+        let bytes = std::fs::read(&resolved).map_err(|_| invalid_request("letter_attachment_unreadable"))?;
+        total = total.saturating_add(bytes.len() as u64);
+        if total > LETTER_CEILING_BYTES {
+            return Err(invalid_request("letter_too_large"));
+        }
+        let fallback = format!("resume-{}.pdf", index + 1);
+        let name = safe_download_name(&attachment.name, &fallback);
+        parts.push((name, bytes));
+    }
+
+    let eml = build_letter_eml(intent, &recipient, &parts, stamp, boundary_seed)?;
+    let folder = root.join(LETTER_FOLDER);
+    std::fs::create_dir_all(&folder).map_err(|_| invalid_request("cannot_create_folder"))?;
+    let target = folder.join(format!("Skipi_Crewing_{:x}.eml", boundary_seed));
+    std::fs::write(&target, eml.as_bytes()).map_err(|_| invalid_request("cannot_write_letter"))?;
+    let digest = Sha256::digest(eml.as_bytes());
+
+    // The opener is the LAST thing, and its answer is kept. A client that did not
+    // come up leaves a letter that exists and a screen that says so.
+    let (opened, open_error) = match opener(&target.to_string_lossy()) {
+        Ok(()) => (true, None),
+        Err(_) => (false, Some("cannot_open_file".to_string())),
+    };
+    Ok(CustomerLetterDraft {
+        path: target.to_string_lossy().to_string(),
+        bytes: eml.as_bytes().len() as u64,
+        sha256: digest.iter().map(|b| format!("{:02x}", b)).collect(),
+        opened,
+        open_error,
+    })
+}
+
+/// Writes the draft and hands it to the operator's own mail client. It does not
+/// send, it cannot send, and it talks to no server at all: there is no context
+/// argument because there is no request.
+#[tauri::command]
+pub(crate) async fn crewing_customer_letter_prepare(
+    intent: CustomerLetterIntent,
+) -> Result<CustomerLetterDraft, PilotBridgeError> {
+    without_blocking_ui(move || {
+        let root = saved_root()?;
+        let stamp = chrono::Utc::now()
+            .format("%a, %d %b %Y %H:%M:%S +0000")
+            .to_string();
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        prepare_letter_with(&root, &intent, &stamp, seed, crate::open_with_default_app)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// N10: a server build that does not carry the keys must not fail the parse.
+    /// The attribute alone is a claim; this is the measurement, and it is
+    /// calibrated - the full body parses into the values, so a green here is not a
+    /// green over a struct that ignores its input.
+    #[test]
+    fn a_response_contact_body_without_the_keys_still_parses() {
+        let empty: CandidateResponseContact = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.value, None);
+        assert_eq!(empty.is_email, None);
+        assert_eq!(empty.offer_email, None);
+
+        let partial: CandidateResponseContact =
+            serde_json::from_str(r#"{"value":"a@b.test"}"#).unwrap();
+        assert_eq!(partial.value.as_deref(), Some("a@b.test"));
+        assert_eq!(partial.offer_email, None);
+
+        let full: CandidateResponseContact = serde_json::from_str(
+            r#"{"value":"a@b.test","is_email":true,"offer_email":false}"#,
+        )
+        .unwrap();
+        assert_eq!(full.is_email, Some(true));
+        assert_eq!(full.offer_email, Some(false));
+    }
+
+
+    /// No.623: THE SILENT-DROP DRILL, in the language the defect lives in.
+    ///
+    /// `send` decodes into `CandidateIntakeReceipt` and serde ignores a key no
+    /// field declares -- no error, no warning, and the value simply never reaches
+    /// the webview. That is precisely the No.622 class the owner paid for: the
+    /// loader dropped `withheld_profiles` while 88 green checks watched, because
+    /// the fixtures put the field straight into the renderer and never crossed
+    /// this boundary.
+    ///
+    /// So the measurement is a ROUND TRIP, not a field-by-field read: decode the
+    /// frozen server body, serialise it back, and require every one of the
+    /// thirteen names to still be there. Delete a field from the struct and this
+    /// goes red; the feature does not quietly become a no-op.
+    fn card_body_with_summary() -> String {
+        r#"{"intake_id":"intake-A","receipt_id":"receipt-A","crewing_id":"crew-1",
+            "source":"skipi_response","source_id":"msg-1","event_id":"e-1",
+            "primary_profile_id":null,"content_sha256":"abc","content_bytes":12,
+            "content_type":"text/plain","state":"ranked","source_trust":"inbound_alias",
+            "version":1,"created_at":"2026-09-30T01:00:00","issued_at":"2026-09-30T01:00:00",
+            "objects":[],"attachments":[],
+            "summary":{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+                       "active_confirmations":0,"needs_review_reason":null},
+            "response_summary":{"rank":"Master","rank_state":"from_snapshot",
+                "first_name":"Ivan","surname":"Petrov","age_years":41,
+                "age_precision":"exact","citizenship":"Ukraine","citizenship_code":"UA",
+                "experience_rank":"Master","experience_days":1170,
+                "experience_state":"matches_response_rank",
+                "experience_days_by_rank":{"Master":1170,"Bosun":300},
+                "experience_days_for_rank":1170,
+                "experience_days_for_rank_state":"from_map",
+                "last_vessel_name":"MV Southern Cross","last_vessel_sign_off":"2026-03-14"}}"#
+            .to_string()
+    }
+
+    /// No.632: THE SAME SILENT-DROP DRILL, for the two bodies this card adds.
+    ///
+    /// The measurement is a ROUND TRIP for the same reason it was in No.623: a
+    /// field-by-field read of a struct proves the struct, while the defect lives
+    /// at the boundary — what the webview is actually handed. Delete any field
+    /// from `ProfileShortlistItem` and this goes red instead of the feature
+    /// quietly becoming a no-op on a screen whose renderer tests stay green.
+    fn profile_shortlist_body() -> String {
+        r#"{"profile_id":"prof-A","profile_version":3,"profile_state":"active",
+            "items":[{"id":"dec-1","intake_id":"intake-1","profile_version":1,
+                      "confirmed_by":"user-op-1","confirmed_at":"2026-10-01T05:00:00",
+                      "on_hold":true,"held_by":"user-op-2","held_at":"2026-10-01T06:00:00",
+                      "in_selection":false,"needs_recompare":true}],
+            "counts":{"selected":3,"in_selection":2,"on_hold":1}}"#
+            .to_string()
+    }
+
+    #[test]
+    fn the_profile_shortlist_keeps_every_field_across_the_bridge() {
+        let list: ProfileShortlistResponse =
+            serde_json::from_str(&profile_shortlist_body()).unwrap();
+
+        // the values, so a struct that parses but discards is not green
+        assert_eq!(list.profile_id, "prof-A");
+        assert_eq!(list.profile_version, 3);
+        assert_eq!(list.profile_state, "active");
+        assert_eq!(list.counts.selected, 3);
+        assert_eq!(list.counts.in_selection, 2);
+        assert_eq!(list.counts.on_hold, 1);
+        let item = &list.items[0];
+        assert_eq!(item.id, "dec-1");
+        assert_eq!(item.intake_id, "intake-1");
+        // The version of the DECISION, not of the profile. If these two were
+        // ever confused, every move of this row would quote the wrong number and
+        // the server would answer 409 — or worse, succeed against a pair the
+        // operator never looked at.
+        assert_eq!(item.profile_version, 1);
+        assert_ne!(item.profile_version, list.profile_version);
+        assert_eq!(item.confirmed_by, "user-op-1");
+        assert_eq!(item.confirmed_at, "2026-10-01T05:00:00");
+        assert!(item.on_hold);
+        assert_eq!(item.held_by.as_deref(), Some("user-op-2"));
+        assert_eq!(item.held_at.as_deref(), Some("2026-10-01T06:00:00"));
+        assert!(!item.in_selection);
+        assert!(item.needs_recompare);
+
+        // and the round trip: what the webview is handed still carries them all
+        let back = serde_json::to_string(&list).unwrap();
+        for key in [
+            "profile_id",
+            "profile_version",
+            "profile_state",
+            "items",
+            "counts",
+            "id",
+            "intake_id",
+            "confirmed_by",
+            "confirmed_at",
+            "on_hold",
+            "held_by",
+            "held_at",
+            "in_selection",
+            "needs_recompare",
+            "selected",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// A server that carries MORE than this build knows must not fail the parse,
+    /// and a server that carries the optional holder fields as null must not be
+    /// read as "somebody held him". Calibrated: the full body above parses into
+    /// real values, so a green here is not a green over a struct ignoring input.
+    #[test]
+    fn a_shortlist_row_without_the_holder_fields_still_parses() {
+        let row: ProfileShortlistItem = serde_json::from_str(
+            r#"{"id":"dec-9","intake_id":"intake-9","profile_version":2,
+                "confirmed_by":"u1","confirmed_at":"2026-10-01T00:00:00",
+                "on_hold":false,"in_selection":true,"needs_recompare":false,
+                "a_field_this_build_has_never_heard_of":42}"#,
+        )
+        .unwrap();
+        assert_eq!(row.held_by, None);
+        assert_eq!(row.held_at, None);
+        assert!(!row.on_hold);
+        assert!(row.in_selection);
+    }
+
+    /// The hold answers ONE decision with its third state, and the screen reads
+    /// `on_hold` rather than inferring it from `held_at`: the two can only
+    /// disagree if one of them is wrong, and the server owns the answer.
+    #[test]
+    fn the_hold_reply_keeps_every_field_across_the_bridge() {
+        let hold: ShortlistHold = serde_json::from_str(
+            r#"{"id":"dec-1","intake_id":"intake-1","profile_id":"prof-A","profile_version":2,
+                "confirmed_by":"u1","confirmed_at":"2026-10-01T05:00:00","on_hold":true,
+                "held_by":"u2","held_at":"2026-10-01T06:00:00",
+                "withdrawn_by":null,"withdrawn_at":null}"#,
+        )
+        .unwrap();
+        assert!(hold.on_hold);
+        assert_eq!(hold.profile_id, "prof-A");
+        assert_eq!(hold.profile_version, 2);
+        assert_eq!(hold.held_by.as_deref(), Some("u2"));
+        assert_eq!(hold.withdrawn_at, None);
+        let back = serde_json::to_string(&hold).unwrap();
+        for key in [
+            "id", "intake_id", "profile_id", "profile_version", "confirmed_by",
+            "confirmed_at", "on_hold", "held_by", "held_at", "withdrawn_by", "withdrawn_at",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// The three new refusal words reach the screen. A code that is not on the
+    /// allowlist arrives as a bare status, and the screen cannot then say WHICH
+    /// door was shut — which is the whole reason `hold_not_permitted` exists as a
+    /// word of its own while standing behind the withdrawal's own check.
+    #[test]
+    fn the_three_hold_refusals_survive_the_safe_detail_filter() {
+        for code in ["already_on_hold", "not_on_hold", "hold_not_permitted"] {
+            let body = serde_json::json!({ "detail": code });
+            assert_eq!(safe_detail(&body).as_deref(), Some(code));
+        }
+        // calibration: a word NOT on the allowlist is still dropped, so the test
+        // above measures the allowlist and not a filter that passes everything.
+        let invented = serde_json::json!({ "detail": "hold_not_permitted_by_accident" });
+        assert_eq!(safe_detail(&invented), None);
+    }
+
+    #[test]
+    fn the_card_keeps_every_element_of_the_response_summary_across_the_bridge() {
+        let card: CandidateIntakeReceipt = serde_json::from_str(&card_body_with_summary()).unwrap();
+        let summary = card
+            .response_summary
+            .as_ref()
+            .expect("the card carries a response summary");
+
+        // the values themselves, so a struct that parses but discards is not green
+        assert_eq!(summary.rank.as_deref(), Some("Master"));
+        assert_eq!(summary.rank_state.as_deref(), Some("from_snapshot"));
+        assert_eq!(summary.first_name.as_deref(), Some("Ivan"));
+        assert_eq!(summary.surname.as_deref(), Some("Petrov"));
+        assert_eq!(summary.age_years, Some(41));
+        assert_eq!(summary.age_precision.as_deref(), Some("exact"));
+        assert_eq!(summary.citizenship.as_deref(), Some("Ukraine"));
+        assert_eq!(summary.citizenship_code.as_deref(), Some("UA"));
+        assert_eq!(summary.experience_rank.as_deref(), Some("Master"));
+        assert_eq!(summary.experience_days, Some(1170));
+        assert_eq!(
+            summary.experience_state.as_deref(),
+            Some("matches_response_rank")
+        );
+        assert_eq!(summary.last_vessel_name.as_deref(), Some("MV Southern Cross"));
+        assert_eq!(summary.last_vessel_sign_off.as_deref(), Some("2026-03-14"));
+
+        // and the round trip: what the webview is handed still has all sixteen.
+        //
+        // No.632/S5 added the last three. They are asserted HERE, through the
+        // round trip, and not only by reading the struct: the letter needs the
+        // career map, and a key this struct does not declare is dropped by serde
+        // on the way to the webview without an error, without a warning, and
+        // with every renderer test still green over it (the No.622 class).
+        let back = serde_json::to_string(&card).unwrap();
+        for key in [
+            "rank",
+            "rank_state",
+            "first_name",
+            "surname",
+            "age_years",
+            "age_precision",
+            "citizenship",
+            "citizenship_code",
+            "experience_rank",
+            "experience_days",
+            "experience_state",
+            "experience_days_by_rank",
+            "experience_days_for_rank",
+            "experience_days_for_rank_state",
+            "last_vessel_name",
+            "last_vessel_sign_off",
+        ] {
+            assert!(
+                back.contains(&format!("\"{key}\"")),
+                "the bridge dropped {key} on the way to the webview"
+            );
+        }
+    }
+
+    /// CALIBRATION for the drill above: a body WITHOUT the key must still parse,
+    /// or "an old pilot server breaks every card" ships as a green feature.
+    #[test]
+    fn a_card_from_a_server_without_the_response_keys_still_parses() {
+        let body = card_body_with_summary()
+            .split(",\n            \"response_summary\"")
+            .next()
+            .unwrap()
+            .to_string()
+            + "}";
+        let card: CandidateIntakeReceipt = serde_json::from_str(&body).unwrap();
+        assert!(card.response_summary.is_none());
+        assert!(card.response_headline.is_none());
+        // calibrated: the rest of the card really did arrive
+        assert_eq!(card.intake_id, "intake-A");
+        assert_eq!(card.summary.as_ref().unwrap().facts, 3);
+    }
+
+    /// No.623: the queue row carries the NARROW shape, and the card shape must
+    /// not ride the list. Four values reach a row; the nine card-only elements
+    /// are not on it even when the server would offer them.
+    #[test]
+    fn a_queue_row_carries_the_headline_and_never_the_card_shape() {
+        let row: CandidateIntakeReceipt = serde_json::from_str(
+            r#"{"intake_id":"i-1","receipt_id":"r-1","crewing_id":"crew-1",
+                "source":"skipi_response","source_id":"m-1","event_id":"e-1",
+                "primary_profile_id":null,"content_sha256":"abc","content_bytes":1,
+                "content_type":"text/plain","state":"ranked","source_trust":"inbound_alias",
+                "version":1,"created_at":"2026-09-30T01:00:00","issued_at":"2026-09-30T01:00:00",
+                "objects":[],"attachments":[],"summary":null,
+                "response_headline":{"rank":"Master","rank_state":"from_snapshot",
+                    "first_name":"Ivan","surname":"Petrov"}}"#,
+        )
+        .unwrap();
+        let head = row.response_headline.as_ref().expect("a headline");
+        assert_eq!(head.rank.as_deref(), Some("Master"));
+        assert_eq!(head.first_name.as_deref(), Some("Ivan"));
+        assert_eq!(head.surname.as_deref(), Some("Petrov"));
+        assert!(row.response_summary.is_none());
+
+        // serialised back, a row offers the four and nothing wider
+        let back = serde_json::to_string(&row).unwrap();
+        for absent in ["age_years", "citizenship", "experience_days", "last_vessel_name"] {
+            assert!(
+                !back.contains(absent),
+                "a queue row must not carry the card element {absent}"
+            );
+        }
+    }
+
+    /// No.623: the state code lives ALONGSIDE the value, never derived from it.
+    /// "the profile named no post" and "the version you answered was overwritten"
+    /// are both `rank: null` and they are not the same sentence -- and No.622 is
+    /// not open, so `experience_state` is the only thing that keeps "no data"
+    /// apart from "no sea time".
+    #[test]
+    fn a_state_code_survives_even_when_its_value_is_null() {
+        let s: CandidateResponseSummary = serde_json::from_str(
+            r#"{"rank":null,"rank_state":"snapshot_superseded",
+                "experience_rank":null,"experience_days":null,
+                "experience_state":"response_rank_unknown"}"#,
+        )
+        .unwrap();
+        assert_eq!(s.rank, None);
+        assert_eq!(s.rank_state.as_deref(), Some("snapshot_superseded"));
+        assert_eq!(s.experience_days, None);
+        assert_eq!(
+            s.experience_state.as_deref(),
+            Some("response_rank_unknown")
+        );
+        // zero sea time is a DIFFERENT answer from no sea-time data
+        let zero: CandidateResponseSummary = serde_json::from_str(
+            r#"{"experience_rank":"Master","experience_days":0,"experience_state":"matches_response_rank"}"#,
+        )
+        .unwrap();
+        assert_eq!(zero.experience_days, Some(0));
+        assert_ne!(zero.experience_days, s.experience_days);
+    }
+
     use std::io::{Read, Write};
     use std::net::TcpListener;
     use std::thread;
@@ -1439,6 +2543,123 @@ mod tests {
             profile_id: "profile-a".to_string(),
             profile_version: version,
         }
+    }
+
+    // ---- R2 (OWNER 2026-09-29): the queue row reads the stored outcome from the
+    // list response, so CandidateIntakeSummary must carry it — and must keep
+    // "the server did not send the field" distinguishable from "the server says
+    // there are none". Collapsing those two makes an unanswered question look
+    // like an answer on the operator's screen.
+    // R2 (OWNER 2026-09-29): the row title. Three states must survive BOTH the
+    // parse and the hand-off to the webview, because they are three different
+    // things to show an operator:
+    //   field absent      -> this server build does not carry it: we cannot say
+    //   field present null-> the server says the recorded facts hold no name
+    //   field present str -> the name
+    // A plain Option<String> collapses the first two into None, and then a row
+    // would announce "no name recorded" on a server that was never asked.
+    #[test]
+    fn candidate_name_absent_present_null_and_present_value_stay_three_states() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Oleksandr K.\"}}")).unwrap();
+        assert_eq!(absent.candidate_name, None, "absent field: unanswered");
+        assert_eq!(null.candidate_name, Some(None), "explicit null: answered, no name");
+        assert_eq!(
+            named.candidate_name,
+            Some(Some("Oleksandr K.".to_string())),
+            "a value is the name itself"
+        );
+    }
+
+    // The webview is where the distinction is actually consumed, so it has to
+    // survive serialization too: absent must not arrive looking like null.
+    #[test]
+    fn candidate_name_three_states_survive_the_hand_off_to_the_webview() {
+        let base = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null"#;
+        let absent: CandidateIntakeSummary = serde_json::from_str(&format!("{base}}}")).unwrap();
+        let null: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":null}}")).unwrap();
+        let named: CandidateIntakeSummary =
+            serde_json::from_str(&format!("{base},\"candidate_name\":\"Ivan M.\"}}")).unwrap();
+        let out = |v: &CandidateIntakeSummary| serde_json::to_string(v).unwrap();
+        assert!(
+            !out(&absent).contains("candidate_name"),
+            "an absent field is omitted, so the screen sees no key at all: {}",
+            out(&absent)
+        );
+        assert!(
+            out(&null).contains("\"candidate_name\":null"),
+            "an explicit null keeps its key: {}",
+            out(&null)
+        );
+        assert!(
+            out(&named).contains("\"candidate_name\":\"Ivan M.\""),
+            "a name travels as itself: {}",
+            out(&named)
+        );
+    }
+
+    #[test]
+    fn summary_without_profile_ranks_parses_and_stays_unanswered() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null}"#;
+        let summary: CandidateIntakeSummary =
+            serde_json::from_str(json).expect("a server build without the field must still parse");
+        assert!(
+            summary.profile_ranks.is_none(),
+            "a missing field is None (unanswered), never an empty list (answered)"
+        );
+    }
+
+    #[test]
+    fn summary_with_empty_profile_ranks_is_an_answer() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":0,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,"profile_ranks":[]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            summary.profile_ranks,
+            Some(Vec::new()),
+            "an empty list is the server saying there are no stored evaluations"
+        );
+    }
+
+    #[test]
+    fn summary_profile_rank_row_carries_the_frozen_contract() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":2,"met":2,
+              "missing":1,"unconfirmed":3,"total":6,"stale":true}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let rows = summary.profile_ranks.expect("present");
+        assert_eq!(rows.len(), 1);
+        let row = &rows[0];
+        assert_eq!(row.profile_id, "p-main");
+        assert_eq!(row.profile_version, 2);
+        assert_eq!((row.met, row.missing, row.unconfirmed, row.total), (2, 1, 3, 6));
+        assert!(row.stale, "stale travels as a bool, exactly as the contract says");
+    }
+
+    // `total` is not symmetry. The card keeps an `unknown` bucket so an outcome
+    // code this build does not know is never silently counted as met; the row
+    // carries numbers, not codes, so `total` is the only thing that can carry
+    // that protection across. A row where the three counts do not add up to
+    // `total` must survive parsing intact so the UI can say so out loud.
+    #[test]
+    fn summary_profile_rank_row_keeps_an_unrecognised_remainder_visible() {
+        let json = r#"{"state":"ranked","facts":3,"ranks":1,"ranks_stale":0,
+            "active_confirmations":0,"needs_review_reason":null,
+            "profile_ranks":[{"profile_id":"p-main","profile_version":1,"met":2,
+              "missing":0,"unconfirmed":0,"total":5,"stale":false}]}"#;
+        let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();
+        let row = &summary.profile_ranks.expect("present")[0];
+        assert_eq!(row.met + row.missing + row.unconfirmed, 2);
+        assert_eq!(row.total, 5, "the remainder stays measurable: 3 outcomes are unaccounted for");
     }
 
     #[test]
@@ -1763,6 +2984,273 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    // ---------- No.632/S5: the letter to the customer ----------------------
+
+    /// A temp stand for the letter tests: a downloads root with two saved
+    /// resumes in it, plus one file OUTSIDE it. Nothing here touches the real
+    /// `Downloads/Skipi/Crewing`.
+    fn letter_stand(tag: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let base = std::env::temp_dir().join(format!(
+            "skipi-crewing-632-letter-{}-{}",
+            std::process::id(),
+            tag
+        ));
+        let root = base.join("root");
+        std::fs::create_dir_all(root.join("intake-1")).unwrap();
+        std::fs::create_dir_all(root.join("intake-2")).unwrap();
+        std::fs::write(root.join("intake-1").join("attachment-0.pdf"), b"%PDF-1.4 one").unwrap();
+        std::fs::write(root.join("intake-2").join("attachment-0.pdf"), b"%PDF-1.4 two").unwrap();
+        std::fs::write(base.join("outside.pdf"), b"%PDF-1.4 outside").unwrap();
+        (base, root)
+    }
+
+    fn letter_intent(root: &std::path::Path, to: &str) -> CustomerLetterIntent {
+        CustomerLetterIntent {
+            to: to.to_string(),
+            subject: "Кандидаты по вашему заказу: Master, Crude Oil Tanker".to_string(),
+            body: "Здравствуйте, уважаемый заказчик!\n\nКандидат  | Возраст\nIvan P.   | 43\n\nС уважением,\nMarlow Crewing Ltd".to_string(),
+            attachments: vec![
+                CustomerLetterAttachment {
+                    path: root.join("intake-1").join("attachment-0.pdf").to_string_lossy().to_string(),
+                    name: "Ivan_Petrenko_CV.pdf".to_string(),
+                },
+                CustomerLetterAttachment {
+                    path: root.join("intake-2").join("attachment-0.pdf").to_string_lossy().to_string(),
+                    name: "Petro_Shevchuk_CV.pdf".to_string(),
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn the_letter_carries_the_table_in_its_body_and_the_resumes_attached() {
+        let (base, root) = letter_stand("shape");
+        let intent = letter_intent(&root, "crewing@oceanic.example.com");
+        let opened = std::cell::RefCell::new(Vec::new());
+        let record = |p: &str| {
+            opened.borrow_mut().push(p.to_string());
+            Ok(())
+        };
+        let draft = prepare_letter_with(
+            &root,
+            &intent,
+            "Thu, 01 Oct 2026 20:00:00 +0000",
+            0x1234,
+            record,
+        )
+        .expect("the letter is written");
+
+        // the file exists, inside the folder this app owns, and the opener was
+        // handed exactly it
+        assert!(draft.path.contains("Letters"), "{}", draft.path);
+        assert!(std::path::Path::new(&draft.path).is_file());
+        assert_eq!(opened.borrow().len(), 1);
+        assert_eq!(opened.borrow()[0], draft.path);
+        assert!(draft.opened);
+        assert_eq!(draft.open_error, None);
+
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert_eq!(draft.bytes, eml.as_bytes().len() as u64);
+        // the envelope
+        assert!(eml.starts_with("To: crewing@oceanic.example.com\r\n"));
+        assert!(eml.contains("MIME-Version: 1.0\r\n"));
+        assert!(eml.contains("Content-Type: multipart/mixed; boundary=\"=_skipi_crewing_1234\""));
+        assert!(eml.contains("Content-Type: multipart/alternative; boundary=\"=_skipi_crewing_alt_1234\""));
+        // NO `From:` — the agency's own client fills that in, and that is what
+        // makes the AGENCY the sender rather than us
+        assert!(!eml.contains("\r\nFrom:"), "the letter must not name a sender");
+        assert!(!eml.contains("Skipi (https://skipi.app)"), "no Skipi footer in the agency's letter");
+        // the Cyrillic subject survives as an encoded word, not as raw bytes in a
+        // header
+        assert!(eml.contains("Subject: =?UTF-8?B?"));
+        // the table is IN THE BODY, twice, and both copies are the same text
+        assert!(eml.contains("Content-Type: text/plain; charset=utf-8"));
+        assert!(eml.contains("Content-Type: text/html; charset=utf-8"));
+        assert!(eml.contains("Кандидат  | Возраст\r\nIvan P.   | 43"));
+        assert!(eml.contains("<pre style=\"font-family:monospace"));
+        assert_eq!(
+            eml.matches("Marlow Crewing Ltd").count(),
+            2,
+            "the body is carried as plain text AND as the same text inside <pre>"
+        );
+        // the resumes, base64, under the names the customer will read
+        assert!(eml.contains("Content-Disposition: attachment; filename=\"Ivan_Petrenko_CV.pdf\""));
+        assert!(eml.contains("Content-Disposition: attachment; filename=\"Petro_Shevchuk_CV.pdf\""));
+        assert_eq!(eml.matches("Content-Transfer-Encoding: base64").count(), 2);
+        assert!(eml.contains(&BASE64_STANDARD.encode(b"%PDF-1.4 one")));
+        assert!(eml.contains(&BASE64_STANDARD.encode(b"%PDF-1.4 two")));
+        assert!(eml.contains("Content-Type: application/pdf; name=\"Ivan_Petrenko_CV.pdf\""));
+        assert!(eml.ends_with("--=_skipi_crewing_1234--\r\n"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_resume_outside_the_downloads_folder_never_reaches_the_letter() {
+        // The one thing this command does is leave the building. Without this
+        // guard it is "attach any file on this machine and mail it", reachable by
+        // whoever reaches the bridge.
+        let (base, root) = letter_stand("guard");
+        let opened = std::cell::RefCell::new(0_usize);
+        let record = |_: &str| {
+            *opened.borrow_mut() += 1;
+            Ok(())
+        };
+        for hostile in [
+            base.join("outside.pdf").to_string_lossy().to_string(),
+            "/etc/passwd".to_string(),
+            root.join("intake-1").join("..").join("..").join("outside.pdf").to_string_lossy().to_string(),
+            String::new(),
+        ] {
+            let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+            intent.attachments = vec![CustomerLetterAttachment {
+                path: hostile.clone(),
+                name: "x.pdf".to_string(),
+            }];
+            let err = prepare_letter_with(&root, &intent, "d", 1, record)
+                .expect_err(&format!("{hostile} must be refused"));
+            assert_eq!(err.kind, "invalid_request");
+        }
+        #[cfg(unix)]
+        {
+            let link = root.join("intake-1").join("escape.pdf");
+            std::os::unix::fs::symlink(base.join("outside.pdf"), &link).unwrap();
+            let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+            intent.attachments = vec![CustomerLetterAttachment {
+                path: link.to_string_lossy().to_string(),
+                name: "x.pdf".to_string(),
+            }];
+            assert!(
+                prepare_letter_with(&root, &intent, "d", 1, record).is_err(),
+                "a symlink pointing out of the folder must resolve and be refused"
+            );
+        }
+        assert_eq!(
+            *opened.borrow(),
+            0,
+            "no letter was written, so nothing must have been opened"
+        );
+        // CALIBRATION: the same stand DOES produce a letter for a file inside the
+        // folder, so the refusals above are the guard and not a broken stand.
+        let intent = letter_intent(&root, "crewing@oceanic.example.com");
+        assert!(prepare_letter_with(&root, &intent, "d", 2, record).is_ok());
+        assert_eq!(*opened.borrow(), 1);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn an_address_the_mail_client_would_refuse_is_refused_here_first() {
+        // Reuses the addr-spec check of `contact.rs` rather than restating it: a
+        // smuggled `attachment=` would otherwise become a SECOND compose field on
+        // the operator's draft, and a CR would become a second header.
+        let (base, root) = letter_stand("to");
+        let opened = std::cell::RefCell::new(0_usize);
+        let record = |_: &str| {
+            *opened.borrow_mut() += 1;
+            Ok(())
+        };
+        for hostile in [
+            "a@b.test%2Cattachment=%27/etc/passwd%27",
+            "-flag@b.test",
+            "a@b.test\r\nBcc: someone@else.test",
+            "two@addresses.test, other@addresses.test",
+            "no-at-sign",
+            "кирилица@почта.рф",
+            "",
+        ] {
+            let intent = letter_intent(&root, hostile);
+            let err = prepare_letter_with(&root, &intent, "d", 3, record)
+                .expect_err(&format!("{hostile:?} must be refused"));
+            assert_eq!(err.detail.as_deref(), Some("letter_recipient_shape"));
+        }
+        assert_eq!(*opened.borrow(), 0, "nothing was prepared, nothing was opened");
+        // CALIBRATION: a plain address passes through the same path
+        assert!(prepare_letter_with(
+            &root,
+            &letter_intent(&root, "crewing@oceanic.example.com"),
+            "d",
+            4,
+            record
+        )
+        .is_ok());
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_mail_client_that_did_not_open_is_reported_and_the_letter_is_kept() {
+        // The one honest defect of the Seafarer original (`let _ = spawn()`): a
+        // client that never came up reads exactly like one that did. Here the
+        // answer comes back, and the written file is still named — the operator
+        // can open it himself instead of being told about a draft he never saw.
+        let (base, root) = letter_stand("opener");
+        let refuse = |_: &str| Err("no handler for message/rfc822".to_string());
+        let draft = prepare_letter_with(
+            &root,
+            &letter_intent(&root, "crewing@oceanic.example.com"),
+            "d",
+            5,
+            refuse,
+        )
+        .expect("a client that will not open is not a failure of the letter");
+        assert!(!draft.opened);
+        assert_eq!(draft.open_error.as_deref(), Some("cannot_open_file"));
+        assert!(std::path::Path::new(&draft.path).is_file());
+        assert!(draft.bytes > 0 && draft.sha256.len() == 64);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_hostile_attachment_name_cannot_forge_a_header() {
+        // The name is chosen on the screen out of a stranger's letter. A quote
+        // would end the `filename="..."` value and a CR would start a new header.
+        let (base, root) = letter_stand("name");
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.attachments = vec![CustomerLetterAttachment {
+            path: root.join("intake-1").join("attachment-0.pdf").to_string_lossy().to_string(),
+            name: "ev\"il\r\nContent-Type: text/html; name=\"x.pdf".to_string(),
+        }];
+        let draft = prepare_letter_with(&root, &intent, "d", 6, |_| Ok(())).unwrap();
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert!(!eml.contains("Content-Type: text/html; name=\"x.pdf"));
+        assert_eq!(
+            eml.matches("Content-Disposition: attachment;").count(),
+            1,
+            "one attachment stays one attachment"
+        );
+        assert!(!eml.contains("ev\"il"), "the quote never reaches the header");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn the_html_copy_of_the_body_escapes_what_a_name_may_contain() {
+        // The HTML part exists so the comparison table stays aligned, and it is
+        // derived from the SAME text as the plain part. A candidate named with an
+        // angle bracket must not become markup in it.
+        let (base, root) = letter_stand("html");
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.body = "Кандидат <b>A & B</b> | 43".to_string();
+        let draft = prepare_letter_with(&root, &intent, "d", 7, |_| Ok(())).unwrap();
+        let eml = std::fs::read_to_string(&draft.path).unwrap();
+        assert!(eml.contains("Кандидат <b>A & B</b> | 43"), "the plain part is the text itself");
+        assert!(eml.contains("Кандидат &lt;b&gt;A &amp; B&lt;/b&gt; | 43"), "the html part escapes it");
+        assert!(!eml.contains("<pre style=\"font-family:monospace;font-size:13px\">\r\nКандидат <b>"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn a_letter_too_heavy_for_a_mail_client_is_refused_by_name() {
+        let (base, root) = letter_stand("size");
+        let fat = root.join("intake-1").join("fat.pdf");
+        std::fs::write(&fat, vec![0_u8; (LETTER_CEILING_BYTES + 1) as usize]).unwrap();
+        let mut intent = letter_intent(&root, "crewing@oceanic.example.com");
+        intent.attachments = vec![CustomerLetterAttachment {
+            path: fat.to_string_lossy().to_string(),
+            name: "fat.pdf".to_string(),
+        }];
+        let err = prepare_letter_with(&root, &intent, "d", 8, |_| Ok(())).expect_err("too large");
+        assert_eq!(err.detail.as_deref(), Some("letter_too_large"));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
     #[test]
     fn only_the_header_part_of_an_eml_reaches_the_screen() {
         let raw = b"From: a@b.test\r\nSubject: one\r\n\r\nSubject: forged\r\nbody\r\n";
@@ -1961,4 +3449,218 @@ mod tests {
             assert_eq!(err.detail, Some("ordinal_out_of_range".to_string()));
         }
     }
+
+    // ================= No.637/S6: THE SEAM, ON SERVER BYTES =================
+    //
+    // Eight green checks watched `applicability`, `applicability_reason` and
+    // `withheld_profiles` never reach the screen. They stayed green because they
+    // hand their own fixtures straight to the renderer and never cross THIS
+    // boundary, where `serde` drops a key no field declares - silently, without
+    // failing the parse.
+    //
+    // So the fixtures below are not written here. They are the VERBATIM response
+    // bodies of the running pilot server, captured on 2026-10-02 from the S5
+    // stand (`GET /api/crewings/{crewing}/candidate-intake/{intake}/ranks` and
+    // the queue row of `GET .../candidate-intake`), pasted in by machine. A
+    // fixture typed by the hand that writes the struct is missing exactly the
+    // field that hand forgot; a fixture taken off the wire is not.
+    //
+    // And the assertion is a WALK, not a list of names, for the same reason: a
+    // list of names is written by that same hand. Every key the server put on
+    // the wire must still be there after the value has crossed the bridge, so a
+    // field added to the server tomorrow and forgotten here goes RED instead of
+    // silently becoming a no-op on a screen whose renderer tests stay green.
+
+    /// Rizal Santos: two evaluated profiles (`same` and `not_applicable`) and
+    /// THREE profiles withheld by rank. Verbatim server bytes.
+    const LIVE_RANKS_MIXED: &str = r#"{"items":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"primary":true,"met":[],"missing":["rank"],"unconfirmed":["certificate:Advanced Oil Tanker Operations","certificate:Bridge Resource Management","certificate:STCW II/2 Master"],"reasons":[{"requirement":"rank","outcome":"missing","wanted":"Master","found":"Able Seaman"},{"requirement":"certificate:STCW II/2 Master","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Advanced Oil Tanker Operations","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Bridge Resource Management","outcome":"unconfirmed_fact","wanted":"held","found":null}],"decided":false,"stale":false,"stale_reason":null,"applicability":"not_applicable","applicability_reason":null},{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"primary":false,"met":[],"missing":["rank"],"unconfirmed":["certificate:Basic Safety Training","certificate:STCW II/5","certificate:Tanker Familiarisation (Oil)"],"reasons":[{"requirement":"rank","outcome":"missing","wanted":"Able Seaman (AB)","found":"Able Seaman"},{"requirement":"certificate:STCW II/5","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Basic Safety Training","outcome":"unconfirmed_fact","wanted":"held","found":null},{"requirement":"certificate:Tanker Familiarisation (Oil)","outcome":"unconfirmed_fact","wanted":"held","found":null}],"decided":false,"stale":true,"stale_reason":"facts_changed","applicability":"same","applicability_reason":null}],"unranked_active_profiles":[],"withheld_profiles":[{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","name":"Chief Officer — Bulk Carrier (Panamax)","applicability":"not_applicable","applicability_reason":null},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","name":"2nd Engineer — Container 4500 TEU","applicability":"not_applicable","applicability_reason":null},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","name":"Bosun — Chemical Tanker","applicability":"not_applicable","applicability_reason":null}],"confirmations":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"confirmed_by":"stand637-operator","confirmed_at":"2026-10-02T11:15:24.218120","id":"6ee4211c-4cf0-4fe1-9fd1-bcda2a5ca7a6","withdrawn_by":"stand637-operator","withdrawn_at":"2026-10-02T11:22:28.318520"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"confirmed_by":"stand637-operator","confirmed_at":"2026-10-02T11:22:54.157699","id":"cad862d4-912c-4679-91f6-f02decd4d805","withdrawn_by":null,"withdrawn_at":null}]}"#;
+
+    /// Oleh Ivanenko: five rows whose rank nobody could read -- `unknown` with
+    /// `applicability_reason: "rank_absent"`, the case No.642 folds into one
+    /// block. Verbatim server bytes.
+    const LIVE_RANKS_UNREAD: &str = r#"{"items":[{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","profile_version":1,"primary":false,"met":[],"missing":[],"unconfirmed":[],"reasons":[],"decided":false,"stale":false,"stale_reason":null,"applicability":"unknown","applicability_reason":"rank_absent"}],"unranked_active_profiles":[],"withheld_profiles":[],"confirmations":[]}"#;
+
+    /// The QUEUE row of the same two candidates, as the list route emits it:
+    /// `summary.ranks_withheld` and `summary.profile_ranks[].applicability` are
+    /// the second surface of the same answer. Verbatim server bytes.
+    const LIVE_QUEUE_ROW_MIXED: &str = r#"{"intake_id":"bd58673d-ff38-4cce-b194-585d9f8d0bd3","receipt_id":"1f00cb62-db2c-46cd-b3be-d788c30e3862","crewing_id":"cd3e5f75-5a4b-4a43-8f97-137b6fee50c6","source":"skipi_response","source_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","event_id":"11ba6eb6-8b00-4797-ae8b-dfb13b0f3aec","primary_profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","content_sha256":"03d040b19259b380c5c78a33c3849036d48060ed9e3422fcbe259f8e76d3e874","content_bytes":3962,"content_type":"message/rfc822","state":"ranked","source_trust":"unverified","version":1,"created_at":"2026-10-02T11:02:12.203588","issued_at":"2026-10-02T11:02:12.203588","objects":[{"id":"98ec6bda-3b0d-47e3-beca-2a36afc124fc","content_type":"message/rfc822"}],"attachments":[],"summary":{"state":"ranked","facts":4,"ranks":2,"ranks_stale":1,"ranks_withheld":3,"active_confirmations":1,"needs_review_reason":null,"profile_ranks":[{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"met":0,"missing":1,"unconfirmed":3,"total":4,"stale":false,"applicability":"not_applicable","applicability_reason":null},{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"met":0,"missing":1,"unconfirmed":3,"total":4,"stale":true,"applicability":"same","applicability_reason":null}],"candidate_name":"Rizal Santos"},"response_headline":{"rank":"Master","rank_state":"from_snapshot","first_name":"Rizal","surname":"Santos"}}"#;
+    const LIVE_QUEUE_ROW_UNREAD: &str = r#"{"intake_id":"b80e281a-a3da-4690-93a8-74c047631f63","receipt_id":"2b60ea21-bacf-42a6-9988-357ddba7a569","crewing_id":"cd3e5f75-5a4b-4a43-8f97-137b6fee50c6","source":"synthetic","source_id":"stand637-ivanenko","event_id":"8c214142-c963-4291-9bd4-6949bdbd6fb8","primary_profile_id":null,"content_sha256":"b1b2d5838b4e2bdceb20827bf7168931d93da66b8b28234be8ec77309646d465","content_bytes":2276,"content_type":"application/pdf","state":"ranked","source_trust":"unverified","version":1,"created_at":"2026-10-02T11:01:20.818383","issued_at":"2026-10-02T11:01:20.818383","objects":[{"id":"b3c0d65d-4bc4-4458-a92a-38c9582153c0","content_type":"application/pdf"}],"attachments":[],"summary":{"state":"ranked","facts":6,"ranks":5,"ranks_stale":0,"ranks_withheld":0,"active_confirmations":0,"needs_review_reason":null,"profile_ranks":[{"profile_id":"55a34bab-c7f4-4c2c-a6b7-d3b4e6ba6c40","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"54e0d056-cffb-4cfa-87cf-e87e2bce6fc0","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"a5fb41a9-4399-4341-9f7a-d7eb3d20f825","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"cd8ffb2f-24ec-46ea-b309-c13009068f41","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"},{"profile_id":"9435cccb-1cb0-4673-ad5d-c5c582c2746c","profile_version":1,"met":0,"missing":0,"unconfirmed":0,"total":0,"stale":false,"applicability":"unknown","applicability_reason":"rank_absent"}],"candidate_name":"Oleh Ivanenko"},"response_headline":null}"#;
+
+    /// The ONLY keys allowed to leave the bridge absent, and ONLY when the
+    /// server sent them as `null`. Each one IS declared and carries
+    /// `skip_serializing_if = "Option::is_none"` deliberately, documented on its
+    /// struct: to a webview `undefined` and `null` are the same answer, and
+    /// `candidate_name` needs an absence to stay an absence.
+    ///
+    /// This is an EXEMPTION list, never a list of required names, and the
+    /// direction is the whole point: forget a name here and the test goes RED.
+    /// The old shape of this check - a hand-written list of names that must be
+    /// present - went green on everything its author forgot, which is how
+    /// `applicability` reached no screen while eight checks watched.
+    const NULL_MAY_VANISH: &[&str] = &["response_headline", "response_summary", "candidate_name"];
+
+    /// Every key of `sent` must be present in `arrived`, recursively, and the
+    /// scalar leaves must be EQUAL. Objects are compared by key; arrays element
+    /// by element. `arrived` may carry more (a client-side default is not a
+    /// defect); it may never carry less, and it may never carry a different
+    /// value under the same name.
+    fn assert_wire_survives(sent: &Value, arrived: &Value, path: &str) {
+        match sent {
+            Value::Object(keys) => {
+                let got = arrived.as_object().unwrap_or_else(|| {
+                    panic!("{path}: the server sent an object, the bridge produced {arrived}")
+                });
+                for (key, value) in keys {
+                    let next = format!("{path}.{key}");
+                    let seen = match got.get(key) {
+                        Some(seen) => seen,
+                        // a declared field that serialises its own `null` away
+                        None if value.is_null() && NULL_MAY_VANISH.contains(&key.as_str()) => {
+                            continue
+                        }
+                        None => panic!(
+                            "{next}: the server sent this key and the bridge DROPPED it. \
+                             Declare the field on the struct - serde discards what no field names."
+                        ),
+                    };
+                    assert_wire_survives(value, seen, &next);
+                }
+            }
+            Value::Array(items) => {
+                let got = arrived.as_array().unwrap_or_else(|| {
+                    panic!("{path}: the server sent an array, the bridge produced {arrived}")
+                });
+                assert_eq!(items.len(), got.len(), "{path}: the array changed length");
+                for (i, value) in items.iter().enumerate() {
+                    assert_wire_survives(value, &got[i], &format!("{path}[{i}]"));
+                }
+            }
+            leaf => assert_eq!(leaf, arrived, "{path}: the value changed across the bridge"),
+        }
+    }
+
+    #[test]
+    fn the_rank_list_carries_every_key_the_live_server_sent() {
+        for (label, body) in [("mixed", LIVE_RANKS_MIXED), ("unread", LIVE_RANKS_UNREAD)] {
+            let sent: Value = serde_json::from_str(body).unwrap();
+            let typed: CandidateRanksResponse = serde_json::from_str(body)
+                .unwrap_or_else(|e| panic!("{label}: the live body must parse: {e}"));
+            let arrived = serde_json::to_value(&typed).unwrap();
+            assert_wire_survives(&sent, &arrived, &format!("${label}"));
+        }
+    }
+
+    #[test]
+    fn the_three_fixes_read_their_values_off_the_live_body_not_a_fixture() {
+        // (a) No.642 / the unread fold: five rows, every one of them `unknown`
+        // WITH its reason. `cardApplicabilityRowSplit` folds on exactly this.
+        let unread: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_UNREAD).unwrap();
+        assert_eq!(unread.items.len(), 5);
+        for row in &unread.items {
+            assert_eq!(row.applicability.as_deref(), Some("unknown"), "{row:?}");
+            assert_eq!(row.applicability_reason.as_deref(), Some("rank_absent"));
+        }
+
+        // (b) No.644 / the honest sentence: a verdict that is NOT unknown reaches
+        // the screen as itself, and `not_applicable` is what hides a row.
+        let mixed: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_MIXED).unwrap();
+        let verdicts: Vec<&str> = mixed
+            .items
+            .iter()
+            .map(|row| row.applicability.as_deref().unwrap_or("<dropped>"))
+            .collect();
+        assert!(verdicts.contains(&"same"), "{verdicts:?}");
+        assert!(verdicts.contains(&"not_applicable"), "{verdicts:?}");
+
+        // (c) the withheld disclosure: NAMED profiles, not a count.
+        assert_eq!(mixed.withheld_profiles.len(), 3);
+        for withheld in &mixed.withheld_profiles {
+            assert!(!withheld.profile_id.is_empty());
+            assert!(!withheld.name.is_empty(), "the disclosure names the profile");
+            assert_eq!(withheld.applicability.as_deref(), Some("not_applicable"));
+        }
+        assert_eq!(unread.withheld_profiles.len(), 0, "nothing withheld for an unread rank");
+    }
+
+    #[test]
+    fn the_queue_row_carries_every_key_the_live_server_sent() {
+        for (label, body) in [
+            ("mixed", LIVE_QUEUE_ROW_MIXED),
+            ("unread", LIVE_QUEUE_ROW_UNREAD),
+        ] {
+            let sent: Value = serde_json::from_str(body).unwrap();
+            let typed: CandidateIntakeReceipt = serde_json::from_str(body)
+                .unwrap_or_else(|e| panic!("{label}: the live queue row must parse: {e}"));
+            let arrived = serde_json::to_value(&typed).unwrap();
+            assert_wire_survives(&sent, &arrived, &format!("${label}"));
+
+            // and the values the row itself renders
+            let summary = typed.summary.as_ref().expect("the queue row carries a summary");
+            for rank in summary.profile_ranks.as_ref().expect("stored evaluations ride along") {
+                assert!(
+                    rank.applicability.is_some(),
+                    "{label}: the row's own verdict was dropped on the way to the webview"
+                );
+            }
+        }
+        let mixed: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_MIXED).unwrap();
+        assert_eq!(mixed.summary.unwrap().ranks_withheld, 3);
+        let unread: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_UNREAD).unwrap();
+        assert_eq!(unread.summary.unwrap().ranks_withheld, 0);
+    }
+
+    /// The press of "Compare" answers with its own count of what it did NOT
+    /// evaluate. There is no GET for this body, so it is not captured from the
+    /// stand: it is the shape the route is VALIDATED against
+    /// (`response_model=CandidateRankResponse`, `routers/candidate_intake.py:1022`)
+    /// and asserted on a live HTTP response by the server's own suite
+    /// (`tests/test_crewing_p2_622_rank_applicability.py:1192`). Provenance is
+    /// named here rather than left to look like a capture.
+    #[test]
+    fn the_compare_press_keeps_the_count_of_what_it_withheld() {
+        let body = r#"{"ranked":2,"written":0,"withheld":2,"reason":"ranked","profiles":["p-1","p-2"]}"#;
+        let sent: Value = serde_json::from_str(body).unwrap();
+        let typed: CandidateRankResponse = serde_json::from_str(body).unwrap();
+        assert_eq!(typed.withheld, 2, "the screen says `2/0` and nothing about the two it skipped");
+        assert_wire_survives(&sent, &serde_json::to_value(&typed).unwrap(), "$rank");
+    }
+
+    /// THE COMPATIBILITY NEGATIVE. A pilot server from before No.622 sends none
+    /// of these keys. The parse must SUCCEED and every new field must come back
+    /// absent - not a default verdict, not a zero that reads as an answer.
+    /// `cardApplicability` turns that absence into `stated:false`, which renders
+    /// exactly as the card rendered before any of this existed.
+    #[test]
+    fn an_older_server_without_the_new_keys_still_parses() {
+        let old_ranks = r#"{"items":[{"profile_id":"p-1","profile_version":1,"primary":true,
+            "met":["rank"],"missing":[],"unconfirmed":[],
+            "reasons":[{"requirement":"rank","outcome":"met"}],
+            "decided":true,"stale":false}],
+            "unranked_active_profiles":[],"confirmations":[]}"#;
+        let ranks: CandidateRanksResponse = serde_json::from_str(old_ranks)
+            .expect("an older server must not fail the parse of the whole card");
+        assert_eq!(ranks.items[0].applicability, None, "absent is not a verdict");
+        assert_eq!(ranks.items[0].applicability_reason, None);
+        assert!(ranks.withheld_profiles.is_empty(), "absent is an empty disclosure");
+
+        let old_rank_press = r#"{"ranked":1,"written":1,"reason":"ranked","profiles":["p-1"]}"#;
+        let press: CandidateRankResponse = serde_json::from_str(old_rank_press).unwrap();
+        assert_eq!(press.withheld, 0, "absent is nothing withheld, and the screen prints no note");
+
+        let old_row = r#"{"intake_id":"i-1","receipt_id":"r-1","crewing_id":"c-1",
+            "source":"inbound","source_id":"m-1","event_id":"e-1","primary_profile_id":null,
+            "content_sha256":"abc","content_bytes":9,"content_type":"text/plain",
+            "state":"ranked","source_trust":"inbound_alias","version":1,
+            "created_at":"2026-10-02T00:00:00","issued_at":"2026-10-02T00:00:00",
+            "summary":{"state":"ranked","facts":1,"ranks":1,"ranks_stale":0,
+                "active_confirmations":0,"needs_review_reason":null,
+                "profile_ranks":[{"profile_id":"p-1","profile_version":1,"met":1,
+                    "missing":0,"unconfirmed":0,"total":1,"stale":false}]}}"#;
+        let row: CandidateIntakeReceipt = serde_json::from_str(old_row)
+            .expect("an older server must not fail the parse of a queue row");
+        let summary = row.summary.unwrap();
+        assert_eq!(summary.ranks_withheld, 0);
+        assert_eq!(summary.profile_ranks.unwrap()[0].applicability, None);
+    }
+    // =============== No.637/S6: THE SEAM, ON SERVER BYTES END ===============
 }

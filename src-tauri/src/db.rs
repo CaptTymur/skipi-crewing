@@ -760,6 +760,27 @@ pub fn save_seafarer_from_bundle(
     let safe_id = clean_path_part(&seafarer_id, "seafarer");
     let seafarers_base = seafarers_dir(vault_path);
     let docs_dir = seafarers_base.join(&safe_id);
+    // No.664/S2 (Г1а). The Crew Flow path once keyed its row by the LETTER
+    // (`intake:<id>`), not by the person. When that same intake is now saved
+    // under the person's stable key, the older row is the same human and must
+    // not stay behind as a second one. The rule is deliberately narrow: only an
+    // `intake:`-born application id, only the row whose id IS that application
+    // id and that was born of it, and only a row holding no document rows — a
+    // row with documents is never destroyed by this path (a doubled list is
+    // repairable, a lost file is not). The bundle path never passes an
+    // `intake:` application id, so it never reaches this branch. What the
+    // operator wrote on the old row (status, notes, ex-crew, first seen) moves
+    // to the new one when the new one is created.
+    let legacy_intake_id: Option<String> =
+        if application_id.starts_with("intake:") && application_id != seafarer_id {
+            Some(application_id.to_string())
+        } else {
+            None
+        };
+    let legacy_docs_dir = legacy_intake_id
+        .as_deref()
+        .map(|lid| seafarers_base.join(clean_path_part(lid, "seafarer")))
+        .filter(|dir| *dir != docs_dir);
     let staging_dir =
         seafarers_base.join(format!(".{}.{}", safe_id, uuid::Uuid::new_v4().simple()));
     let backup_dir = seafarers_base.join(format!(
@@ -906,16 +927,46 @@ pub fn save_seafarer_from_bundle(
         return Err(format!("activate seafarer dir: {e}"));
     }
 
-    let db_result = (|| -> Result<SavedSeafarer, String> {
+    let db_result = (|| -> Result<(SavedSeafarer, bool), String> {
         let mut guard = CONN.lock().unwrap();
         let conn = guard.as_mut().expect("db not initialised");
         let tx = conn.transaction().map_err(|e| e.to_string())?;
+        // Г1а: retired only if it exists, was born of this very intake and holds
+        // no document rows (see the note where `legacy_intake_id` is computed).
+        let legacy: Option<String> = legacy_intake_id
+            .as_deref()
+            .filter(|lid| {
+                let born_here: i64 = tx
+                    .query_row(
+                        "SELECT COUNT(*) FROM seafarers WHERE id = ?1 AND source_application_id = ?2",
+                        params![lid, application_id],
+                        |r| r.get(0),
+                    )
+                    .unwrap_or(0);
+                let docs: i64 = tx
+                    .query_row(
+                        "SELECT COUNT(*) FROM seafarer_documents WHERE seafarer_id = ?1",
+                        params![lid],
+                        |r| r.get(0),
+                    )
+                    .unwrap_or(0);
+                born_here > 0 && docs == 0
+            })
+            .map(str::to_string);
         let first_seen = tx
             .query_row(
                 "SELECT first_seen_at FROM seafarers WHERE id = ?1",
                 params![&seafarer_id],
                 |r| r.get::<_, String>(0),
             )
+            .or_else(|_| match legacy.as_deref() {
+                Some(lid) => tx.query_row(
+                    "SELECT first_seen_at FROM seafarers WHERE id = ?1",
+                    params![lid],
+                    |r| r.get::<_, String>(0),
+                ),
+                None => Err(rusqlite::Error::QueryReturnedNoRows),
+            })
             .unwrap_or_else(|_| now.clone());
         tx.execute(
             "INSERT INTO seafarers
@@ -923,9 +974,12 @@ pub fn save_seafarer_from_bundle(
                  source_application_id, first_seen_at, last_received_at, ex_crew,
                  status, notes, summary_json, manifest_json, docs_dir, cv_path)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
-                 COALESCE((SELECT ex_crew FROM seafarers WHERE id = ?1), 0),
-                 COALESCE((SELECT status FROM seafarers WHERE id = ?1), 'prospect'),
-                 (SELECT notes FROM seafarers WHERE id = ?1),
+                 COALESCE((SELECT ex_crew FROM seafarers WHERE id = ?1),
+                          (SELECT ex_crew FROM seafarers WHERE id = ?14), 0),
+                 COALESCE((SELECT status FROM seafarers WHERE id = ?1),
+                          (SELECT status FROM seafarers WHERE id = ?14), 'prospect'),
+                 COALESCE((SELECT notes FROM seafarers WHERE id = ?1),
+                          (SELECT notes FROM seafarers WHERE id = ?14)),
                  ?10, ?11, ?12, ?13)
              ON CONFLICT(id) DO UPDATE SET
                  display_name = excluded.display_name,
@@ -953,9 +1007,19 @@ pub fn save_seafarer_from_bundle(
                 &manifest_json,
                 docs_dir.to_string_lossy().as_ref(),
                 saved_cv_path.as_deref(),
+                legacy.as_deref(),
             ],
         )
         .map_err(|e| e.to_string())?;
+        if let Some(lid) = legacy.as_deref() {
+            tx.execute(
+                "DELETE FROM seafarer_documents WHERE seafarer_id = ?1",
+                params![lid],
+            )
+            .map_err(|e| e.to_string())?;
+            tx.execute("DELETE FROM seafarers WHERE id = ?1", params![lid])
+                .map_err(|e| e.to_string())?;
+        }
         tx.execute(
             "DELETE FROM seafarer_documents WHERE seafarer_id = ?1",
             params![&seafarer_id],
@@ -1008,13 +1072,21 @@ pub fn save_seafarer_from_bundle(
         }
 
         tx.commit().map_err(|e| e.to_string())?;
-        read_saved_seafarer(conn, &seafarer_id).map_err(|e| e.to_string())
+        let saved = read_saved_seafarer(conn, &seafarer_id).map_err(|e| e.to_string())?;
+        Ok((saved, legacy.is_some()))
     })();
 
     match db_result {
-        Ok(saved) => {
+        Ok((saved, legacy_retired)) => {
             if had_existing_dir {
                 let _ = std::fs::remove_dir_all(&backup_dir);
+            }
+            // Г1а: the folder of the retired letter-keyed row. It held no
+            // document rows (the condition above), so nothing of value is lost.
+            if legacy_retired {
+                if let Some(dir) = legacy_docs_dir.as_ref() {
+                    let _ = std::fs::remove_dir_all(dir);
+                }
             }
             Ok(saved)
         }
@@ -1168,4 +1240,119 @@ pub fn mark_saved_seafarer_reply(
     )
     .map_err(|e| e.to_string())?;
     read_saved_seafarer(conn, seafarer_id).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn vault() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "skipi-crewing-664-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4().simple()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        init(dir.to_str().unwrap()).expect("init");
+        dir
+    }
+    fn save(vault: &Path, application_id: &str, seafarer_user_id: &str, name: &str, manifest_mid: &str) -> SavedSeafarer {
+        let manifest = serde_json::json!({
+            "exported_by": { "name": name, "rank": "Master", "messaging_user_id": manifest_mid },
+            "documents": []
+        });
+        let summary = serde_json::json!({ "name": name, "rank": "Master", "nationality": "Ukrainian", "email": "" });
+        save_seafarer_from_bundle(application_id, seafarer_user_id, &manifest, "", Some(&summary), None, vault.to_str().unwrap())
+            .expect("save")
+    }
+    fn row(id: &str) -> Option<SavedSeafarer> {
+        list_saved_seafarers().unwrap().into_iter().find(|s| s.id == id)
+    }
+    fn ids() -> Vec<String> {
+        let mut v: Vec<String> = list_saved_seafarers().unwrap().into_iter().map(|s| s.id).collect();
+        v.sort();
+        v
+    }
+
+    // ONE test for the whole No.664/S2 receiver story, because the connection is
+    // a process-wide static: the scenarios run in sequence on one vault, each on
+    // ids of its own. There were no unit tests on this file before this card.
+    #[test]
+    fn no_664_s2_the_person_key_retires_the_letter_key_and_touches_nobody_else() {
+        let v = vault();
+        let pr_a = "PR-0123456789abcdef";
+        let pr_b = "PR-ffffffffffffffff";
+
+        // 1. the old build keyed the row by the letter; the operator worked on it
+        let legacy = save(&v, "intake:I1", "", "", "intake:I1");
+        assert_eq!(legacy.id, "intake:I1");
+        assert_eq!(legacy.display_name, "intake:I1", "the old shape: no name, the id shows as the name");
+        update_saved_seafarer("intake:I1", Some(true), Some("contacted"), Some("called twice")).unwrap();
+        let legacy_first_seen = row("intake:I1").unwrap().first_seen_at;
+        let legacy_dir = seafarers_dir(v.to_str().unwrap()).join(clean_path_part("intake:I1", "seafarer"));
+        assert!(legacy_dir.exists(), "calibration: the letter-keyed row has its (empty) folder");
+
+        // another person, saved before A so that A's save can be shown not to touch it
+        let _ = save(&v, "intake:I2", pr_b, "B. Other", pr_b);
+        update_saved_seafarer(pr_b, None, Some("hold"), Some("B notes")).unwrap();
+        let b_before = serde_json::to_value(row(pr_b).unwrap()).unwrap();
+
+        // 2. the new build: the SAME intake, keyed by the person
+        let a = save(&v, "intake:I1", pr_a, "Ivan Petrenko", pr_a);
+        assert_eq!(a.id, pr_a);
+        assert_eq!(a.display_name, "Ivan Petrenko");
+        assert_eq!(ids(), vec![pr_a.to_string(), pr_b.to_string()], "Г1а: one row for A — the letter-keyed row is retired");
+        assert!(row("intake:I1").is_none());
+        assert!(!legacy_dir.exists(), "Г1а: the empty folder of the letter-keyed row is gone");
+        assert_eq!(a.status, "contacted", "what the operator wrote on the old row travelled");
+        assert_eq!(a.notes.as_deref(), Some("called twice"));
+        assert!(a.ex_crew);
+        assert_eq!(a.first_seen_at, legacy_first_seen);
+        assert_eq!(a.source_application_id.as_deref(), Some("intake:I1"));
+        assert!(a.docs_dir.as_deref().map(|d| Path::new(d).exists()).unwrap_or(false));
+
+        // 3. Г1б: B is untouched — every column, compared as a whole
+        let b_after = serde_json::to_value(row(pr_b).unwrap()).unwrap();
+        assert_eq!(b_before, b_after, "Г1б: saving A changed nothing on B");
+
+        // 4. Г1б: a repeat on A (a second response of the same person = another
+        //    intake) keeps first_seen / status / notes / ex_crew and stays ONE row
+        update_saved_seafarer(pr_a, None, Some("shortlisted"), Some("notes stay")).unwrap();
+        let a2 = save(&v, "intake:I3", pr_a, "Ivan Petrenko", pr_a);
+        assert_eq!(ids(), vec![pr_a.to_string(), pr_b.to_string()]);
+        assert_eq!(a2.first_seen_at, legacy_first_seen);
+        assert_eq!(a2.status, "shortlisted");
+        assert_eq!(a2.notes.as_deref(), Some("notes stay"));
+        assert!(a2.ex_crew);
+        assert_eq!(a2.source_application_id.as_deref(), Some("intake:I3"));
+        assert_eq!(serde_json::to_value(row(pr_b).unwrap()).unwrap(), b_after, "and B is still untouched");
+
+        // 5. a letter-keyed row that HOLDS document rows is never retired:
+        //    a doubled list over a lost document, by construction
+        let with_doc = serde_json::json!({
+            "exported_by": { "name": "Doc Holder", "rank": "AB", "messaging_user_id": "intake:I4" },
+            "documents": [{ "title": "Passport" }]
+        });
+        save_seafarer_from_bundle("intake:I4", "", &with_doc, "", None, None, v.to_str().unwrap()).unwrap();
+        let d = save(&v, "intake:I4", "PR-4444444444444444", "Doc Holder", "PR-4444444444444444");
+        assert_eq!(d.id, "PR-4444444444444444");
+        assert!(row("intake:I4").is_some(), "a row holding document rows stays");
+        assert_eq!(d.status, "prospect", "and nothing is carried from a row that was not retired");
+
+        // 6. the bundle path never names an `intake:` application: the branch
+        //    does not fire, no letter-keyed row of anybody is touched
+        let _ = save(&v, "intake:I5", "", "Letter Five", "intake:I5");
+        let bundle = save(&v, "app-9f1e", "demo-sf1", "Oleksandr K.", "demo-sf1");
+        assert_eq!(bundle.id, "demo-sf1");
+        assert!(row("intake:I5").is_some());
+        assert_eq!(bundle.source_application_id.as_deref(), Some("app-9f1e"));
+
+        // 7. Г1б: an empty key never upserts by "" — the receiver's own fallback
+        //    (manifest id, then application_<id>) is what it was before this card
+        let empty = save(&v, "intake:I6", "", "No Key", "");
+        assert_eq!(empty.id, "application_intake_I6");
+        assert!(row("").is_none());
+
+        let _ = std::fs::remove_dir_all(&v);
+    }
 }
