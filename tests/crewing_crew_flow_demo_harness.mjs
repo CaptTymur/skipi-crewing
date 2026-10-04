@@ -1640,6 +1640,49 @@ if (r3Ready) {
         '[' + lang + '] No.675: the pill is a sentence in this language — a missing key would print the wire code — got "' + text + '"');
     }
     store.set('skipi-crewing-ui-language', 'en');
+
+    // ---- No.675 (OWNER (991)/(992)): the CLASS on each chip ---------------
+    // Read off the rendered row, not off the stylesheet: a correct rule on a
+    // chip that never gets the class is the defect this pair exists to catch.
+    {
+      const classOf = (row, qa) => {
+        const m = String(row).match(new RegExp('<span class="([^"]*)" data-qa="' + qa + '"'));
+        return m ? m[1] : (new RegExp('data-qa="' + qa + '"').test(String(row)) ? '(no class attr)' : '');
+      };
+      // The FIRST span of a row is the timestamp; the state chip is the first one
+      // inside the chip container. Reading the wrong span made this read
+      // "cf-row-time" and measured nothing.
+      const chipsOf2 = (row) => (String(row).match(/<div class="cf-chips">([\s\S]*?)<\/div>/) || [])[1] || '';
+      const stateChipClass = (chipsOf2(r3Row('L-resp-none')).match(/<span class="([^"]*)"/) || [])[1] || '';
+      ok(stateChipClass === 'badge',
+        '991 CALIBRATION: the intake-state chip of that row is a plain `badge` — got "' + stateChipClass + '"');
+      ok(classOf(r3Row('L-resp-none'), 'crew-flow-row-no-matches') === stateChipClass,
+        '991: the no-matches chip carries the SAME class as the chip beside it, so one rule paints both — got "'
+          + classOf(r3Row('L-resp-none'), 'crew-flow-row-no-matches') + '"');
+
+      // (992): the irreversible save is green; a reversible local mark is not.
+      MR3.state.crewFlowReadState['L-met'] = { action: 'saved_to_db', saved_to_db: true, at: '2026-10-04T00:00:00Z' };
+      MR3.state.crewFlowReadState['L-gap'] = { action: 'kept_for_later', at: '2026-10-04T00:00:00Z' };
+      const greenTree = String(MR3.crewFlowLiveTreeHtml('live'));
+      const gRow = (id) => {
+        const m = greenTree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+        return m ? m[0] : '';
+      };
+      ok(classOf(gRow('L-met'), 'crew-flow-row-review') === 'badge saved',
+        '992: «в базе моряков» is the green chip in the queue row — got "' + classOf(gRow('L-met'), 'crew-flow-row-review') + '"');
+      ok(/data-review="saved_to_db"/.test(gRow('L-met')),
+        '992 CALIBRATION: and that is really the saved state and not another one wearing the class');
+      ok(classOf(gRow('L-gap'), 'crew-flow-row-review') === 'badge',
+        '992: a reversible local mark («отложен») stays grey — the strong colour is not spent on it — got "'
+          + classOf(gRow('L-gap'), 'crew-flow-row-review') + '"');
+      // the phone list is the same renderer, so the class reaches it too
+      const gMob = String(MR3.crewFlowLiveMobileHtml('live'));
+      const gMobRow = (gMob.match(/data-intake="L-met"[\s\S]*?(?=<button class="mobile-list-item|$)/) || [''])[0];
+      ok(/class="badge saved"/.test(gMobRow),
+        '992: and the phone row carries it as well — one badge renderer, not two');
+      delete MR3.state.crewFlowReadState['L-met'];
+      delete MR3.state.crewFlowReadState['L-gap'];
+    }
   }
 
   // ---- 3b. the remainder the three counts do not explain ------------------
@@ -2032,6 +2075,63 @@ section('No.675: the no-matches wording is one sentence in both dictionaries');
   // letter, and the calibration rows above depend on it being there.
   ok(/'crew_flow\.card_fit_none':/.test(HTML) && /fit_none:'/.test(HTML),
     'No.675 PRESERVE: the «пока нет» wording stays in both dictionaries for everything that is not a response');
+}
+
+// ============================================================================
+// No.675 (OWNER (991) + (992), 2026-10-04): WHICH CHIP IS GREY AND WHICH IS
+// GREEN, pinned on the shipped CSS so a refactor cannot quietly re-invent one.
+//
+// (991) The no-matches pill spent one build as a bordered thing of its own and
+// read as a different kind of object beside «Записано; ожидает проверки». It is
+// now `class="badge"` inside `.cf-chips` — the SAME class and the SAME rule as
+// the chips it stands with. What is asserted is therefore an ABSENCE (no second
+// grey rule) plus the properties of the one rule that remains.
+//
+// (992) «в базе моряков» is green, and the green is not a new one: it must be
+// the very values «Все проверки выполнены» / the 100 % figure already use. That
+// is checked by EQUALITY of the two colours read out of the stylesheet, in both
+// themes — a third green cannot drift in without reddening this.
+// ============================================================================
+section('No.675: the grey chip is the queue grey, the green chip is the queue green');
+{
+  const css = HTML.slice(0, HTML.indexOf('</style>'));
+
+  // ---- (991) one grey, and it is the chip rule --------------------------
+  ok(!/\.cf-nomatch/.test(HTML),
+    '991: no `.cf-nomatch` rule or class survives anywhere — the bordered pill cannot come back under its old name');
+  const chipRule = (css.match(/\n\.cf-chips \.badge \{[^}]*\}/) || [''])[0];
+  ok(chipRule !== '', '991 CALIBRATION: the queue chip rule is where this test thinks it is');
+  ok(/var\(--panel2\)/.test(chipRule) && /var\(--text2\)/.test(chipRule),
+    '991: the chip grey is theme tokens, so one rule serves light and dark — got "' + chipRule.trim() + '"');
+  // `border-radius` contains the word "border": a bare /border/ here is a check
+  // that cannot pass, which is the same defect as one that cannot fail.
+  ok(/border-radius/.test(chipRule) && !/[\s;{]border\s*:/.test(chipRule),
+    '991: it keeps its round shape and carries NO border line — that was the thing the owner saw as "not the same pill"');
+
+  // ---- (992) the green is the SAME green, both themes --------------------
+  const colourOf = (re) => { const m = css.match(re); return m ? m[1].toLowerCase() : ''; };
+  const completeDark = colourOf(/\n\.cf-fit-complete \.cf-word, \.cf-fit-complete \.cf-pct \{ color:(#[0-9a-f]{6}); \}/);
+  const completeLight = colourOf(/:root\[data-theme="light"\] \.cf-fit-complete \.cf-pct \{ color:(#[0-9a-f]{6}); \}/);
+  const savedDark = colourOf(/\n\.badge\.saved \{ color:(#[0-9a-f]{6});/);
+  const savedLight = colourOf(/\n:root\[data-theme="light"\] \.badge\.saved \{ color:(#[0-9a-f]{6}); \}/);
+  ok(completeDark !== '' && completeLight !== '' && completeDark !== completeLight,
+    '992 CALIBRATION: «Все проверки выполнены» really does carry two different greens, one per theme — got '
+      + completeDark + ' / ' + completeLight);
+  ok(savedDark !== '' && savedLight !== '',
+    '992: the saved chip has a green in BOTH themes — got ' + savedDark + ' / ' + savedLight);
+  ok(savedDark === completeDark,
+    '992: and the dark one is the SAME green as the 100 % figure, not a second one — ' + savedDark + ' vs ' + completeDark);
+  ok(savedLight === completeLight,
+    '992: and so is the light one — ' + savedLight + ' vs ' + completeLight);
+  ok(/\n\.badge\.saved \{[^}]*font-weight:650;/.test(css),
+    '992: it also borrows the weight `.cf-fit-complete .cf-word` uses, so the two read as one state and not two');
+  // Colour only. A tinted ground would be a value nobody measured, and this
+  // screen expresses "all good" as a text colour everywhere else.
+  ok(!/\n\.badge\.saved \{[^}]*background/.test(css),
+    '992: no new tinted ground was invented for it');
+  // The selector must reach the phone chip row too, where `.badge` is unstyled.
+  ok(/\n\.badge\.saved \{/.test(css) && !/\n\.cf-chips \.badge\.saved \{/.test(css),
+    '992: the rule is not scoped to the desktop tree — the word turns green in the phone chip row as well');
 }
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');

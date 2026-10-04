@@ -860,18 +860,26 @@ body.mobile-shell .settings-modal { width: min(100%, 520px); max-height: none; }
    .panel-header, so in the tree these read as loose words run together. */
 .cf-chips .badge { font-size:10.5px; line-height:1.7; padding:0 7px; border-radius:99px;
   background:var(--panel2); color:var(--text2); white-space:nowrap; }
-/* No.675 (OWNER (990), 2026-10-04): «На момент отклика соответствий нет».
-   A fact about a moment that has already passed, so it is CALM -- a neutral
-   chip, never an error colour: nothing went wrong, nobody has compared him yet
-   and the operator's own button is what changes that. Painted from theme
-   tokens, which is the only way one rule serves the light theme as well as the
-   dark (930). It styles itself completely instead of leaning on
-   `.cf-chips .badge`, because the same renderer places it in the phone's
-   `.mobile-chip-row` and on the candidate card, where that rule does not reach. */
-.cf-nomatch { display:inline-block; font-size:10.5px; line-height:1.7; padding:0 8px;
-  border-radius:99px; background:var(--panel2); color:var(--text2);
-  border:1px solid var(--border); }
-.pilot-status .cf-nomatch { font-size:12px; line-height:1.9; padding:1px 10px; }
+/* No.675 (OWNER (991), 2026-10-04): «На момент отклика соответствий нет» is
+   ONE OF THESE CHIPS and nothing of its own. For one build it was a separate
+   bordered pill and read as a different kind of object standing next to
+   «Записано; ожидает проверки»; the owner asked for the grey the queue already
+   uses. There is therefore no rule here for it at all -- it is `class="badge"`
+   inside `.cf-chips`, and the candidate card renders it inside a `.cf-chips`
+   container for the same reason: one grey, one rule, nothing to drift.
+
+   No.675 (OWNER (992), 2026-10-04): «в базе моряков» is the one chip that is
+   GREEN. The green is NOT a new one -- #34d399 / #1f7a45 and weight 650 are
+   exactly the two declarations `.cf-fit-complete .cf-word` and `.cf-pct` carry
+   for «Все проверки выполнены» and the 100 % figure (see the block above), and
+   the harness asserts the two are the SAME values so a third green cannot
+   appear by drift. Colour only, no fill: on this screen green is a text
+   colour, and a tinted ground would be a new value nobody measured. The
+   selector is `.badge.saved` rather than `.cf-chips .badge.saved` so the chip
+   is green in the phone's `.mobile-chip-row` too, where `.badge` is otherwise
+   unstyled -- the word still turns green there. */
+.badge.saved { color:#34d399; font-weight:650; }
+:root[data-theme="light"] .badge.saved { color:#1f7a45; }
 .cf-panel-note { padding:4px 12px 6px 16px; font-size:11px; color:var(--text2); overflow-wrap:anywhere; }
 .cf-panel-note.err { color:var(--err); }
 /* The candidate card: who this is, then what was compared, then what to do. */
@@ -6046,10 +6054,24 @@ function crewFlowRowBadges(item) {
   // nothing about matching. Replacing it would delete that fact here, and on
   // every row already `ranked` there would be nothing to replace at all.
   if (crewFlowNoMatchesYet(item)) {
-    out += '<span class="cf-nomatch" data-qa="crew-flow-row-no-matches">' + escapeHtml(crewFlowTr('no_matches_yet')) + '</span>';
+    out += '<span class="badge" data-qa="crew-flow-row-no-matches">' + escapeHtml(crewFlowTr('no_matches_yet')) + '</span>';
   }
-  if (read && read.action) out += '<span class="badge">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</span>';
+  // (992): the irreversible one is the one that is green. Every other review
+  // state ("ignored", "kept for later", "draft opened") stays grey: they are
+  // reversible local marks, and painting them the same green would spend the
+  // only strong colour this row has on the states that do not need it.
+  if (read && read.action) {
+    out += '<span class="' + (crewFlowReviewIsSaved(read.action) ? 'badge saved' : 'badge')
+      + '" data-qa="crew-flow-row-review" data-review="' + escapeAttr(String(read.action)) + '">'
+      + escapeHtml(crewFlowReviewLabel(read.action)) + '</span>';
+  }
   return out;
+}
+// No.675 (OWNER (992)): ONE place that answers "is this the irreversible
+// save", so the queue row and the card panel can never disagree about which
+// chip is green. The code is the one `crewFlowSaveToSeafarers` writes.
+function crewFlowReviewIsSaved(action) {
+  return String(action || '') === 'saved_to_db';
 }
 function crewFlowReviewLabel(action) {
   var key = 'state_' + String(action || '');
@@ -6250,7 +6272,12 @@ function crewFlowActionsHtml(intakeId) {
     + (hintKey ? '<div class="sub" data-qa="crew-flow-' + (hintKey === 'email_missing' ? 'email-hint' : (hintKey === 'email_not_usable' ? 'email-not-usable' : 'email-unknown')) + '" style="margin-top:5px;">' + escapeHtml(crewFlowTr(hintKey)) + '</div>' : '')
     + (mobile ? '<div class="sub" data-qa="crew-flow-share-hint" style="margin-top:5px;">' + escapeHtml(crewFlowTr('share_note')) + '</div>' : '')
     + '<div class="sub" data-qa="crew-flow-local-note" style="margin-top:7px;">' + escapeHtml(crewFlowTr('local_decision')) + '</div>'
-    + (read.action ? '<div class="sub" data-qa="crew-flow-review-state" style="margin-top:7px;">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</div>' : '')
+    // (992): under the buttons, the irreversible save is the same GREEN chip the
+    // queue row carries -- same class, same rule. The other review states keep
+    // the plain line they have always had: the owner named this one.
+    + (read.action && crewFlowReviewIsSaved(read.action)
+        ? '<div class="cf-chips" data-qa="crew-flow-review-state"><span class="badge saved" data-qa="crew-flow-review-state-pill">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</span></div>'
+        : (read.action ? '<div class="sub" data-qa="crew-flow-review-state" style="margin-top:7px;">' + escapeHtml(crewFlowReviewLabel(read.action)) + '</div>' : ''))
     + '</div>';
 }
 // No.664/S2 (OWNER (985)): the save writes the PERSON, not the letter.
@@ -7410,8 +7437,10 @@ function cardNoMatchesPillHtml() {
   if (!cardSourceIsResponse()) return '';
   var items = Array.isArray(d.ranks.items) ? d.ranks.items : [];
   if (items.length) return '';
-  return '<div class="pilot-status" data-qa="pilot-fit-no-matches">'
-    + '<span class="cf-nomatch" data-qa="pilot-fit-no-matches-pill">' + escapeHtml(cardT('fit_no_matches')) + '</span></div>';
+  // (991): the SAME chip the queue row uses -- same class, same container, so
+  // one rule paints both and the card cannot grow a second grey.
+  return '<div class="cf-chips" data-qa="pilot-fit-no-matches">'
+    + '<span class="badge" data-qa="pilot-fit-no-matches-pill">' + escapeHtml(cardT('fit_no_matches')) + '</span></div>';
 }
 function cardOriginLabel(profileId) {
   var origin = cardResponseOrigin();

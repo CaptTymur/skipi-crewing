@@ -1783,6 +1783,53 @@ console.log('# K2 modules/crew-flow');
     } catch (e) { console.log('    (K2 runtime: ' + (e && e.message) + ')'); return undefined; }
   };
 
+  // ===========================================================================
+  // No.675 (OWNER (991)/(992), 2026-10-04) on the CARD surfaces.
+  //   (991) the no-matches pill is the queue's own grey chip — same class, same
+  //         container — and not a bordered object of its own;
+  //   (992) «в базе моряков» under the action buttons is the green chip, the same
+  //         class the queue row uses, and a reversible mark is not.
+  // ===========================================================================
+  console.log('\n# No.675: chip classes on the card (grey 991, green 992)');
+  {
+    const ctx = makeContext();
+    ctx.server.card.source = 'skipi_response';
+    await openCard(ctx);
+    const src = main(ctx);
+    const s = src.indexOf('<section class="pilot-card" data-qa="pilot-section-fit"');
+    const e = src.indexOf('<section class="pilot-card" data-qa="pilot-section-letter"', s);
+    const fit = (s < 0) ? '' : (e < 0 ? src.slice(s) : src.slice(s, e));
+    softOk(/<div class="cf-chips" data-qa="pilot-fit-no-matches">/.test(fit),
+      '991: the card renders the pill inside the queue\'s own chip container, so one rule paints both surfaces');
+    softOk(/<span class="badge" data-qa="pilot-fit-no-matches-pill">/.test(fit),
+      '991: and the pill itself is a plain `badge` — no class of its own to carry a border');
+    softOk(!/cf-nomatch/.test(src),
+      '991: nothing on this card still asks for the retired bordered pill');
+  }
+  {
+    // The actions panel lives in the Crew Flow host, so it is driven in the host
+    // sandbox where it actually renders.
+    const ctx = makeCrewContext({});
+    ctx.__crew.renderCrewFlowView();
+    await flush();
+    const panel = (id) => String(tryRun(ctx, "crewFlowActionsHtml('" + id + "')") || '');
+    ctx.state.crewFlowReadState['intake-1'] = { action: 'saved_to_db', saved_to_db: true, at: '2026-10-04T00:00:00Z' };
+    ctx.state.crewFlowReadState['intake-2'] = { action: 'kept_for_later', at: '2026-10-04T00:00:00Z' };
+    const saved = panel('intake-1');
+    const later = panel('intake-2');
+    softOk(/data-qa="crew-flow-actions"/.test(saved),
+      '992 CALIBRATION: the actions panel renders at all — the checks below are about a chip, not an empty string');
+    softOk(/<span class="badge saved" data-qa="crew-flow-review-state-pill">/.test(saved),
+      '992: under the buttons «в базе моряков» is the SAME green chip the queue row carries, not a line of plain text');
+    softOk(/<div class="cf-chips" data-qa="crew-flow-review-state">/.test(saved),
+      '992: and it sits in the chip container, so it is painted by the chip rule rather than by something new');
+    softOk(!/class="badge saved"/.test(later) && /data-qa="crew-flow-review-state"/.test(later),
+      '992 CALIBRATION: a reversible mark («отложен») keeps its plain line and never borrows the green');
+    // PRESERVE: the irreversible save is still the thing the panel is about.
+    softOk(/data-qa="crew-flow-action-save"/.test(saved) && /data-qa="crew-flow-action-match"/.test(saved),
+      '992 PRESERVE: the Save and «Сопоставить с профилем» buttons are untouched by the chip');
+  }
+
   // 4. live queue in Crew Flow
   let liveCtx = null;
   try { liveCtx = makeCrewContext({}); } catch (e) { console.error('  K2 runtime load failed:', e && e.message); }
