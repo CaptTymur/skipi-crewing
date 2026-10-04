@@ -6262,7 +6262,16 @@ function crewFlowDeliveredContact(intakeId) {
 // shows them. NAME: exactly what the heading shows — pilotCardResolvedName, the
 // ONE order (operator correction > delivered > recorded fact > listed name);
 // no copy of that order lives here, so the base cannot disagree with the
-// screen. RANK: delivered, then the recorded fact. NATIONALITY: delivered
+// screen. RANK: the rank the SEAFARER NAMED — `experience_rank` of the summary
+// (schemas.py: «the days were counted for a rank the SEAFARER named»), then the
+// recorded fact. NEVER `response_summary.rank`: that is the rank of the
+// VACANCY this response answered (`_rank_of_response(snapshot)`), and a Chief
+// Engineer who applied for a 2nd Engineer post must stay a Chief Engineer in
+// the base — the product itself prints «not the rank of this response» beside
+// it (Counsel, closure 04.10). Not written into `position` either: the seafarer
+// screens read `s.rank || s.position` as ONE thing, the person's post
+// (dist: filter, rank list, row, card), so a vacancy there is the same defect in
+// another column. The vacancy stays on the intake card. NATIONALITY: delivered
 // citizenship only — the fact dictionary has no such key (`facts.nationality`
 // never existed). EMAIL: the address DELIVERED WITH THE RESPONSE when it is one
 // (state have + isEmail), else the recorded `contact:email` fact. Four keys and
@@ -6276,7 +6285,7 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
   // The card block is always loaded where this writer can be reached (the
   // panel renders inside the card); without it there is no name — and no save.
   var name = (typeof pilotCardResolvedName === 'function') ? clean(pilotCardResolvedName(rs).name) : '';
-  var rank = clean(rs && rs.rank) || clean(facts.rank);
+  var rank = clean(rs && rs.experience_rank) || clean(facts.rank);
   var nationality = clean(rs && rs.citizenship) || clean(rs && rs.citizenship_code);
   var email = '';
   if (contact && contact.state === 'have' && contact.isEmail) email = clean(contact.value);

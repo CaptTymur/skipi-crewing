@@ -1925,7 +1925,7 @@ console.log('# K2 modules/crew-flow');
         'Г1а: the application id stays intake:<id> — it is what the receiver reads to retire the legacy intake: row of this very intake');
       const s = ctx.save && ctx.save.args.applicantSummary;
       softOk(!!s && s.name === 'Ivan Petrenko', 'Г2: name = first name + surname of the delivered summary (beats the machine-read fact «Oleh V.») — got ' + (s && JSON.stringify(s.name)));
-      softOk(!!s && s.rank === 'Master', 'Г2: rank from the delivered summary');
+      softOk(!!s && s.rank === 'Master', 'Г2: rank from the delivered summary (experience_rank — here equal to the post answered)');
       softOk(!!s && s.nationality === 'Ukrainian', 'Г2: nationality = citizenship of the delivered summary — got ' + (s && JSON.stringify(s.nationality)));
       softOk(!!s && s.email === 'oleh@example.test', 'Г2: with no delivered contact (404) the email is the recorded contact:email FACT');
       softOk(!!s && Object.keys(s).sort().join(',') === 'email,name,nationality,rank', 'Г2: exactly four keys — no facts.nationality / facts.email ghosts — got ' + (s && Object.keys(s).join(',')));
@@ -1949,6 +1949,39 @@ console.log('# K2 modules/crew-flow');
       softOk(rs['intake-1'] && rs['intake-1'].saved_to_db === true, 'the review state records the save');
       softOk(!JSON.stringify(ctx.state.crewFlowFacts || {}).includes('Ukrainian') && !JSON.stringify(ctx.state.crewFlowFacts || {}).includes('Petrenko'),
         'No.621 N17 stays: nothing of the delivered summary enters crewFlowFactCache');
+    }
+
+    // ---- 1b. THE RANK IS THE PERSON'S, NOT THE VACANCY'S (Counsel STOP, 04.10) --
+    // `response_summary.rank` is the rank of the post this response ANSWERED
+    // (server: _rank_of_response(snapshot)); `experience_rank` is the rank the
+    // seafarer named for their own career. On the stand a Chief Engineer who
+    // answered a 2nd Engineer post was filed as «2nd Engineer» and stopped being
+    // found by their qualification. The base gets the person's rank; the vacancy
+    // goes nowhere in the row — not into `rank`, not into `position` (the seafarer
+    // screens read `s.rank || s.position` as one thing: the person's post).
+    {
+      const CE_ON_2E = Object.assign({}, RS664, { rank: 'Second Engineer', rank_state: 'from_snapshot',
+        experience_rank: 'Chief Engineer', experience_days: 900, experience_state: 'other_rank',
+        experience_days_by_rank: { 'Chief Engineer': 900, 'Second Engineer': 0 } });
+      const ctx = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: CE_ON_2E } } });
+      const s = ctx.save && ctx.save.args.applicantSummary;
+      softOk(!!s && s.rank === 'Chief Engineer', 'Г2/rank: the saved rank is the rank the SEAFARER named (experience_rank) — got ' + (s && JSON.stringify(s.rank)));
+      softOk(!!ctx.save && ctx.save.args.manifest.exported_by.rank === 'Chief Engineer', 'Г2/rank: and the manifest rank (which the receiver prefers) is the same person’s rank');
+      softOk(!!ctx.save && !JSON.stringify(ctx.save.args).includes('Second Engineer'), 'Г2/rank: the rank of the VACANCY answered is nowhere in the payload — not rank, not position');
+      softOk(!!ctx.save && !('position' in ctx.save.args.manifest.exported_by) && !('position' in s), 'Г2/rank: position is not written (in the seafarer screens it IS the person’s rank, read as s.rank || s.position)');
+      // no experience rank in the summary → the recorded fact (Master in the fixture), never the vacancy
+      const noExp = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: Object.assign({}, CE_ON_2E, { experience_rank: null, experience_days: null, experience_state: 'not_stated', experience_days_by_rank: null }) } } });
+      softOk(!!noExp.save && noExp.save.args.applicantSummary.rank === 'Master' && noExp.save.args.manifest.exported_by.rank === 'Master',
+        'Г2/rank: without a seafarer-named rank the recorded `rank` FACT fills it — got ' + (noExp.save && JSON.stringify(noExp.save.args.applicantSummary.rank)));
+      // and without the fact too → EMPTY, not the vacancy
+      const nameOnly = [{ field: 'name', versions: [{ field: 'name', value: 'Oleh V.', version: 1, source_object: 'o1', created_at: '2026-09-24T09:05:00' }] }];
+      const bare = await openSave({ cardFields: { 'intake-1': { person_ref: PR, response_summary: Object.assign({}, CE_ON_2E, { experience_rank: null, experience_days: null, experience_state: 'not_stated', experience_days_by_rank: null }) } }, factRows: { 'intake-1': nameOnly } });
+      softOk(!!bare.save && bare.save.args.applicantSummary.rank === '' && bare.save.args.manifest.exported_by.rank === '' && !JSON.stringify(bare.save.args).includes('Second Engineer'),
+        'Г2/rank: with neither, the rank is EMPTY — an unknown rank is not the rank of the vacancy');
+      // static: the helper never reads response_summary.rank
+      const helperR = (k2crew.match(/function crewFlowApplicantSummary\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
+      softOk(helperR !== '' && /experience_rank/.test(helperR) && !/rs\s*&&\s*rs\.rank\b|rs\.rank\b|\.rank\s*\)\s*\|\|/.test(helperR.replace(/experience_rank/g, 'EXPR')),
+        'Г2/rank static: the helper reads experience_rank and never response_summary.rank');
     }
 
     // ---- 2. the delivered contact, by the one named route -------------------
