@@ -773,26 +773,38 @@ ok(r2CrewInvokeSet === 'crewing_intake_attachment_download,crewing_intake_matchi
 // (crewFlowIgnoreSignal, four lines, reaches 803 functions through the render hubs),
 // so what is frozen is ONE step, as a second exact literal. Two calibrations and a
 // mutant below prove the probe sees what is there and nothing that is not.
-function oneStepInvokeRoads(blockText) {
-  // Where a body ends: at the first `\n}` after the definition OR at the next
-  // top-level definition, whichever comes first. `indexOf('\\n}')` alone is not
-  // enough: a ONE-LINE function (escapeHtml, escapeJsString — their regex literals
-  // carry quotes, so a brace counter that skips strings loses its way there too)
-  // would swallow the definitions after it and report their invokes as its own
-  // (measured on 3b3d326a: false roads escapeHtml→plugin:updater|check,
-  // escapeJsString→close_vacancy_remote|…).
-  const defStarts = [...script.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)];
+function oneStepInvokeRoads(blockText, source = script) {
+  // Definitions of BOTH shapes a helper can take at the top level: the home's
+  // `function NAME(` (907 in the file) and the `var|const|let NAME = function|(…) =>|x =>`
+  // forms (3 in the file: __demoMode, invoke, convertFileSrc). The second shape was a
+  // measured gap: a helper written as `var h = async (id) => invoke(…)` outside the
+  // block and called from it reached a command with this list still green
+  // (Supervisor acceptance 2026-10-04, mutation M1b).
+  const defRe = /^(?:(?:async )?function ([A-Za-z_$][\w$]*)\s*\(|(?:var|const|let) ([A-Za-z_$][\w$]*) = (?:async )?(?:function\b|\([^)\n]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/gm;
+  const defStarts = [...source.matchAll(defRe)].map((m) => ({ name: m[1] || m[2], index: m.index, text: m[0] }));
+  // Where a body ends: the first `\n}` after the definition, the next top-level
+  // definition, or — for an arrow with an EXPRESSION body — the end of its own line,
+  // whichever comes first. `indexOf('\n}')` alone is not enough: a ONE-LINE function
+  // (escapeHtml, escapeJsString — their regex literals carry quotes, so a brace counter
+  // that skips strings loses its way there too) would swallow the definitions after it
+  // and report their invokes as its own (measured on 3b3d326a: false roads
+  // escapeHtml→plugin:updater|check, escapeJsString→close_vacancy_remote|…).
   const bodyFrom = (k) => {
     const at = defStarts[k].index;
-    const next = k + 1 < defStarts.length ? defStarts[k + 1].index : script.length;
-    const close = script.indexOf('\n}', at);
-    const end = close >= 0 ? Math.min(close + 2, next) : next;
-    return script.slice(at, end);
+    const next = k + 1 < defStarts.length ? defStarts[k + 1].index : source.length;
+    const close = source.indexOf('\n}', at);
+    let end = close >= 0 ? Math.min(close + 2, next) : next;
+    if (/=>$/.test(defStarts[k].text.trim())) {
+      const eol = source.indexOf('\n', at);
+      const after = source.slice(at + defStarts[k].text.length, eol < 0 ? source.length : eol);
+      if (!/^\s*\{/.test(after)) end = Math.min(end, eol < 0 ? source.length : eol + 1);
+    }
+    return source.slice(at, end);
   };
-  const defs = new Map(); // top-level function name -> { start, body }
-  defStarts.forEach((m, k) => { defs.set(m[1], { start: m.index, body: bodyFrom(k) }); });
-  const blockStart = script.indexOf(blockText.slice(0, 200));
-  const inBlock = new Set([...blockText.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)].map((m) => m[1]));
+  const defs = new Map(); // top-level helper name -> { start, body }
+  defStarts.forEach((m, k) => { defs.set(m.name, { start: m.index, body: bodyFrom(k) }); });
+  const blockStart = source.indexOf(blockText.slice(0, 200));
+  const inBlock = new Set([...blockText.matchAll(defRe)].map((m) => m[1] || m[2]));
   const roads = [];
   for (const name of new Set([...blockText.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]))) {
     if (inBlock.has(name) || !defs.has(name)) continue;
@@ -813,6 +825,14 @@ ok(roads.join(';') === 'pilotLoadQueue→crewing_intake_candidate_list;saveCurre
   'No.664/S3: the roads out of the Crew Flow block are exactly [pilotLoadQueue→crewing_intake_candidate_list, saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle, saveRankedCandidate→fetch_attachments_for_application] — a new helper that fetches for the block changes this list — got ['
   + roads.join('; ') + ']');
 const mutantRoads = oneStepInvokeRoads(crewBlock + '\n  pilotAttachmentDownload(1);\n');
+// M1b (Supervisor acceptance): the helper is NOT a `function` declaration but a `var … = async (…) =>`
+// outside the block — one-line expression body, and a `var … = function () {}` block body.
+const m1bSource = script + "\nvar crewFlowM1bArrow = async (id) => invoke('crewing_intake_candidate_rank', { intakeId: id });\nfunction crewFlowM1bAfter() { return 1; }\nvar crewFlowM1bFn = function (id) {\n  return invoke('parse_cv', { intakeId: id });\n};\n";
+const m1bRoads = oneStepInvokeRoads(crewBlock + '\n  crewFlowM1bArrow(1); crewFlowM1bFn(1); crewFlowM1bAfter();\n', m1bSource);
+ok(m1bRoads.includes('crewFlowM1bArrow→crewing_intake_candidate_rank') && m1bRoads.includes('crewFlowM1bFn→parse_cv'),
+  'S3 MUTANT M1b: a helper declared as var/const/let = arrow or = function outside the block is listed too — got +[' + m1bRoads.filter((r) => !roads.includes(r)).join(',') + ']');
+ok(!m1bRoads.some((r) => r.indexOf('crewFlowM1bAfter→') === 0),
+  'S3 CALIBRATION M1b: the one-line arrow does not swallow the function declared on the next line (its body ends at its own line)');
 ok(mutantRoads.some((r) => r === 'pilotAttachmentDownload→crewing_intake_attachment_download') && mutantRoads.join(';') !== roads.join(';'),
   'S3 MUTANT: a block that reached the byte road through the card’s handler instead of its own literal WOULD change the second list — got +[' + mutantRoads.filter((r) => !roads.includes(r)).join(',') + ']');
 // The two commands that cost money or mutate state must never appear in this block.

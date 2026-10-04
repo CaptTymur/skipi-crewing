@@ -6377,11 +6377,21 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
 // card. `eligible` is the SERVER's answer (the scanner) and is neither relaxed
 // nor repeated here; on top of it the seafarer folder takes pdf|docx ONLY — the
 // two document types the server can name (SERVABLE_EXTENSIONS: eml|pdf|docx,
-// everything else leaves as `.bin`). A `bin` (a jpg, an rtf, a zip in disguise)
-// is neither fetched nor placed and is NAMED to the operator — CANON (930): a
-// file that did not make it is said beside the action, not hidden. The gate
-// stands BEFORE the fetch, so one press of «Save» does not land a stranger's
-// attachment in the operator's Downloads; and the shared byte road
+// everything else leaves as `.bin`). THE KEY IS THE SERVER'S, in two steps,
+// because the server decides in two places (servable_type, No.663 R2):
+//   1. BEFORE the fetch, from the metadata, the two branches the server has: a
+//      pdf is named by its MEASURED type; a .docx is an OOXML and MEASURES AS
+//      application/zip (the scanner's closed signature table has no DOCX entry),
+//      so it is recognised by the pair declared docx + measured application/zip.
+//      Everything else (a jpg, an rtf, a zip that does not even claim to be a
+//      docx) is `bin` here already: not fetched, not placed, NAMED.
+//   2. AFTER the fetch, from the name the server gave the copy: only the server
+//      sees the archive's members, and a zip impostor (declared docx, measures
+//      zip, no [Content_Types].xml) comes back as attachment-N.bin — placed only
+//      if the returned extension is .pdf or .docx, otherwise NAMED the same way.
+// CANON (930): a file that did not make it is said beside the action, not hidden.
+// The first gate stands BEFORE the fetch, so one press of «Save» does not land a
+// stranger's photographs in the operator's Downloads; the shared byte road
 // (crewing_intake_attachment_download — the card's «Download», the letter's pick)
 // is not changed.
 // CEILING per press: at most 10 placeable files and 64 MiB of them in total,
@@ -6404,7 +6414,18 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
 // row and into summary_json. Its reader is №663-S2, not this card.
 var CREW_FLOW_DOCS_MAX_COUNT = 10;
 var CREW_FLOW_DOCS_MAX_BYTES = 64 * 1024 * 1024;
-var CREW_FLOW_DOCS_EXT = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx' };
+var CREW_FLOW_DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+// Step 1 of the key: the extension the server WOULD name from this metadata, or
+// '' for everything it names `bin`. Mirrors servable_type's two branches minus
+// the member check the client cannot make.
+function crewFlowDocsExpectedExt(a) {
+  var measured = String((a && a.measured_type) || '').trim().toLowerCase();
+  var declared = String((a && a.declared_type) || '').trim().toLowerCase();
+  if (measured === 'application/pdf') return 'pdf';
+  if (measured === CREW_FLOW_DOCX_TYPE) return 'docx';
+  if (declared === CREW_FLOW_DOCX_TYPE && measured === 'application/zip') return 'docx';
+  return '';
+}
 function crewFlowDocSource(card) {
   return (card && String(card.source || '').toLowerCase() === 'skipi_response') ? 'skipi_response' : 'email';
 }
@@ -6416,7 +6437,7 @@ function crewFlowPlanDocuments(card) {
   var plan = { place: [], bin: [], bytes: 0 };
   rows.forEach(function(a){
     if (!a || !a.eligible) return;
-    var ext = CREW_FLOW_DOCS_EXT[String(a.measured_type || '').toLowerCase()] || '';
+    var ext = crewFlowDocsExpectedExt(a);
     var row = { ordinal: Number(a.ordinal || 0), name: String(a.filename == null ? '' : a.filename).trim(), ext: ext, bytes: Number(a.byte_size || 0) };
     if (!ext) { plan.bin.push(row); return; }
     plan.place.push(row);
@@ -6427,10 +6448,12 @@ function crewFlowPlanDocuments(card) {
 // One fetch per placeable file, in ordinal order, through the EXISTING command —
 // the ONE place in this block that reaches the byte road (the demo harness
 // freezes the literal of four). Returns the document rows for the receiver and
-// the download root, or throws { ordinal } for the file that did not arrive: a
-// save without that file is not the save the operator pressed.
+// the download root, plus the fetched files the server named `.bin` after all
+// (step 2 of the key — not placed, reported like a bin); or throws { ordinal }
+// for the file that did not arrive: a save without that file is not the save
+// the operator pressed.
 async function crewFlowFetchDocuments(intakeId, card, context, plan) {
-  var docs = [], root = '', cvTaken = false, source = crewFlowDocSource(card);
+  var docs = [], skipped = [], root = '', cvTaken = false, source = crewFlowDocSource(card);
   for (var i = 0; i < plan.place.length; i++) {
     var p = plan.place[i], result;
     try {
@@ -6444,7 +6467,12 @@ async function crewFlowFetchDocuments(intakeId, card, context, plan) {
     var fileName = parts[parts.length - 1], intakeDir = parts[parts.length - 2];
     var rootHere = path.slice(0, path.length - (intakeDir.length + fileName.length + 2));
     if (!root) root = rootHere;
-    var isCv = !cvTaken && p.ext === 'pdf';
+    // Step 2 of the key: the extension the SERVER named. `.bin` here is the zip
+    // impostor the metadata could not tell apart — the copy stays in Downloads
+    // (as the card's own «Download» would leave it), the folder does not take it.
+    var actualExt = (fileName.match(/\.([A-Za-z0-9]+)$/) || ['', ''])[1].toLowerCase();
+    if (actualExt !== 'pdf' && actualExt !== 'docx') { skipped.push({ ordinal: p.ordinal, name: p.name }); continue; }
+    var isCv = !cvTaken && actualExt === 'pdf';
     if (isCv) cvTaken = true;
     docs.push({
       title: isCv ? 'CV' : (p.name || fileName),
@@ -6454,7 +6482,7 @@ async function crewFlowFetchDocuments(intakeId, card, context, plan) {
       doc_source: source
     });
   }
-  return { documents: docs, extractedTo: root };
+  return { documents: docs, extractedTo: docs.length ? root : '', skipped: skipped };
 }
 // The irreversible write, keyed by the PERSON (crewFlowPersonIdentity above).
 // db.rs:739-1029 accepts an empty extracted_to / cv_path (attachments are slice
@@ -6521,7 +6549,7 @@ async function crewFlowSaveToSeafarers(intakeId) {
     showToast(crewFlowTr('saved'), 'success');
     // (930): the folder outcome is SAID — how many files went in, and which did not.
     showToast(fetched.documents.length ? crewFlowTr('docs_placed').replace('{n}', String(fetched.documents.length)) : crewFlowTr('docs_none'), 'info');
-    plan.bin.forEach(function(b){ showToast(crewFlowTr('doc_bin_skipped').replace('{n}', String(b.ordinal)).replace('{name}', b.name || '\u2014'), 'warn'); });
+    plan.bin.concat(fetched.skipped).forEach(function(b){ showToast(crewFlowTr('doc_bin_skipped').replace('{n}', String(b.ordinal)).replace('{name}', b.name || '\u2014'), 'warn'); });
   } catch (e) {
     showToast(crewFlowTr('save_failed') + ': ' + e, 'error');
   }

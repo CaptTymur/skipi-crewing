@@ -1521,6 +1521,31 @@ mod tests {
         assert_eq!(b.notes.as_deref(), Some("called"));
         assert_eq!(hidden_dirs(), 0, "no staging or backup folder is left behind after a merge");
 
+        // 3b. R4 (Supervisor acceptance): the seed copy is `?`, and this holds it. A file
+        //     of the person's folder that cannot be read makes the merge FAIL — a `let _`
+        //     there would seed silently without it, swap the folder, and leave the old
+        //     row with has_file = 1 pointing at nothing while the new row is committed.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let locked = stored("2a353cdd/attachment-0.pdf");
+            let before_rows = serde_json::to_value(rows(pr)).unwrap();
+            std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+            write("9e9e9e9e/attachment-0.pdf", b"PDF-E");
+            let blocked = save_docs("intake:9e9e9e9e-4", pr, "Ivan Petrenko", &dl, vec![("9e9e9e9e/attachment-0.pdf", "CV", "CV")], None, Some("merge"));
+            // (restore first, so a failed assertion below leaves no 000 file behind; under
+            // the `let _` mutant the file is GONE from the folder at this point)
+            if locked.exists() {
+                std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o644)).unwrap();
+            }
+            assert!(blocked.is_err(), "R4: a seed copy that fails is a failed save, not a silent skip — got {:?}", blocked.map(|s| s.doc_count));
+            assert_eq!(serde_json::to_value(rows(pr)).unwrap(), before_rows, "R4: no row of the failed save, no row lost");
+            assert!(!stored("9e9e9e9e").exists(), "R4: nothing of the failed save reached the folder");
+            assert_eq!(std::fs::read(&locked).unwrap(), b"PDF-A2", "R4: the locked file is intact and readable again");
+            assert_eq!(std::fs::read(stored("5c164286/attachment-0.pdf")).unwrap(), b"PDF-B");
+            assert_eq!(hidden_dirs(), 0, "R4: no staging folder left behind");
+        }
+
         // 4. a merge with NOTHING to add (a repeat without attachments): nothing is erased
         let c = save_docs("intake:2a353cdd-1", pr, "Ivan P. Petrenko", "", vec![], None, Some("merge")).expect("save 4");
         assert_eq!(c.display_name, "Ivan P. Petrenko", "the details are refreshed");

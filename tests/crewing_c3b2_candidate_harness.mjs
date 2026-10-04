@@ -1630,6 +1630,10 @@ console.log('# K2 modules/crew-flow');
     contactEmail = 'oleh@example.test',
     // No.664/S3: ordinals whose fetch fails with a server error (one file that did not arrive).
     downloadFails = [],
+    // No.664/S3 (Supervisor acceptance, HIGH): ordinals that are zip IMPOSTORS — declared
+    // docx, measuring application/zip like every OOXML, but WITHOUT the ECMA-376 members;
+    // the server's servable_type answers `bin` for those, and only the server can see it.
+    impostors = [],
     // No.621. `undefined` is the server's 404 (this intake carries no binding);
     // an object is the 200 body; `{ __throw: err }` is any OTHER failure, which
     // the screen must not confuse with an absence (N14).
@@ -1727,9 +1731,21 @@ console.log('# K2 modules/crew-flow');
           // type (eml|pdf|docx, anything else bin) under Downloads/Skipi/Crewing/<intake8>/
           // (skipi-server routers/candidate_intake.py, SERVABLE_EXTENSIONS). The stub does the
           // same, so the path the client derives is the one the receiver will read from.
+          // servable_type, both branches (skipi-server candidate_intake_service.py): the MEASURED
+          // type names it when it is one of the three; otherwise the DECLARED type must be one of
+          // the three AND carry the signature the table says it carries — a real .docx is an
+          // OOXML and measures as application/zip, and the archive must show the ECMA-376
+          // members (impostors here) — else `bin`.
           const cardAtts = ((cardFields[args && args.intakeId] || {}).attachments) || ((srv.items.find((i) => i.intake_id === (args && args.intakeId)) || {}).attachments) || [];
           const att = cardAtts.find((a) => Number(a.ordinal) === Number(args && args.ordinal));
-          const ext = att ? ({ 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'message/rfc822': 'eml' }[String(att.measured_type || '')] || 'bin') : 'pdf';
+          const SERVABLE = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'message/rfc822': 'eml' };
+          let ext = 'pdf';
+          if (att) {
+            const measured = String(att.measured_type || ''), declared = String(att.declared_type || '').toLowerCase();
+            if (SERVABLE[measured]) ext = SERVABLE[measured];
+            else if (declared === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && measured === 'application/zip' && !impostors.includes(Number(att.ordinal))) ext = 'docx';
+            else ext = 'bin';
+          }
           return { path: '/home/op/Downloads/Skipi/Crewing/' + String(args && args.intakeId).slice(0, 8) + '/attachment-' + String(args && args.ordinal) + '.' + ext, bytes: 1024, sha256: 'b'.repeat(64) };
         }
         if (command === 'crewing_intake_open_saved') { timeline.push('invoke:open_saved:' + String(args && args.path)); return null; }
@@ -2169,7 +2185,11 @@ console.log('# K2 modules/crew-flow');
       const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       const RESP = { person_ref: PR, response_summary: RS664, source: 'skipi_response' };
       const pdfAtt = (ordinal, filename, byte_size = 210000) => ({ ordinal, filename, declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size, verdict: 'accepted', reason: null, eligible: true });
-      const docxAtt = (ordinal, filename) => ({ ordinal, filename, declared_type: DOCX, measured_type: DOCX, byte_size: 50000, verdict: 'accepted', reason: null, eligible: true });
+      // A REAL .docx as the product produces it (Supervisor acceptance, HIGH): the scanner's
+      // closed signature table has no DOCX entry — an OOXML is a zip and MEASURES as
+      // application/zip; the server names it .docx by declared+measured+members. A fixture
+      // with measured_type DOCX is a state the product never produces.
+      const docxAtt = (ordinal, filename) => ({ ordinal, filename, declared_type: DOCX, measured_type: 'application/zip', byte_size: 50000, verdict: 'accepted', reason: null, eligible: true });
       const binAtt = (ordinal, filename, measured_type = 'image/jpeg') => ({ ordinal, filename, declared_type: measured_type, measured_type, byte_size: 3000, verdict: 'accepted', reason: null, eligible: true });
       const dls = (ctx) => ctx.calls.filter((c) => c.command === 'crewing_intake_attachment_download');
       const docsOf = (ctx) => (ctx.save && ctx.save.args.manifest && Array.isArray(ctx.save.args.manifest.documents)) ? ctx.save.args.manifest.documents : null;
@@ -2283,6 +2303,27 @@ console.log('# K2 modules/crew-flow');
         const word = k2str(ctx, 'doc_download_failed');
         softOk(word !== 'crew_flow.doc_download_failed' && toastWith(ctx, word.replace('{n}', '1')), 'S3a-8 (930): the operator is told which attachment did not arrive — "' + word.replace('{n}', '1') + '"');
         softOk(!ctx.toasts.some((t) => t[1] === 'success'), 'S3a-8: and no success is claimed');
+      }
+
+      // ---- 8b. the docx key is the SERVER's: a real OOXML (declared docx, measures zip) is placed as .docx; a zip impostor comes back .bin and is NOT placed
+      {
+        const ctx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [docxAtt(0, 'cv.docx')] }) } });
+        const docs = docsOf(ctx);
+        softOk(dls(ctx).length === 1 && !!docs && docs.length === 1 && docs[0] && docs[0].file_path === 'intake-1/attachment-0.docx',
+          'S3a-8b docx: declared docx + measured application/zip — what a real .docx looks like to the scanner — is fetched and placed as .docx — got ' + JSON.stringify(docs && docs.map((d) => d.file_path)));
+        const imp = await openSave({ impostors: [0], cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [docxAtt(0, 'cv.docx'), pdfAtt(1, 'cv.pdf')] }) } });
+        const idocs = docsOf(imp);
+        softOk(dls(imp).length === 2, 'S3a-8b impostor: the metadata cannot tell a zip impostor from a real docx (same declared, same measured) — both are fetched — got ' + JSON.stringify(dls(imp).map((c) => c.args.ordinal)));
+        softOk(!!idocs && idocs.length === 1 && idocs[0] && idocs[0].file_path === 'intake-1/attachment-1.pdf',
+          'S3a-8b impostor: the server answered attachment-0.bin — it is NOT placed; only the pdf is — got ' + JSON.stringify(idocs && idocs.map((d) => d.file_path)));
+        const word = k2str(imp, 'doc_bin_skipped');
+        softOk(toastWith(imp, word.replace('{n}', '0').replace('{name}', 'cv.docx')), 'S3a-8b impostor (930): and the operator is told which attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'cv.docx') + '"');
+        softOk(!!imp.save, 'S3a-8b impostor: the person and his pdf are still saved');
+        const plainZip = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [{ ordinal: 0, filename: 'photos.zip', declared_type: 'application/zip', measured_type: 'application/zip', byte_size: 900, verdict: 'accepted', reason: null, eligible: true }, pdfAtt(1, 'cv.pdf')] }) } });
+        softOk(dls(plainZip).length === 1 && dls(plainZip)[0].args.ordinal === 1, 'S3a-8b: a zip that does not even CLAIM to be a docx is not fetched at all — the metadata already says bin');
+        softOk(/application\/zip/.test(k2crew), 'S3a-8b static: the block names application/zip — the type a real docx measures as — so the docx half of the allowlist is alive, not a dead key');
+        softOk(/var actualExt = /.test(k2crew) && /actualExt !== 'pdf' && actualExt !== 'docx'/.test(k2crew),
+          'S3a-8b static: the placement key is the extension the SERVER named in the returned path — the one place that can see the archive members');
       }
 
       // ---- 9. the block: the invoke literal lives INSIDE the Crew Flow block, and the two sibling sites are untouched
