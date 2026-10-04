@@ -60,10 +60,11 @@ for (const code of ['rank_not_found', 'profile_not_active', 'profile_version_sta
 ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc370983366672c41b41116754ce/.test(workflow), 'runtime pin d6238191 is unchanged');
 // S5: exactly ONE accepted guard pin. A list of three quietly accepts two
 // superseded gate configurations — the pin then proves nothing about WHICH
-// gate ran. The accepted configuration is 37ff9581 (K2 route, the K2.1
-// single-screen route and the No.664 person-keyed save route); the
-// superseded b72a59ca and aa3b2efb must not be accepted.
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: 37ff9581f3e8ccca399525844f1c27cb7f468698\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
+// gate ran. The accepted configuration is e8000d75 (K2 route, the K2.1
+// single-screen route and the No.664 person-keyed save route widened to all
+// eight paths the line touches); the superseded b72a59ca, aa3b2efb and
+// 37ff9581 must not be accepted.
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: e8000d757ea387fc29220cbe8a14c6efea7b7fb4\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -2346,17 +2347,20 @@ console.log('# K2 modules/crew-flow');
     // ---- S5: one guard pin, one localized team row ---------------------------
     {
       const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
-      softOk(pins === '37ff9581f3e8ccca399525844f1c27cb7f468698', 'S5: the workflow pins exactly the accepted guard SHA');
+      softOk(pins === 'e8000d757ea387fc29220cbe8a14c6efea7b7fb4', 'S5: the workflow pins exactly the accepted guard SHA');
       // The needles are assembled from halves on purpose: a probe that spells a
       // SHA out reads its own source and can never pass (self-referential-probe
       // class — measured three times in this session, this line included).
       // b72a59ca joined the list with the K2.1 pin bump (PR #54); aa3b2efb joined
       // it with the No.664 pin bump (guard PR #70): each is the gate
       // configuration WITHOUT the K2.1 route, so accepting it would mean the
-      // workflow could run a gate that never heard of this task. RISKS №497: a pin
+      // workflow could run a gate that never heard of this task. 37ff9581 joined
+      // it with the widened No.664 route (guard PR #71): it DOES carry the route,
+      // but only six of the eight paths the line touches, so a gate running it
+      // refuses the receiver slice outright. RISKS №497: a pin
       // bump touching more than one file skips assert-config-superset, so a
       // downgrade of the pin passes CI green — this line is what notices.
-      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5', 'b72a59ca' + '947ddb6a70a07b0328b61f9a29eca090', 'aa3b2efb' + '19cb4448226075be36b3f8c7b302c3df'];
+      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5', 'b72a59ca' + '947ddb6a70a07b0328b61f9a29eca090', 'aa3b2efb' + '19cb4448226075be36b3f8c7b302c3df', '37ff9581' + 'f3e8ccca399525844f1c27cb7f468698'];
       const selfSrc = fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8');
       softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
         'S5: neither the harness nor the workflow still accepts a superseded guard pin');
