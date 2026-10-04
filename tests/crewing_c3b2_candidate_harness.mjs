@@ -6111,6 +6111,117 @@ console.log('\n# No.637/S7: a rank that does not apply carries no figure, and ke
   }
 }
 
+// ===========================================================================
+// No.675 (OWNER (990), 2026-10-04) — «На момент отклика соответствий нет».
+//
+// The grey «Сохранённых сравнений по этому кандидату пока нет» is TRUE of a
+// letter and MISLEADING of a response: «пока нет» promises something in
+// flight, and nothing is in flight — nobody has compared him, and the
+// operator's own «Сопоставить с профилем» button is what changes that. The
+// owner read that sentence on the stand as "the comparison is coming".
+//
+// FOUR scenarios, and three of them exist to make the first one capable of
+// going red. A pill that appears for everybody would pass a single positive
+// check and still be the defect:
+//   * `skipi_response` with ZERO stored comparisons -> the pill, RU and EN;
+//   * a letter with zero comparisons                -> the OLD grey sentence;
+//   * a response WITH stored comparisons            -> neither (the cards);
+//   * comparisons NOT READ yet (`ranks == null`)    -> neither, because "no
+//     matches" about an unread list is a silent zero and not an answer.
+// ===========================================================================
+console.log('\n# No.675: a response with nothing compared says so, on the card');
+{
+  const fitSection = (ctx) => {
+    const src = main(ctx);
+    const s = src.indexOf('<section class="pilot-card" data-qa="pilot-section-fit"');
+    if (s < 0) return '';
+    const e = src.indexOf('<section class="pilot-card" data-qa="pilot-section-letter"', s);
+    return e < 0 ? src.slice(s) : src.slice(s, e);
+  };
+  const pillOf = (fit) => (String(fit).match(/data-qa="pilot-fit-no-matches-pill"[^>]*>([^<]*)</) || [])[1] || '';
+  const openWith = async (source, language) => {
+    const ctx = makeContext({ language });
+    ctx.server.card.source = source;
+    await openCard(ctx);
+    return ctx;
+  };
+
+  for (const lang of ['ru', 'en']) {
+    const ctx = await openWith('skipi_response', lang);
+    const d = ctx.__pilot.pilotDetail();
+    const fit = fitSection(ctx);
+    const pill = pillOf(fit);
+    const want = ctx.__pilot.cardT('fit_no_matches');
+    softOk(!!d && d.ranks != null && (d.ranks.items || []).length === 0,
+      '[' + lang + '] 675 CALIBRATION: this fixture really does load an EMPTY comparison list (ranks read, zero rows)');
+    softOk(pill !== '' && pill === want && want !== 'fit_no_matches',
+      '[' + lang + '] 675: the fit block states that at the time of the response there were no matches — got "' + pill + '"');
+    softOk(lang === 'ru' ? /[Ѐ-ӿ]/.test(pill) : !/[Ѐ-ӿ]/.test(pill),
+      '[' + lang + '] 675: and it is a sentence in THIS language, not the other one — got "' + pill + '"');
+    softOk(!/data-qa="pilot-fit-empty"/.test(fit),
+      '[' + lang + '] 675: the «пока нет» promise no longer stands in that block');
+    softOk(/data-qa="pilot-section-fit"/.test(fit) && /data-qa="pilot-card-refresh"/.test(main(ctx)),
+      '[' + lang + '] 675 PRESERVE: the block and the rest of the card are still rendered around it');
+  }
+
+  // CALIBRATION 1 — an ordinary letter. Nobody responded to anything there, so
+  // "at the time of the response" would name a moment that never happened.
+  {
+    const ctx = await openWith('inbound', 'ru');
+    const fit = fitSection(ctx);
+    softOk(/data-qa="pilot-fit-empty"/.test(fit),
+      '675 CALIBRATION: a letter with nothing compared KEEPS «Сохранённых сравнений по этому кандидату пока нет»');
+    softOk(!/pilot-fit-no-matches/.test(fit),
+      '675: and the letter is never told «на момент отклика» — it is not a response');
+    const synth = await openWith('synthetic', 'en');
+    softOk(/data-qa="pilot-fit-empty"/.test(fitSection(synth)) && !/pilot-fit-no-matches/.test(fitSection(synth)),
+      '675 CALIBRATION: a synthetic test record keeps the old wording too');
+  }
+
+  // CALIBRATION 2 — a response that HAS comparisons. The pill must not shoulder
+  // its way in beside real cards.
+  {
+    const ctx = makeContext();
+    ctx.server.card.source = 'skipi_response';
+    await positiveChainUntilRank(ctx);
+    const fit = fitSection(ctx);
+    softOk(/data-qa="pilot-fit-name"/.test(fit),
+      '675 CALIBRATION: this scenario really did produce comparison cards');
+    softOk(!/pilot-fit-no-matches/.test(fit),
+      '675: a response WITH stored comparisons shows the comparisons and no pill');
+  }
+
+  // CALIBRATION 3 — unread is not zero.
+  {
+    const ctx = await openWith('skipi_response', 'ru');
+    softOk(/pilot-fit-no-matches/.test(fitSection(ctx)),
+      '675 CALIBRATION: the pill is on this card before the comparisons are taken away');
+    ctx.__pilot.pilotDetail().ranks = null;
+    ctx.__pilot.renderIntakePilot();
+    await flush();
+    softOk(!/pilot-fit-no-matches/.test(fitSection(ctx)),
+      '675: comparisons that were never read are NOT «нет соответствий» — an unanswered question is not a zero');
+  }
+
+  // ONE renderer behind both call sites of the block: two copies drift, and the
+  // card has paid for a two-oracle split before (No.637/S4).
+  softOk(/function cardNoMatchesPillHtml\(/.test(c3b2Source),
+    '675: the pill has exactly one renderer in the shipped block');
+  softOk((c3b2Source.match(/cardNoMatchesPillHtml\(\)/g) || []).length >= 2,
+    '675: and both «nothing to show» exits of the fit block go through it');
+  // The bound lives IN the renderer, not only at its call sites: a call site is
+  // one `if` away from being copied without it.
+  {
+    const pillFn = (ctx) => { try { return String(vm.runInContext('cardNoMatchesPillHtml()', ctx)); } catch (e) { return '__missing__'; } };
+    const resp = await openWith('skipi_response', 'ru');
+    const letter = await openWith('inbound', 'ru');
+    softOk(pillFn(resp) !== '' && pillFn(resp) !== '__missing__',
+      '675 CALIBRATION: the renderer answers for a response with nothing compared — got "' + pillFn(resp).slice(0, 40) + '"');
+    softOk(pillFn(letter) === '',
+      '675: and it refuses a letter by itself — the SOURCE bound is in the function, not only in its call site — got "' + pillFn(letter).slice(0, 40) + '"');
+  }
+}
+
 console.log('\n# control matrix');
 for (const row of controlResults) console.log(`  ${row.id} ${row.verdict} clean=${row.cleanBefore} mutantRed=${row.mutantRed} kind=${row.mutantKind} restore=${row.cleanAfter} — ${row.defect}`);
 console.log(`\ncrewing_c3b2_candidate_harness: ${failed === 0 ? 'GREEN' : 'RED'} (${passed} passed, ${failed} failed)`);

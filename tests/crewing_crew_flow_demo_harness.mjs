@@ -1396,6 +1396,10 @@ if (r3Ready) {
   // tests -- and a row titled from it looked correct here while every real
   // record fell through to the generic label on the pilot.
   const sourceOf = (id) => (id === 'L-noname' ? 'skipi_response'
+    // No.675: the response rows the no-matches pill is measured on. The pill is
+    // bounded by the SOURCE, so the fixture needs responses that differ from
+    // each other only in what the server compared them against.
+    : /^L-resp/.test(id) ? 'skipi_response'
     : id === 'L-noname-field' ? 'synthetic'
     : id === 'L-stale' ? 'no_such_source_code_v9'
     : 'inbound');
@@ -1447,8 +1451,16 @@ if (r3Ready) {
         profile_id: 'p-main', profile_version: 1, met: 0, missing: 0, unconfirmed: 0,
         total: 0, stale: false, applicability: 'unknown', applicability_reason: 'rank_absent',
       }], 'Petro H.'),
+      // No.675 (OWNER (990)). A response from the app the server has compared
+      // against NOTHING — the shape the owner saw on the stand. `L-none` above
+      // is byte-for-byte the same empty list on an INBOUND letter, so the two
+      // rows differ in the source alone and the pill cannot pass by accident.
+      listItem('L-resp-none', [], 'Vadym K.'),
+      // ... and the same response from an older server that sends no
+      // profile_ranks field at all: unread, which is not zero.
+      listItem('L-resp-nofield', undefined, 'Vadym K.'),
     ],
-    limit: 50, offset: 0, total: 12,
+    limit: 50, offset: 0, total: 14,
   };
   R2_FIXTURES.profiles = { items: [
     { id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' },
@@ -1554,6 +1566,81 @@ if (r3Ready) {
     'R2/L: neither of those two carries counts that could read as a match');
   ok(/data-stale="1"/.test(r3Row('L-stale')) && /data-match="ranked"/.test(r3Row('L-stale')),
     'R2/L: a stale stored evaluation says so instead of reading as current');
+
+  // ---- No.675 (OWNER (990), 2026-10-04) ----------------------------------
+  // «На момент отклика соответствий нет» / «No matches at the time of the
+  // response» on the QUEUE ROW.
+  //
+  // WHY BESIDE «Записано; ожидает проверки» AND NOT INSTEAD OF IT. That word
+  // is not about matching at all: it is PILOT_TEXT.state_quarantined, printed
+  // by pilotStateLabel(item.state) off the intake PIPELINE ladder
+  // (received -> quarantined -> scanned -> needs_review -> rejected -> ranked).
+  // It states that the document is stored and its file checks have not run.
+  // Replacing it would delete a true sentence about the checks, and on every
+  // row that is already `ranked` or `needs_review` there would be nothing to
+  // replace in the first place. So the pill is a second chip in the same row.
+  //
+  // Bounded the same way as on the card, and calibrated by rows that must NOT
+  // carry it: a letter with zero stored comparisons, a response WITH stored
+  // comparisons, and a response whose comparisons were never read.
+  {
+    const chipsOf = (row) => (String(row).match(/<div class="cf-chips">([\s\S]*?)<\/div>/) || [])[1] || '';
+    const pillOf = (row) => (String(row).match(/data-qa="crew-flow-row-no-matches"[^>]*>([^<]*)</) || [])[1] || '';
+
+    ok(/data-match="absent"/.test(r3Row('L-resp-none')),
+      'No.675 CALIBRATION: the response row with an EMPTY profile_ranks list really did load as "no stored comparison"');
+    ok(pillOf(r3Row('L-resp-none')) !== '',
+      'No.675: a response the server compared against nothing carries the no-matches pill');
+    ok(chipsOf(r3Row('L-resp-none')).indexOf('data-qa="crew-flow-row-no-matches"') !== -1,
+      'No.675: and it stands in the chip row of that queue line, where the operator scans');
+    ok(/data-qa="crew-flow-row-no-matches"/.test(r3Row('L-resp-none'))
+      && /<span class="badge">/.test(r3Row('L-resp-none')),
+      'No.675: BESIDE the intake state chip, not instead of it — «Записано; ожидает проверки» is the file-check ladder, a different fact');
+
+    // CALIBRATION A — a letter. Nobody responded to anything, so «на момент
+    // отклика» would name a moment that never happened.
+    ok(pillOf(r3Row('L-none')) === '',
+      'No.675 CALIBRATION: an inbound LETTER with the same empty list gets no pill — got "' + pillOf(r3Row('L-none')) + '"');
+    // CALIBRATION B — a response that HAS a stored comparison.
+    ok(pillOf(r3Row('L-noname')) === '',
+      'No.675 CALIBRATION: a response WITH a stored comparison gets no pill — got "' + pillOf(r3Row('L-noname')) + '"');
+    // CALIBRATION C — unread is not zero.
+    ok(/data-match="not-loaded"/.test(r3Row('L-resp-nofield')),
+      'No.675 CALIBRATION: the response row without the field really did stay "not loaded"');
+    ok(pillOf(r3Row('L-resp-nofield')) === '',
+      'No.675: comparisons that were never read are not «соответствий нет» — an unanswered question is not a zero');
+
+    // The phone list is the same left column and the same renderer.
+    {
+      const mob = String(MR3.crewFlowLiveMobileHtml('live'));
+      const mRow = (id) => {
+        const m = mob.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<button class="mobile-list-item|$)'));
+        return m ? m[0] : '';
+      };
+      ok(/data-qa="crew-flow-row-no-matches"/.test(mRow('L-resp-none')),
+        'No.675: the pill reaches the phone list too — one badge renderer, not two');
+      ok(!/data-qa="crew-flow-row-no-matches"/.test(mRow('L-none')),
+        'No.675 CALIBRATION: and the phone letter row is still without it');
+    }
+
+    // PRESERVE (975 п.5 / OWNER (990)): the action that changes this answer is
+    // the operator's own button, and it is still on the card.
+    ok(/btn\('match', crewFlowTr\('match'\), false, "crewFlowMatchToProfile\('/.test(crewBlock)
+      && /'crew_flow\.match':'Сопоставить с профилем'/.test(HTML),
+      'No.675 PRESERVE: «Сопоставить с профилем» is still rendered by the actions block — the pill states a fact, it does not take the action away');
+
+    // Both shipped languages, read off the rendered bytes.
+    for (const lang of ['ru', 'en']) {
+      store.set('skipi-crewing-ui-language', lang);
+      const tree = String(MR3.crewFlowLiveTreeHtml('live'));
+      const m = tree.match(new RegExp('data-intake="L-resp-none"[\\s\\S]*?(?=<div class="tree-item|$)'));
+      const text = pillOf(m ? m[0] : '');
+      const cyr = /[Ѐ-ӿ]/.test(text);
+      ok(text.length > 5 && (lang === 'ru' ? cyr : !cyr),
+        '[' + lang + '] No.675: the pill is a sentence in this language — a missing key would print the wire code — got "' + text + '"');
+    }
+    store.set('skipi-crewing-ui-language', 'en');
+  }
 
   // ---- 3b. the remainder the three counts do not explain ------------------
   // The card refuses to count an unknown outcome code as met; the row carries
@@ -1911,6 +1998,40 @@ section('No.623: the queue row says who responded, and only where it can');
   R2_FIXTURES.list = null;
   R2_FIXTURES.profiles = null;
   store.set('skipi_crewing_demo', '1');
+}
+
+// ============================================================================
+// No.675 (OWNER (990), 2026-10-04): ONE sentence, two localisation mechanisms.
+//
+// This screen has two of them and always has: the Crew Flow row reads
+// UI_STRINGS through tr(), and the candidate card reads PILOT_CARD_TEXT through
+// cardT() — the card block contains not a single tr() call, and its isolated
+// harness stubs tr() to return the key. So the owner's sentence has to live in
+// both tables, and the one thing that can go wrong is that they drift apart:
+// the queue would then say one thing and the card another about the same
+// candidate. That is pinned here by equality, not by eye.
+// ============================================================================
+section('No.675: the no-matches wording is one sentence in both dictionaries');
+{
+  const uiVals = [...HTML.matchAll(/'crew_flow\.no_matches_yet':'([^']*)'/g)].map((m) => m[1]);
+  const cardVals = [...HTML.matchAll(/fit_no_matches:'([^']*)'/g)].map((m) => m[1]);
+  ok(uiVals.length === 2, 'No.675: crew_flow.no_matches_yet is defined once in EN and once in RU — got ' + uiVals.length);
+  ok(cardVals.length === 2, 'No.675: PILOT_CARD_TEXT.fit_no_matches is defined once in EN and once in RU — got ' + cardVals.length);
+  if (uiVals.length === 2 && cardVals.length === 2) {
+    ok(!/[Ѐ-ӿ]/.test(uiVals[0]) && /[Ѐ-ӿ]/.test(uiVals[1]),
+      'No.675: the row dictionary carries an English and a Russian wording — got "' + uiVals[0] + '" / "' + uiVals[1] + '"');
+    ok(!/[Ѐ-ӿ]/.test(cardVals[0]) && /[Ѐ-ӿ]/.test(cardVals[1]),
+      'No.675: and so does the card dictionary — got "' + cardVals[0] + '" / "' + cardVals[1] + '"');
+    ok(uiVals[0] === cardVals[0] && uiVals[1] === cardVals[1],
+      'No.675: the queue row and the card say the SAME sentence in each language — row ["' + uiVals.join('" | "')
+        + '"], card ["' + cardVals.join('" | "') + '"]');
+    ok(/отклика/.test(uiVals[1]) && /response/i.test(uiVals[0]),
+      'No.675: and the sentence names the MOMENT (the response), not a pending promise — got "' + uiVals[1] + '" / "' + uiVals[0] + '"');
+  }
+  // The old grey sentence is not deleted: it is still the right words for a
+  // letter, and the calibration rows above depend on it being there.
+  ok(/'crew_flow\.card_fit_none':/.test(HTML) && /fit_none:'/.test(HTML),
+    'No.675 PRESERVE: the «пока нет» wording stays in both dictionaries for everything that is not a response');
 }
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
