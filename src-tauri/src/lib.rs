@@ -1741,6 +1741,9 @@ fn save_seafarer_from_bundle(
     extracted_to: String,
     applicant_summary: Option<serde_json::Value>,
     cv_path: Option<String>,
+    // No.664/S3: optional on the bridge. The bundle writer sends none → «replace»
+    // (its behaviour byte for byte); the Crew Flow writer sends "merge".
+    mode: Option<String>,
     state: tauri::State<AppState>,
 ) -> Result<db::SavedSeafarer, String> {
     let settings = state.settings.lock().unwrap().clone();
@@ -1752,6 +1755,7 @@ fn save_seafarer_from_bundle(
         applicant_summary.as_ref(),
         cv_path.as_deref(),
         &settings.vault_path,
+        mode.as_deref(),
     )
 }
 

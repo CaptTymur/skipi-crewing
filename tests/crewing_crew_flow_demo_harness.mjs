@@ -750,11 +750,71 @@ section('R2 task 2: the queue row states the outcome against the selected profil
 // was added, crewing_intake_matching_profile_list — an existing, unpaid, O(1)
 // lookup that turns a profile_id into a name. Anything beyond these three is a
 // call nobody authorised.
+// No.664/S3 (2026-10-04): a FOURTH name, crewing_intake_attachment_download. Added by
+// the manager under OWNER (985)/(986)/(994) — «form the CV with the ready module →
+// ATTACH it» — and DECISIONS (998); not put to the owner, because none of the four
+// marks of an architectural fork applies: the command already exists and is
+// already called from two other screens of this file (the card's «Download», the
+// letter's pick), it is unpaid (no model, no billed route — the paid ones are the
+// three forbidden names below), it opens no new server surface, and the diff is
+// one line each way. The list stays an exact literal: no prefix test, no regex,
+// no constant that is "checked elsewhere". Anything beyond these four is a call
+// nobody authorised.
 const r2CrewInvokes = [...crewBlock.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]);
 const r2CrewInvokeSet = [...new Set(r2CrewInvokes)].sort().join(',');
-ok(r2CrewInvokeSet === 'crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
-  'R2/2: the Crew Flow block calls exactly [crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
+ok(r2CrewInvokeSet === 'crewing_intake_attachment_download,crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
+  'R2/2 + No.664/S3: the Crew Flow block calls exactly [crewing_intake_attachment_download, crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
   + r2CrewInvokeSet + ']');
+// SECOND literal (Supervisor PREP 2026-10-04 п.4): the roads OUT of the literal above.
+// A function defined OUTSIDE the block, called directly FROM the block, that itself
+// does invoke(), reaches a command the first literal cannot see — and the block
+// already has three such roads (measured: pilotLoadQueue, saveCurrentBundleSeafarer,
+// saveRankedCandidate). Full transitive reachability was measured and DISCARDED
+// (crewFlowIgnoreSignal, four lines, reaches 803 functions through the render hubs),
+// so what is frozen is ONE step, as a second exact literal. Two calibrations and a
+// mutant below prove the probe sees what is there and nothing that is not.
+function oneStepInvokeRoads(blockText) {
+  // Where a body ends: at the first `\n}` after the definition OR at the next
+  // top-level definition, whichever comes first. `indexOf('\\n}')` alone is not
+  // enough: a ONE-LINE function (escapeHtml, escapeJsString — their regex literals
+  // carry quotes, so a brace counter that skips strings loses its way there too)
+  // would swallow the definitions after it and report their invokes as its own
+  // (measured on 3b3d326a: false roads escapeHtml→plugin:updater|check,
+  // escapeJsString→close_vacancy_remote|…).
+  const defStarts = [...script.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)];
+  const bodyFrom = (k) => {
+    const at = defStarts[k].index;
+    const next = k + 1 < defStarts.length ? defStarts[k + 1].index : script.length;
+    const close = script.indexOf('\n}', at);
+    const end = close >= 0 ? Math.min(close + 2, next) : next;
+    return script.slice(at, end);
+  };
+  const defs = new Map(); // top-level function name -> { start, body }
+  defStarts.forEach((m, k) => { defs.set(m[1], { start: m.index, body: bodyFrom(k) }); });
+  const blockStart = script.indexOf(blockText.slice(0, 200));
+  const inBlock = new Set([...blockText.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)].map((m) => m[1]));
+  const roads = [];
+  for (const name of new Set([...blockText.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]))) {
+    if (inBlock.has(name) || !defs.has(name)) continue;
+    const def = defs.get(name);
+    if (blockStart >= 0 && def.start >= blockStart && def.start < blockStart + blockText.length) continue;
+    const cmds = [...new Set([...def.body.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]))].sort();
+    if (cmds.length) roads.push(name + '→' + cmds.join('|'));
+  }
+  return roads.sort();
+}
+const roads = oneStepInvokeRoads(crewBlock);
+ok(roads.some((r) => r.indexOf('saveCurrentBundleSeafarer→') === 0), 'S3 CALIBRATION: the one-step probe finds saveCurrentBundleSeafarer (known by eye to invoke)');
+ok(!roads.some((r) => r.indexOf('escapeHtml→') === 0 || r.indexOf('escapeJsString→') === 0) && /escapeHtml\(/.test(crewBlock) && /escapeJsString\(/.test(crewBlock),
+  'S3 CALIBRATION: the one-line escapeHtml / escapeJsString are not credited with the invokes of the functions after them (a body ends at its own line or at the next definition)');
+ok(!roads.some((r) => r.indexOf('crewFlowFindApplication→') === 0) && /crewFlowFindApplication\(/.test(crewBlock),
+  'S3 CALIBRATION: and does not list crewFlowFindApplication (called from the block, invokes nothing)');
+ok(roads.join(';') === 'pilotLoadQueue→crewing_intake_candidate_list;saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle;saveRankedCandidate→fetch_attachments_for_application',
+  'No.664/S3: the roads out of the Crew Flow block are exactly [pilotLoadQueue→crewing_intake_candidate_list, saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle, saveRankedCandidate→fetch_attachments_for_application] — a new helper that fetches for the block changes this list — got ['
+  + roads.join('; ') + ']');
+const mutantRoads = oneStepInvokeRoads(crewBlock + '\n  pilotAttachmentDownload(1);\n');
+ok(mutantRoads.some((r) => r === 'pilotAttachmentDownload→crewing_intake_attachment_download') && mutantRoads.join(';') !== roads.join(';'),
+  'S3 MUTANT: a block that reached the byte road through the card’s handler instead of its own literal WOULD change the second list — got +[' + mutantRoads.filter((r) => !roads.includes(r)).join(',') + ']');
 // The two commands that cost money or mutate state must never appear in this block.
 for (const forbidden of ['crewing_intake_candidate_rank', 'parse_cv', 'reprocess']) {
   ok(!crewBlock.includes(forbidden),

@@ -736,6 +736,28 @@ pub fn get_saved_seafarer(seafarer_id: &str) -> Result<SavedSeafarer, String> {
     read_saved_seafarer(conn, seafarer_id).map_err(|e| e.to_string())
 }
 
+/// No.664/S3. How a save treats what the person's row and folder ALREADY hold.
+/// `Replace` is the bundle path as it always was: the folder is rebuilt from this
+/// manifest and the document rows are rewritten. `Merge` is the Crew Flow path: a
+/// response adds ITS files beside the ones already there, a row with the same
+/// `file_path` is replaced, nothing else is removed. The word is optional on the
+/// bridge and anything that is not exactly `merge` is `Replace`, so a caller that
+/// sends no mode (dist saveCurrentBundleSeafarer) gets the old behaviour.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SaveMode {
+    Replace,
+    Merge,
+}
+
+impl SaveMode {
+    fn parse(mode: Option<&str>) -> SaveMode {
+        match mode.map(str::trim).unwrap_or("") {
+            "merge" => SaveMode::Merge,
+            _ => SaveMode::Replace,
+        }
+    }
+}
+
 pub fn save_seafarer_from_bundle(
     application_id: &str,
     seafarer_user_id: &str,
@@ -744,7 +766,9 @@ pub fn save_seafarer_from_bundle(
     applicant_summary: Option<&serde_json::Value>,
     cv_path: Option<&str>,
     vault_path: &str,
+    mode: Option<&str>,
 ) -> Result<SavedSeafarer, String> {
+    let _mode = SaveMode::parse(mode);
     let manifest_user_id = json_str(manifest, &["skipi_identity", "messaging_user_id"])
         .or_else(|| json_str(manifest, &["exported_by", "messaging_user_id"]))
         .or_else(|| json_str(manifest, &["exported_by", "user_id"]));
@@ -1262,7 +1286,7 @@ mod tests {
             "documents": []
         });
         let summary = serde_json::json!({ "name": name, "rank": "Master", "nationality": "Ukrainian", "email": "" });
-        save_seafarer_from_bundle(application_id, seafarer_user_id, &manifest, "", Some(&summary), None, vault.to_str().unwrap())
+        save_seafarer_from_bundle(application_id, seafarer_user_id, &manifest, "", Some(&summary), None, vault.to_str().unwrap(), None)
             .expect("save")
     }
     fn row(id: &str) -> Option<SavedSeafarer> {
@@ -1277,8 +1301,14 @@ mod tests {
     // ONE test for the whole No.664/S2 receiver story, because the connection is
     // a process-wide static: the scenarios run in sequence on one vault, each on
     // ids of its own. There were no unit tests on this file before this card.
+    // The connection is a process-wide static and `cargo test` runs tests in
+    // parallel threads: two tests calling init() would race on it. One lock,
+    // taken by every test of this module.
+    static SERIAL: Mutex<()> = Mutex::new(());
+
     #[test]
     fn no_664_s2_the_person_key_retires_the_letter_key_and_touches_nobody_else() {
+        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let v = vault();
         let pr_a = "PR-0123456789abcdef";
         let pr_b = "PR-ffffffffffffffff";
@@ -1333,7 +1363,7 @@ mod tests {
             "exported_by": { "name": "Doc Holder", "rank": "AB", "messaging_user_id": "intake:I4" },
             "documents": [{ "title": "Passport" }]
         });
-        save_seafarer_from_bundle("intake:I4", "", &with_doc, "", None, None, v.to_str().unwrap()).unwrap();
+        save_seafarer_from_bundle("intake:I4", "", &with_doc, "", None, None, v.to_str().unwrap(), None).unwrap();
         let d = save(&v, "intake:I4", "PR-4444444444444444", "Doc Holder", "PR-4444444444444444");
         assert_eq!(d.id, "PR-4444444444444444");
         assert!(row("intake:I4").is_some(), "a row holding document rows stays");
@@ -1355,4 +1385,135 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&v);
     }
+
+    // No.664/S3: the files of a response travel with the person. Scenarios in
+    // sequence on one vault (same reason as above). Files are written under a
+    // fake download root inside the vault; the receiver only ever COPIES.
+    #[test]
+    fn no_664_s3_merge_keeps_the_folder_and_replaces_by_file_path() {
+        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let v = vault();
+        let vault_str = v.to_str().unwrap().to_string();
+        let downloads = v.join("Downloads").join("Skipi").join("Crewing");
+        let pr = "PR-5353535353535353";
+        let write = |rel: &str, bytes: &[u8]| {
+            let p = downloads.join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, bytes).unwrap();
+        };
+        let save_docs = |app: &str, key: &str, name: &str, extracted: &str, docs: Vec<(&str, &str, &str)>, cv: Option<&str>, mode: Option<&str>| {
+            let documents: Vec<serde_json::Value> = docs
+                .iter()
+                .map(|(fp, title, cat)| serde_json::json!({ "title": title, "category": cat, "file_path": fp, "file_name": fp.rsplit('/').next().unwrap(), "doc_source": "skipi_response" }))
+                .collect();
+            let manifest = serde_json::json!({
+                "exported_by": { "name": name, "rank": "Master", "messaging_user_id": key },
+                "documents": documents
+            });
+            let summary = serde_json::json!({ "name": name, "rank": "Master", "nationality": "Ukrainian", "email": "", "doc_source": "skipi_response" });
+            save_seafarer_from_bundle(app, key, &manifest, extracted, Some(&summary), cv, &vault_str, mode)
+        };
+        let rows = |id: &str| -> Vec<SavedSeafarerDocument> {
+            let mut r = list_saved_seafarer_documents(id).unwrap();
+            r.sort_by(|a, b| a.file_path.cmp(&b.file_path));
+            r
+        };
+        let stored = |rel: &str| seafarers_dir(&vault_str).join(clean_path_part(pr, "seafarer")).join(rel);
+        let hidden_dirs = || -> usize {
+            std::fs::read_dir(seafarers_dir(&vault_str)).unwrap()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_name().to_string_lossy().starts_with('.'))
+                .count()
+        };
+        let dl = downloads.to_str().unwrap().to_string();
+
+        // 1. the first response: one pdf, placed under <intake8>/attachment-0.pdf
+        write("2a353cdd/attachment-0.pdf", b"PDF-A");
+        let a = save_docs("intake:2a353cdd-1", pr, "Ivan Petrenko", &dl, vec![("2a353cdd/attachment-0.pdf", "CV", "CV")], None, Some("merge")).expect("save 1");
+        assert_eq!(a.id, pr);
+        assert_eq!(a.doc_count, 1);
+        let r1 = rows(pr);
+        assert_eq!(r1.len(), 1);
+        assert!(r1[0].has_file);
+        assert!(r1[0].file_path.as_deref().unwrap().ends_with("2a353cdd/attachment-0.pdf"), "got {:?}", r1[0].file_path);
+        assert_eq!(std::fs::read(stored("2a353cdd/attachment-0.pdf")).unwrap(), b"PDF-A");
+        assert!(a.cv_path.is_none(), "no cvPath was sent, none is invented");
+        update_saved_seafarer(pr, Some(true), Some("contacted"), Some("called")).unwrap();
+
+        // 2. the SAME response saved again (the operator pressed twice): one row, the newer bytes
+        write("2a353cdd/attachment-0.pdf", b"PDF-A2");
+        let a2 = save_docs("intake:2a353cdd-1", pr, "Ivan Petrenko", &dl, vec![("2a353cdd/attachment-0.pdf", "CV", "CV")], None, Some("merge")).expect("save 2");
+        assert_eq!(a2.doc_count, 1, "idempotent by file_path: a repeat with the same file does not double the list");
+        assert_eq!(rows(pr).len(), 1);
+        assert_eq!(std::fs::read(stored("2a353cdd/attachment-0.pdf")).unwrap(), b"PDF-A2", "the row with the same file_path is REPLACED, bytes included");
+
+        // 3. a SECOND response of the same person: the same server name, its own sub-folder, BOTH files
+        write("5c164286/attachment-0.pdf", b"PDF-B");
+        let b = save_docs("intake:5c164286-2", pr, "Ivan Petrenko", &dl, vec![("5c164286/attachment-0.pdf", "CV", "CV")], None, Some("merge")).expect("save 3");
+        assert_eq!(b.doc_count, 2, "merge ADDS a document with a new file_path");
+        assert_eq!(rows(pr).len(), 2);
+        assert_eq!(std::fs::read(stored("2a353cdd/attachment-0.pdf")).unwrap(), b"PDF-A2", "the first person's file is still there, byte for byte");
+        assert_eq!(std::fs::read(stored("5c164286/attachment-0.pdf")).unwrap(), b"PDF-B");
+        assert_eq!(b.status, "contacted");
+        assert_eq!(b.notes.as_deref(), Some("called"));
+        assert_eq!(hidden_dirs(), 0, "no staging or backup folder is left behind after a merge");
+
+        // 4. a merge with NOTHING to add (a repeat without attachments): nothing is erased
+        let c = save_docs("intake:2a353cdd-1", pr, "Ivan P. Petrenko", "", vec![], None, Some("merge")).expect("save 4");
+        assert_eq!(c.display_name, "Ivan P. Petrenko", "the details are refreshed");
+        assert_eq!(c.doc_count, 2, "but not one document row is lost");
+        assert_eq!(rows(pr).len(), 2);
+        assert!(stored("2a353cdd/attachment-0.pdf").exists() && stored("5c164286/attachment-0.pdf").exists(), "and not one file is lost");
+
+        // 5. a cvPath given once is kept by later merges without one
+        write("cv/cv-signed.pdf", b"CV-SIGNED");
+        let d = save_docs("intake:2a353cdd-1", pr, "Ivan Petrenko", "", vec![], Some(downloads.join("cv/cv-signed.pdf").to_str().unwrap()), Some("merge")).expect("save 5");
+        assert!(d.cv_path.as_deref().map(|p| p.ends_with("cv-signed.pdf")).unwrap_or(false), "got {:?}", d.cv_path);
+        assert_eq!(d.doc_count, 3, "the CV row is added beside the two documents");
+        let e = save_docs("intake:2a353cdd-1", pr, "Ivan Petrenko", "", vec![], None, Some("merge")).expect("save 6");
+        assert_eq!(e.cv_path, d.cv_path, "a merge without a cvPath keeps the cv_path the row already had");
+        assert_eq!(e.doc_count, 3);
+        let e2 = save_docs("intake:2a353cdd-1", pr, "Ivan Petrenko", "", vec![], Some(downloads.join("cv/cv-signed.pdf").to_str().unwrap()), Some("merge")).expect("save 6b");
+        assert_eq!(e2.doc_count, 3, "the same cvPath again replaces the CV row by file_path, it does not add a fourth row");
+
+        // 6. a copy that fails: nothing changes — rows, files, cv_path — and no half-built folder stays
+        std::fs::create_dir_all(downloads.join("7f7f7f7f/attachment-0.pdf")).unwrap(); // a DIRECTORY where a file is expected: fs::copy fails
+        let before_rows = serde_json::to_value(rows(pr)).unwrap();
+        let err = save_docs("intake:7f7f7f7f-3", pr, "Ivan Petrenko", &dl, vec![("7f7f7f7f/attachment-0.pdf", "CV", "CV")], None, Some("merge"));
+        assert!(err.is_err(), "a copy error is a failed save");
+        assert_eq!(serde_json::to_value(rows(pr)).unwrap(), before_rows, "not one row changed");
+        assert_eq!(std::fs::read(stored("2a353cdd/attachment-0.pdf")).unwrap(), b"PDF-A2");
+        assert_eq!(std::fs::read(stored("5c164286/attachment-0.pdf")).unwrap(), b"PDF-B");
+        assert!(!stored("7f7f7f7f").exists(), "nothing of the failed save reached the folder");
+        assert_eq!(hidden_dirs(), 0, "the staging folder of the failed save is gone");
+        // a listed file that does not exist is the same refusal in merge mode: a
+        // row with has_file = 0 cannot be keyed and would double on every repeat
+        let missing = save_docs("intake:7f7f7f7f-3", pr, "Ivan Petrenko", &dl, vec![("7f7f7f7f/attachment-9.pdf", "CV", "CV")], None, Some("merge"));
+        assert!(missing.is_err(), "merge refuses a document whose file is not there");
+        assert_eq!(serde_json::to_value(rows(pr)).unwrap(), before_rows);
+
+        // 7. No.669: a save under ANOTHER intake: key never retires a letter-keyed row
+        let l1 = save(&v, "intake:L1", "", "Letter One", "intake:L1");
+        assert_eq!(l1.id, "intake:L1");
+        let l2 = save_docs("intake:L1", "intake:L2", "Letter One", "", vec![], None, Some("merge")).expect("L1 under L2");
+        assert_eq!(l2.id, "intake:L2");
+        assert!(row("intake:L1").is_some(), "No.669: the intake:L1 row stays — only a PERSON key retires a letter key");
+
+        // 8. no mode at all = «replace», the bundle path as it was: the folder is rebuilt from THIS manifest
+        write("bundle/Identity/passport.pdf", b"PASSPORT");
+        let f = save_docs("app-77", pr, "Ivan Petrenko", downloads.join("bundle").to_str().unwrap(), vec![("Identity/passport.pdf", "Passport", "Identity")], None, None).expect("replace");
+        assert_eq!(f.doc_count, 1, "replace: the rows are rewritten from the manifest — the revocation mechanism of the bundle path is alive");
+        assert_eq!(rows(pr).len(), 1);
+        assert!(!stored("2a353cdd/attachment-0.pdf").exists() && !stored("5c164286/attachment-0.pdf").exists(), "replace: the folder is rebuilt");
+        assert_eq!(std::fs::read(stored("Identity/passport.pdf")).unwrap(), b"PASSPORT");
+        assert!(f.cv_path.is_none(), "replace: cv_path follows this manifest (none) as before");
+        // and a word that is not `merge` is `replace` too
+        write("x/attachment-0.pdf", b"X");
+        let g = save_docs("intake:x-1", pr, "Ivan Petrenko", &dl, vec![("x/attachment-0.pdf", "CV", "CV")], None, Some("MERGE")).expect("bogus word");
+        assert_eq!(g.doc_count, 1, "an unknown mode word is replace, not a silent merge");
+        assert!(!stored("Identity/passport.pdf").exists());
+
+        let _ = std::fs::remove_dir_all(&v);
+    }
+
 }
