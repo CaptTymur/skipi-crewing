@@ -2784,5 +2784,110 @@ if (s3bReady) {
 }
 store.set('skipi_crewing_demo', '1');
 
+
+// ============================================================================
+// No.664/S3b/F2 (Supervisor, 2026-10-05): THE RECORD EXISTS IF EITHER MARKER
+// SAYS SO - and the owner can reach the one the first cut ignored.
+//
+// The first cut keyed the button on the chip's marker, crewFlowReviewIsSaved
+// (action === 'saved_to_db'), and said so openly as a slice boundary. The
+// Supervisor then showed that boundary is reachable ON THE STAND: the Add path
+// (dist :7186) writes crewFlowMarkRead(id, 'added', { saved_to_db: true }), so
+// the seafarer IS in the database while the action is 'added' - and the button
+// invited the operator to add him again. The owner's words were «если моряк уже
+// добавлен в базу», which is about the FACT, not about which path wrote it.
+//
+// WHY EACH FIXTURE CARRIES EXACTLY ONE MARKER (Supervisor F1). A fixture with
+// both markers set cannot tell the two mechanisms apart: a predicate reading
+// only the flag and one reading only the action would both pass it, so the test
+// would be green over a client that ignores half the truth. Each case below
+// therefore sets ONE marker, and the M5 mutations - predicate reduced to the
+// flag alone, then to the action alone - must each kill a case.
+// ============================================================================
+section('No.664/S3b/F2: either marker means the record exists');
+{
+  ok(/function crewFlowRecordInDb\(read\) \{/.test(HTML),
+    'F2: one predicate answers "is this seafarer already in the database", taking the READ RECORD - one of the two markers is not in the action at all');
+  ok(/read\.saved_to_db === true \|\| crewFlowReviewIsSaved\(read\.action\)/.test(HTML),
+    'F2: and it is the OR of both markers, not either one alone');
+  ok(/function crewFlowReviewIsSaved\(action\) \{/.test(HTML),
+    'F2 PRESERVE: crewFlowReviewIsSaved is left alone - it answers the narrower question the (992) chip is pinned on');
+  const added = HTML.match(/'crew_flow\.state_added':'[^']*'/g) || [];
+  ok(added.length === 2,
+    'F2: crew_flow.state_added exists in BOTH dictionaries, so the chip stops printing the raw token "added"; got ' + added.length);
+}
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let MF2 = null;
+try { MF2 = loadInlineModuleForCurrentStore(scriptNoBoot + S3B_STUB); } catch (e) { console.error('F2 runtime load failed:', e); }
+ok(!!MF2, 'F2: the inline script loads');
+const f2Ready = !!MF2 && typeof MF2.crewFlowActionsHtml === 'function';
+ok(f2Ready, 'F2: crewFlowActionsHtml is reachable');
+
+if (f2Ready) {
+  const prevTauriF2 = globalThis.__TAURI__;
+  globalThis.__TAURI__ = Object.assign({}, prevTauriF2, { event: {} });
+  s3bPrime(MF2);
+  const renderF2 = (lang, read) => {
+    store.set(S3B_LANG_KEY, lang);
+    MF2.state.crewFlowReadState = { i3b: read };
+    return s3bSaveBtn(MF2.crewFlowActionsHtml('i3b'));
+  };
+  // ONE marker each. Named so a failure says which mechanism was ignored.
+  const ADD_PATH   = { action: 'added', saved_to_db: true, at: '2026-10-05T00:00:00Z' };   // flag only
+  const SAVE_PATH  = { action: 'saved_to_db', at: '2026-10-05T00:00:00Z' };                // action only
+  const REVERSIBLE = { action: 'kept_for_later', at: '2026-10-05T00:00:00Z' };             // neither
+
+  const addRu = renderF2('ru', ADD_PATH);
+  ok(/Уже в базе/.test(addRu) && /cf-save-done/.test(addRu),
+    'F2/RU the Add path: action "added" with saved_to_db true is a seafarer IN the database - green «Уже в базе», not an invitation to add him twice');
+  const saveRu = renderF2('ru', SAVE_PATH);
+  ok(/Уже в базе/.test(saveRu) && /cf-save-done/.test(saveRu),
+    'F2/RU the save path: action "saved_to_db" with NO flag is still green - the action alone is enough');
+  const revRu = renderF2('ru', REVERSIBLE);
+  ok(/В базу моряков/.test(revRu) && !/Уже в базе/.test(revRu) && !/cf-save-done/.test(revRu),
+    'F2/RU CALIBRATION: a reversible mark with neither marker stays «В базу моряков» and grey - the predicate is not simply always true');
+  const addEn = renderF2('en', ADD_PATH);
+  ok(/Already in database/.test(addEn) && /cf-save-done/.test(addEn),
+    'F2/EN the Add path says «Already in database» too');
+  globalThis.__TAURI__ = prevTauriF2;
+}
+
+// ---- M5: each half of the predicate must be load-bearing -------------------
+{
+  const M5 = [
+    { id: 'F2/M5a', from: 'read.saved_to_db === true || crewFlowReviewIsSaved(read.action)',
+      to: 'crewFlowReviewIsSaved(read.action)',
+      what: 'the predicate reduced to the ACTION alone - the Add path becomes invisible again',
+      fixture: { action: 'added', saved_to_db: true, at: '2026-10-05T00:00:00Z' } },
+    { id: 'F2/M5b', from: 'read.saved_to_db === true || crewFlowReviewIsSaved(read.action)',
+      to: 'read.saved_to_db === true',
+      what: 'the predicate reduced to the FLAG alone - the ordinary save path becomes invisible',
+      fixture: { action: 'saved_to_db', at: '2026-10-05T00:00:00Z' } },
+  ];
+  for (const mut of M5) {
+    const occurrences = scriptNoBoot.split(mut.from).length - 1;
+    ok(occurrences === 1, mut.id + ': the predicate this mutation halves occurs exactly once - got ' + occurrences);
+    if (occurrences !== 1) continue;
+    let MM5 = null, err = null;
+    try { MM5 = loadInlineModuleForCurrentStore(scriptNoBoot.replace(mut.from, mut.to) + S3B_STUB); } catch (e) { err = e; }
+    ok(!!MM5, mut.id + ': the mutant BUILDS - otherwise what reddens is the parser, not ' + mut.what
+      + (err ? ' (' + err.name + ': ' + err.message + ')' : ''));
+    if (!MM5 || typeof MM5.crewFlowActionsHtml !== 'function') continue;
+    const prev = globalThis.__TAURI__;
+    globalThis.__TAURI__ = Object.assign({}, prev, { event: {} });
+    s3bPrime(MM5);
+    store.set(S3B_LANG_KEY, 'ru');
+    MM5.state.crewFlowReadState = { i3b: mut.fixture };
+    const btn = s3bSaveBtn(MM5.crewFlowActionsHtml('i3b'));
+    ok(btn !== '', mut.id + ' CALIBRATION: the mutant still renders a save button, so it is a working client');
+    ok(!/Уже в базе/.test(btn),
+      mut.id + ' KILLED: with ' + mut.what + ', that fixture falls back to «В базу моряков» - so this half of the predicate really is load-bearing');
+    globalThis.__TAURI__ = prev;
+  }
+}
+store.set('skipi_crewing_demo', '1');
+
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
