@@ -888,7 +888,12 @@ if (r2RuntimeReady) {
             // `ranks_withheld` is the summary field the bridge already carries
             // (No.637/S6): active profiles this candidate was deliberately not
             // compared against, every one of them because the rank does not apply.
-            qRow('i-na'), qRow('i-nofit'), qWithheld('i-nofit-w', 3), qRow('i-nothing')],
+            // No.683 corrected the count from 3 to 2: this screen holds TWO
+            // active profiles, and «withheld 3 of 2» is data the server cannot
+            // produce. The row still means what it meant — nothing stored, and
+            // every active profile withheld by rank — it is now arithmetic
+            // that can exist.
+            qRow('i-na'), qRow('i-nofit'), qWithheld('i-nofit-w', 2), qRow('i-nothing')],
     limit: 50, offset: 0, total: 10,
   };
   MR2.state.intakePilot.queueLastUpdated = '2026-09-29T10:00:00Z';
@@ -1360,8 +1365,13 @@ if (r2RuntimeReady) {
       const MUTATIONS = [
         { id: 'S7-PCT', anchor: "  if (row.applicability === 'not_applicable') { out.reason = 'rank_not_applicable'; return out; }\n",
           what: 'the refusal of a figure for a rank that does not apply' },
-        { id: 'S7-NOFIT', anchor: "  if (crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; } else if (!profileId) {",
-          replacement: '  if (!profileId) {',
+        // No.683 re-anchored this one: the branch now has a sibling below it
+        // («подходит под N — не оценён»), so DELETING the line would leave an
+        // `else` with no `if` and the mutant would die in the parser — which
+        // proves the parser and not the state. Short-circuiting the condition
+        // disables exactly the same state and still builds.
+        { id: 'S7-NOFIT', anchor: "  if (crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; }",
+          replacement: "  if (false && crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; }",
           what: 'the calm grey state for a candidate who fits no profile' },
       ];
       for (const mut of MUTATIONS) {
@@ -2295,6 +2305,327 @@ section('No.675: pills keep their shape on the selected row (both themes)');
   ok(!/\.badge\.saved \{[^}]*background/.test(css) && !/:not\(\.saved\)/.test(overrideRule),
     'SEL: the green chip gets the same ground and keeps only its green text — it is not excluded from the rule');
 }
+
+
+// ============================================================================
+// No.683 (OWNER, live acceptance 2026-10-05): «Не подошёл ни под один профиль»
+// stood beside a Chief Officer the server had NOT finished comparing.
+//
+// The row answered the question with a TEST FOR ANY, where the sentence it
+// prints is a claim about ALL:
+//
+//     answered = ranks_withheld + <rows loaded>;  return answered > 0;
+//
+// `ranks_withheld` is NOT "the profiles he failed". The server counts there,
+// and only there, the ACTIVE profiles his RANK does not reach
+// (app/candidate_intake_service.py, SITE 6a: `sum(... applicability.withheld)`
+// over the active matching profiles, minus the one he answered). A profile his
+// rank DOES reach but nobody has evaluated yet is in neither number — so on the
+// stand Lysenko came back `ranks_withheld = 5` with SIX active profiles and
+// nothing stored, and the one profile left over is precisely the one he could
+// still be taken for. The row said he fits nothing. He fits one, unevaluated.
+//
+// So the claim becomes an EQUALITY against the number of active profiles, and
+// the leftover gets a sentence of its own instead of being rounded into the
+// strong one. The number of active profiles is NOT on the queue row: the list
+// route carries no such field (the card's rank route has
+// `unranked_active_profiles`, the queue has nothing), so the best boundary the
+// screen already holds is used — the matching-profile list it loads once per
+// context for the names, counted over `state === 'active'`. Unknown count =
+// no claim at all, which is the calibration M683B below.
+// ============================================================================
+section('No.683: «fits no profile» is an EQUALITY, not «something was withheld»');
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let M683 = null;
+try {
+  M683 = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('No.683 runtime load failed:', e);
+}
+ok(!!M683, 'No.683: the non-demo inline script loads');
+const m683Ready = !!M683 && typeof M683.crewFlowCacheProfiles === 'function'
+  && typeof M683.crewFlowCacheRanks === 'function' && typeof M683.crewFlowLiveTreeHtml === 'function'
+  && typeof M683.crewFlowSelectProfile === 'function';
+ok(m683Ready, 'No.683: the queue renderer and both caches are reachable from the harness');
+
+const q683 = (id, withheld) => ({
+  intake_id: id, content_type: 'application/pdf', created_at: '2026-10-05T10:00:00Z', state: 'ranked',
+  summary: { state: 'ranked', facts: 4, ranks: 0, ranks_stale: 0, ranks_withheld: withheld,
+    active_confirmations: 0, needs_review_reason: null },
+});
+const na683 = (profileId) => ({
+  profile_id: profileId, profile_version: 1, primary: false, stale: false, decided: false,
+  reasons: [{ requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Chief Officer' }],
+  applicability: 'not_applicable', applicability_reason: null,
+});
+
+if (m683Ready) {
+  M683.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-683',
+    interface: { theme: 'light', language: 'en' },
+  };
+  // SIX active profiles — the stand's own number on 05.10. One archived row
+  // rides with them on purpose: `crewing_intake_matching_profile_list` asks the
+  // server with `include_archived=true`, so a count that forgets to read
+  // `state` would silently use SEVEN and never print the strong sentence again.
+  const profiles683 = {};
+  for (let i = 1; i <= 6; i++) {
+    profiles683['p683-' + i] = { id: 'p683-' + i, crewing_id: 'crew-flow-683', name: 'Profile ' + i, version: 1, state: 'active' };
+  }
+  profiles683['p683-old'] = { id: 'p683-old', crewing_id: 'crew-flow-683', name: 'Profile retired', version: 1, state: 'archived' };
+  M683.crewFlowCacheProfiles(profiles683);
+
+  M683.state.intakePilot.queue = {
+    items: [
+      // LYSENKO'S EXACT SHAPE off the stand: five of six active profiles
+      // withheld by rank, nothing stored. One profile is left — he fits it and
+      // nobody has evaluated it.
+      q683('i683-fits1', 5),
+      // Every active profile withheld: the strong sentence is TRUE here.
+      q683('i683-none6', 6),
+      // The same total reached the other way: five withheld, one evaluated and
+      // answered `not_applicable`. 5 + 1 = 6 — also true.
+      q683('i683-none5r1', 5),
+      // CALIBRATION 1 — silence. Nothing withheld, nothing stored. The server
+      // has said nothing about this man at all, and neither claim may be built
+      // from that: `withheld = 0` also covers "nobody could read his rank".
+      q683('i683-silent', 0),
+      // CALIBRATION 2 — a loaded row that is NOT `not_applicable`. An unread
+      // rank leaves the operator something to do; it is not an answer and it
+      // must block BOTH sentences.
+      q683('i683-unknownrow', 5),
+      // CALIBRATION 3 — arithmetic that cannot be: more withheld than the
+      // screen knows active. Its own list is behind, so it claims nothing.
+      q683('i683-overcount', 7),
+    ],
+    limit: 50, offset: 0, total: 6,
+  };
+  M683.state.intakePilot.queueLastUpdated = '2026-10-05T10:00:00Z';
+
+  M683.crewFlowCacheRanks('i683-fits1', []);
+  M683.crewFlowCacheRanks('i683-none6', []);
+  M683.crewFlowCacheRanks('i683-none5r1', [na683('p683-6')]);
+  M683.crewFlowCacheRanks('i683-silent', []);
+  M683.crewFlowCacheRanks('i683-unknownrow', [{
+    profile_id: 'p683-6', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [], applicability: 'unknown', applicability_reason: 'rank_absent',
+  }]);
+  M683.crewFlowCacheRanks('i683-overcount', []);
+  M683.crewFlowSelectProfile('p683-1');
+
+  const calls683Before = calls.length;
+  const fetch683Before = fetchCalls.length;
+  const tree683 = String(M683.crewFlowLiveTreeHtml('live'));
+  ok(calls.length === calls683Before && fetchCalls.length === fetch683Before,
+    'No.683: the new arithmetic costs NO command and NO fetch — it is read off what the row already carries');
+
+  const row683 = (id) => {
+    const m = tree683.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    return m ? m[0] : '';
+  };
+  const fit683 = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit" data-fit="([^"]*)"/);
+    return m ? m[1] : null;
+  };
+  const fitText683 = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+    return m ? m[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  };
+  for (const id of ['i683-fits1', 'i683-none6', 'i683-none5r1', 'i683-silent', 'i683-unknownrow', 'i683-overcount']) {
+    ok(row683(id) !== '', 'No.683 CALIBRATION: the fixture row ' + id + ' really rendered — an empty match would pass every negative below');
+  }
+
+  // ---- 1. THE DEFECT the owner found -------------------------------------
+  ok(fit683(row683('i683-fits1')) !== 'no_profile_fit',
+    'No.683: five of SIX withheld is not «fits none of the profiles» — the sixth is the vacancy he could still be taken for; got "'
+      + fit683(row683('i683-fits1')) + '"');
+  ok(fit683(row683('i683-fits1')) === 'unevaluated_fit',
+    'No.683: it gets the calm state of its own instead — got "' + fit683(row683('i683-fits1')) + '"');
+  ok(/Fits 1 — not evaluated/.test(fitText683(row683('i683-fits1'))),
+    'No.683: and it says HOW MANY are left and that nobody evaluated them — got "' + fitText683(row683('i683-fits1')) + '"');
+  ok(!/%/.test(fitText683(row683('i683-fits1'))) && !/data-pct="\d/.test(row683('i683-fits1')),
+    'No.683: with no figure — an unevaluated fit is not a score');
+  ok(/cf-fit-none/.test(row683('i683-fits1')) && !/cf-fit-nofit/.test(row683('i683-fits1')),
+    'No.683: and it carries the same quiet marking as «профиль пока не выбран», not the grey bar of «не подошёл»');
+
+  // ---- 2. the strong sentence still fires where it is TRUE ---------------
+  for (const [name, id] of [['all withheld', 'i683-none6'], ['withheld + a not_applicable row', 'i683-none5r1']]) {
+    ok(fit683(row683(id)) === 'no_profile_fit',
+      'No.683 (' + name + '): when every active profile IS answered, the calm grey state is still printed — got "'
+        + fit683(row683(id)) + '"');
+    ok(/cf-fit-nofit/.test(row683(id)),
+      'No.683 (' + name + '): and keeps its own grey marking in the left column');
+    ok(/[Ff]its none of the profiles/.test(fitText683(row683(id))),
+      'No.683 (' + name + '): with the sentence OWNER 02.10 asked for — got "' + fitText683(row683(id)) + '"');
+  }
+
+  // ---- 3. the three calibrations: no claim at all ------------------------
+  for (const [name, id] of [
+    ['silence', 'i683-silent'],
+    ['an unread rank', 'i683-unknownrow'],
+    ['more withheld than active profiles known', 'i683-overcount'],
+  ]) {
+    ok(fit683(row683(id)) !== 'no_profile_fit',
+      'No.683 CALIBRATION (' + name + '): never «не подошёл ни под один профиль» — got "' + fit683(row683(id)) + '"');
+    ok(fit683(row683(id)) !== 'unevaluated_fit',
+      'No.683 CALIBRATION (' + name + '): and never «подходит под N» either — a positive claim out of silence is the same defect mirrored; got "'
+        + fit683(row683(id)) + '"');
+  }
+
+  // ---- 4. both shipped languages, on the rendered bytes ------------------
+  for (const lang of ['ru', 'en']) {
+    store.set('skipi-crewing-ui-language', lang);
+    const tree = String(M683.crewFlowLiveTreeHtml('live'));
+    const grab = (id) => {
+      const m = tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+      if (!m) return '';
+      const f = String(m[0]).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+      return f ? f[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    };
+    const text = grab('i683-fits1');
+    const cyr = (t) => /[Ѐ-ӿ]/.test(t);
+    ok(text.length > 5 && (lang === 'ru' ? cyr(text) : !cyr(text)),
+      '[' + lang + '] No.683: the new state is spelled out in this language — got "' + text + '"');
+    ok(/1/.test(text),
+      '[' + lang + '] No.683: and carries the count, so «подходит под 1» and «подходит под 4» are not one sentence — got "' + text + '"');
+    ok(text !== grab('i683-none6'),
+      '[' + lang + '] No.683: «подходит под N» and «не подошёл ни под один» stay two different sentences in this language');
+  }
+  store.set('skipi-crewing-ui-language', 'en');
+
+  // ---- 5. the count is a COUNT, not the constant 1 ------------------------
+  M683.state.intakePilot.queue.items.push(q683('i683-fits4', 2));
+  M683.crewFlowCacheRanks('i683-fits4', []);
+  {
+    const tree = String(M683.crewFlowLiveTreeHtml('live'));
+    const m = tree.match(new RegExp('data-intake="i683-fits4"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    const r = m ? m[0] : '';
+    ok(r !== '', 'No.683 CALIBRATION: the four-left row rendered');
+    const f = String(r).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+    const txt = f ? f[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    ok(/Fits 4 — not evaluated/.test(txt),
+      'No.683: two withheld of six leaves FOUR, and the row prints four — a hard-coded 1 dies here; got "' + txt + '"');
+  }
+
+  // ---- 6. the dictionary key, so a missing one cannot print a wire code ---
+  {
+    const key = 'crew_flow.fit_unevaluated_fit';
+    const lines = HTML.split('\n').filter((line) => line.includes("'" + key + "'"));
+    ok(lines.length === 2, key + ': exactly one EN and one RU entry — got ' + lines.length);
+    const val = (i) => (new RegExp("'" + key.replace(/\./g, '\\.') + "':'([^']+)'").exec(lines[i] || '') || [])[1] || '';
+    ok(val(0) !== '' && !/[Ѐ-ӿ]/.test(val(0)) && /\{n\}/.test(val(0)),
+      key + ': the EN wording exists and carries the {n} slot — got "' + val(0) + '"');
+    ok(val(1) !== '' && /[Ѐ-ӿ]/.test(val(1)) && /\{n\}/.test(val(1)),
+      key + ': and a Russian one with the same slot — got "' + val(1) + '"');
+  }
+
+  // ---- 7. THE PHONE, where the same left column is a list -----------------
+  {
+    const mobile = String(M683.crewFlowLiveMobileHtml('live'));
+    const mRow = (id) => {
+      const m = mobile.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<button class="mobile-list-item|$)'));
+      return m ? m[0] : '';
+    };
+    ok(mRow('i683-fits1') !== '', 'No.683 CALIBRATION: the phone row rendered');
+    ok(/data-fit="unevaluated_fit"/.test(mRow('i683-fits1')),
+      'No.683: the PHONE row carries the same answer — same function, not a second opinion');
+    ok(/data-fit="no_profile_fit"/.test(mRow('i683-none6')),
+      'No.683: and the strong sentence still reaches the phone where it is true');
+  }
+
+  // ---- 8. REMOVAL CALIBRATION: the equality itself, and the active count --
+  //
+  // Each assertion above can also pass on a client that stopped printing these
+  // states at all, so both halves of the fix are re-measured on a source whose
+  // line is REPLACED by the defect it replaced. The mutant must BUILD and a
+  // known-good row must still render inside it, otherwise what goes red is the
+  // parser and not the arithmetic.
+  {
+    const MUTATIONS683 = [
+      { id: '683-EQUALITY',
+        anchor: "  return !!tally && tally.unevaluated === 0;",
+        replacement: "  return !!tally;",
+        what: 'the equality against the number of active profiles',
+        check: (mutantRow) => {
+          ok(/data-fit="no_profile_fit"/.test(mutantRow('i683-fits1')),
+            '683-EQUALITY KILLED: with the equality gone the row prints «не подошёл ни под один профиль» back over a man who fits one — the exact bytes the owner saw');
+        } },
+      { id: '683-ACTIVE-COUNT',
+        anchor: "    if (meta && String(meta.state || '') === 'active') n++;",
+        replacement: "    if (meta) n++;",
+        what: 'reading `state` so archived profiles are not counted as active',
+        check: (mutantRow) => {
+          ok(!/data-fit="no_profile_fit"/.test(mutantRow('i683-none6')),
+            '683-ACTIVE-COUNT KILLED: counting the archived profile too makes SEVEN, and the row that really fits nothing stops saying so');
+        } },
+    ];
+    for (const mut of MUTATIONS683) {
+      const occurrences = scriptNoBoot.split(mut.anchor).length - 1;
+      ok(occurrences === 1,
+        mut.id + ': the line this calibration replaces occurs exactly once in the shipped script — got ' + occurrences);
+      if (occurrences !== 1) continue;
+      const mutantSource = scriptNoBoot.replace(mut.anchor, mut.replacement);
+      let MY = null, buildError = null;
+      try { MY = loadInlineModuleForCurrentStore(mutantSource); } catch (e) { buildError = e; }
+      ok(MY !== null,
+        mut.id + ': the mutant BUILDS — otherwise what goes red is the parser and not ' + mut.what
+          + (buildError ? ' (' + buildError.name + ': ' + buildError.message + ')' : ''));
+      if (!MY) continue;
+      MY.state.settings = M683.state.settings;
+      MY.state.intakePilot = M683.state.intakePilot;
+      MY.state.crewFlowRanks = M683.state.crewFlowRanks;
+      MY.state.crewFlowProfiles = M683.state.crewFlowProfiles;
+      MY.crewFlowSelectProfile('p683-1');
+      const mutantTree = String(MY.crewFlowLiveTreeHtml('live'));
+      const mutantRow = (id) => {
+        const m = mutantTree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+        return m ? m[0] : '';
+      };
+      ok(mutantRow('i683-none5r1') !== '',
+        mut.id + ' CALIBRATION OF THE MUTANT: a known row still renders inside it, so the mutant is a working client and not a blank page');
+      mut.check(mutantRow);
+    }
+  }
+}
+
+// ---- 9. the active count is a BOUNDARY: unknown count, no claim ----------
+//
+// A second module with the SAME rows and NO matching-profile list loaded. On
+// the shipped build before this change the strong sentence was printed here
+// too — «fits none of the profiles» over a screen that had not heard of a
+// single profile. Without a denominator neither sentence can be true.
+store.delete('skipi_crewing_demo');
+elements.clear();
+let M683B = null;
+try {
+  M683B = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('No.683B runtime load failed:', e);
+}
+ok(!!M683B, 'No.683B: the non-demo inline script loads a second time, with no profile list');
+if (M683B && typeof M683B.crewFlowCacheRanks === 'function') {
+  M683B.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-683b',
+    interface: { theme: 'light', language: 'en' },
+  };
+  M683B.state.intakePilot.queue = { items: [q683('i683b-none6', 6)], limit: 50, offset: 0, total: 1 };
+  M683B.state.intakePilot.queueLastUpdated = '2026-10-05T10:00:00Z';
+  M683B.crewFlowCacheRanks('i683b-none6', []);
+  const treeB = String(M683B.crewFlowLiveTreeHtml('live'));
+  const rowB = (treeB.match(/data-intake="i683b-none6"[\s\S]*?(?=<div class="tree-item|$)/) || [''])[0];
+  ok(rowB !== '', 'No.683B CALIBRATION: the row rendered on the second module too');
+  ok(!/data-fit="no_profile_fit"/.test(rowB),
+    'No.683B: with NO profile list loaded the screen has no denominator, so it does not claim «не подошёл ни под один профиль» — the count is a boundary of measurement, not an assumption');
+  ok(!/data-fit="unevaluated_fit"/.test(rowB),
+    'No.683B: and it does not claim a fit either');
+}
+store.set('skipi_crewing_demo', '1');
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
