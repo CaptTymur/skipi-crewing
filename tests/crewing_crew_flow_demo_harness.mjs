@@ -340,6 +340,9 @@ function loadInlineModuleForCurrentStore(sourceOverride) {
       + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
       + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
       + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '
+      + 'crewFlowActionsHtml: (typeof crewFlowActionsHtml === "function" ? crewFlowActionsHtml : null), '
+      + 'crewFlowSaveToSeafarers: (typeof crewFlowSaveToSeafarers === "function" ? crewFlowSaveToSeafarers : null), '
+      + 'crewFlowReviewIsSaved: (typeof crewFlowReviewIsSaved === "function" ? crewFlowReviewIsSaved : null), '
       + 'initLeftPanelResizer: (typeof initLeftPanelResizer === "function" ? initLeftPanelResizer : null) };'
   )();
 }
@@ -2624,6 +2627,160 @@ if (M683B && typeof M683B.crewFlowCacheRanks === 'function') {
     'No.683B: with NO profile list loaded the screen has no denominator, so it does not claim «не подошёл ни под один профиль» — the count is a boundary of measurement, not an assumption');
   ok(!/data-fit="unevaluated_fit"/.test(rowB),
     'No.683B: and it does not claim a fit either');
+}
+store.set('skipi_crewing_demo', '1');
+
+
+// ============================================================================
+// No.664/S3b (OWNER, live acceptance 2026-10-05): «если моряк уже добавлен в
+// базу то вместо "в базу моряков" должно быть написано "уже в базе" и кнопка
+// зеленая».
+//
+// WHICH STATE, and why THIS one. The product marks "already in the seafarer
+// database" in TWO independent ways, and only one of them paints the chip the
+// owner was looking at:
+//   crewFlowReviewIsSaved(read.action) === 'saved_to_db'  -> the green chip
+//       crew_flow.state_saved_to_db, on the queue row and under the buttons.
+//       This is the source the button now follows.
+//   read.saved_to_db === true  -> the «in Seafarers DB» badge on the row and
+//       the mobile chip. Left alone by this slice.
+// Naming both matters because they CAN disagree: crewFlowMarkRead REPLACES the
+// stored record, so a candidate saved and then deferred loses the action and the
+// flag together. Following the chip is what keeps button and chip in step.
+//
+// WHY A CLASS AND NOT AN INLINE COLOUR. btn() writes the primary colour INLINE,
+// and an inline declaration beats any class selector, so a green class on its
+// own would have been dead text. The sixth argument therefore IS the class, and
+// when a class is given the inline colours are not written at all.
+// ============================================================================
+section('No.664/S3b: a candidate already in the database gets «уже в базе» on a green button');
+{
+  const cssB = HTML.slice(0, HTML.indexOf('</style>'));
+  ok(/\nbutton\.cf-save-done \{[^}]*background:#1f7a45;/.test(cssB),
+    'S3b: the green ground is #1f7a45 - the value .badge.saved and .cf-fit-complete already carry for THIS state, not a third green');
+  ok(/\nbutton\.cf-save-done \{[^}]*color:#fff;/.test(cssB),
+    'S3b: white ink, as every other filled button in this home - 5.35:1, and the SAME in both themes because the green is the ground, not a text colour');
+  ok(!/\nbutton\.cf-save-done \{[^}]*background:var\(--ok\)/.test(cssB),
+    'S3b COLOUR CALIBRATION: it is NOT var(--ok), whose white pair measures 2.28:1 dark / 3.30:1 light - below the 2.74:1 this screen already threw out under (930)');
+  ok(!/\n\.badge\.saved \{[^}]*background/.test(cssB),
+    'S3b PRESERVE: .badge.saved still sets colour only - the new button did not hand the chip a ground, so (992) stays green');
+}
+{
+  const again = HTML.match(/'crew_flow\.save_again':'[^']*'/g) || [];
+  const againConfirm = HTML.match(/'crew_flow\.save_again_confirm':'[^']*'/g) || [];
+  ok(again.length === 2,
+    'S3b: crew_flow.save_again is in BOTH dictionaries - tr() falls back to English silently, so one copy would hide a missing Russian string; got ' + again.length);
+  ok(againConfirm.length === 2,
+    'S3b: and so is crew_flow.save_again_confirm; got ' + againConfirm.length);
+}
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+globalThis.__S3B_CONFIRM = [];
+const S3B_STUB = '\ninAppConfirm = function(msg, opts){ globalThis.__S3B_CONFIRM.push({ msg: String(msg), label: String((opts || {}).confirmLabel || "") }); return Promise.resolve(false); };';
+const S3B_LANG_KEY = 'skipi-crewing-ui-language';
+const s3bSaved = () => ({ i3b: { action: 'saved_to_db', saved_to_db: true, at: '2026-10-05T00:00:00Z' } });
+const s3bFresh = () => ({});
+const s3bSaveBtn = (html) => (String(html).match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>[\s\S]*?<\/button>/) || [''])[0];
+const s3bPrime = (M) => {
+  M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-s3b', interface: { theme: 'light', language: 'en' } };
+  M.state.intakePilot.detail = { intakeId: 'i3b', generation: 1, facts: [], responseContact: null,
+    card: { summary: { candidate_name: 'Oleksandr K.' } } };
+};
+
+let MS3B = null;
+try { MS3B = loadInlineModuleForCurrentStore(scriptNoBoot + S3B_STUB); } catch (e) { console.error('S3b runtime load failed:', e); }
+ok(!!MS3B, 'S3b: the inline script loads with the confirm stub in place');
+const s3bReady = !!MS3B && typeof MS3B.crewFlowActionsHtml === 'function' && typeof MS3B.crewFlowSaveToSeafarers === 'function';
+ok(s3bReady, 'S3b: crewFlowActionsHtml and crewFlowSaveToSeafarers are reachable from the harness');
+
+if (s3bReady) {
+  const prevTauri = globalThis.__TAURI__;
+  // The save path refuses outright on a non-native transport, so the drill needs one.
+  globalThis.__TAURI__ = Object.assign({}, prevTauri, { event: {} });
+  s3bPrime(MS3B);
+  const render = (lang, read) => {
+    store.set(S3B_LANG_KEY, lang);
+    MS3B.state.crewFlowReadState = read;
+    return String(MS3B.crewFlowActionsHtml('i3b'));
+  };
+  const savedEn = render('en', s3bSaved());
+  const freshEn = render('en', s3bFresh());
+  const savedRu = render('ru', s3bSaved());
+  const freshRu = render('ru', s3bFresh());
+
+  ok(s3bSaveBtn(savedEn) !== '' && s3bSaveBtn(freshEn) !== '',
+    'S3b CALIBRATION: a save button renders in BOTH states - every check below is about its words, not about an empty string');
+  ok(/Already in database/.test(s3bSaveBtn(savedEn)),
+    'S3b/EN: a candidate already in the database is offered «Already in database»');
+  ok(/Save to Seafarers DB/.test(s3bSaveBtn(freshEn)) && !/Already in database/.test(s3bSaveBtn(freshEn)),
+    'S3b/EN PRESERVE: a candidate that is NOT saved keeps the old «Save to Seafarers DB»');
+  ok(/Уже в базе/.test(s3bSaveBtn(savedRu)),
+    'S3b/RU: in Russian it is the owner own words «Уже в базе» - not the English fallback tr() would quietly return');
+  ok(/В базу моряков/.test(s3bSaveBtn(freshRu)) && !/Уже в базе/.test(s3bSaveBtn(freshRu)),
+    'S3b/RU PRESERVE: the unsaved candidate still reads «В базу моряков»');
+  ok(/class="cf-save-done"/.test(s3bSaveBtn(savedEn)) && /class="cf-save-done"/.test(s3bSaveBtn(savedRu)),
+    'S3b: the saved button carries the green class in both languages');
+  ok(!/cf-save-done/.test(s3bSaveBtn(freshEn)) && !/cf-save-done/.test(s3bSaveBtn(freshRu)),
+    'S3b CALIBRATION: and the unsaved one does not - the class is a state, not decoration');
+  ok(!/background:var\(--accent\)/.test(s3bSaveBtn(savedEn)),
+    'S3b: the green button writes NO inline background - an inline declaration would beat the class and the green would never appear');
+  ok(/background:var\(--accent\)/.test(s3bSaveBtn(freshEn)),
+    'S3b CALIBRATION: the ordinary primary button still carries its inline accent, so the check above measures a change and not a removal everywhere');
+  ok(/<span class="badge saved" data-qa="crew-flow-review-state-pill">/.test(savedRu),
+    'S3b PRESERVE: the green chip of (992) is still under the buttons - the button did not replace it');
+
+  // ---- the confirm wording follows the SAME state, proved by CALLING it ----
+  // Answering NO, so the drill proves the question and writes nothing.
+  const S3B_CASES = [
+    ['ru', s3bSaved(), 'Обновить запись в базе моряков? Новые документы добавятся, дублей не будет.', 'Уже в базе', 'saved/RU'],
+    ['ru', s3bFresh(), 'Сохранить кандидата в базу моряков? Удалить сохранённого моряка потом нельзя — ни здесь, ни в базе моряков.', 'В базу моряков', 'fresh/RU'],
+    ['en', s3bSaved(), 'Update the saved record? New documents will be added, nothing is duplicated.', 'Already in database', 'saved/EN'],
+  ];
+  for (const [lang, read, wantMsg, wantLabel, what] of S3B_CASES) {
+    store.set(S3B_LANG_KEY, lang);
+    MS3B.state.crewFlowReadState = read;
+    globalThis.__S3B_CONFIRM.length = 0;
+    const before = calls.length;
+    await MS3B.crewFlowSaveToSeafarers('i3b');
+    const asked = globalThis.__S3B_CONFIRM[0] || { msg: '(no question was asked)', label: '' };
+    ok(asked.msg === wantMsg,
+      'S3b confirm ' + what + ': the question is the one for THIS state - got "' + asked.msg + '"');
+    ok(asked.label === wantLabel,
+      'S3b confirm ' + what + ': and so is the confirm button - got "' + asked.label + '"');
+    ok(!calls.slice(before).some((c) => c[0] === 'save_seafarer_from_bundle'),
+      'S3b confirm ' + what + ' CALIBRATION: answering NO wrote nothing - this drill proves the wording, never a save');
+  }
+  globalThis.__TAURI__ = prevTauri;
+}
+
+// ---- MUTATION CALIBRATION (the No.683 practice): can these asserts go red? --
+{
+  const anchor = "? btn('save', crewFlowTr('save_again'), !native || noName, \"crewFlowSaveToSeafarers('\" + id + \"')\", true, 'cf-save-done')";
+  const mutant = "? btn('save', crewFlowTr('save'), !native || noName, \"crewFlowSaveToSeafarers('\" + id + \"')\", true)";
+  const occurrences = scriptNoBoot.split(anchor).length - 1;
+  ok(occurrences === 1,
+    'S3b MUT: the branch this calibration removes occurs exactly once in the shipped script - got ' + occurrences);
+  if (occurrences === 1) {
+    let MM = null, buildErr = null;
+    try { MM = loadInlineModuleForCurrentStore(scriptNoBoot.replace(anchor, mutant) + S3B_STUB); } catch (e) { buildErr = e; }
+    ok(!!MM, 'S3b MUT: the mutant BUILDS - otherwise what goes red is the parser and not the branch'
+      + (buildErr ? ' (' + buildErr.name + ': ' + buildErr.message + ')' : ''));
+    if (MM && typeof MM.crewFlowActionsHtml === 'function') {
+      const prevTauri2 = globalThis.__TAURI__;
+      globalThis.__TAURI__ = Object.assign({}, prevTauri2, { event: {} });
+      s3bPrime(MM);
+      store.set(S3B_LANG_KEY, 'ru');
+      MM.state.crewFlowReadState = s3bSaved();
+      const mutBtn = s3bSaveBtn(MM.crewFlowActionsHtml('i3b'));
+      ok(mutBtn !== '',
+        'S3b MUT CALIBRATION: the mutant still renders a save button, so it is a working client and not a blank page');
+      ok(!/Уже в базе/.test(mutBtn) && !/cf-save-done/.test(mutBtn),
+        'S3b MUT KILLED: with the branch gone the saved candidate falls back to «В базу моряков» with no green class - so the assertions above really can go red');
+      globalThis.__TAURI__ = prevTauri2;
+    }
+  }
 }
 store.set('skipi_crewing_demo', '1');
 
