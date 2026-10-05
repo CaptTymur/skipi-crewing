@@ -6377,13 +6377,12 @@ function crewFlowActionsHtml(intakeId) {
   return '<div class="card" data-qa="crew-flow-actions" style="margin:0 0 12px;padding:12px;">'
     + '<label>' + escapeHtml(crewFlowTr('actions')) + '</label>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
-    // No.664/S3b: one button, two words. The branch is the SAME state that paints
-    // the green chip below -- crewFlowReviewIsSaved(read.action) -- so the button
-    // and the chip can never disagree about whether the record exists. The sixth
-    // argument is the green class; see the note on btn() for why a class and not
-    // an inline colour. NOTE the OTHER marker this does not use: `read.saved_to_db`
-    // (the «in Seafarers DB» badge on the row, :7111, and the mobile chip) is a
-    // second, independent mechanism and is left alone.
+    // No.664/S3b: one button, two words. The branch is crewFlowRecordInDb(read) --
+    // EITHER marker: action 'saved_to_db', or the flag read.saved_to_db that the Add
+    // path (:7186) sets alongside action 'added'. The green CHIP below is still gated
+    // on crewFlowReviewIsSaved(action) alone, pinned there by (992), so on the Add
+    // path the button is green while the chip stays grey: a known, deliberate
+    // asymmetry, not drift. Sixth argument = the green class; see the note on btn().
     +   (crewFlowRecordInDb(read)
           ? btn('save', crewFlowTr('save_again'), !native || noName, "crewFlowSaveToSeafarers('" + id + "')", true, 'cf-save-done')
           : btn('save', crewFlowTr('save'), !native || noName, "crewFlowSaveToSeafarers('" + id + "')", true))
