@@ -1738,7 +1738,9 @@ console.log('# K2 modules/crew-flow');
           // members (impostors here) — else `bin`.
           const cardAtts = ((cardFields[args && args.intakeId] || {}).attachments) || ((srv.items.find((i) => i.intake_id === (args && args.intakeId)) || {}).attachments) || [];
           const att = cardAtts.find((a) => Number(a.ordinal) === Number(args && args.ordinal));
-          const SERVABLE = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'message/rfc822': 'eml' };
+          // No.688/S3c: the server half adds the two image types it measures unambiguously
+          // (image/jpeg → jpg, image/png → png); gif/svg and the rest stay `bin`.
+          const SERVABLE = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'message/rfc822': 'eml', 'image/jpeg': 'jpg', 'image/png': 'png' };
           let ext = 'pdf';
           if (att) {
             const measured = String(att.measured_type || ''), declared = String(att.declared_type || '').toLowerCase();
@@ -2174,7 +2176,7 @@ console.log('# K2 modules/crew-flow');
     //
     // What is drilled, by call site (card «Матрица негативов»): an eligible pdf/docx
     // is fetched through the EXISTING audited byte route and handed to the receiver
-    // under `<intake8>/attachment-N.<ext>`; a `bin` (jpg, rtf, a zip in disguise) is
+    // under `<intake8>/attachment-N.<ext>`; a `bin` (gif, rtf, a zip in disguise) is
     // neither fetched nor placed and is NAMED to the operator; more than 10 files or
     // 64 MiB is refused BEFORE any byte moves and before the question; a second
     // intake of the same person lands in its own sub-folder; a letter's file says
@@ -2190,7 +2192,7 @@ console.log('# K2 modules/crew-flow');
       // application/zip; the server names it .docx by declared+measured+members. A fixture
       // with measured_type DOCX is a state the product never produces.
       const docxAtt = (ordinal, filename) => ({ ordinal, filename, declared_type: DOCX, measured_type: 'application/zip', byte_size: 50000, verdict: 'accepted', reason: null, eligible: true });
-      const binAtt = (ordinal, filename, measured_type = 'image/jpeg') => ({ ordinal, filename, declared_type: measured_type, measured_type, byte_size: 3000, verdict: 'accepted', reason: null, eligible: true });
+      const binAtt = (ordinal, filename, measured_type = 'image/gif') => ({ ordinal, filename, declared_type: measured_type, measured_type, byte_size: 3000, verdict: 'accepted', reason: null, eligible: true });
       const dls = (ctx) => ctx.calls.filter((c) => c.command === 'crewing_intake_attachment_download');
       const docsOf = (ctx) => (ctx.save && ctx.save.args.manifest && Array.isArray(ctx.save.args.manifest.documents)) ? ctx.save.args.manifest.documents : null;
       const toastWith = (ctx, text) => ctx.toasts.some((t) => String(t[0]).indexOf(text) !== -1);
@@ -2227,14 +2229,14 @@ console.log('# K2 modules/crew-flow');
 
       // ---- 2. a `bin`: not fetched, not placed, NAMED to the operator (RU and EN)
       for (const lang of ['en', 'ru']) {
-        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [binAtt(0, 'photo.jpg'), pdfAtt(1, 'cv.pdf')] }) } });
+        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [binAtt(0, 'photo.gif'), pdfAtt(1, 'cv.pdf')] }) } });
         const dl = dls(ctx);
-        softOk(dl.length === 1 && dl[0].args.ordinal === 1, '[' + lang + '] S3a-2 bin: the jpg is NOT fetched — only the pdf goes down the byte road — got ' + JSON.stringify(dl.map((c) => c.args.ordinal)));
+        softOk(dl.length === 1 && dl[0].args.ordinal === 1, '[' + lang + '] S3a-2 bin: the gif is NOT fetched — only the pdf goes down the byte road — got ' + JSON.stringify(dl.map((c) => c.args.ordinal)));
         const docs = docsOf(ctx);
         softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-1/attachment-1.pdf', '[' + lang + '] S3a-2 bin: and it is not placed — one document, the pdf');
         const word = k2str(ctx, 'doc_bin_skipped');
-        softOk(word !== 'crew_flow.doc_bin_skipped' && /\{n\}/.test(word) && /\{name\}/.test(word) && toastWith(ctx, word.replace('{n}', '0').replace('{name}', 'photo.jpg')),
-          '[' + lang + '] S3a-2 bin (930): the operator is told, in the dictionary’s words, WHICH attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'photo.jpg') + '"');
+        softOk(word !== 'crew_flow.doc_bin_skipped' && /\{n\}/.test(word) && /\{name\}/.test(word) && toastWith(ctx, word.replace('{n}', '0').replace('{name}', 'photo.gif')),
+          '[' + lang + '] S3a-2 bin (930): the operator is told, in the dictionary’s words, WHICH attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'photo.gif') + '"');
         softOk(!!ctx.save, '[' + lang + '] S3a-2 bin: the person is still saved — a photo is not a reason to lose the CV');
       }
 
@@ -2269,10 +2271,10 @@ console.log('# K2 modules/crew-flow');
         softOk(dls(ctx).length === 0 && ctx.save === null && !asked(ctx), 'S3a-5 ceiling: 80 MiB in two files → nothing fetched, nothing saved, no question');
         const word = k2str(ctx, 'docs_too_large');
         softOk(word !== 'crew_flow.docs_too_large' && ctx.toasts.some((t) => String(t[0]).indexOf(word.split('{')[0]) === 0), 'S3a-5 ceiling (930): the refusal is the dictionary’s size sentence — "' + word + '"');
-        const fits = [pdfAtt(0, 'a.pdf', 60 * 1024 * 1024), binAtt(1, 'huge.jpg')];
+        const fits = [pdfAtt(0, 'a.pdf', 60 * 1024 * 1024), binAtt(1, 'huge.gif')];
         fits[1].byte_size = 30 * 1024 * 1024;
         const okCtx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: fits }) } });
-        softOk(dls(okCtx).length === 1 && !!okCtx.save, 'S3a-5 CALIBRATION: a 30 MiB jpg does not count against the ceiling — only what would be placed is summed');
+        softOk(dls(okCtx).length === 1 && !!okCtx.save, 'S3a-5 CALIBRATION: a 30 MiB gif does not count against the ceiling — only what would be placed is summed');
       }
 
       // ---- 6. a second intake of the same person: HIS second file, in ITS OWN sub-folder
@@ -2322,8 +2324,90 @@ console.log('# K2 modules/crew-flow');
         const plainZip = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [{ ordinal: 0, filename: 'photos.zip', declared_type: 'application/zip', measured_type: 'application/zip', byte_size: 900, verdict: 'accepted', reason: null, eligible: true }, pdfAtt(1, 'cv.pdf')] }) } });
         softOk(dls(plainZip).length === 1 && dls(plainZip)[0].args.ordinal === 1, 'S3a-8b: a zip that does not even CLAIM to be a docx is not fetched at all — the metadata already says bin');
         softOk(/application\/zip/.test(k2crew), 'S3a-8b static: the block names application/zip — the type a real docx measures as — so the docx half of the allowlist is alive, not a dead key');
-        softOk(/var actualExt = /.test(k2crew) && /actualExt !== 'pdf' && actualExt !== 'docx'/.test(k2crew),
+        softOk(/var actualExt = /.test(k2crew) && /!CREW_FLOW_DOCS_EXT\.test\(actualExt\)/.test(k2crew) && /var CREW_FLOW_DOCS_EXT = \/\^\(pdf\|docx\|jpg\|jpeg\|png\)\$\/;/.test(k2crew),
           'S3a-8b static: the placement key is the extension the SERVER named in the returned path — the one place that can see the archive members');
+      }
+
+      // ---- 8c. No.688/S3c (OWNER (1005)/(1006)): pictures from the letter go into the folder too.
+      // jpg/png by the MEASURED type (the server measures images unambiguously — no declared
+      // claim needed) are fetched and placed like a pdf: category Attachment, title = the
+      // letter's name, never the CV. gif/svg stay bin: not fetched, named. An image counts
+      // against both ceilings, and a repeat sends the same file_path (the receiver's dedup key).
+      {
+        const imgAtt = (ordinal, filename, measured_type, declared_type = measured_type, byte_size = 4000) => ({ ordinal, filename, declared_type, measured_type, byte_size, verdict: 'accepted', reason: null, eligible: true });
+        for (const lang of ['en', 'ru']) {
+          const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [imgAtt(0, 'passport.jpg', 'image/jpeg'), imgAtt(1, 'photo.png', 'image/png'), pdfAtt(2, 'cv.pdf')] }) } });
+          const dl = dls(ctx);
+          softOk(dl.length === 3 && dl.map((c) => c.args.ordinal).join(',') === '0,1,2',
+            '[' + lang + '] S3c-1: the jpg and the png are fetched through the same audited route as the pdf, in ordinal order — got ' + JSON.stringify(dl.map((c) => c.args.ordinal)));
+          const docs = docsOf(ctx);
+          softOk(!!docs && docs.length === 3 && docs.map((d) => d.file_path).join(',') === 'intake-1/attachment-0.jpg,intake-1/attachment-1.png,intake-1/attachment-2.pdf',
+            '[' + lang + '] S3c-1: all three are placed under <intake8>/attachment-N.<ext> with the extension the SERVER named — got ' + JSON.stringify(docs && docs.map((d) => d.file_path)));
+          softOk(!!docs && docs[0] && docs[0].category === 'Attachment' && docs[0].title === 'passport.jpg' && docs[0].file_name === 'passport.jpg' && docs[0].doc_source === 'skipi_response',
+            '[' + lang + '] S3c-1: the jpg is a document like a pdf attachment — category Attachment, title = the name the letter carried, doc_source of the response');
+          softOk(!!docs && docs[1] && docs[1].category === 'Attachment' && docs[1].title === 'photo.png',
+            '[' + lang + '] S3c-1: the png likewise — category Attachment, title photo.png');
+          softOk(!!docs && docs[2] && docs[2].category === 'CV' && docs.filter((d) => d.category === 'CV').length === 1,
+            '[' + lang + '] S3c-1: a picture that comes first is never the CV — the first PDF still is, and only it');
+          const placed = k2str(ctx, 'docs_placed');
+          softOk(toastWith(ctx, placed.replace('{n}', '3')), '[' + lang + '] S3c-1 (930): the count said to the operator includes the pictures — "' + placed.replace('{n}', '3') + '"');
+          const word = k2str(ctx, 'doc_bin_skipped');
+          softOk(!ctx.toasts.some((t) => String(t[0]).indexOf(word.split('{')[0]) === 0), '[' + lang + '] S3c-1: and no picture is reported as «not placed»');
+        }
+
+        // measured decides: a jpeg the mail called octet-stream is still a jpg; a «jpeg» that measures gif is bin
+        {
+          const ctx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [imgAtt(0, 'scan.jpeg', 'image/jpeg', 'application/octet-stream'), imgAtt(1, 'fake.jpg', 'image/gif', 'image/jpeg'), pdfAtt(2, 'cv.pdf')] }) } });
+          softOk(dls(ctx).map((c) => c.args.ordinal).join(',') === '0,2', 'S3c-2: the MEASURED type decides — octet-stream measured jpeg is fetched, a declared jpeg that measures gif is not — got ' + JSON.stringify(dls(ctx).map((c) => c.args.ordinal)));
+          const docs = docsOf(ctx);
+          softOk(!!docs && docs.length === 2 && docs[0].file_path === 'intake-1/attachment-0.jpg' && docs[0].title === 'scan.jpeg', 'S3c-2: the .jpeg letter file lands as the server named it (.jpg) and keeps its own name as the title');
+          const word = k2str(ctx, 'doc_bin_skipped');
+          softOk(toastWith(ctx, word.replace('{n}', '1').replace('{name}', 'fake.jpg')), 'S3c-2 (930): the gif posing as a jpg is named to the operator — "' + word.replace('{n}', '1').replace('{name}', 'fake.jpg') + '"');
+        }
+
+        // gif and svg: still bin — not fetched, not placed, named (RU and EN); the dictionary line is the old one
+        for (const lang of ['en', 'ru']) {
+          const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [imgAtt(0, 'anim.gif', 'image/gif'), imgAtt(1, 'logo.svg', 'image/svg+xml'), pdfAtt(2, 'cv.pdf')] }) } });
+          softOk(dls(ctx).length === 1 && dls(ctx)[0].args.ordinal === 2, '[' + lang + '] S3c-3: gif and svg are NOT fetched — got ' + JSON.stringify(dls(ctx).map((c) => c.args.ordinal)));
+          const docs = docsOf(ctx);
+          softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-1/attachment-2.pdf', '[' + lang + '] S3c-3: and not placed — only the pdf');
+          const word = k2str(ctx, 'doc_bin_skipped');
+          softOk(toastWith(ctx, word.replace('{n}', '0').replace('{name}', 'anim.gif')) && toastWith(ctx, word.replace('{n}', '1').replace('{name}', 'logo.svg')),
+            '[' + lang + '] S3c-3 (930): both are named with the unchanged doc_bin_skipped line');
+          softOk(word === (lang === 'ru' ? 'Вложение {n} ({name}): формат не распознан — в папку не положено' : 'Attachment {n} ({name}): format not recognised — not placed in the folder'),
+            '[' + lang + '] S3c-3 PRESERVE: the dictionary line is byte for byte the S3 one');
+        }
+
+        // a picture counts against the ceilings: refused before any byte and before the question
+        {
+          const big = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [pdfAtt(0, 'a.pdf', 40 * 1024 * 1024), imgAtt(1, 'huge.jpg', 'image/jpeg', 'image/jpeg', 30 * 1024 * 1024)] }) } });
+          softOk(dls(big).length === 0 && big.save === null && !asked(big), 'S3c-4 ceiling: 40 MiB pdf + 30 MiB jpg → nothing fetched, nothing saved, no question — the jpg now COUNTS');
+          const word = k2str(big, 'docs_too_large');
+          softOk(big.toasts.some((t) => String(t[0]).indexOf(word.split('{')[0]) === 0), 'S3c-4 ceiling (930): refused with the size sentence');
+          const many = [pdfAtt(0, 'cv.pdf', 1000)]; for (let i = 1; i < 11; i++) many.push(imgAtt(i, 'p-' + i + '.png', 'image/png'));
+          const cnt = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: many }) } });
+          softOk(dls(cnt).length === 0 && cnt.save === null && !asked(cnt), 'S3c-4 ceiling: 1 pdf + 10 png = 11 placeable → refused before any byte');
+          const ok10 = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: many.slice(0, 10) }) } });
+          softOk(dls(ok10).length === 10 && (docsOf(ok10) || []).length === 10, 'S3c-4 CALIBRATION: 1 pdf + 9 png = 10 pass');
+        }
+
+        // a repeat: the same file_paths — the receiver's dedup key does not drift for pictures
+        {
+          const atts = [imgAtt(0, 'passport.jpg', 'image/jpeg'), pdfAtt(1, 'cv.pdf')];
+          const a = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: atts }) } });
+          const b = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: atts }) } });
+          const fa = (docsOf(a) || []).map((d) => d.file_path).join(','), fb = (docsOf(b) || []).map((d) => d.file_path).join(',');
+          softOk(fa === 'intake-1/attachment-0.jpg,intake-1/attachment-1.pdf' && fa === fb && a.save.args.mode === 'merge' && b.save.args.mode === 'merge',
+            'S3c-5 repeat: two presses send the same file_paths under merge — no duplicate for the receiver to keep — got ' + JSON.stringify([fa, fb]));
+        }
+
+        // static: the client mirrors exactly the two image branches; the placement set is one constant
+        {
+          const exp = (k2crew.match(/function crewFlowDocsExpectedExt\(a\) \{[\s\S]*?\n\}/) || [''])[0];
+          softOk(/measured === 'image\/jpeg'\) return 'jpg'/.test(exp) && /measured === 'image\/png'\) return 'png'/.test(exp) && !/gif|svg/.test(exp),
+            'S3c static: crewFlowDocsExpectedExt names image/jpeg → jpg and image/png → png by the MEASURED type, and nothing else image-like');
+          softOk((k2crew.match(/CREW_FLOW_DOCS_EXT/g) || []).length === 2, 'S3c static: CREW_FLOW_DOCS_EXT is declared once and read once — the placement set lives in one place');
+        }
       }
 
       // ---- 9. the block: the invoke literal lives INSIDE the Crew Flow block, and the two sibling sites are untouched

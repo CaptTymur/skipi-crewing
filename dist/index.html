@@ -6485,20 +6485,22 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
 // ===== No.664/S3 (OWNER (985)/(986)/(994), DECISIONS (998)): the files travel ====
 // WHAT GOES. The card's attachment rows — metadata only, bytes never ride the
 // card. `eligible` is the SERVER's answer (the scanner) and is neither relaxed
-// nor repeated here; on top of it the seafarer folder takes pdf|docx ONLY — the
-// two document types the server can name (SERVABLE_EXTENSIONS: eml|pdf|docx,
-// everything else leaves as `.bin`). THE KEY IS THE SERVER'S, in two steps,
+// nor repeated here; on top of it the seafarer folder takes pdf|docx|jpg|png ONLY —
+// the types the server can name (SERVABLE_EXTENSIONS: eml|pdf|docx and, No.688/S3c,
+// jpg|png; everything else leaves as `.bin`). THE KEY IS THE SERVER'S, in two steps,
 // because the server decides in two places (servable_type, No.663 R2):
 //   1. BEFORE the fetch, from the metadata, the two branches the server has: a
 //      pdf is named by its MEASURED type; a .docx is an OOXML and MEASURES AS
 //      application/zip (the scanner's closed signature table has no DOCX entry),
 //      so it is recognised by the pair declared docx + measured application/zip.
-//      Everything else (a jpg, an rtf, a zip that does not even claim to be a
-//      docx) is `bin` here already: not fetched, not placed, NAMED.
+//      A picture (No.688/S3c) is named by its MEASURED type alone — image/jpeg →
+//      jpg, image/png → png; the server measures images unambiguously.
+//      Everything else (a gif, an svg, an rtf, a zip that does not even claim to
+//      be a docx) is `bin` here already: not fetched, not placed, NAMED.
 //   2. AFTER the fetch, from the name the server gave the copy: only the server
 //      sees the archive's members, and a zip impostor (declared docx, measures
 //      zip, no [Content_Types].xml) comes back as attachment-N.bin — placed only
-//      if the returned extension is .pdf or .docx, otherwise NAMED the same way.
+//      if the returned extension is one the folder takes, otherwise NAMED the same way.
 // CANON (930): a file that did not make it is said beside the action, not hidden.
 // The first gate stands BEFORE the fetch, so one press of «Save» does not land a
 // stranger's photographs in the operator's Downloads; the shared byte road
@@ -6525,6 +6527,8 @@ function crewFlowApplicantSummary(intakeId, card, contact) {
 var CREW_FLOW_DOCS_MAX_COUNT = 10;
 var CREW_FLOW_DOCS_MAX_BYTES = 64 * 1024 * 1024;
 var CREW_FLOW_DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+// The extensions the folder takes, as the server names the copy (step 2 below).
+var CREW_FLOW_DOCS_EXT = /^(pdf|docx|jpg|jpeg|png)$/;
 // Step 1 of the key: the extension the server WOULD name from this metadata, or
 // '' for everything it names `bin`. Mirrors servable_type's two branches minus
 // the member check the client cannot make.
@@ -6534,6 +6538,8 @@ function crewFlowDocsExpectedExt(a) {
   if (measured === 'application/pdf') return 'pdf';
   if (measured === CREW_FLOW_DOCX_TYPE) return 'docx';
   if (declared === CREW_FLOW_DOCX_TYPE && measured === 'application/zip') return 'docx';
+  if (measured === 'image/jpeg') return 'jpg';
+  if (measured === 'image/png') return 'png';
   return '';
 }
 function crewFlowDocSource(card) {
@@ -6581,7 +6587,7 @@ async function crewFlowFetchDocuments(intakeId, card, context, plan) {
     // impostor the metadata could not tell apart — the copy stays in Downloads
     // (as the card's own «Download» would leave it), the folder does not take it.
     var actualExt = (fileName.match(/\.([A-Za-z0-9]+)$/) || ['', ''])[1].toLowerCase();
-    if (actualExt !== 'pdf' && actualExt !== 'docx') { skipped.push({ ordinal: p.ordinal, name: p.name }); continue; }
+    if (!CREW_FLOW_DOCS_EXT.test(actualExt)) { skipped.push({ ordinal: p.ordinal, name: p.name }); continue; }
     var isCv = !cvTaken && actualExt === 'pdf';
     if (isCv) cvTaken = true;
     docs.push({
