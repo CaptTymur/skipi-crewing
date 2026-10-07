@@ -340,6 +340,9 @@ function loadInlineModuleForCurrentStore(sourceOverride) {
       + 'crewFlowEnsureLiveQueue: (typeof crewFlowEnsureLiveQueue === "function" ? crewFlowEnsureLiveQueue : null), '
       + 'pilotLoadQueue: (typeof pilotLoadQueue === "function" ? pilotLoadQueue : null), '
       + 'crewFlowLiveMobileHtml: (typeof crewFlowLiveMobileHtml === "function" ? crewFlowLiveMobileHtml : null), '
+      + 'crewFlowActionsHtml: (typeof crewFlowActionsHtml === "function" ? crewFlowActionsHtml : null), '
+      + 'crewFlowSaveToSeafarers: (typeof crewFlowSaveToSeafarers === "function" ? crewFlowSaveToSeafarers : null), '
+      + 'crewFlowReviewIsSaved: (typeof crewFlowReviewIsSaved === "function" ? crewFlowReviewIsSaved : null), '
       + 'initLeftPanelResizer: (typeof initLeftPanelResizer === "function" ? initLeftPanelResizer : null) };'
   )();
 }
@@ -750,11 +753,91 @@ section('R2 task 2: the queue row states the outcome against the selected profil
 // was added, crewing_intake_matching_profile_list — an existing, unpaid, O(1)
 // lookup that turns a profile_id into a name. Anything beyond these three is a
 // call nobody authorised.
+// No.664/S3 (2026-10-04): a FOURTH name, crewing_intake_attachment_download. Added by
+// the manager under OWNER (985)/(986)/(994) — «form the CV with the ready module →
+// ATTACH it» — and DECISIONS (998); not put to the owner, because none of the four
+// marks of an architectural fork applies: the command already exists and is
+// already called from two other screens of this file (the card's «Download», the
+// letter's pick), it is unpaid (no model, no billed route — the paid ones are the
+// three forbidden names below), it opens no new server surface, and the diff is
+// one line each way. The list stays an exact literal: no prefix test, no regex,
+// no constant that is "checked elsewhere". Anything beyond these four is a call
+// nobody authorised.
 const r2CrewInvokes = [...crewBlock.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]);
 const r2CrewInvokeSet = [...new Set(r2CrewInvokes)].sort().join(',');
-ok(r2CrewInvokeSet === 'crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
-  'R2/2: the Crew Flow block calls exactly [crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
+ok(r2CrewInvokeSet === 'crewing_intake_attachment_download,crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
+  'R2/2 + No.664/S3: the Crew Flow block calls exactly [crewing_intake_attachment_download, crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
   + r2CrewInvokeSet + ']');
+// SECOND literal (Supervisor PREP 2026-10-04 п.4): the roads OUT of the literal above.
+// A function defined OUTSIDE the block, called directly FROM the block, that itself
+// does invoke(), reaches a command the first literal cannot see — and the block
+// already has three such roads (measured: pilotLoadQueue, saveCurrentBundleSeafarer,
+// saveRankedCandidate). Full transitive reachability was measured and DISCARDED
+// (crewFlowIgnoreSignal, four lines, reaches 803 functions through the render hubs),
+// so what is frozen is ONE step, as a second exact literal. Two calibrations and a
+// mutant below prove the probe sees what is there and nothing that is not.
+function oneStepInvokeRoads(blockText, source = script) {
+  // Definitions of BOTH shapes a helper can take at the top level: the home's
+  // `function NAME(` (907 in the file) and the `var|const|let NAME = function|(…) =>|x =>`
+  // forms (3 in the file: __demoMode, invoke, convertFileSrc). The second shape was a
+  // measured gap: a helper written as `var h = async (id) => invoke(…)` outside the
+  // block and called from it reached a command with this list still green
+  // (Supervisor acceptance 2026-10-04, mutation M1b).
+  const defRe = /^(?:(?:async )?function ([A-Za-z_$][\w$]*)\s*\(|(?:var|const|let) ([A-Za-z_$][\w$]*) = (?:async )?(?:function\b|\([^)\n]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/gm;
+  const defStarts = [...source.matchAll(defRe)].map((m) => ({ name: m[1] || m[2], index: m.index, text: m[0] }));
+  // Where a body ends: the first `\n}` after the definition, the next top-level
+  // definition, or — for an arrow with an EXPRESSION body — the end of its own line,
+  // whichever comes first. `indexOf('\n}')` alone is not enough: a ONE-LINE function
+  // (escapeHtml, escapeJsString — their regex literals carry quotes, so a brace counter
+  // that skips strings loses its way there too) would swallow the definitions after it
+  // and report their invokes as its own (measured on 3b3d326a: false roads
+  // escapeHtml→plugin:updater|check, escapeJsString→close_vacancy_remote|…).
+  const bodyFrom = (k) => {
+    const at = defStarts[k].index;
+    const next = k + 1 < defStarts.length ? defStarts[k + 1].index : source.length;
+    const close = source.indexOf('\n}', at);
+    let end = close >= 0 ? Math.min(close + 2, next) : next;
+    if (/=>$/.test(defStarts[k].text.trim())) {
+      const eol = source.indexOf('\n', at);
+      const after = source.slice(at + defStarts[k].text.length, eol < 0 ? source.length : eol);
+      if (!/^\s*\{/.test(after)) end = Math.min(end, eol < 0 ? source.length : eol + 1);
+    }
+    return source.slice(at, end);
+  };
+  const defs = new Map(); // top-level helper name -> { start, body }
+  defStarts.forEach((m, k) => { defs.set(m.name, { start: m.index, body: bodyFrom(k) }); });
+  const blockStart = source.indexOf(blockText.slice(0, 200));
+  const inBlock = new Set([...blockText.matchAll(defRe)].map((m) => m[1] || m[2]));
+  const roads = [];
+  for (const name of new Set([...blockText.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]))) {
+    if (inBlock.has(name) || !defs.has(name)) continue;
+    const def = defs.get(name);
+    if (blockStart >= 0 && def.start >= blockStart && def.start < blockStart + blockText.length) continue;
+    const cmds = [...new Set([...def.body.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]))].sort();
+    if (cmds.length) roads.push(name + '→' + cmds.join('|'));
+  }
+  return roads.sort();
+}
+const roads = oneStepInvokeRoads(crewBlock);
+ok(roads.some((r) => r.indexOf('saveCurrentBundleSeafarer→') === 0), 'S3 CALIBRATION: the one-step probe finds saveCurrentBundleSeafarer (known by eye to invoke)');
+ok(!roads.some((r) => r.indexOf('escapeHtml→') === 0 || r.indexOf('escapeJsString→') === 0) && /escapeHtml\(/.test(crewBlock) && /escapeJsString\(/.test(crewBlock),
+  'S3 CALIBRATION: the one-line escapeHtml / escapeJsString are not credited with the invokes of the functions after them (a body ends at its own line or at the next definition)');
+ok(!roads.some((r) => r.indexOf('crewFlowFindApplication→') === 0) && /crewFlowFindApplication\(/.test(crewBlock),
+  'S3 CALIBRATION: and does not list crewFlowFindApplication (called from the block, invokes nothing)');
+ok(roads.join(';') === 'pilotLoadQueue→crewing_intake_candidate_list;saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle;saveRankedCandidate→fetch_attachments_for_application',
+  'No.664/S3: the roads out of the Crew Flow block are exactly [pilotLoadQueue→crewing_intake_candidate_list, saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle, saveRankedCandidate→fetch_attachments_for_application] — a new helper that fetches for the block changes this list — got ['
+  + roads.join('; ') + ']');
+const mutantRoads = oneStepInvokeRoads(crewBlock + '\n  pilotAttachmentDownload(1);\n');
+// M1b (Supervisor acceptance): the helper is NOT a `function` declaration but a `var … = async (…) =>`
+// outside the block — one-line expression body, and a `var … = function () {}` block body.
+const m1bSource = script + "\nvar crewFlowM1bArrow = async (id) => invoke('crewing_intake_candidate_rank', { intakeId: id });\nfunction crewFlowM1bAfter() { return 1; }\nvar crewFlowM1bFn = function (id) {\n  return invoke('parse_cv', { intakeId: id });\n};\n";
+const m1bRoads = oneStepInvokeRoads(crewBlock + '\n  crewFlowM1bArrow(1); crewFlowM1bFn(1); crewFlowM1bAfter();\n', m1bSource);
+ok(m1bRoads.includes('crewFlowM1bArrow→crewing_intake_candidate_rank') && m1bRoads.includes('crewFlowM1bFn→parse_cv'),
+  'S3 MUTANT M1b: a helper declared as var/const/let = arrow or = function outside the block is listed too — got +[' + m1bRoads.filter((r) => !roads.includes(r)).join(',') + ']');
+ok(!m1bRoads.some((r) => r.indexOf('crewFlowM1bAfter→') === 0),
+  'S3 CALIBRATION M1b: the one-line arrow does not swallow the function declared on the next line (its body ends at its own line)');
+ok(mutantRoads.some((r) => r === 'pilotAttachmentDownload→crewing_intake_attachment_download') && mutantRoads.join(';') !== roads.join(';'),
+  'S3 MUTANT: a block that reached the byte road through the card’s handler instead of its own literal WOULD change the second list — got +[' + mutantRoads.filter((r) => !roads.includes(r)).join(',') + ']');
 // The two commands that cost money or mutate state must never appear in this block.
 for (const forbidden of ['crewing_intake_candidate_rank', 'parse_cv', 'reprocess']) {
   ok(!crewBlock.includes(forbidden),
@@ -808,7 +891,12 @@ if (r2RuntimeReady) {
             // `ranks_withheld` is the summary field the bridge already carries
             // (No.637/S6): active profiles this candidate was deliberately not
             // compared against, every one of them because the rank does not apply.
-            qRow('i-na'), qRow('i-nofit'), qWithheld('i-nofit-w', 3), qRow('i-nothing')],
+            // No.683 corrected the count from 3 to 2: this screen holds TWO
+            // active profiles, and «withheld 3 of 2» is data the server cannot
+            // produce. The row still means what it meant — nothing stored, and
+            // every active profile withheld by rank — it is now arithmetic
+            // that can exist.
+            qRow('i-na'), qRow('i-nofit'), qWithheld('i-nofit-w', 2), qRow('i-nothing')],
     limit: 50, offset: 0, total: 10,
   };
   MR2.state.intakePilot.queueLastUpdated = '2026-09-29T10:00:00Z';
@@ -1280,8 +1368,13 @@ if (r2RuntimeReady) {
       const MUTATIONS = [
         { id: 'S7-PCT', anchor: "  if (row.applicability === 'not_applicable') { out.reason = 'rank_not_applicable'; return out; }\n",
           what: 'the refusal of a figure for a rank that does not apply' },
-        { id: 'S7-NOFIT', anchor: "  if (crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; } else if (!profileId) {",
-          replacement: '  if (!profileId) {',
+        // No.683 re-anchored this one: the branch now has a sibling below it
+        // («подходит под N — не оценён»), so DELETING the line would leave an
+        // `else` with no `if` and the mutant would die in the parser — which
+        // proves the parser and not the state. Short-circuiting the condition
+        // disables exactly the same state and still builds.
+        { id: 'S7-NOFIT', anchor: "  if (crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; }",
+          replacement: "  if (false && crewFlowFitsNoProfile(item)) { share = { pct:null, met:0, total:0, reason:'no_profile_fit' }; cls = 'nofit'; }",
           what: 'the calm grey state for a candidate who fits no profile' },
       ];
       for (const mut of MUTATIONS) {
@@ -2215,6 +2308,586 @@ section('No.675: pills keep their shape on the selected row (both themes)');
   ok(!/\.badge\.saved \{[^}]*background/.test(css) && !/:not\(\.saved\)/.test(overrideRule),
     'SEL: the green chip gets the same ground and keeps only its green text — it is not excluded from the rule');
 }
+
+
+// ============================================================================
+// No.683 (OWNER, live acceptance 2026-10-05): «Не подошёл ни под один профиль»
+// stood beside a Chief Officer the server had NOT finished comparing.
+//
+// The row answered the question with a TEST FOR ANY, where the sentence it
+// prints is a claim about ALL:
+//
+//     answered = ranks_withheld + <rows loaded>;  return answered > 0;
+//
+// `ranks_withheld` is NOT "the profiles he failed". The server counts there,
+// and only there, the ACTIVE profiles his RANK does not reach
+// (app/candidate_intake_service.py, SITE 6a: `sum(... applicability.withheld)`
+// over the active matching profiles, minus the one he answered). A profile his
+// rank DOES reach but nobody has evaluated yet is in neither number — so on the
+// stand Lysenko came back `ranks_withheld = 5` with SIX active profiles and
+// nothing stored, and the one profile left over is precisely the one he could
+// still be taken for. The row said he fits nothing. He fits one, unevaluated.
+//
+// So the claim becomes an EQUALITY against the number of active profiles, and
+// the leftover gets a sentence of its own instead of being rounded into the
+// strong one. The number of active profiles is NOT on the queue row: the list
+// route carries no such field (the card's rank route has
+// `unranked_active_profiles`, the queue has nothing), so the best boundary the
+// screen already holds is used — the matching-profile list it loads once per
+// context for the names, counted over `state === 'active'`. Unknown count =
+// no claim at all, which is the calibration M683B below.
+// ============================================================================
+section('No.683: «fits no profile» is an EQUALITY, not «something was withheld»');
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let M683 = null;
+try {
+  M683 = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('No.683 runtime load failed:', e);
+}
+ok(!!M683, 'No.683: the non-demo inline script loads');
+const m683Ready = !!M683 && typeof M683.crewFlowCacheProfiles === 'function'
+  && typeof M683.crewFlowCacheRanks === 'function' && typeof M683.crewFlowLiveTreeHtml === 'function'
+  && typeof M683.crewFlowSelectProfile === 'function';
+ok(m683Ready, 'No.683: the queue renderer and both caches are reachable from the harness');
+
+const q683 = (id, withheld) => ({
+  intake_id: id, content_type: 'application/pdf', created_at: '2026-10-05T10:00:00Z', state: 'ranked',
+  summary: { state: 'ranked', facts: 4, ranks: 0, ranks_stale: 0, ranks_withheld: withheld,
+    active_confirmations: 0, needs_review_reason: null },
+});
+const na683 = (profileId) => ({
+  profile_id: profileId, profile_version: 1, primary: false, stale: false, decided: false,
+  reasons: [{ requirement: 'rank', outcome: 'missing', wanted: 'Master', found: 'Chief Officer' }],
+  applicability: 'not_applicable', applicability_reason: null,
+});
+
+if (m683Ready) {
+  M683.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-683',
+    interface: { theme: 'light', language: 'en' },
+  };
+  // SIX active profiles — the stand's own number on 05.10. One archived row
+  // rides with them on purpose: `crewing_intake_matching_profile_list` asks the
+  // server with `include_archived=true`, so a count that forgets to read
+  // `state` would silently use SEVEN and never print the strong sentence again.
+  const profiles683 = {};
+  for (let i = 1; i <= 6; i++) {
+    profiles683['p683-' + i] = { id: 'p683-' + i, crewing_id: 'crew-flow-683', name: 'Profile ' + i, version: 1, state: 'active' };
+  }
+  profiles683['p683-old'] = { id: 'p683-old', crewing_id: 'crew-flow-683', name: 'Profile retired', version: 1, state: 'archived' };
+  M683.crewFlowCacheProfiles(profiles683);
+
+  M683.state.intakePilot.queue = {
+    items: [
+      // LYSENKO'S EXACT SHAPE off the stand: five of six active profiles
+      // withheld by rank, nothing stored. One profile is left — he fits it and
+      // nobody has evaluated it.
+      q683('i683-fits1', 5),
+      // Every active profile withheld: the strong sentence is TRUE here.
+      q683('i683-none6', 6),
+      // The same total reached the other way: five withheld, one evaluated and
+      // answered `not_applicable`. 5 + 1 = 6 — also true.
+      q683('i683-none5r1', 5),
+      // CALIBRATION 1 — silence. Nothing withheld, nothing stored. The server
+      // has said nothing about this man at all, and neither claim may be built
+      // from that: `withheld = 0` also covers "nobody could read his rank".
+      q683('i683-silent', 0),
+      // CALIBRATION 2 — a loaded row that is NOT `not_applicable`. An unread
+      // rank leaves the operator something to do; it is not an answer and it
+      // must block BOTH sentences.
+      q683('i683-unknownrow', 5),
+      // CALIBRATION 3 — arithmetic that cannot be: more withheld than the
+      // screen knows active. Its own list is behind, so it claims nothing.
+      q683('i683-overcount', 7),
+    ],
+    limit: 50, offset: 0, total: 6,
+  };
+  M683.state.intakePilot.queueLastUpdated = '2026-10-05T10:00:00Z';
+
+  M683.crewFlowCacheRanks('i683-fits1', []);
+  M683.crewFlowCacheRanks('i683-none6', []);
+  M683.crewFlowCacheRanks('i683-none5r1', [na683('p683-6')]);
+  M683.crewFlowCacheRanks('i683-silent', []);
+  M683.crewFlowCacheRanks('i683-unknownrow', [{
+    profile_id: 'p683-6', profile_version: 1, primary: false, stale: false, decided: false,
+    reasons: [], applicability: 'unknown', applicability_reason: 'rank_absent',
+  }]);
+  M683.crewFlowCacheRanks('i683-overcount', []);
+  M683.crewFlowSelectProfile('p683-1');
+
+  const calls683Before = calls.length;
+  const fetch683Before = fetchCalls.length;
+  const tree683 = String(M683.crewFlowLiveTreeHtml('live'));
+  ok(calls.length === calls683Before && fetchCalls.length === fetch683Before,
+    'No.683: the new arithmetic costs NO command and NO fetch — it is read off what the row already carries');
+
+  const row683 = (id) => {
+    const m = tree683.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    return m ? m[0] : '';
+  };
+  const fit683 = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit" data-fit="([^"]*)"/);
+    return m ? m[1] : null;
+  };
+  const fitText683 = (row) => {
+    const m = String(row).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+    return m ? m[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  };
+  for (const id of ['i683-fits1', 'i683-none6', 'i683-none5r1', 'i683-silent', 'i683-unknownrow', 'i683-overcount']) {
+    ok(row683(id) !== '', 'No.683 CALIBRATION: the fixture row ' + id + ' really rendered — an empty match would pass every negative below');
+  }
+
+  // ---- 1. THE DEFECT the owner found -------------------------------------
+  ok(fit683(row683('i683-fits1')) !== 'no_profile_fit',
+    'No.683: five of SIX withheld is not «fits none of the profiles» — the sixth is the vacancy he could still be taken for; got "'
+      + fit683(row683('i683-fits1')) + '"');
+  ok(fit683(row683('i683-fits1')) === 'unevaluated_fit',
+    'No.683: it gets the calm state of its own instead — got "' + fit683(row683('i683-fits1')) + '"');
+  ok(/Fits 1 — not evaluated/.test(fitText683(row683('i683-fits1'))),
+    'No.683: and it says HOW MANY are left and that nobody evaluated them — got "' + fitText683(row683('i683-fits1')) + '"');
+  ok(!/%/.test(fitText683(row683('i683-fits1'))) && !/data-pct="\d/.test(row683('i683-fits1')),
+    'No.683: with no figure — an unevaluated fit is not a score');
+  ok(/cf-fit-none/.test(row683('i683-fits1')) && !/cf-fit-nofit/.test(row683('i683-fits1')),
+    'No.683: and it carries the same quiet marking as «профиль пока не выбран», not the grey bar of «не подошёл»');
+
+  // ---- 2. the strong sentence still fires where it is TRUE ---------------
+  for (const [name, id] of [['all withheld', 'i683-none6'], ['withheld + a not_applicable row', 'i683-none5r1']]) {
+    ok(fit683(row683(id)) === 'no_profile_fit',
+      'No.683 (' + name + '): when every active profile IS answered, the calm grey state is still printed — got "'
+        + fit683(row683(id)) + '"');
+    ok(/cf-fit-nofit/.test(row683(id)),
+      'No.683 (' + name + '): and keeps its own grey marking in the left column');
+    ok(/[Ff]its none of the profiles/.test(fitText683(row683(id))),
+      'No.683 (' + name + '): with the sentence OWNER 02.10 asked for — got "' + fitText683(row683(id)) + '"');
+  }
+
+  // ---- 3. the three calibrations: no claim at all ------------------------
+  for (const [name, id] of [
+    ['silence', 'i683-silent'],
+    ['an unread rank', 'i683-unknownrow'],
+    ['more withheld than active profiles known', 'i683-overcount'],
+  ]) {
+    ok(fit683(row683(id)) !== 'no_profile_fit',
+      'No.683 CALIBRATION (' + name + '): never «не подошёл ни под один профиль» — got "' + fit683(row683(id)) + '"');
+    ok(fit683(row683(id)) !== 'unevaluated_fit',
+      'No.683 CALIBRATION (' + name + '): and never «подходит под N» either — a positive claim out of silence is the same defect mirrored; got "'
+        + fit683(row683(id)) + '"');
+  }
+
+  // ---- 4. both shipped languages, on the rendered bytes ------------------
+  for (const lang of ['ru', 'en']) {
+    store.set('skipi-crewing-ui-language', lang);
+    const tree = String(M683.crewFlowLiveTreeHtml('live'));
+    const grab = (id) => {
+      const m = tree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+      if (!m) return '';
+      const f = String(m[0]).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+      return f ? f[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    };
+    const text = grab('i683-fits1');
+    const cyr = (t) => /[Ѐ-ӿ]/.test(t);
+    ok(text.length > 5 && (lang === 'ru' ? cyr(text) : !cyr(text)),
+      '[' + lang + '] No.683: the new state is spelled out in this language — got "' + text + '"');
+    ok(/1/.test(text),
+      '[' + lang + '] No.683: and carries the count, so «подходит под 1» and «подходит под 4» are not one sentence — got "' + text + '"');
+    ok(text !== grab('i683-none6'),
+      '[' + lang + '] No.683: «подходит под N» and «не подошёл ни под один» stay two different sentences in this language');
+  }
+  store.set('skipi-crewing-ui-language', 'en');
+
+  // ---- 5. the count is a COUNT, not the constant 1 ------------------------
+  M683.state.intakePilot.queue.items.push(q683('i683-fits4', 2));
+  M683.crewFlowCacheRanks('i683-fits4', []);
+  {
+    const tree = String(M683.crewFlowLiveTreeHtml('live'));
+    const m = tree.match(new RegExp('data-intake="i683-fits4"[\\s\\S]*?(?=<div class="tree-item|$)'));
+    const r = m ? m[0] : '';
+    ok(r !== '', 'No.683 CALIBRATION: the four-left row rendered');
+    const f = String(r).match(/data-qa="crew-flow-row-fit"[\s\S]*?>([\s\S]*?)(?=<details|<div class="cf-chips")/);
+    const txt = f ? f[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    ok(/Fits 4 — not evaluated/.test(txt),
+      'No.683: two withheld of six leaves FOUR, and the row prints four — a hard-coded 1 dies here; got "' + txt + '"');
+  }
+
+  // ---- 6. the dictionary key, so a missing one cannot print a wire code ---
+  {
+    const key = 'crew_flow.fit_unevaluated_fit';
+    const lines = HTML.split('\n').filter((line) => line.includes("'" + key + "'"));
+    ok(lines.length === 2, key + ': exactly one EN and one RU entry — got ' + lines.length);
+    const val = (i) => (new RegExp("'" + key.replace(/\./g, '\\.') + "':'([^']+)'").exec(lines[i] || '') || [])[1] || '';
+    ok(val(0) !== '' && !/[Ѐ-ӿ]/.test(val(0)) && /\{n\}/.test(val(0)),
+      key + ': the EN wording exists and carries the {n} slot — got "' + val(0) + '"');
+    ok(val(1) !== '' && /[Ѐ-ӿ]/.test(val(1)) && /\{n\}/.test(val(1)),
+      key + ': and a Russian one with the same slot — got "' + val(1) + '"');
+  }
+
+  // ---- 7. THE PHONE, where the same left column is a list -----------------
+  {
+    const mobile = String(M683.crewFlowLiveMobileHtml('live'));
+    const mRow = (id) => {
+      const m = mobile.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<button class="mobile-list-item|$)'));
+      return m ? m[0] : '';
+    };
+    ok(mRow('i683-fits1') !== '', 'No.683 CALIBRATION: the phone row rendered');
+    ok(/data-fit="unevaluated_fit"/.test(mRow('i683-fits1')),
+      'No.683: the PHONE row carries the same answer — same function, not a second opinion');
+    ok(/data-fit="no_profile_fit"/.test(mRow('i683-none6')),
+      'No.683: and the strong sentence still reaches the phone where it is true');
+  }
+
+  // ---- 8. REMOVAL CALIBRATION: the equality itself, and the active count --
+  //
+  // Each assertion above can also pass on a client that stopped printing these
+  // states at all, so both halves of the fix are re-measured on a source whose
+  // line is REPLACED by the defect it replaced. The mutant must BUILD and a
+  // known-good row must still render inside it, otherwise what goes red is the
+  // parser and not the arithmetic.
+  {
+    const MUTATIONS683 = [
+      { id: '683-EQUALITY',
+        anchor: "  return !!tally && tally.unevaluated === 0;",
+        replacement: "  return !!tally;",
+        what: 'the equality against the number of active profiles',
+        check: (mutantRow) => {
+          ok(/data-fit="no_profile_fit"/.test(mutantRow('i683-fits1')),
+            '683-EQUALITY KILLED: with the equality gone the row prints «не подошёл ни под один профиль» back over a man who fits one — the exact bytes the owner saw');
+        } },
+      { id: '683-ACTIVE-COUNT',
+        anchor: "    if (meta && String(meta.state || '') === 'active') n++;",
+        replacement: "    if (meta) n++;",
+        what: 'reading `state` so archived profiles are not counted as active',
+        check: (mutantRow) => {
+          ok(!/data-fit="no_profile_fit"/.test(mutantRow('i683-none6')),
+            '683-ACTIVE-COUNT KILLED: counting the archived profile too makes SEVEN, and the row that really fits nothing stops saying so');
+        } },
+    ];
+    for (const mut of MUTATIONS683) {
+      const occurrences = scriptNoBoot.split(mut.anchor).length - 1;
+      ok(occurrences === 1,
+        mut.id + ': the line this calibration replaces occurs exactly once in the shipped script — got ' + occurrences);
+      if (occurrences !== 1) continue;
+      const mutantSource = scriptNoBoot.replace(mut.anchor, mut.replacement);
+      let MY = null, buildError = null;
+      try { MY = loadInlineModuleForCurrentStore(mutantSource); } catch (e) { buildError = e; }
+      ok(MY !== null,
+        mut.id + ': the mutant BUILDS — otherwise what goes red is the parser and not ' + mut.what
+          + (buildError ? ' (' + buildError.name + ': ' + buildError.message + ')' : ''));
+      if (!MY) continue;
+      MY.state.settings = M683.state.settings;
+      MY.state.intakePilot = M683.state.intakePilot;
+      MY.state.crewFlowRanks = M683.state.crewFlowRanks;
+      MY.state.crewFlowProfiles = M683.state.crewFlowProfiles;
+      MY.crewFlowSelectProfile('p683-1');
+      const mutantTree = String(MY.crewFlowLiveTreeHtml('live'));
+      const mutantRow = (id) => {
+        const m = mutantTree.match(new RegExp('data-intake="' + id + '"[\\s\\S]*?(?=<div class="tree-item|$)'));
+        return m ? m[0] : '';
+      };
+      ok(mutantRow('i683-none5r1') !== '',
+        mut.id + ' CALIBRATION OF THE MUTANT: a known row still renders inside it, so the mutant is a working client and not a blank page');
+      mut.check(mutantRow);
+    }
+  }
+}
+
+// ---- 9. the active count is a BOUNDARY: unknown count, no claim ----------
+//
+// A second module with the SAME rows and NO matching-profile list loaded. On
+// the shipped build before this change the strong sentence was printed here
+// too — «fits none of the profiles» over a screen that had not heard of a
+// single profile. Without a denominator neither sentence can be true.
+store.delete('skipi_crewing_demo');
+elements.clear();
+let M683B = null;
+try {
+  M683B = loadInlineModuleForCurrentStore();
+} catch (e) {
+  console.error('No.683B runtime load failed:', e);
+}
+ok(!!M683B, 'No.683B: the non-demo inline script loads a second time, with no profile list');
+if (M683B && typeof M683B.crewFlowCacheRanks === 'function') {
+  M683B.state.settings = {
+    server_url: 'https://api.skipi.app',
+    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-683b',
+    interface: { theme: 'light', language: 'en' },
+  };
+  M683B.state.intakePilot.queue = { items: [q683('i683b-none6', 6)], limit: 50, offset: 0, total: 1 };
+  M683B.state.intakePilot.queueLastUpdated = '2026-10-05T10:00:00Z';
+  M683B.crewFlowCacheRanks('i683b-none6', []);
+  const treeB = String(M683B.crewFlowLiveTreeHtml('live'));
+  const rowB = (treeB.match(/data-intake="i683b-none6"[\s\S]*?(?=<div class="tree-item|$)/) || [''])[0];
+  ok(rowB !== '', 'No.683B CALIBRATION: the row rendered on the second module too');
+  ok(!/data-fit="no_profile_fit"/.test(rowB),
+    'No.683B: with NO profile list loaded the screen has no denominator, so it does not claim «не подошёл ни под один профиль» — the count is a boundary of measurement, not an assumption');
+  ok(!/data-fit="unevaluated_fit"/.test(rowB),
+    'No.683B: and it does not claim a fit either');
+}
+store.set('skipi_crewing_demo', '1');
+
+
+// ============================================================================
+// No.664/S3b (OWNER, live acceptance 2026-10-05): «если моряк уже добавлен в
+// базу то вместо "в базу моряков" должно быть написано "уже в базе" и кнопка
+// зеленая».
+//
+// WHICH STATE, and why THIS one. The product marks "already in the seafarer
+// database" in TWO independent ways, and only one of them paints the chip the
+// owner was looking at:
+//   crewFlowReviewIsSaved(read.action) === 'saved_to_db'  -> the green chip
+//       crew_flow.state_saved_to_db, on the queue row and under the buttons.
+//       This is the source the button now follows.
+//   read.saved_to_db === true  -> the «in Seafarers DB» badge on the row and
+//       the mobile chip. Left alone by this slice.
+// Naming both matters because they CAN disagree: crewFlowMarkRead REPLACES the
+// stored record, so a candidate saved and then deferred loses the action and the
+// flag together. Following the chip is what keeps button and chip in step.
+//
+// WHY A CLASS AND NOT AN INLINE COLOUR. btn() writes the primary colour INLINE,
+// and an inline declaration beats any class selector, so a green class on its
+// own would have been dead text. The sixth argument therefore IS the class, and
+// when a class is given the inline colours are not written at all.
+// ============================================================================
+section('No.664/S3b: a candidate already in the database gets «уже в базе» on a green button');
+{
+  const cssB = HTML.slice(0, HTML.indexOf('</style>'));
+  ok(/\nbutton\.cf-save-done \{[^}]*background:#1f7a45;/.test(cssB),
+    'S3b: the green ground is #1f7a45 - the value .badge.saved and .cf-fit-complete already carry for THIS state, not a third green');
+  ok(/\nbutton\.cf-save-done \{[^}]*color:#fff;/.test(cssB),
+    'S3b: white ink, as every other filled button in this home - 5.35:1, and the SAME in both themes because the green is the ground, not a text colour');
+  ok(!/\nbutton\.cf-save-done \{[^}]*background:var\(--ok\)/.test(cssB),
+    'S3b COLOUR CALIBRATION: it is NOT var(--ok), whose white pair measures 2.28:1 dark / 3.30:1 light - below the 2.74:1 this screen already threw out under (930)');
+  ok(!/\n\.badge\.saved \{[^}]*background/.test(cssB),
+    'S3b PRESERVE: .badge.saved still sets colour only - the new button did not hand the chip a ground, so (992) stays green');
+}
+{
+  const again = HTML.match(/'crew_flow\.save_again':'[^']*'/g) || [];
+  const againConfirm = HTML.match(/'crew_flow\.save_again_confirm':'[^']*'/g) || [];
+  ok(again.length === 2,
+    'S3b: crew_flow.save_again is in BOTH dictionaries - tr() falls back to English silently, so one copy would hide a missing Russian string; got ' + again.length);
+  ok(againConfirm.length === 2,
+    'S3b: and so is crew_flow.save_again_confirm; got ' + againConfirm.length);
+}
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+globalThis.__S3B_CONFIRM = [];
+const S3B_STUB = '\ninAppConfirm = function(msg, opts){ globalThis.__S3B_CONFIRM.push({ msg: String(msg), label: String((opts || {}).confirmLabel || "") }); return Promise.resolve(false); };';
+const S3B_LANG_KEY = 'skipi-crewing-ui-language';
+const s3bSaved = () => ({ i3b: { action: 'saved_to_db', saved_to_db: true, at: '2026-10-05T00:00:00Z' } });
+const s3bFresh = () => ({});
+const s3bSaveBtn = (html) => (String(html).match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>[\s\S]*?<\/button>/) || [''])[0];
+const s3bPrime = (M) => {
+  M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-s3b', interface: { theme: 'light', language: 'en' } };
+  M.state.intakePilot.detail = { intakeId: 'i3b', generation: 1, facts: [], responseContact: null,
+    card: { summary: { candidate_name: 'Oleksandr K.' } } };
+};
+
+let MS3B = null;
+try { MS3B = loadInlineModuleForCurrentStore(scriptNoBoot + S3B_STUB); } catch (e) { console.error('S3b runtime load failed:', e); }
+ok(!!MS3B, 'S3b: the inline script loads with the confirm stub in place');
+const s3bReady = !!MS3B && typeof MS3B.crewFlowActionsHtml === 'function' && typeof MS3B.crewFlowSaveToSeafarers === 'function';
+ok(s3bReady, 'S3b: crewFlowActionsHtml and crewFlowSaveToSeafarers are reachable from the harness');
+
+if (s3bReady) {
+  const prevTauri = globalThis.__TAURI__;
+  // The save path refuses outright on a non-native transport, so the drill needs one.
+  globalThis.__TAURI__ = Object.assign({}, prevTauri, { event: {} });
+  s3bPrime(MS3B);
+  const render = (lang, read) => {
+    store.set(S3B_LANG_KEY, lang);
+    MS3B.state.crewFlowReadState = read;
+    return String(MS3B.crewFlowActionsHtml('i3b'));
+  };
+  const savedEn = render('en', s3bSaved());
+  const freshEn = render('en', s3bFresh());
+  const savedRu = render('ru', s3bSaved());
+  const freshRu = render('ru', s3bFresh());
+
+  ok(s3bSaveBtn(savedEn) !== '' && s3bSaveBtn(freshEn) !== '',
+    'S3b CALIBRATION: a save button renders in BOTH states - every check below is about its words, not about an empty string');
+  ok(/Already in database/.test(s3bSaveBtn(savedEn)),
+    'S3b/EN: a candidate already in the database is offered «Already in database»');
+  ok(/Save to Seafarers DB/.test(s3bSaveBtn(freshEn)) && !/Already in database/.test(s3bSaveBtn(freshEn)),
+    'S3b/EN PRESERVE: a candidate that is NOT saved keeps the old «Save to Seafarers DB»');
+  ok(/Уже в базе/.test(s3bSaveBtn(savedRu)),
+    'S3b/RU: in Russian it is the owner own words «Уже в базе» - not the English fallback tr() would quietly return');
+  ok(/В базу моряков/.test(s3bSaveBtn(freshRu)) && !/Уже в базе/.test(s3bSaveBtn(freshRu)),
+    'S3b/RU PRESERVE: the unsaved candidate still reads «В базу моряков»');
+  ok(/class="cf-save-done"/.test(s3bSaveBtn(savedEn)) && /class="cf-save-done"/.test(s3bSaveBtn(savedRu)),
+    'S3b: the saved button carries the green class in both languages');
+  ok(!/cf-save-done/.test(s3bSaveBtn(freshEn)) && !/cf-save-done/.test(s3bSaveBtn(freshRu)),
+    'S3b CALIBRATION: and the unsaved one does not - the class is a state, not decoration');
+  ok(!/background:var\(--accent\)/.test(s3bSaveBtn(savedEn)),
+    'S3b: the green button writes NO inline background - an inline declaration would beat the class and the green would never appear');
+  ok(/background:var\(--accent\)/.test(s3bSaveBtn(freshEn)),
+    'S3b CALIBRATION: the ordinary primary button still carries its inline accent, so the check above measures a change and not a removal everywhere');
+  ok(/<span class="badge saved" data-qa="crew-flow-review-state-pill">/.test(savedRu),
+    'S3b PRESERVE: the green chip of (992) is still under the buttons - the button did not replace it');
+
+  // ---- the confirm wording follows the SAME state, proved by CALLING it ----
+  // Answering NO, so the drill proves the question and writes nothing.
+  const S3B_CASES = [
+    ['ru', s3bSaved(), 'Обновить запись в базе моряков? Новые документы добавятся, дублей не будет.', 'Уже в базе', 'saved/RU'],
+    ['ru', s3bFresh(), 'Сохранить кандидата в базу моряков? Удалить сохранённого моряка потом нельзя — ни здесь, ни в базе моряков.', 'В базу моряков', 'fresh/RU'],
+    ['en', s3bSaved(), 'Update the saved record? New documents will be added, nothing is duplicated.', 'Already in database', 'saved/EN'],
+  ];
+  for (const [lang, read, wantMsg, wantLabel, what] of S3B_CASES) {
+    store.set(S3B_LANG_KEY, lang);
+    MS3B.state.crewFlowReadState = read;
+    globalThis.__S3B_CONFIRM.length = 0;
+    const before = calls.length;
+    await MS3B.crewFlowSaveToSeafarers('i3b');
+    const asked = globalThis.__S3B_CONFIRM[0] || { msg: '(no question was asked)', label: '' };
+    ok(asked.msg === wantMsg,
+      'S3b confirm ' + what + ': the question is the one for THIS state - got "' + asked.msg + '"');
+    ok(asked.label === wantLabel,
+      'S3b confirm ' + what + ': and so is the confirm button - got "' + asked.label + '"');
+    ok(!calls.slice(before).some((c) => c[0] === 'save_seafarer_from_bundle'),
+      'S3b confirm ' + what + ' CALIBRATION: answering NO wrote nothing - this drill proves the wording, never a save');
+  }
+  globalThis.__TAURI__ = prevTauri;
+}
+
+// ---- MUTATION CALIBRATION (the No.683 practice): can these asserts go red? --
+{
+  const anchor = "? btn('save', crewFlowTr('save_again'), !native || noName, \"crewFlowSaveToSeafarers('\" + id + \"')\", true, 'cf-save-done')";
+  const mutant = "? btn('save', crewFlowTr('save'), !native || noName, \"crewFlowSaveToSeafarers('\" + id + \"')\", true)";
+  const occurrences = scriptNoBoot.split(anchor).length - 1;
+  ok(occurrences === 1,
+    'S3b MUT: the branch this calibration removes occurs exactly once in the shipped script - got ' + occurrences);
+  if (occurrences === 1) {
+    let MM = null, buildErr = null;
+    try { MM = loadInlineModuleForCurrentStore(scriptNoBoot.replace(anchor, mutant) + S3B_STUB); } catch (e) { buildErr = e; }
+    ok(!!MM, 'S3b MUT: the mutant BUILDS - otherwise what goes red is the parser and not the branch'
+      + (buildErr ? ' (' + buildErr.name + ': ' + buildErr.message + ')' : ''));
+    if (MM && typeof MM.crewFlowActionsHtml === 'function') {
+      const prevTauri2 = globalThis.__TAURI__;
+      globalThis.__TAURI__ = Object.assign({}, prevTauri2, { event: {} });
+      s3bPrime(MM);
+      store.set(S3B_LANG_KEY, 'ru');
+      MM.state.crewFlowReadState = s3bSaved();
+      const mutBtn = s3bSaveBtn(MM.crewFlowActionsHtml('i3b'));
+      ok(mutBtn !== '',
+        'S3b MUT CALIBRATION: the mutant still renders a save button, so it is a working client and not a blank page');
+      ok(!/Уже в базе/.test(mutBtn) && !/cf-save-done/.test(mutBtn),
+        'S3b MUT KILLED: with the branch gone the saved candidate falls back to «В базу моряков» with no green class - so the assertions above really can go red');
+      globalThis.__TAURI__ = prevTauri2;
+    }
+  }
+}
+store.set('skipi_crewing_demo', '1');
+
+
+// ============================================================================
+// No.664/S3b/F2 (Supervisor, 2026-10-05): THE RECORD EXISTS IF EITHER MARKER
+// SAYS SO - and the owner can reach the one the first cut ignored.
+//
+// The first cut keyed the button on the chip's marker, crewFlowReviewIsSaved
+// (action === 'saved_to_db'), and said so openly as a slice boundary. The
+// Supervisor then showed that boundary is reachable ON THE STAND: the Add path
+// (dist :7186) writes crewFlowMarkRead(id, 'added', { saved_to_db: true }), so
+// the seafarer IS in the database while the action is 'added' - and the button
+// invited the operator to add him again. The owner's words were «если моряк уже
+// добавлен в базу», which is about the FACT, not about which path wrote it.
+//
+// WHY EACH FIXTURE CARRIES EXACTLY ONE MARKER (Supervisor F1). A fixture with
+// both markers set cannot tell the two mechanisms apart: a predicate reading
+// only the flag and one reading only the action would both pass it, so the test
+// would be green over a client that ignores half the truth. Each case below
+// therefore sets ONE marker, and the M5 mutations - predicate reduced to the
+// flag alone, then to the action alone - must each kill a case.
+// ============================================================================
+section('No.664/S3b/F2: either marker means the record exists');
+{
+  ok(/function crewFlowRecordInDb\(read\) \{/.test(HTML),
+    'F2: one predicate answers "is this seafarer already in the database", taking the READ RECORD - one of the two markers is not in the action at all');
+  ok(/read\.saved_to_db === true \|\| crewFlowReviewIsSaved\(read\.action\)/.test(HTML),
+    'F2: and it is the OR of both markers, not either one alone');
+  ok(/function crewFlowReviewIsSaved\(action\) \{/.test(HTML),
+    'F2 PRESERVE: crewFlowReviewIsSaved is left alone - it answers the narrower question the (992) chip is pinned on');
+  const added = HTML.match(/'crew_flow\.state_added':'[^']*'/g) || [];
+  ok(added.length === 2,
+    'F2: crew_flow.state_added exists in BOTH dictionaries, so the chip stops printing the raw token "added"; got ' + added.length);
+}
+
+store.delete('skipi_crewing_demo');
+elements.clear();
+let MF2 = null;
+try { MF2 = loadInlineModuleForCurrentStore(scriptNoBoot + S3B_STUB); } catch (e) { console.error('F2 runtime load failed:', e); }
+ok(!!MF2, 'F2: the inline script loads');
+const f2Ready = !!MF2 && typeof MF2.crewFlowActionsHtml === 'function';
+ok(f2Ready, 'F2: crewFlowActionsHtml is reachable');
+
+if (f2Ready) {
+  const prevTauriF2 = globalThis.__TAURI__;
+  globalThis.__TAURI__ = Object.assign({}, prevTauriF2, { event: {} });
+  s3bPrime(MF2);
+  const renderF2 = (lang, read) => {
+    store.set(S3B_LANG_KEY, lang);
+    MF2.state.crewFlowReadState = { i3b: read };
+    return s3bSaveBtn(MF2.crewFlowActionsHtml('i3b'));
+  };
+  // ONE marker each. Named so a failure says which mechanism was ignored.
+  const ADD_PATH   = { action: 'added', saved_to_db: true, at: '2026-10-05T00:00:00Z' };   // flag only
+  const SAVE_PATH  = { action: 'saved_to_db', at: '2026-10-05T00:00:00Z' };                // action only
+  const REVERSIBLE = { action: 'kept_for_later', at: '2026-10-05T00:00:00Z' };             // neither
+
+  const addRu = renderF2('ru', ADD_PATH);
+  ok(/Уже в базе/.test(addRu) && /cf-save-done/.test(addRu),
+    'F2/RU the Add path: action "added" with saved_to_db true is a seafarer IN the database - green «Уже в базе», not an invitation to add him twice');
+  const saveRu = renderF2('ru', SAVE_PATH);
+  ok(/Уже в базе/.test(saveRu) && /cf-save-done/.test(saveRu),
+    'F2/RU the save path: action "saved_to_db" with NO flag is still green - the action alone is enough');
+  const revRu = renderF2('ru', REVERSIBLE);
+  ok(/В базу моряков/.test(revRu) && !/Уже в базе/.test(revRu) && !/cf-save-done/.test(revRu),
+    'F2/RU CALIBRATION: a reversible mark with neither marker stays «В базу моряков» and grey - the predicate is not simply always true');
+  const addEn = renderF2('en', ADD_PATH);
+  ok(/Already in database/.test(addEn) && /cf-save-done/.test(addEn),
+    'F2/EN the Add path says «Already in database» too');
+  globalThis.__TAURI__ = prevTauriF2;
+}
+
+// ---- M5: each half of the predicate must be load-bearing -------------------
+{
+  const M5 = [
+    { id: 'F2/M5a', from: 'read.saved_to_db === true || crewFlowReviewIsSaved(read.action)',
+      to: 'crewFlowReviewIsSaved(read.action)',
+      what: 'the predicate reduced to the ACTION alone - the Add path becomes invisible again',
+      fixture: { action: 'added', saved_to_db: true, at: '2026-10-05T00:00:00Z' } },
+    { id: 'F2/M5b', from: 'read.saved_to_db === true || crewFlowReviewIsSaved(read.action)',
+      to: 'read.saved_to_db === true',
+      what: 'the predicate reduced to the FLAG alone - the ordinary save path becomes invisible',
+      fixture: { action: 'saved_to_db', at: '2026-10-05T00:00:00Z' } },
+  ];
+  for (const mut of M5) {
+    const occurrences = scriptNoBoot.split(mut.from).length - 1;
+    ok(occurrences === 1, mut.id + ': the predicate this mutation halves occurs exactly once - got ' + occurrences);
+    if (occurrences !== 1) continue;
+    let MM5 = null, err = null;
+    try { MM5 = loadInlineModuleForCurrentStore(scriptNoBoot.replace(mut.from, mut.to) + S3B_STUB); } catch (e) { err = e; }
+    ok(!!MM5, mut.id + ': the mutant BUILDS - otherwise what reddens is the parser, not ' + mut.what
+      + (err ? ' (' + err.name + ': ' + err.message + ')' : ''));
+    if (!MM5 || typeof MM5.crewFlowActionsHtml !== 'function') continue;
+    const prev = globalThis.__TAURI__;
+    globalThis.__TAURI__ = Object.assign({}, prev, { event: {} });
+    s3bPrime(MM5);
+    store.set(S3B_LANG_KEY, 'ru');
+    MM5.state.crewFlowReadState = { i3b: mut.fixture };
+    const btn = s3bSaveBtn(MM5.crewFlowActionsHtml('i3b'));
+    ok(btn !== '', mut.id + ' CALIBRATION: the mutant still renders a save button, so it is a working client');
+    ok(!/Уже в базе/.test(btn),
+      mut.id + ' KILLED: with ' + mut.what + ', that fixture falls back to «В базу моряков» - so this half of the predicate really is load-bearing');
+    globalThis.__TAURI__ = prev;
+  }
+}
+store.set('skipi_crewing_demo', '1');
 
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

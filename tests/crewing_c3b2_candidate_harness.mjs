@@ -12,6 +12,8 @@ const workflow = fs.readFileSync('.github/workflows/skipi-guard.yml', 'utf8');
 // K2.1: contact.rs is NEW in this candidate. A missing file must read as a RED
 // assertion, not as an import-time crash that hides every other check.
 const contactRs = fs.existsSync('src-tauri/src/contact.rs') ? fs.readFileSync('src-tauri/src/contact.rs', 'utf8') : '';
+// No.664/S3: the receiver of the seafarer base; absent reads as RED below, not as a crash.
+const dbRs = fs.existsSync('src-tauri/src/db.rs') ? fs.readFileSync('src-tauri/src/db.rs', 'utf8') : '';
 
 const c3b1Start = html.indexOf('// ================= C3b-1 SYNTHETIC INTAKE PILOT START =================');
 const c3b1End = html.indexOf('// ================== C3b-1 SYNTHETIC INTAKE PILOT END ==================', c3b1Start);
@@ -1626,6 +1628,12 @@ console.log('# K2 modules/crew-flow');
   function makeCrewContext({ language = 'en', settings, demo = false, native = true, noProfiles = false, confirmAnswer = true, noTauri = false, webShell = false,
     contactMode = 'both', attachments, bytes404 = false, mailtoFails = false, realEscaping = false, mailbox,
     contactEmail = 'oleh@example.test',
+    // No.664/S3: ordinals whose fetch fails with a server error (one file that did not arrive).
+    downloadFails = [],
+    // No.664/S3 (Supervisor acceptance, HIGH): ordinals that are zip IMPOSTORS — declared
+    // docx, measuring application/zip like every OOXML, but WITHOUT the ECMA-376 members;
+    // the server's servable_type answers `bin` for those, and only the server can see it.
+    impostors = [],
     // No.621. `undefined` is the server's 404 (this intake carries no binding);
     // an object is the 200 body; `{ __throw: err }` is any OTHER failure, which
     // the screen must not confuse with an absence (N14).
@@ -1717,8 +1725,28 @@ console.log('# K2 modules/crew-flow');
         }
         if (command === 'crewing_intake_attachment_download') {
           if (bytes404) throw { kind: 'server', status: 404, detail: null, ambiguous: false };
+          if (downloadFails.includes(Number(args && args.ordinal))) throw { kind: 'server', status: 500, detail: null, ambiguous: false };
           timeline.push('invoke:attachment_download:' + String(args && args.ordinal));
-          return { path: '/home/op/Downloads/Skipi/Crewing/intake-1/attachment-' + String(args && args.ordinal) + '.pdf', bytes: 1024, sha256: 'b'.repeat(64) };
+          // No.664/S3: the server names the copy attachment-<ordinal>.<ext> from the MEASURED
+          // type (eml|pdf|docx, anything else bin) under Downloads/Skipi/Crewing/<intake8>/
+          // (skipi-server routers/candidate_intake.py, SERVABLE_EXTENSIONS). The stub does the
+          // same, so the path the client derives is the one the receiver will read from.
+          // servable_type, both branches (skipi-server candidate_intake_service.py): the MEASURED
+          // type names it when it is one of the three; otherwise the DECLARED type must be one of
+          // the three AND carry the signature the table says it carries — a real .docx is an
+          // OOXML and measures as application/zip, and the archive must show the ECMA-376
+          // members (impostors here) — else `bin`.
+          const cardAtts = ((cardFields[args && args.intakeId] || {}).attachments) || ((srv.items.find((i) => i.intake_id === (args && args.intakeId)) || {}).attachments) || [];
+          const att = cardAtts.find((a) => Number(a.ordinal) === Number(args && args.ordinal));
+          const SERVABLE = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'message/rfc822': 'eml' };
+          let ext = 'pdf';
+          if (att) {
+            const measured = String(att.measured_type || ''), declared = String(att.declared_type || '').toLowerCase();
+            if (SERVABLE[measured]) ext = SERVABLE[measured];
+            else if (declared === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && measured === 'application/zip' && !impostors.includes(Number(att.ordinal))) ext = 'docx';
+            else ext = 'bin';
+          }
+          return { path: '/home/op/Downloads/Skipi/Crewing/' + String(args && args.intakeId).slice(0, 8) + '/attachment-' + String(args && args.ordinal) + '.' + ext, bytes: 1024, sha256: 'b'.repeat(64) };
         }
         if (command === 'crewing_intake_open_saved') { timeline.push('invoke:open_saved:' + String(args && args.path)); return null; }
         if (command === 'open_mailto') {
@@ -1977,10 +2005,12 @@ console.log('# K2 modules/crew-flow');
       softOk(!!s && s.rank === 'Master', 'Г2: rank from the delivered summary (experience_rank — here equal to the post answered)');
       softOk(!!s && s.nationality === 'Ukrainian', 'Г2: nationality = citizenship of the delivered summary — got ' + (s && JSON.stringify(s.nationality)));
       softOk(!!s && s.email === 'oleh@example.test', 'Г2: with no delivered contact (404) the email is the recorded contact:email FACT');
-      softOk(!!s && Object.keys(s).sort().join(',') === 'email,name,nationality,rank', 'Г2: exactly four keys — no facts.nationality / facts.email ghosts — got ' + (s && Object.keys(s).join(',')));
+      softOk(!!s && Object.keys(s).sort().join(',') === 'doc_source,email,name,nationality,rank', 'Г2 (+S3): exactly five keys — the four of S2 plus doc_source of S3; no facts.nationality / facts.email ghosts — got ' + (s && Object.keys(s).join(',')));
       softOk(!!ctx.save && ctx.save.args.manifest.exported_by.name === 'Ivan Petrenko' && ctx.save.args.manifest.exported_by.rank === 'Master', 'Г2: manifest.exported_by carries the same name and rank');
-      softOk(!!ctx.save && ctx.save.args.extractedTo === '' && ctx.save.args.cvPath === '' && Array.isArray(ctx.save.args.manifest.documents) && ctx.save.args.manifest.documents.length === 0,
-        'S2 boundary: no attachments travel in this slice — extractedTo/cvPath empty, documents [] (Г3/Г4 = S3)');
+      // S2 drew the boundary «no attachments travel in this slice»; S3 (No.664, this card) moves it:
+      // the eligible pdf of the default fixture travels as ONE document under <intake8>/attachment-1.pdf.
+      softOk(!!ctx.save && ctx.save.args.extractedTo === '/home/op/Downloads/Skipi/Crewing' && ctx.save.args.cvPath === '' && Array.isArray(ctx.save.args.manifest.documents) && ctx.save.args.manifest.documents.length === 1,
+        'S3 (was the S2 boundary): the eligible attachment travels — extractedTo = download root, cvPath empty, documents [1] (Г3/Г4 closed here)');
       // invalidation, as the bundle path does it (dist: saveCurrentBundleSeafarer)
       const ids = ctx.state.seafarers.map((r) => r.id);
       softOk(ids.includes(PR) && ctx.state.seafarers.find((r) => r.id === PR).display_name === 'Ivan Petrenko', 'Г2 invalidation: state.seafarers holds the saved row — got [' + ids.join(',') + ']');
@@ -2138,6 +2168,194 @@ console.log('# K2 modules/crew-flow');
       const heading = (html.match(/function pilotCardIdentityHtml\([^)]*\) \{[\s\S]*?\n\}/) || [''])[0];
       softOk(/pilotCardResolvedName\(/.test(helper) && /pilotCardResolvedName\(/.test(heading) && !/pilotCardNameOrigin|first_name|candidate_name/.test(helper),
         'LOW-2 static: the heading and the writer read the name through pilotCardResolvedName, and the writer keeps no copy of the order');
+    }
+
+    // ===== No.664/S3 (OWNER (985)/(986)/(994), DECISIONS (998)): the files travel with the person =====
+    //
+    // What is drilled, by call site (card «Матрица негативов»): an eligible pdf/docx
+    // is fetched through the EXISTING audited byte route and handed to the receiver
+    // under `<intake8>/attachment-N.<ext>`; a `bin` (jpg, rtf, a zip in disguise) is
+    // neither fetched nor placed and is NAMED to the operator; more than 10 files or
+    // 64 MiB is refused BEFORE any byte moves and before the question; a second
+    // intake of the same person lands in its own sub-folder; a letter's file says
+    // `email`, a response's file says `skipi_response`; the Crew Flow writer asks
+    // the receiver to MERGE, the bundle writer is byte for byte what it was.
+    console.log('\n# No.664/S3: the files travel with the person');
+    {
+      const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      const RESP = { person_ref: PR, response_summary: RS664, source: 'skipi_response' };
+      const pdfAtt = (ordinal, filename, byte_size = 210000) => ({ ordinal, filename, declared_type: 'application/pdf', measured_type: 'application/pdf', byte_size, verdict: 'accepted', reason: null, eligible: true });
+      // A REAL .docx as the product produces it (Supervisor acceptance, HIGH): the scanner's
+      // closed signature table has no DOCX entry — an OOXML is a zip and MEASURES as
+      // application/zip; the server names it .docx by declared+measured+members. A fixture
+      // with measured_type DOCX is a state the product never produces.
+      const docxAtt = (ordinal, filename) => ({ ordinal, filename, declared_type: DOCX, measured_type: 'application/zip', byte_size: 50000, verdict: 'accepted', reason: null, eligible: true });
+      const binAtt = (ordinal, filename, measured_type = 'image/jpeg') => ({ ordinal, filename, declared_type: measured_type, measured_type, byte_size: 3000, verdict: 'accepted', reason: null, eligible: true });
+      const dls = (ctx) => ctx.calls.filter((c) => c.command === 'crewing_intake_attachment_download');
+      const docsOf = (ctx) => (ctx.save && ctx.save.args.manifest && Array.isArray(ctx.save.args.manifest.documents)) ? ctx.save.args.manifest.documents : null;
+      const toastWith = (ctx, text) => ctx.toasts.some((t) => String(t[0]).indexOf(text) !== -1);
+      const asked = (ctx) => ctx.timeline.some((e) => String(e).indexOf('confirm:') === 0);
+
+      // ---- 1. an eligible pdf: fetched once, through the audited route, placed under <intake8>/attachment-N.pdf
+      {
+        const ctx = await openSave({ cardFields: { 'intake-1': RESP } });  // default K2_ATTACHMENTS: 1 = pdf eligible, 2 = exe rejected
+        const dl = dls(ctx);
+        softOk(dl.length === 1 && dl[0].args.intakeId === 'intake-1' && dl[0].args.ordinal === 1,
+          'S3a-1: exactly ONE fetch, of the eligible ordinal, through crewing_intake_attachment_download — got ' + JSON.stringify(dl.map((c) => c.args.ordinal)));
+        softOk(dl.length === 1 && dl[0].args.expectedContext && dl[0].args.expectedContext.crewing_id === 'crew-synthetic' && dl[0].args.expectedBytes === 120,
+          'S3a-1: the fetch carries the same expected context and ceiling argument as the two sibling call sites (pilotExpected, card.content_bytes)');
+        softOk(!dl.some((c) => c.args.ordinal === 2), 'S3a-1 non-eligible: the rejected .exe is never fetched — zero requests on the byte road for it');
+        softOk(!!ctx.save && ctx.calls.indexOf(dl[0]) < ctx.calls.indexOf(ctx.save), 'S3a-1: the bytes arrive BEFORE the receiver is called, so the receiver copies a file that exists');
+        softOk(!!ctx.save && ctx.save.args.mode === 'merge', 'S3b: the Crew Flow writer asks the receiver to MERGE — a repeat must not erase what is already in the folder — got ' + (ctx.save && JSON.stringify(ctx.save.args.mode)));
+        softOk(!!ctx.save && ctx.save.args.extractedTo === '/home/op/Downloads/Skipi/Crewing',
+          'S3a-1: extractedTo is the download root (the parent of the intake folder), derived from the path the route returned — got ' + (ctx.save && JSON.stringify(ctx.save.args.extractedTo)));
+        softOk(!!ctx.save && ctx.save.args.cvPath === '',
+          'S3a-1: cvPath stays empty — the CV route flattens names into CV/<name>, and two intakes of one person both ship attachment-0.pdf (DONE (2)); the CV is a document row instead');
+        const docs = docsOf(ctx);
+        softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-1/attachment-1.pdf',
+          'S3a-1: ONE document, file_path = <intake8>/attachment-N.<ext> — the sub-folder is the idempotency key and the provenance — got ' + JSON.stringify(docs && docs.map((d) => d.file_path)));
+        softOk(!!docs && docs[0] && docs[0].doc_source === 'skipi_response', 'S3a-1: a file of a RESPONSE says doc_source skipi_response');
+        softOk(!!docs && docs[0] && docs[0].category === 'CV' && docs[0].title === 'CV', 'S3a-1: the first pdf is the CV — title and category CV, as the bundle receiver labels a CV');
+        softOk(!!docs && docs[0] && docs[0].file_name === 'oleh-cv.pdf', 'S3a-1: the name the letter carried is kept as metadata (file_name), never as the path');
+        const s = ctx.save && ctx.save.args.applicantSummary;
+        softOk(!!s && s.doc_source === 'skipi_response' && Object.keys(s).sort().join(',') === 'doc_source,email,name,nationality,rank',
+          'S3a-1: summary_json carries doc_source as its FIFTH key and nothing else grew — got ' + (s && Object.keys(s).sort().join(',')));
+        softOk(ctx.toasts.some((t) => t[1] === 'success'), 'S3a-1: the operator is told it worked');
+        const placed = k2str(ctx, 'docs_placed');
+        softOk(placed !== 'crew_flow.docs_placed' && toastWith(ctx, placed.replace('{n}', '1')), 'S3a-1 (930): and how many files went into the folder is SAID — "' + placed.replace('{n}', '1') + '"');
+      }
+
+      // ---- 2. a `bin`: not fetched, not placed, NAMED to the operator (RU and EN)
+      for (const lang of ['en', 'ru']) {
+        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [binAtt(0, 'photo.jpg'), pdfAtt(1, 'cv.pdf')] }) } });
+        const dl = dls(ctx);
+        softOk(dl.length === 1 && dl[0].args.ordinal === 1, '[' + lang + '] S3a-2 bin: the jpg is NOT fetched — only the pdf goes down the byte road — got ' + JSON.stringify(dl.map((c) => c.args.ordinal)));
+        const docs = docsOf(ctx);
+        softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-1/attachment-1.pdf', '[' + lang + '] S3a-2 bin: and it is not placed — one document, the pdf');
+        const word = k2str(ctx, 'doc_bin_skipped');
+        softOk(word !== 'crew_flow.doc_bin_skipped' && /\{n\}/.test(word) && /\{name\}/.test(word) && toastWith(ctx, word.replace('{n}', '0').replace('{name}', 'photo.jpg')),
+          '[' + lang + '] S3a-2 bin (930): the operator is told, in the dictionary’s words, WHICH attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'photo.jpg') + '"');
+        softOk(!!ctx.save, '[' + lang + '] S3a-2 bin: the person is still saved — a photo is not a reason to lose the CV');
+      }
+
+      // ---- 3. nothing to place: the person is saved, and the folder outcome is said
+      for (const lang of ['en', 'ru']) {
+        const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [] }) } });
+        softOk(dls(ctx).length === 0 && !!ctx.save && (docsOf(ctx) || []).length === 0 && ctx.save.args.extractedTo === '',
+          '[' + lang + '] S3a-3 none: zero fetches, the save goes through with no documents and an empty extractedTo');
+        const word = k2str(ctx, 'docs_none');
+        softOk(word !== 'crew_flow.docs_none' && toastWith(ctx, word), '[' + lang + '] S3a-3 none (930): «no files for the folder» is said, not implied — "' + word + '"');
+      }
+
+      // ---- 4. more than 10 placeable files: refused BEFORE the question and before any byte
+      {
+        const many = []; for (let i = 0; i < 11; i++) many.push(pdfAtt(i, 'doc-' + i + '.pdf', 1000));
+        for (const lang of ['en', 'ru']) {
+          const ctx = await openSave({ language: lang, cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: many }) } });
+          softOk(dls(ctx).length === 0 && ctx.save === null, '[' + lang + '] S3a-4 ceiling: 11 files → NOTHING fetched and NOTHING saved — no partial write');
+          softOk(!asked(ctx), '[' + lang + '] S3a-4 ceiling: and the question is not even asked — the refusal comes first');
+          const word = k2str(ctx, 'docs_too_many');
+          softOk(word !== 'crew_flow.docs_too_many' && toastWith(ctx, word.replace('{n}', '11')), '[' + lang + '] S3a-4 ceiling (930): the refusal names the count — "' + word.replace('{n}', '11') + '"');
+        }
+        const ten = many.slice(0, 10);
+        const ok10 = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: ten }) } });
+        softOk(dls(ok10).length === 10 && !!ok10.save && (docsOf(ok10) || []).length === 10, 'S3a-4 CALIBRATION: exactly 10 files pass — the bound is "more than 10", not "10"');
+      }
+
+      // ---- 5. more than 64 MiB in total: the same refusal, by size
+      {
+        const heavy = [pdfAtt(0, 'a.pdf', 40 * 1024 * 1024), pdfAtt(1, 'b.pdf', 40 * 1024 * 1024)];
+        const ctx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: heavy }) } });
+        softOk(dls(ctx).length === 0 && ctx.save === null && !asked(ctx), 'S3a-5 ceiling: 80 MiB in two files → nothing fetched, nothing saved, no question');
+        const word = k2str(ctx, 'docs_too_large');
+        softOk(word !== 'crew_flow.docs_too_large' && ctx.toasts.some((t) => String(t[0]).indexOf(word.split('{')[0]) === 0), 'S3a-5 ceiling (930): the refusal is the dictionary’s size sentence — "' + word + '"');
+        const fits = [pdfAtt(0, 'a.pdf', 60 * 1024 * 1024), binAtt(1, 'huge.jpg')];
+        fits[1].byte_size = 30 * 1024 * 1024;
+        const okCtx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: fits }) } });
+        softOk(dls(okCtx).length === 1 && !!okCtx.save, 'S3a-5 CALIBRATION: a 30 MiB jpg does not count against the ceiling — only what would be placed is summed');
+      }
+
+      // ---- 6. a second intake of the same person: HIS second file, in ITS OWN sub-folder
+      {
+        const ctx = await openSave({ cardFields: { 'intake-2': Object.assign({}, RESP, { attachments: [pdfAtt(0, 'cv.pdf')] }) } }, 'intake-2');
+        const docs = docsOf(ctx);
+        softOk(!!ctx.save && ctx.save.args.seafarerUserId === PR && ctx.save.args.mode === 'merge', 'S3a-6: the same person key, merge — the receiver adds, it does not replace');
+        softOk(!!docs && docs.length === 1 && docs[0].file_path === 'intake-2/attachment-0.pdf',
+          'S3a-6: attachment-0.pdf of the SECOND intake lives under intake-2/ — the same server name does not collide with intake-1/attachment-0.pdf — got ' + JSON.stringify(docs && docs.map((d) => d.file_path)));
+      }
+
+      // ---- 7. a letter’s file says `email`; a docx is placed and is not the CV
+      {
+        const ctx = await openSave({ cardFields: { 'intake-1': { source: 'inbound', attachments: [docxAtt(0, 'references.docx'), pdfAtt(1, 'cv.pdf')] } } });
+        const docs = docsOf(ctx);
+        softOk(!!ctx.save && ctx.save.args.seafarerUserId === 'intake:intake-1', 'S3a-7: a letter without a person key still saves under intake: (S2 behaviour kept)');
+        softOk(!!docs && docs.length === 2 && docs.every((d) => d.doc_source === 'email'), 'S3a-7: both files of a LETTER say doc_source email — got ' + JSON.stringify(docs && docs.map((d) => d.doc_source)));
+        softOk(!!ctx.save && ctx.save.args.applicantSummary && ctx.save.args.applicantSummary.doc_source === 'email', 'S3a-7: and summary_json says email too');
+        softOk(!!docs && docs[0] && docs[0].file_path === 'intake-1/attachment-0.docx' && docs[0].category !== 'CV' && docs[0].title === 'references.docx',
+          'S3a-7: the docx is placed under its own extension and is not labelled CV; its title is the name the letter carried');
+        softOk(!!docs && docs[1] && docs[1].file_path === 'intake-1/attachment-1.pdf' && docs[1].category === 'CV', 'S3a-7: the first PDF is the CV even when a docx comes first');
+      }
+
+      // ---- 8. a fetch that fails: nothing is written — the person is not saved half
+      {
+        const ctx = await openSave({ downloadFails: [1], cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [pdfAtt(0, 'a.pdf'), pdfAtt(1, 'b.pdf')] }) } });
+        softOk(ctx.save === null, 'S3a-8: when one file does not arrive the receiver is NOT called — a half-saved person is a second defect, not a save');
+        const word = k2str(ctx, 'doc_download_failed');
+        softOk(word !== 'crew_flow.doc_download_failed' && toastWith(ctx, word.replace('{n}', '1')), 'S3a-8 (930): the operator is told which attachment did not arrive — "' + word.replace('{n}', '1') + '"');
+        softOk(!ctx.toasts.some((t) => t[1] === 'success'), 'S3a-8: and no success is claimed');
+      }
+
+      // ---- 8b. the docx key is the SERVER's: a real OOXML (declared docx, measures zip) is placed as .docx; a zip impostor comes back .bin and is NOT placed
+      {
+        const ctx = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [docxAtt(0, 'cv.docx')] }) } });
+        const docs = docsOf(ctx);
+        softOk(dls(ctx).length === 1 && !!docs && docs.length === 1 && docs[0] && docs[0].file_path === 'intake-1/attachment-0.docx',
+          'S3a-8b docx: declared docx + measured application/zip — what a real .docx looks like to the scanner — is fetched and placed as .docx — got ' + JSON.stringify(docs && docs.map((d) => d.file_path)));
+        const imp = await openSave({ impostors: [0], cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [docxAtt(0, 'cv.docx'), pdfAtt(1, 'cv.pdf')] }) } });
+        const idocs = docsOf(imp);
+        softOk(dls(imp).length === 2, 'S3a-8b impostor: the metadata cannot tell a zip impostor from a real docx (same declared, same measured) — both are fetched — got ' + JSON.stringify(dls(imp).map((c) => c.args.ordinal)));
+        softOk(!!idocs && idocs.length === 1 && idocs[0] && idocs[0].file_path === 'intake-1/attachment-1.pdf',
+          'S3a-8b impostor: the server answered attachment-0.bin — it is NOT placed; only the pdf is — got ' + JSON.stringify(idocs && idocs.map((d) => d.file_path)));
+        const word = k2str(imp, 'doc_bin_skipped');
+        softOk(toastWith(imp, word.replace('{n}', '0').replace('{name}', 'cv.docx')), 'S3a-8b impostor (930): and the operator is told which attachment was not placed — "' + word.replace('{n}', '0').replace('{name}', 'cv.docx') + '"');
+        softOk(!!imp.save, 'S3a-8b impostor: the person and his pdf are still saved');
+        const plainZip = await openSave({ cardFields: { 'intake-1': Object.assign({}, RESP, { attachments: [{ ordinal: 0, filename: 'photos.zip', declared_type: 'application/zip', measured_type: 'application/zip', byte_size: 900, verdict: 'accepted', reason: null, eligible: true }, pdfAtt(1, 'cv.pdf')] }) } });
+        softOk(dls(plainZip).length === 1 && dls(plainZip)[0].args.ordinal === 1, 'S3a-8b: a zip that does not even CLAIM to be a docx is not fetched at all — the metadata already says bin');
+        softOk(/application\/zip/.test(k2crew), 'S3a-8b static: the block names application/zip — the type a real docx measures as — so the docx half of the allowlist is alive, not a dead key');
+        softOk(/var actualExt = /.test(k2crew) && /actualExt !== 'pdf' && actualExt !== 'docx'/.test(k2crew),
+          'S3a-8b static: the placement key is the extension the SERVER named in the returned path — the one place that can see the archive members');
+      }
+
+      // ---- 9. the block: the invoke literal lives INSIDE the Crew Flow block, and the two sibling sites are untouched
+      {
+        const save = (k2crew.match(/async function crewFlowSaveToSeafarers\(intakeId\) \{[\s\S]*?\n\}/) || [''])[0];
+        softOk((k2crew.match(/invoke\(\s*'crewing_intake_attachment_download'/g) || []).length === 1,
+          'S3a-9 static: the fourth command is called from exactly ONE place inside the Crew Flow block (the demo harness freezes the literal of four)');
+        softOk(!/pilotAttachmentDownload\(|profileLetterPick\(/.test(k2crew), 'S3a-9 static: the block does not reach the byte road through either sibling screen’s handler');
+        softOk(/crewing_intake_attachment_download/.test(k2slice('async function pilotAttachmentDownload(ordinal) {', '\nasync function pilotOpenSavedPath'))
+          && /crewing_intake_attachment_download/.test(k2slice('async function profileLetterPick(intakeId, ordinal) {', '\nasync function profileLetterPrepare')),
+          'S3a-9 PRESERVE: the card’s «Download» and the letter’s pick still fetch through the same command — the shared road is not changed');
+        softOk(/mode:\s*'merge'/.test(save), 'S3b static: the Crew Flow writer sends mode merge');
+        const bundleSave = (html.match(/async function saveCurrentBundleSeafarer\(\) \{[\s\S]*?\n\}/) || [''])[0];
+        softOk(bundleSave !== '' && !/mode/.test(bundleSave), 'S3b PRESERVE: the bundle writer sends NO mode — the receiver’s default must be «replace», byte for byte the old path');
+      }
+
+      // ---- 10. the receiver (src-tauri/src/db.rs, lib.rs): static shape of the merge
+      {
+        const cmd = (lib.match(/#\[tauri::command\]\s*\nfn save_seafarer_from_bundle\([\s\S]*?\n\}/) || [''])[0];
+        softOk(/mode: Option<String>,/.test(cmd), 'S3b bridge: the command takes mode as Option<String> — a caller that sends none (the bundle path) must deserialise, or «Save failed» on the golden path');
+        softOk(/enum SaveMode\s*\{[\s\S]*?Replace[\s\S]*?Merge[\s\S]*?\}/.test(dbRs) && /"merge"\s*=>\s*SaveMode::Merge/.test(dbRs) && /_\s*=>\s*SaveMode::Replace/.test(dbRs),
+          'S3b: two modes, «merge» by the word and everything else (None, a typo) is «replace»');
+        softOk(/!seafarer_id\.starts_with\("intake:"\)/.test(dbRs), 'No.669: a save under an intake: key of another letter never retires a row — the one-line closing of the residual gap');
+        const seed = dbRs.indexOf('seed_staging_from_existing(');
+        const swap = dbRs.indexOf('std::fs::rename(&docs_dir, &backup_dir)');
+        softOk(seed > 0 && swap > seed, 'S3b merge: staging is SEEDED from the existing folder BEFORE the swap — the rollback (backup → docs_dir) is left exactly as it was');
+        softOk(/if mode == SaveMode::Replace \{\s*\n\s*tx\.execute\(\s*\n?\s*"DELETE FROM seafarer_documents WHERE seafarer_id = \?1"/.test(dbRs),
+          'S3b: the blanket DELETE of the person’s document rows runs in «replace» ONLY');
+        softOk(/DELETE FROM seafarer_documents WHERE seafarer_id = \?1 AND file_path = \?2/.test(dbRs), 'S3b merge: a row with the same file_path is replaced, so a repeat with the same files does not double the list');
+        softOk(/cv_path = COALESCE\(excluded\.cv_path, seafarers\.cv_path\)/.test(dbRs), 'S3b merge: a save without a cvPath keeps the cv_path the row already had');
+        softOk(!/let _ = std::fs::copy/.test(dbRs), 'F3: every copy into staging is `?`, never `let _` — a failed copy is a failed save, not a row without a file');
+      }
     }
 
     const matchCtx = makeCrewContext({});
