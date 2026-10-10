@@ -2028,6 +2028,117 @@ console.log('# K2 modules/crew-flow');
         'No.621 N17 stays: nothing of the delivered summary enters crewFlowFactCache');
     }
 
+    // ---- No.695: the «База моряков» tab after a save from Crew Flow ---------
+    // Stand finding 07.10 (BACKLOG No.695): with the tab never opened, the save
+    // above puts ONE row into the EMPTY client cache, and the tab's reader took
+    // «cache non-empty» for «list loaded» — so the operator saw «1 / 1» until ↻.
+    // The reader is the subject (Supervisor PREP 08.10, C-D1..C-D8): a flag
+    // `state.seafarersLoaded` set ONLY by a successful `list_saved_seafarers`;
+    // the writers (Crew Flow, bundle) and the Г2 asserts above stay as they are.
+    // The two readers live outside the crew-flow block, so they are installed
+    // from the shipped bytes the way the harness already does elsewhere.
+    console.log('\n# No.695: the seafarer base after a save from Crew Flow');
+    {
+      const fnSlice = (head) => {
+        const at = html.indexOf(head);
+        if (at < 0) return '';
+        const ends = ['\nfunction ', '\nasync function '].map((m) => html.indexOf(m, at + 10)).filter((i) => i > 0);
+        return ends.length ? html.slice(at, Math.min(...ends)) : '';
+      };
+      const readerDesktop = fnSlice('async function renderSeafarersTree(opts) {');
+      const readerMobile = fnSlice('async function mobileLoadSeafarers(force) {');
+      softOk(readerDesktop.includes("invoke('list_saved_seafarers')") && readerMobile.includes("invoke('list_saved_seafarers')"),
+        'No.695: both readers (renderSeafarersTree, mobileLoadSeafarers) are found in dist and load through list_saved_seafarers');
+      const DB_ROWS = [PR, PR_B, 'sf-3', 'sf-4', 'sf-5', 'sf-6', 'sf-7'].map((id) => ({ id, display_name: id === PR ? 'Ivan Petrenko' : id }));
+      // installs the two readers + recording stubs on a crew context; the list
+      // answer is programmable (rows, or a thrown error) per call
+      const withReaders = (ctx) => {
+        for (const id of ['panel-tree', 'mobile-seafarer-list', 'seafarer-filter-controls']) ctx.nodes.set(id, { id, innerHTML: '', style: {} });
+        ctx.__paint = [];
+        ctx.renderSeafarerFilterControls = () => { ctx.__paint.push('filters'); };
+        ctx.renderSeafarersTreeBody = () => { ctx.__paint.push('tree'); };
+        ctx.mobilePaintSeafarerList = () => { ctx.__paint.push('mobile'); };
+        ctx.__listAnswer = DB_ROWS;
+        const base = ctx.invoke;
+        ctx.invoke = async (command, args) => {
+          if (command === 'list_saved_seafarers') {
+            ctx.calls.push({ command, args: null });
+            if (ctx.__listAnswer instanceof Error) throw ctx.__listAnswer;
+            return ctx.__listAnswer.map((r) => Object.assign({}, r));
+          }
+          return base(command, args);
+        };
+        vm.runInContext(readerDesktop + '\n' + readerMobile + '\nthis.__readers = { renderSeafarersTree, mobileLoadSeafarers };', ctx);
+        ctx.lists = () => ctx.calls.filter((c) => c.command === 'list_saved_seafarers').length;
+        return ctx;
+      };
+      const SAVE = { cardFields: { 'intake-1': { person_ref: PR, response_summary: RS664 } }, seafarers: [] };
+
+      // C-D1 (failing-first, desktop): the tab was never opened, the cache is
+      // empty, the operator saves from Crew Flow, then opens the tab.
+      {
+        const ctx = withReaders(await openSave(SAVE));
+        softOk(ctx.state.seafarers.length === 1 && ctx.state.seafarers[0].id === PR, 'No.695 C-D1 precondition: after the save the empty cache holds exactly the saved row (writer unchanged)');
+        await ctx.__readers.renderSeafarersTree(); await flush();
+        softOk(ctx.lists() === 1, 'No.695 C-D1 (desktop): opening the tab with a never-loaded cache CALLS list_saved_seafarers — got ' + ctx.lists() + ' call(s)');
+        softOk(ctx.state.seafarers.length === DB_ROWS.length, 'No.695 C-D1 (desktop): the tab shows the full base (' + DB_ROWS.length + '), not «1 / 1» — got ' + ctx.state.seafarers.length);
+        softOk(ctx.state.seafarersLoaded === true, 'No.695: a successful load sets state.seafarersLoaded');
+      }
+      // C-D8 (failing-first, mobile): the same door in the mobile shell.
+      {
+        const ctx = withReaders(await openSave(SAVE));
+        await ctx.__readers.mobileLoadSeafarers(false); await flush();
+        softOk(ctx.lists() === 1, 'No.695 C-D8 (mobile): the mobile list with a never-loaded cache CALLS list_saved_seafarers — got ' + ctx.lists() + ' call(s)');
+        softOk(ctx.state.seafarers.length === DB_ROWS.length && ctx.__paint.includes('mobile'), 'No.695 C-D8 (mobile): the full base is painted — got ' + ctx.state.seafarers.length);
+      }
+      // C-D2 (preserve): the cache was loaded, then a new person is saved — the
+      // tab shows N+1 with NO second round-trip, and the selection is kept.
+      {
+        const ctx = withReaders(await openSave(SAVE, 'intake-1', false));
+        await ctx.__readers.renderSeafarersTree(); await flush();
+        const before = ctx.state.seafarers.length;
+        ctx.__listAnswer = DB_ROWS.filter((r) => r.id !== PR);
+        ctx.state.seafarers = ctx.state.seafarers.filter((r) => r.id !== PR); // the base without this person yet
+        await tryRun(ctx, "crewFlowSaveToSeafarers('intake-1');"); await flush(10);
+        softOk(before === DB_ROWS.length && ctx.state.seafarers.length === DB_ROWS.length && ctx.state.seafarers[0].id === PR,
+          'No.695 C-D2: a loaded cache + a new save = N+1 rows with the saved one first (unshift of the writer, unchanged)');
+        await ctx.__readers.renderSeafarersTree(); await flush();
+        softOk(ctx.lists() === 1 && ctx.state.seafarers.length === DB_ROWS.length, 'No.695 C-D2: re-opening the tab does NOT reload a loaded cache — still 1 call, still ' + DB_ROWS.length + ' rows');
+        softOk(ctx.state.selectedSeafarer && ctx.state.selectedSeafarer.id === PR, 'No.695 C-D2: the selection made by the save is kept');
+      }
+      // C-D6 (both readers): a failed load must NOT mark the cache loaded — the
+      // next opening retries instead of being locked out forever.
+      for (const [name, open] of [['desktop', (c) => c.__readers.renderSeafarersTree()], ['mobile', (c) => c.__readers.mobileLoadSeafarers(false)]]) {
+        const ctx = withReaders(await openSave(SAVE));
+        ctx.__listAnswer = new Error('db locked');
+        await open(ctx); await flush();
+        softOk(ctx.lists() === 1 && ctx.state.seafarersLoaded !== true && ctx.state.seafarers.length === 1,
+          'No.695 C-D6 (' + name + '): a failed list leaves the flag unset and the cache as it was');
+        ctx.__listAnswer = DB_ROWS;
+        await open(ctx); await flush();
+        softOk(ctx.lists() === 2 && ctx.state.seafarers.length === DB_ROWS.length, 'No.695 C-D6 (' + name + '): the next opening retries and shows the full base');
+      }
+      // C-D7: ↻ (force) still reloads a loaded cache.
+      {
+        const ctx = withReaders(await openSave(SAVE));
+        await ctx.__readers.renderSeafarersTree(); await flush();
+        await ctx.__readers.renderSeafarersTree({ force: true }); await flush();
+        await ctx.__readers.mobileLoadSeafarers(true); await flush();
+        softOk(ctx.lists() === 3, 'No.695 C-D7: force (↻) reloads on both readers — got ' + ctx.lists() + ' calls');
+      }
+      // C-D3 (static): the only profile switch that does not reload the page
+      // (mobile shell, connect dialog) drops the flag, so a base loaded under
+      // another profile is not shown as this one's.
+      softOk(/state\.seafarersLoaded = false;\n\s*state\.vacancies = \[\];\n\s*if \(isMobileShellActive\(\)\) mobileShow\('crew_flow'\);\n\s*else location\.reload\(\);/.test(html),
+        'No.695 C-D3: the connect-dialog switch resets state.seafarersLoaded before the mobile branch that does not reload');
+      // C-D6 (static): the flag is set on the success path only, never in the catch.
+      const catchDesktop = (readerDesktop.match(/catch\s*\(e\)\s*\{[\s\S]*?\n  \}/) || [''])[0];
+      const catchMobile = (readerMobile.match(/catch\s*\(e\)\s*\{[\s\S]*?\n  \}/) || [''])[0];
+      softOk(/state\.seafarersLoaded = true/.test(readerDesktop) && /state\.seafarersLoaded = true/.test(readerMobile) && !/seafarersLoaded/.test(catchDesktop) && !/seafarersLoaded/.test(catchMobile),
+        'No.695 C-D6 (static): both readers set the flag after the successful list and never inside their catch');
+      softOk(/seafarers: \[\],\n(?:\s*\/\/[^\n]*\n)*\s*seafarersLoaded: false,/.test(html), 'No.695: the initial state declares seafarersLoaded: false beside seafarers: []');
+    }
+
     // ---- 1b. THE RANK IS THE PERSON'S, NOT THE VACANCY'S (Counsel STOP, 04.10) --
     // `response_summary.rank` is the rank of the post this response ANSWERED
     // (server: _rank_of_response(snapshot)); `experience_rank` is the rank the

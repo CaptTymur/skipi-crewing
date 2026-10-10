@@ -1861,6 +1861,8 @@ async function connectSubmitToken(){
     closeConnectDialog();
     var eo = document.getElementById('entry-choice-overlay'); if (eo) eo.remove();
     showToast('Подключено к ' + (activation.display_name || 'Skipi Crewing'), 'success');
+    // No.695: a base listed under the previous profile is not this one's.
+    state.seafarersLoaded = false;
     state.vacancies = [];
     if (isMobileShellActive()) mobileShow('crew_flow');
     else location.reload();
@@ -2787,6 +2789,10 @@ var state = {
   },
   focusedApplicationId: null,
   seafarers: [],
+  // No.695: «loaded» is a fact of a successful list_saved_seafarers, not of a
+  // non-empty cache — a save from Crew Flow/bundle seeds ONE row into an empty
+  // cache, and the readers must still load the base the first time the tab opens.
+  seafarersLoaded: false,
   selectedSeafarer: null,
   seafarerDocsById: {},
   seafarerSearch: '',
@@ -10922,7 +10928,9 @@ async function renderSeafarersTree(opts) {
 
   renderSeafarerFilterControls();
   if (state.seafarers && state.seafarers.length) renderSeafarersTreeBody();
-  if (!force && state.seafarers && state.seafarers.length) return;
+  // No.695: the early exit is taken on the LOADED flag, not on a non-empty cache
+  // (a save from Crew Flow seeds one row into an empty cache — that is not a load).
+  if (!force && state.seafarersLoaded) return;
 
   try {
     state.seafarers = await invoke('list_saved_seafarers');
@@ -10931,6 +10939,7 @@ async function renderSeafarersTree(opts) {
       '<div class="tree-empty" style="color:var(--err);">Load failed: '+escapeHtml(''+e)+'</div>';
     return;
   }
+  state.seafarersLoaded = true;
   renderSeafarerFilterControls();
   renderSeafarersTreeBody();
 }
@@ -17372,13 +17381,15 @@ function mobileRenderSeafarers() {
 async function mobileLoadSeafarers(force) {
   var host = document.getElementById('mobile-seafarer-list');
   if (!host) return;
-  if (!force && state.seafarers && state.seafarers.length) {
+  // No.695: same rule as renderSeafarersTree — loaded means listed, not non-empty.
+  if (!force && state.seafarersLoaded) {
     mobilePaintSeafarerList();
     return;
   }
   host.innerHTML = '<div class="mobile-empty">Loading...</div>';
   try {
     state.seafarers = await invoke('list_saved_seafarers');
+    state.seafarersLoaded = true;
     mobilePaintSeafarerList();
   } catch(e) {
     host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</span><div class="mobile-muted" style="margin-top:8px;">'+escapeHtml(''+e)+'</div></div>';
