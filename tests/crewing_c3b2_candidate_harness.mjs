@@ -1530,6 +1530,82 @@ console.log('# K2 modules/crew-flow');
     'K2-2/K2.2: mobileRenderChrome renders exactly the three remaining D3 slots in order — got [' + k2railOrder.join(',') + ']');
   softOk(count(/data-qa="crew-flow-open-pilot"/g) >= 2,
     'K2-2: the pilot entry data-qa="crew-flow-open-pilot" exists in both the desktop and the mobile Crew Flow render');
+
+  // ---- No.714 (OWNER 10.10): the Crew Flow head keeps neither the test-upload
+  // button nor the duplicate refresh ---------------------------------------
+  // The owner saw two refresh controls and a button promising «Upload a test
+  // document» on a screen that uploads nothing. Both leave the HEAD. The entry
+  // to `intake_pilot` is NOT deleted — that screen carries the inbound-identifier
+  // controls — it moves into the Crew Flow left-panel header beside the refresh
+  // the owner kept («the one on the left»), labelled by the existing nav key.
+  // The settings menu was measured and rejected: the live shell is the vendored
+  // window.SkipiSettings (pinned), and the native renderSettingsModal is only a
+  // load-failure fallback, so an entry there would be invisible in practice.
+  // The data-qa and the handler stay as they are, and `data-qa` stays BEFORE
+  // `onclick` in the same tag: tests/crewing_c3b1_pilot_harness.mjs:24 matches
+  // that exact shape and lives outside this change's guard route.
+  {
+    const fnOf = (head, ...ends) => {
+      const a = html.indexOf(head);
+      if (a < 0) return '';
+      const stops = ends.map((e) => html.indexOf(e, a + 10)).filter((i) => i > 0);
+      return stops.length ? html.slice(a, Math.min(...stops)) : '';
+    };
+    const headFn = fnOf('function crewFlowHeadHtml(mode) {', '\nfunction crewFlowLiveMainHtml');
+    const panelFn = fnOf('function renderCrewFlowTree() {', '\nfunction renderCrewFlowTreeBody');
+    const mobileFn = fnOf('function crewFlowLiveMobileHtml(mode) {', '\nfunction mobileRenderCrewFlowSignal', '\nfunction crewFlowActionsHtml', '\nfunction ');
+    softOk(headFn !== '' && panelFn !== '' && mobileFn !== '',
+      'No.714: the three Crew Flow renders are found in dist (head, left panel, mobile)');
+    softOk(!/data-qa="crew-flow-open-pilot"/.test(headFn),
+      'No.714: the Crew Flow HEAD no longer carries the intake entry');
+    softOk(!/data-qa="crew-flow-refresh"/.test(headFn),
+      'No.714: the Crew Flow HEAD no longer carries the duplicate refresh');
+    softOk((panelFn.match(/data-qa="crew-flow-panel-refresh"/g) || []).length === 1,
+      'No.714: the refresh the owner kept — the one on the left — is still the panel one, exactly once');
+    // No.714 unit 2 (OWNER (1042)): the entry left the header for the panel BODY.
+    // These two SURVIVED and were RELOCATED — the properties are untouched by the
+    // owner's decision, only the surface moved.
+    const bodyFn = fnOf('function crewFlowLiveTreeHtml(mode) {', '\nfunction crewFlowProfileSelectHtml', '\nfunction ');
+    softOk(bodyFn !== '' && /data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(bodyFn)
+       && !/data-qa="crew-flow-open-pilot"/.test(panelFn),
+      'No.714/2 SURVIVED-RELOCATED — SOURCE TEXT of crewFlowLiveTreeHtml, not its output: the renderer text declares the path wired to crewFlowOpenPilot with data-qa BEFORE onclick, and the header text declares it no longer. A door declared and never emitted SATISFIES this assert, so the placement trap is the runtime one in crewing_crew_flow_demo_harness, not this. The attribute order must survive the move because crewing_c3b1_pilot_harness.mjs:24 greps the whole dist for that shape and sits outside this route');
+    softOk(/tr\('nav\.intake_pilot'\)/.test(bodyFn),
+      'No.714/2 SURVIVED-RELOCATED — SOURCE TEXT: the door declared in crewFlowLiveTreeHtml is labelled by the existing nav.intake_pilot key, not by crew_flow.open_pilot');
+    softOk((headFn.match(/data-qa="crew-flow-refresh"/g) || []).length + (panelFn.match(/data-qa="crew-flow-(panel-)?refresh"/g) || []).length === 1,
+      'No.714: the desktop Crew Flow surface offers exactly ONE refresh control — got ' + ((headFn.match(/data-qa="crew-flow-refresh"/g) || []).length + (panelFn.match(/data-qa="crew-flow-(panel-)?refresh"/g) || []).length));
+    softOk((mobileFn.match(/data-qa="crew-flow-refresh"/g) || []).length === 1,
+      'No.714: the mobile shell KEEPS its refresh — there is no left panel on a phone, it is the only one there');
+    softOk(/data-qa="crew-flow-open-pilot"/.test(mobileFn) && /tr\('nav\.intake_pilot'\)/.test(mobileFn) && !/crewFlowTr\('open_pilot'\)/.test(mobileFn),
+      'No.714: the mobile entry stays reachable but stops promising a document upload — it is labelled nav.intake_pilot');
+    const liveMainFn = fnOf('function crewFlowLiveMainHtml(mode) {', '\nfunction crewFlowLiveMobileHtml');
+    const emptyLiveBranch = (liveMainFn.match(/else if \(!crewFlowVisibleLiveRows\(\)\.length\) body = [\s\S]*?;\n/) || [''])[0];
+    softOk(!/data-qa="crew-flow-open-pilot"/.test(emptyLiveBranch),
+      'No.714/2 LOST-SUBJECT, INVERTED — SOURCE TEXT of the empty-live branch of crewFlowLiveMainHtml: that branch no longer declares the entry (OWNER (1042) «пусть у пользователя на главном экране не будет»). This is absence in the SOURCE, which is weaker than absence in the OUTPUT — the output is pinned in crewing_crew_flow_demo_harness. The explanation of HOW candidates arrive stays');
+    // No.714/N1 (Supervisor note, measured with the stand's font): two full labels
+    // did not fit the panel header — 320.5px RU against 252px available at the
+    // default 280px width. The refresh keeps its place and shows the glyph with
+    // its words in title, and THIS header wraps. What is pinned here is the
+    // structure that produces the fit, because a harness reads markup, not layout.
+    // (4) LOST-SUBJECT: there is no glyph any more. The ANTI-M7 LESSON is carried
+    // over rather than discarded with it — the content is anchored to the tag, so a
+    // decoy elsewhere in the function still cannot satisfy this.
+    softOk(/data-qa="crew-flow-panel-refresh"[^>]*>'\s*\+\s*escapeHtml\(crewFlowTr\('refresh_list'\)\)\s*\+\s*'<\/button>/.test(panelFn),
+      'No.714/2 LOST-SUBJECT, lesson carried — SOURCE TEXT of the panel header: the refresh button OWN content is the WORDS crewFlowTr(refresh_list), anchored to its tag — the glyph is gone and a decoy elsewhere in the function still does not satisfy this');
+    // (5) the title assert is REMOVED, not duplicated: its property «the words are
+    // not lost» is exactly what the assert above now pins, from the content.
+    // (6) SURVIVED: the requirement «a real accessible name in both languages» is
+    // still true; what died is the means. Measured from the CONTENT by number.
+    const refreshTag = (panelFn.match(/data-qa="crew-flow-panel-refresh"[\s\S]*?<\/button>/) || [''])[0];
+    const refreshName = (refreshTag.match(/>'\s*\+\s*escapeHtml\(([^)]*\))\)/) || [, ''])[1];
+    softOk(refreshName.length > 0 && /crewFlowTr\('refresh_list'\)/.test(refreshName) && !/aria-label/.test(refreshTag),
+      'No.714/2 SURVIVED — SOURCE TEXT, measured by number: the refresh control declares a real accessible name in both languages, now from its CONTENT — the expression between > and </button> is ' + (refreshName || '«empty»') + ', length ' + refreshName.length + ', and no aria-label is present');
+    softOk(/class="panel-header" style="[^"]*flex-wrap:wrap;/.test(panelFn),
+      'No.714/2 SURVIVED — CSS TEXT, not measured layout: this one header still DECLARES flex-wrap, so it wraps instead of overflowing at narrow widths. The pixels come from the stand, not from here: with the word back the RU row needs 192.4px against 192px available at the 220px minimum, a 0.4px overflow that was present in the base too');
+    softOk(/\.panel-header \{ display: flex; align-items: center; justify-content: space-between;/.test(html) && !/\.panel-header \{[^}]*flex-wrap/.test(html),
+      'No.714/N1 PRESERVE: the shared .panel-header class is untouched — every other panel in the house keeps its single-line header');
+    softOk(html.includes("'crew_flow.open_pilot':") && html.includes("'nav.intake_pilot':"),
+      'No.714: the now-unreferenced crew_flow.open_pilot key is LEFT in both dictionaries (card PRESERVE), and nav.intake_pilot is the label source');
+  }
   // must-keep tokens introduced by PR-P (presence contract for crew_flow)
   softOk(html.includes('data-qa="crew-flow-view"') && html.includes('id="mt-crew_flow"') && html.includes("crew_flow: 'bottom-nav-crew_flow'"),
     'K2-2: PR-P must-keep crew_flow presence tokens survive the K2 dist');
