@@ -7068,7 +7068,11 @@ function renderCrewFlowTree() {
   lp.innerHTML =
     '<div class="panel-header" style="flex-wrap:wrap;row-gap:6px;"><span class="title">Crew Flow</span>'
     + '<span class="actions"><button id="crew-flow-panel-refresh" data-qa="crew-flow-panel-refresh" onclick="crewFlowRefreshFromPanel()"'
-    + (busy ? ' disabled' : '') + ' title="' + escapeAttr(crewFlowTr('refresh_list')) + '" style="padding:4px 10px;font-size:11px;">\u21bb</button>'
+    // No.714/N2: with text content present, title degrades to a DESCRIPTION and the
+    // accessible name falls back to the content — which here is a bare glyph. aria-label
+    // carries the same existing key, so the control keeps a real name in both languages
+    // and no dictionary key is added.
+    + (busy ? ' disabled' : '') + ' title="' + escapeAttr(crewFlowTr('refresh_list')) + '" aria-label="' + escapeAttr(crewFlowTr('refresh_list')) + '" style="padding:4px 10px;font-size:11px;">\u21bb</button>'
     // No.714: the way into the intake screen, where the inbound identifiers are
     // created, changed, paused and withdrawn. Named by what it is, not by the
     // synthetic upload that happens to live there while mail is not connected.

@@ -1560,7 +1560,7 @@ console.log('# K2 modules/crew-flow');
       'No.714: the Crew Flow HEAD no longer carries the intake entry');
     softOk(!/data-qa="crew-flow-refresh"/.test(headFn),
       'No.714: the Crew Flow HEAD no longer carries the duplicate refresh');
-    softOk(/data-qa="crew-flow-panel-refresh"/.test(panelFn) && (panelFn.match(/crewFlowTr\('refresh_list'\)/g) || []).length === 1,
+    softOk((panelFn.match(/data-qa="crew-flow-panel-refresh"/g) || []).length === 1,
       'No.714: the refresh the owner kept — the one on the left — is still the panel one, exactly once');
     softOk(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(panelFn),
       'No.714: the intake entry now lives in the left-panel header, wired to crewFlowOpenPilot, data-qa before onclick (the shape crewing_c3b1_pilot_harness.mjs:24 matches)');
@@ -1581,11 +1581,13 @@ console.log('# K2 modules/crew-flow');
     // default 280px width. The refresh keeps its place and shows the glyph with
     // its words in title, and THIS header wraps. What is pinned here is the
     // structure that produces the fit, because a harness reads markup, not layout.
-    softOk(/data-qa="crew-flow-panel-refresh"[\s\S]*?\\u21bb<\/button>/.test(panelFn) || /data-qa="crew-flow-panel-refresh"[\s\S]*?\u21bb<\/button>/.test(panelFn),
-      'No.714/N1: the panel refresh shows the glyph, not a full label — that is what frees the row for the intake entry');
+    softOk(/data-qa="crew-flow-panel-refresh"[^>]*>(?:\\u21bb|\u21bb)<\/button>/.test(panelFn),
+      'No.714/N1 (hardened after Supervisor M7): the glyph is the refresh button OWN content, anchored to its tag — a decoy glyph elsewhere in the function no longer satisfies this');
     softOk(/title="' \+ escapeAttr\(crewFlowTr\('refresh_list'\)\)/.test(panelFn),
       'No.714/N1: and its words are not lost — crew_flow.refresh_list moves into the title, localised in both languages');
-    softOk(/class="panel-header" style="[^"]*flex-wrap:wrap/.test(panelFn),
+    softOk(/aria-label="' \+ escapeAttr\(crewFlowTr\('refresh_list'\)\)/.test(panelFn),
+      'No.714/N2: the control has a real ACCESSIBLE NAME — with text content present a title is only a description, and the content here is a bare glyph, so aria-label carries the same existing key');
+    softOk(/class="panel-header" style="[^"]*flex-wrap:wrap;/.test(panelFn),
       'No.714/N1: this one header wraps instead of overflowing at narrow widths (RU still needed 224.8px against 192px at the 220px minimum)');
     softOk(/\.panel-header \{ display: flex; align-items: center; justify-content: space-between;/.test(html) && !/\.panel-header \{[^}]*flex-wrap/.test(html),
       'No.714/N1 PRESERVE: the shared .panel-header class is untouched — every other panel in the house keeps its single-line header');
