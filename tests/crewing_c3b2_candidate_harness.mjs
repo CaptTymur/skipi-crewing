@@ -1572,6 +1572,10 @@ console.log('# K2 modules/crew-flow');
       'No.714: the mobile shell KEEPS its refresh — there is no left panel on a phone, it is the only one there');
     softOk(/data-qa="crew-flow-open-pilot"/.test(mobileFn) && /tr\('nav\.intake_pilot'\)/.test(mobileFn) && !/crewFlowTr\('open_pilot'\)/.test(mobileFn),
       'No.714: the mobile entry stays reachable but stops promising a document upload — it is labelled nav.intake_pilot');
+    const liveMainFn = fnOf('function crewFlowLiveMainHtml(mode) {', '\nfunction crewFlowLiveMobileHtml');
+    const emptyLiveBranch = (liveMainFn.match(/else if \(!crewFlowVisibleLiveRows\(\)\.length\) body = [\s\S]*?;\n/) || [''])[0];
+    softOk(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(emptyLiveBranch) && /tr\('nav\.intake_pilot'\)/.test(emptyLiveBranch),
+      'No.714: the connected-but-empty body carries the path to intake as well — the operator with zero candidates is not left without a way forward (the gap crewing_crew_flow_demo_harness caught, and no new dictionary key: empty_live already names the inbound identifier)');
     softOk(html.includes("'crew_flow.open_pilot':") && html.includes("'nav.intake_pilot':"),
       'No.714: the now-unreferenced crew_flow.open_pilot key is LEFT in both dictionaries (card PRESERVE), and nav.intake_pilot is the label source');
   }

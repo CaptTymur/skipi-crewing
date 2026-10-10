@@ -6282,7 +6282,8 @@ function crewFlowLiveMainHtml(mode) {
   var body;
   if (p.queueLoading) body = '<div class="sub">' + escapeHtml(crewFlowTr('loading')) + '</div>';
   else if (p.queueError) body = '<div class="empty-state" data-qa="crew-flow-queue-error"><strong>' + escapeHtml(crewFlowTr('failed')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div></div>';
-  else if (!crewFlowVisibleLiveRows().length) body = '<div class="empty-state" data-qa="crew-flow-empty"><strong>' + escapeHtml(crewFlowTr('empty_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('empty_live')) + '</div></div>';
+  else if (!crewFlowVisibleLiveRows().length) body = '<div class="empty-state" data-qa="crew-flow-empty"><strong>' + escapeHtml(crewFlowTr('empty_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('empty_live')) + '</div>'
+    + '<div style="margin-top:10px;"><button data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" class="ghost" style="padding:6px 12px;font-size:12px;">' + escapeHtml(tr('nav.intake_pilot')) + '</button></div></div>';
   else body = '<div class="empty-state"><strong>' + escapeHtml(crewFlowTr('pick_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('pick_note')) + '</div></div>';
   return head + '<div data-qa="crew-flow-live">' + body + '</div></div>';
 }

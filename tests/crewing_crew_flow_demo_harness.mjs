@@ -510,8 +510,17 @@ if (M) {
     ok(noDemoHtml.includes('data-qa="crew-flow-view"') && !noDemoHtml.includes('Vacancies -> Applications'),
       'non-demo Crew Flow shows the live intake surface, not the retired vacancies direction');
     ok(noDemoHtml.includes('data-qa="crew-flow-empty"'), 'non-demo Crew Flow renders an explicit empty state');
-    ok(/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
-      'the empty state still offers the only producer of candidates until K1 (the pilot upload)');
+    // No.714 (OWNER 10.10): the empty state must still offer the only producer of
+    // candidates — but pinned by what the path IS, not by the retired promise
+    // «Upload a test document» on a screen that uploads nothing. This goes RED
+    // when the path is removed and stays GREEN when the button is renamed, which
+    // is the opposite of the literal match it replaces.
+    ok(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(noDemoHtml),
+      'No.714: the empty state still offers the only producer of candidates — a path to the intake screen wired to crewFlowOpenPilot');
+    ok(/Приём кандидатов|Intake pilot/.test(noDemoHtml),
+      'No.714: that path is named by what it is (nav.intake_pilot), in the operator language');
+    ok(!/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
+      'No.714: and the empty state no longer promises a test-document upload (owner 10.10)');
     // S3: connected + empty queue is the everyday pilot state; the copy must say
     // HOW candidates appear, in both interface languages.
     const emptyLive = { en: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[0] || '', ru: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[1] || '' };
