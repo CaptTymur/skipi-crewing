@@ -1530,6 +1530,51 @@ console.log('# K2 modules/crew-flow');
     'K2-2/K2.2: mobileRenderChrome renders exactly the three remaining D3 slots in order — got [' + k2railOrder.join(',') + ']');
   softOk(count(/data-qa="crew-flow-open-pilot"/g) >= 2,
     'K2-2: the pilot entry data-qa="crew-flow-open-pilot" exists in both the desktop and the mobile Crew Flow render');
+
+  // ---- No.714 (OWNER 10.10): the Crew Flow head keeps neither the test-upload
+  // button nor the duplicate refresh ---------------------------------------
+  // The owner saw two refresh controls and a button promising «Upload a test
+  // document» on a screen that uploads nothing. Both leave the HEAD. The entry
+  // to `intake_pilot` is NOT deleted — that screen carries the inbound-identifier
+  // controls — it moves into the Crew Flow left-panel header beside the refresh
+  // the owner kept («the one on the left»), labelled by the existing nav key.
+  // The settings menu was measured and rejected: the live shell is the vendored
+  // window.SkipiSettings (pinned), and the native renderSettingsModal is only a
+  // load-failure fallback, so an entry there would be invisible in practice.
+  // The data-qa and the handler stay as they are, and `data-qa` stays BEFORE
+  // `onclick` in the same tag: tests/crewing_c3b1_pilot_harness.mjs:24 matches
+  // that exact shape and lives outside this change's guard route.
+  {
+    const fnOf = (head, ...ends) => {
+      const a = html.indexOf(head);
+      if (a < 0) return '';
+      const stops = ends.map((e) => html.indexOf(e, a + 10)).filter((i) => i > 0);
+      return stops.length ? html.slice(a, Math.min(...stops)) : '';
+    };
+    const headFn = fnOf('function crewFlowHeadHtml(mode) {', '\nfunction crewFlowLiveMainHtml');
+    const panelFn = fnOf('function renderCrewFlowTree() {', '\nfunction renderCrewFlowTreeBody');
+    const mobileFn = fnOf('function crewFlowLiveMobileHtml(mode) {', '\nfunction mobileRenderCrewFlowSignal', '\nfunction crewFlowActionsHtml', '\nfunction ');
+    softOk(headFn !== '' && panelFn !== '' && mobileFn !== '',
+      'No.714: the three Crew Flow renders are found in dist (head, left panel, mobile)');
+    softOk(!/data-qa="crew-flow-open-pilot"/.test(headFn),
+      'No.714: the Crew Flow HEAD no longer carries the intake entry');
+    softOk(!/data-qa="crew-flow-refresh"/.test(headFn),
+      'No.714: the Crew Flow HEAD no longer carries the duplicate refresh');
+    softOk(/data-qa="crew-flow-panel-refresh"/.test(panelFn) && (panelFn.match(/crewFlowTr\('refresh_list'\)/g) || []).length === 1,
+      'No.714: the refresh the owner kept — the one on the left — is still the panel one, exactly once');
+    softOk(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(panelFn),
+      'No.714: the intake entry now lives in the left-panel header, wired to crewFlowOpenPilot, data-qa before onclick (the shape crewing_c3b1_pilot_harness.mjs:24 matches)');
+    softOk(/tr\('nav\.intake_pilot'\)/.test(panelFn),
+      'No.714: the panel entry is labelled by the existing nav.intake_pilot key («Приём кандидатов» / «Intake pilot»), not by crew_flow.open_pilot');
+    softOk((headFn.match(/data-qa="crew-flow-refresh"/g) || []).length + (panelFn.match(/data-qa="crew-flow-(panel-)?refresh"/g) || []).length === 1,
+      'No.714: the desktop Crew Flow surface offers exactly ONE refresh control — got ' + ((headFn.match(/data-qa="crew-flow-refresh"/g) || []).length + (panelFn.match(/data-qa="crew-flow-(panel-)?refresh"/g) || []).length));
+    softOk((mobileFn.match(/data-qa="crew-flow-refresh"/g) || []).length === 1,
+      'No.714: the mobile shell KEEPS its refresh — there is no left panel on a phone, it is the only one there');
+    softOk(/data-qa="crew-flow-open-pilot"/.test(mobileFn) && /tr\('nav\.intake_pilot'\)/.test(mobileFn) && !/crewFlowTr\('open_pilot'\)/.test(mobileFn),
+      'No.714: the mobile entry stays reachable but stops promising a document upload — it is labelled nav.intake_pilot');
+    softOk(html.includes("'crew_flow.open_pilot':") && html.includes("'nav.intake_pilot':"),
+      'No.714: the now-unreferenced crew_flow.open_pilot key is LEFT in both dictionaries (card PRESERVE), and nav.intake_pilot is the label source');
+  }
   // must-keep tokens introduced by PR-P (presence contract for crew_flow)
   softOk(html.includes('data-qa="crew-flow-view"') && html.includes('id="mt-crew_flow"') && html.includes("crew_flow: 'bottom-nav-crew_flow'"),
     'K2-2: PR-P must-keep crew_flow presence tokens survive the K2 dist');

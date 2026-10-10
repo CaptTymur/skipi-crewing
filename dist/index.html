@@ -6260,13 +6260,16 @@ function crewFlowLiveTreeHtml(mode) {
       + '</div>';
   }).join('');
 }
+// No.714 (OWNER 10.10): the head carries no action buttons any more. The
+// duplicate refresh left (the operator keeps the one on the LEFT, in the panel
+// header), and so did the button that promised «Upload a test document» on a
+// screen that uploads nothing. The entry to the intake screen is not gone — it
+// moved into the panel header below, under its honest name. `mode` is still the
+// caller's parameter; the head no longer branches on it.
 function crewFlowHeadHtml(mode) {
   return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
     + '<div><h1>Crew Flow</h1><div class="sub">' + escapeHtml(crewFlowTr('subtitle')) + '</div></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-    + (mode === 'live' ? '<button class="ghost" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
-    + '<button class="ghost" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
-    + '</div></div>';
+    + '</div>';
 }
 function crewFlowLiveMainHtml(mode) {
   var head = '<div data-qa="crew-flow-view">' + crewFlowHeadHtml(mode);
@@ -6288,7 +6291,7 @@ function crewFlowLiveMobileHtml(mode) {
     + '<div class="mobile-muted">' + escapeHtml(crewFlowTr('subtitle')) + '</div>'
     + '<div class="mobile-actions" style="margin-top:10px;">'
     + (mode === 'live' ? '<button class="mobile-secondary" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
-    + '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
+    + '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(tr('nav.intake_pilot')) + '</button>'
     + '</div></div>';
   if (mode !== 'live') {
     return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_unconnected')) + '</div>';
@@ -7065,7 +7068,12 @@ function renderCrewFlowTree() {
     '<div class="panel-header"><span class="title">Crew Flow</span>'
     + '<span class="actions"><button id="crew-flow-panel-refresh" data-qa="crew-flow-panel-refresh" onclick="crewFlowRefreshFromPanel()"'
     + (busy ? ' disabled' : '') + ' style="padding:4px 10px;font-size:11px;">'
-    + escapeHtml(crewFlowTr('refresh_list')) + '</button></span></div>'
+    + escapeHtml(crewFlowTr('refresh_list')) + '</button>'
+    // No.714: the way into the intake screen, where the inbound identifiers are
+    // created, changed, paused and withdrawn. Named by what it is, not by the
+    // synthetic upload that happens to live there while mail is not connected.
+    + '<button data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" class="ghost" style="padding:4px 10px;font-size:11px;margin-left:6px;">'
+    + escapeHtml(tr('nav.intake_pilot')) + '</button></span></div>'
     + '<div class="panel-search"><input type="text" id="crew-flow-search" placeholder="' + escapeAttr(tr('common.search')) + '" oninput="state.crewFlowSearch=this.value.toLowerCase();renderCrewFlowTreeBody();"></div>'
     + '<div class="panel-tree" id="crew-flow-tree"></div>';
   renderCrewFlowTreeBody();
