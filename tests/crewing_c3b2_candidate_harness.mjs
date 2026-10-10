@@ -1576,6 +1576,19 @@ console.log('# K2 modules/crew-flow');
     const emptyLiveBranch = (liveMainFn.match(/else if \(!crewFlowVisibleLiveRows\(\)\.length\) body = [\s\S]*?;\n/) || [''])[0];
     softOk(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(emptyLiveBranch) && /tr\('nav\.intake_pilot'\)/.test(emptyLiveBranch),
       'No.714: the connected-but-empty body carries the path to intake as well — the operator with zero candidates is not left without a way forward (the gap crewing_crew_flow_demo_harness caught, and no new dictionary key: empty_live already names the inbound identifier)');
+    // No.714/N1 (Supervisor note, measured with the stand's font): two full labels
+    // did not fit the panel header — 320.5px RU against 252px available at the
+    // default 280px width. The refresh keeps its place and shows the glyph with
+    // its words in title, and THIS header wraps. What is pinned here is the
+    // structure that produces the fit, because a harness reads markup, not layout.
+    softOk(/data-qa="crew-flow-panel-refresh"[\s\S]*?\\u21bb<\/button>/.test(panelFn) || /data-qa="crew-flow-panel-refresh"[\s\S]*?\u21bb<\/button>/.test(panelFn),
+      'No.714/N1: the panel refresh shows the glyph, not a full label — that is what frees the row for the intake entry');
+    softOk(/title="' \+ escapeAttr\(crewFlowTr\('refresh_list'\)\)/.test(panelFn),
+      'No.714/N1: and its words are not lost — crew_flow.refresh_list moves into the title, localised in both languages');
+    softOk(/class="panel-header" style="[^"]*flex-wrap:wrap/.test(panelFn),
+      'No.714/N1: this one header wraps instead of overflowing at narrow widths (RU still needed 224.8px against 192px at the 220px minimum)');
+    softOk(/\.panel-header \{ display: flex; align-items: center; justify-content: space-between;/.test(html) && !/\.panel-header \{[^}]*flex-wrap/.test(html),
+      'No.714/N1 PRESERVE: the shared .panel-header class is untouched — every other panel in the house keeps its single-line header');
     softOk(html.includes("'crew_flow.open_pilot':") && html.includes("'nav.intake_pilot':"),
       'No.714: the now-unreferenced crew_flow.open_pilot key is LEFT in both dictionaries (card PRESERVE), and nav.intake_pilot is the label source');
   }
