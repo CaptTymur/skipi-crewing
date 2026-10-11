@@ -510,8 +510,25 @@ if (M) {
     ok(noDemoHtml.includes('data-qa="crew-flow-view"') && !noDemoHtml.includes('Vacancies -> Applications'),
       'non-demo Crew Flow shows the live intake surface, not the retired vacancies direction');
     ok(noDemoHtml.includes('data-qa="crew-flow-empty"'), 'non-demo Crew Flow renders an explicit empty state');
-    ok(/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
-      'the empty state still offers the only producer of candidates until K1 (the pilot upload)');
+    // No.714 unit 2 (OWNER (1042), his words: «пусть у пользователя на главном
+    // экране не будет»). These used to say «the empty state offers the producer of
+    // candidates» and were green because of a button rendered at :6286 in the main
+    // area. The entry has moved into the panel body, so the SAME names would stay
+    // green on a different source — an assert whose name no longer describes its
+    // subject. Rewritten so each one names the surface it actually pins, and so
+    // that PLACEMENT is measured, not mere presence: noDemoHtml is main + tree
+    // summed, and a sum cannot say which side carries the entry.
+    const mainOnlyHtml = elFor('main').innerHTML;
+    const treeOnlyHtml = elFor('crew-flow-tree').innerHTML;
+    ok(!/data-qa="crew-flow-open-pilot"/.test(mainOnlyHtml)
+       && /data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(treeOnlyHtml),
+      'No.714/2: the intake entry is OUT of the main area and IN the panel body — this falls both when the path disappears and when it comes back to main, so it pins placement and not presence');
+    ok(/Приём кандидатов|Intake pilot/.test(treeOnlyHtml),
+      'No.714/2: the panel-body path is named by what it is (nav.intake_pilot), in the operator language');
+    ok(/Кандидаты появятся|Candidates appear here/.test(mainOnlyHtml),
+      'No.714/2: the empty MAIN area still explains HOW candidates arrive (crew_flow.empty_live) — the half of the old property that stays after the path folds away; this falls if that copy disappears');
+    ok(!/Загрузить тестовый документ|Upload a test document/.test(noDemoHtml),
+      'No.714/2: neither surface promises a test-document upload (owner 10.10)');
     // S3: connected + empty queue is the everyday pilot state; the copy must say
     // HOW candidates appear, in both interface languages.
     const emptyLive = { en: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[0] || '', ru: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[1] || '' };

@@ -6229,15 +6229,26 @@ function crewFlowLiveTreeHtml(mode) {
   }
   var p = state.intakePilot || {};
   var kept = crewFlowVisibleLiveRows();
+  // No.714 unit 2 (OWNER (1042)): the way into the intake screen is no longer put
+  // in the operator's face on the main screen — it is folded here, at the top of
+  // the panel body. Built ONCE and prefixed to EVERY live return below, because
+  // this function returns early on loading, on a queue error and on an empty
+  // queue, and the empty queue is precisely the state where the door matters.
+  // The unconnected branch above deliberately does NOT get it: there the company
+  // must be connected first and an intake door would be premature.
+  var intakeDoor = '<details class="cf-intake-door" style="margin:0 0 8px;"><summary style="cursor:pointer;font-size:12px;color:var(--text2);">'
+    + escapeHtml(tr('nav.intake_pilot')) + '</summary>'
+    + '<div style="padding:6px 0 2px;"><button data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" class="ghost" style="padding:4px 10px;font-size:11px;">'
+    + escapeHtml(tr('nav.intake_pilot')) + '</button></div></details>';
   // Only a load with NOTHING to show replaces the list. A refresh over existing
   // rows leaves them where they are (no flash of emptiness, no lost scroll) and
   // says what is happening above them.
-  if (p.queueLoading && !kept.length) return '<div class="tree-empty">' + escapeHtml(crewFlowTr('loading')) + '</div>';
-  if (p.queueError && !kept.length) return '<div class="tree-empty" data-qa="crew-flow-queue-error">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div>';
+  if (p.queueLoading && !kept.length) return intakeDoor + '<div class="tree-empty">' + escapeHtml(crewFlowTr('loading')) + '</div>';
+  if (p.queueError && !kept.length) return intakeDoor + '<div class="tree-empty" data-qa="crew-flow-queue-error">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div>';
   var rows = kept;
-  if (!rows.length) return '<div class="tree-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
+  if (!rows.length) return intakeDoor + '<div class="tree-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
   var selected = (state.intakePilot && state.intakePilot.detail) ? state.intakePilot.detail.intakeId : null;
-  return crewFlowProfileSelectHtml('desktop') + crewFlowQueueStatusHtml() + rows.map(function(item){
+  return intakeDoor + crewFlowProfileSelectHtml('desktop') + crewFlowQueueStatusHtml() + rows.map(function(item){
     // A row is a control, so it answers to the keyboard like one: reachable by
     // Tab, activated by Enter or Space, and announced as selected rather than
     // merely tinted. The blue selection bar is deliberately a DIFFERENT channel
@@ -6260,13 +6271,16 @@ function crewFlowLiveTreeHtml(mode) {
       + '</div>';
   }).join('');
 }
+// No.714 (OWNER 10.10): the head carries no action buttons any more. The
+// duplicate refresh left (the operator keeps the one on the LEFT, in the panel
+// header), and so did the button that promised «Upload a test document» on a
+// screen that uploads nothing. The entry to the intake screen is not gone — it
+// moved into the panel header below, under its honest name. `mode` is still the
+// caller's parameter; the head no longer branches on it.
 function crewFlowHeadHtml(mode) {
   return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
     + '<div><h1>Crew Flow</h1><div class="sub">' + escapeHtml(crewFlowTr('subtitle')) + '</div></div>'
-    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-    + (mode === 'live' ? '<button class="ghost" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
-    + '<button class="ghost" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" style="padding:6px 12px;font-size:12px;">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
-    + '</div></div>';
+    + '</div>';
 }
 function crewFlowLiveMainHtml(mode) {
   var head = '<div data-qa="crew-flow-view">' + crewFlowHeadHtml(mode);
@@ -6279,6 +6293,9 @@ function crewFlowLiveMainHtml(mode) {
   var body;
   if (p.queueLoading) body = '<div class="sub">' + escapeHtml(crewFlowTr('loading')) + '</div>';
   else if (p.queueError) body = '<div class="empty-state" data-qa="crew-flow-queue-error"><strong>' + escapeHtml(crewFlowTr('failed')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(pilotErrorMessage(p.queueError)) + '</div></div>';
+  // No.714 unit 2: the path folded into the panel body, so the main area keeps only
+  // the explanation of HOW candidates arrive. That is half of the old property and
+  // the WORKLOG says so; the other half returns with No.720, the inbound address.
   else if (!crewFlowVisibleLiveRows().length) body = '<div class="empty-state" data-qa="crew-flow-empty"><strong>' + escapeHtml(crewFlowTr('empty_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('empty_live')) + '</div></div>';
   else body = '<div class="empty-state"><strong>' + escapeHtml(crewFlowTr('pick_title')) + '</strong><div style="margin-top:6px;color:var(--text2);">' + escapeHtml(crewFlowTr('pick_note')) + '</div></div>';
   return head + '<div data-qa="crew-flow-live">' + body + '</div></div>';
@@ -6288,7 +6305,7 @@ function crewFlowLiveMobileHtml(mode) {
     + '<div class="mobile-muted">' + escapeHtml(crewFlowTr('subtitle')) + '</div>'
     + '<div class="mobile-actions" style="margin-top:10px;">'
     + (mode === 'live' ? '<button class="mobile-secondary" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()">' + escapeHtml(crewFlowTr('refresh')) + '</button>' : '')
-    + '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(crewFlowTr('open_pilot')) + '</button>'
+    + '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(tr('nav.intake_pilot')) + '</button>'
     + '</div></div>';
   if (mode !== 'live') {
     return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_unconnected')) + '</div>';
@@ -7062,7 +7079,12 @@ function renderCrewFlowTree() {
   var lp = document.getElementById('left-panel');
   var busy = !!(state.intakePilot && state.intakePilot.queueLoading) && crewFlowMode() !== 'demo';
   lp.innerHTML =
-    '<div class="panel-header"><span class="title">Crew Flow</span>'
+    '<div class="panel-header" style="flex-wrap:wrap;row-gap:6px;"><span class="title">Crew Flow</span>'
+    // No.714 unit 2: the intake entry left this header for the panel body, so the
+    // refresh is alone again and wears its WORDS. The glyph existed only because two
+    // labels did not fit; with one label there is room (measured: RU 192.4 of 252 at
+    // the default width). aria-label goes with the glyph: the accessible name comes
+    // from the content once the content is the words again.
     + '<span class="actions"><button id="crew-flow-panel-refresh" data-qa="crew-flow-panel-refresh" onclick="crewFlowRefreshFromPanel()"'
     + (busy ? ' disabled' : '') + ' style="padding:4px 10px;font-size:11px;">'
     + escapeHtml(crewFlowTr('refresh_list')) + '</button></span></div>'
