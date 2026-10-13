@@ -69,6 +69,36 @@ pub(crate) struct IntakeAliasIssued {
     pub alias: String,
 }
 
+// No.720 unit C. The reveal answer needs a struct of its OWN, and reusing
+// `IntakeAliasIssued` would have been wrong in a way no test would have seen: serde
+// silently DROPS fields a struct does not declare (`deny_unknown_fields` appears 0 times
+// in this file, against 148 mentions of serde — the probe is not blind, the zero is real,
+// and it is No.723), so `address` and `reason` would have vanished between a truthful
+// server and a client that then honestly rendered «no address issued». Green server,
+// green bridge, green suite, and the user still sees nothing.
+//
+// All three values are `Option` on purpose, and not for tidiness:
+//   `address` is null on the never-stored outcome, by the card's own table;
+//   `reason` is absent on the success outcome;
+//   `alias` the card does NOT specify for the never-stored outcome — the column is empty
+//   there, so there is no local part either, and `Option` survives BOTH «null» and
+//   «field omitted». I am naming that this ABSORBS a gap rather than closing it: the
+//   card still owes the line, and unit A should not have to guess.
+//
+// `deny_unknown_fields` is deliberately NOT set here. Its radius is every bridge struct
+// in this file, which is No.723 and wider than this card; switching it on in one place
+// would create the false impression that the class is handled. What guards this struct
+// instead is the drill in crewing_c3b1_pilot_harness.mjs: remove a field and the
+// assertion must redden.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub(crate) struct IntakeAliasRevealed {
+    #[serde(flatten)]
+    pub public: IntakeAliasPublic,
+    pub alias: Option<String>,
+    pub address: Option<String>,
+    pub reason: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct IntakeAliasListResponse {
     pub items: Vec<IntakeAliasPublic>,
@@ -988,6 +1018,27 @@ pub(crate) async fn crewing_intake_alias_create(
             Some(json!({ "label": label })),
             true,
         )?;
+        Ok(response)
+    })
+    .await
+}
+
+// No.720 unit C: reveal is a READ of a value the server composes, under the same
+// team-admin check as the other alias writes. The handle writes an audit row per call,
+// which is why the client calls it once per session and not per render.
+#[tauri::command]
+pub(crate) async fn crewing_intake_alias_reveal(
+    expected_context: PilotExpectedContext,
+    alias_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<IntakeAliasRevealed, PilotBridgeError> {
+    let context = context_from_state(state, &expected_context)?;
+    if alias_id.trim().is_empty() {
+        return Err(PilotBridgeError::invalid_context("alias_id_required"));
+    }
+    without_blocking_ui(move || {
+        let url = alias_url(&context, &[alias_id.trim(), "reveal"])?;
+        let (_, response) = send(&context, Method::POST, url, Some(json!({})), true)?;
         Ok(response)
     })
     .await
