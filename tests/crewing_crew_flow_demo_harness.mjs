@@ -167,7 +167,7 @@ function elFor(id) {
 const store = new Map();
 store.set('skipi_crewing_demo', '1');
 // R2: what the two list-load commands answer; set by the list-load section.
-const R2_FIXTURES = { list: null, profiles: null };
+const R2_FIXTURES = { list: null, profiles: null, aliases: null, reveal: null };
 const toasts = [];
 const calls = [];
 const fetchCalls = [];
@@ -300,6 +300,17 @@ async function invoke(cmd, args = {}) {
   // R2: the list-load section below swaps in its own fixtures; unset means the old empty queue.
   if (cmd === 'crewing_intake_candidate_list') return R2_FIXTURES.list || { items: [], limit: 50, offset: 0, total: 0 };
   if (cmd === 'crewing_intake_matching_profile_list') return R2_FIXTURES.profiles || { items: [] };
+  // No.720: the reveal and the alias list answer from the FIXTURE TABLE. The control
+  // is not built out of the artefact it controls: nothing here reads the client's own
+  // code, and a client that stops calling them simply gets no value.
+  if (cmd === 'crewing_intake_alias_list') {
+    if (R2_FIXTURES.aliases instanceof Error) throw R2_FIXTURES.aliases;
+    return R2_FIXTURES.aliases || { items: [] };
+  }
+  if (cmd === 'crewing_intake_alias_reveal') {
+    if (R2_FIXTURES.reveal instanceof Error) throw R2_FIXTURES.reveal;
+    return R2_FIXTURES.reveal || { address: null, reason: 'never_stored' };
+  }
   if (cmd === 'save_seafarer_from_bundle') return { seafarer: { id: 'demo-sf1', display_name: 'Oleksandr K.' }, saved_documents: 1 };
   if (cmd === 'list_saved_seafarers') return [];
   if (cmd === 'register_my_pubkey') return null;
@@ -782,8 +793,21 @@ section('R2 task 2: the queue row states the outcome against the selected profil
 // nobody authorised.
 const r2CrewInvokes = [...crewBlock.matchAll(/invoke\(\s*'([^']+)'/g)].map((m) => m[1]);
 const r2CrewInvokeSet = [...new Set(r2CrewInvokes)].sort().join(',');
-ok(r2CrewInvokeSet === 'crewing_intake_attachment_download,crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
-  'R2/2 + No.664/S3: the Crew Flow block calls exactly [crewing_intake_attachment_download, crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
+// No.720 unit B, SURVIVED-EXTENDED: the DIRECT set gains exactly ONE name and stays a set.
+// Measured, not assumed: `crewing_intake_alias_list` is NOT a direct invoke of this
+// block — `pilotLoadAliases` is defined OUTSIDE it, so that command is accounted for by
+// the one-step ROADS assert below. The two asserts partition direct calls from calls
+// made one function away, and conflating them would have widened the wrong set.
+// Why these two are authorised, by the same four marks the four above were weighed by:
+// `crewing_intake_alias_reveal` is the contract the card fixes two-sidedly (unit A
+// declares it, unit B calls it) and it opens no new server surface beyond the handle the
+// card already approved; `crewing_intake_alias_list` already exists and is already called
+// from the intake screen — Crew Flow could not reach it only because its single loader is
+// gated on the activity of ANOTHER screen. Neither is paid, neither is a model route.
+// The form does not move: exact equality of the sorted set, no prefix test, no regex, no
+// subset check. Anything beyond these SIX is still a call nobody authorised.
+ok(r2CrewInvokeSet === 'crewing_intake_alias_reveal,crewing_intake_attachment_download,crewing_intake_matching_profile_list,rank_compliance_candidate,save_seafarer_from_bundle',
+  'R2/2 + No.664/S3 + No.720: the Crew Flow block calls exactly [crewing_intake_alias_reveal, crewing_intake_attachment_download, crewing_intake_matching_profile_list, rank_compliance_candidate, save_seafarer_from_bundle] — got ['
   + r2CrewInvokeSet + ']');
 // SECOND literal (Supervisor PREP 2026-10-04 п.4): the roads OUT of the literal above.
 // A function defined OUTSIDE the block, called directly FROM the block, that itself
@@ -841,8 +865,11 @@ ok(!roads.some((r) => r.indexOf('escapeHtml→') === 0 || r.indexOf('escapeJsStr
   'S3 CALIBRATION: the one-line escapeHtml / escapeJsString are not credited with the invokes of the functions after them (a body ends at its own line or at the next definition)');
 ok(!roads.some((r) => r.indexOf('crewFlowFindApplication→') === 0) && /crewFlowFindApplication\(/.test(crewBlock),
   'S3 CALIBRATION: and does not list crewFlowFindApplication (called from the block, invokes nothing)');
-ok(roads.join(';') === 'pilotLoadQueue→crewing_intake_candidate_list;saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle;saveRankedCandidate→fetch_attachments_for_application',
-  'No.664/S3: the roads out of the Crew Flow block are exactly [pilotLoadQueue→crewing_intake_candidate_list, saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle, saveRankedCandidate→fetch_attachments_for_application] — a new helper that fetches for the block changes this list — got ['
+// No.720: one NEW road out, in sorted position — `pilotLoadAliases` is defined outside
+// the block and invokes the alias list; Crew Flow now reaches it, which is the whole
+// point of the unit. Equality of the joined list is kept.
+ok(roads.join(';') === 'pilotLoadAliases→crewing_intake_alias_list;pilotLoadQueue→crewing_intake_candidate_list;saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle;saveRankedCandidate→fetch_attachments_for_application',
+  'No.664/S3 + No.720: the roads out of the Crew Flow block are exactly [pilotLoadAliases→crewing_intake_alias_list, pilotLoadQueue→crewing_intake_candidate_list, saveCurrentBundleSeafarer→download_encrypted_attachment|save_seafarer_from_bundle, saveRankedCandidate→fetch_attachments_for_application] — a new helper that fetches for the block changes this list — got ['
   + roads.join('; ') + ']');
 const mutantRoads = oneStepInvokeRoads(crewBlock + '\n  pilotAttachmentDownload(1);\n');
 // M1b (Supervisor acceptance): the helper is NOT a `function` declaration but a `var … = async (…) =>`
@@ -2906,5 +2933,189 @@ if (f2Ready) {
 }
 store.set('skipi_crewing_demo', '1');
 
+
+// ─────────────── No.720 unit B — the inbound address in the live container ───────────────
+// Seven fixtures AND two probes of the METHOD. The method needs probing as much as the
+// product does, because this harness has no cascade at all: querySelectorAll() returns an
+// empty list ALWAYS, querySelector() returns a synthetic element whatever the selector, and
+// getComputedStyle does not exist. «Is it visible» therefore cannot be asked of a DOM here,
+// and what replaces it is declared rather than implied — a depth-aware slice of the live
+// container, plus a static read of every hiding FORM over the block's ancestor chain.
+console.log('# No.720 unit B — inbound address');
+
+// Depth-aware, and that is the whole point: a substring search cannot tell a marker INSIDE
+// the container from one that moved just after it, which is the regression the container
+// exists to prevent. The span classes are bounded by [^<>] because this file is markup AND
+// script at once, so `<` is overloaded and an unbounded run crosses comparison operators.
+function cfSlice(html, qa) {
+  const open = new RegExp('<div[^<>]{0,300}data-qa="' + qa + '"[^<>]{0,300}>');
+  const m = open.exec(html);
+  if (!m) return null;
+  let i = m.index + m[0].length, depth = 1;
+  const tag = /<(\/?)div\b[^<>]{0,400}>/g; tag.lastIndex = i;
+  let t;
+  while ((t = tag.exec(html))) { depth += t[1] ? -1 : 1; if (depth === 0) return html.slice(i, t.index); }
+  return null;
+}
+const CF_ALIAS = { id: 'al-1', crewing_id: 'crew-flow-demo-harness', primary_profile_id: null,
+  label: null, state: 'active', generation: 2, created_at: '2026-09-20T00:00:00Z',
+  updated_at: '2026-09-30T00:00:00Z', rotated_at: '2026-09-30T00:00:00Z' };
+const CF_ADDR = 'ska_' + 'A'.repeat(43) + '@in.skipi.app';
+
+function cfBuild(aliases, reveal, rows) {
+  R2_FIXTURES.aliases = aliases; R2_FIXTURES.reveal = reveal;
+  R2_FIXTURES.list = rows == null ? { items: [], limit: 50, offset: 0, total: 0 } : rows;
+  store.delete('skipi_crewing_demo');
+  elements.clear();
+  const M = loadInlineModuleForCurrentStore();
+  M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    crewing_id: 'crew-flow-demo-harness' };
+  return M;
+}
+async function cfMain(M) {
+  M.renderCrewFlowView();
+  for (let i = 0; i < 40; i++) { await Promise.resolve(); await new Promise((r) => setTimeout(r, 0)); }
+  M.renderCrewFlowView();
+  return String(elFor('main').innerHTML || '');
+}
+
+// F1 — the live-EMPTY state: the address is inside the live container.
+{
+  const M = cfBuild({ items: [CF_ALIAS] }, { address: CF_ADDR, reason: null }, null);
+  const html = await cfMain(M);
+  const inside = cfSlice(html, 'crew-flow-live');
+  ok(inside !== null && /data-qa="crew-flow-address"/.test(inside) && inside.indexOf(CF_ADDR) !== -1,
+    'No.720/B1: on the connected-and-empty screen the address is INSIDE data-qa="crew-flow-live" — sliced by matching depth, not by substring, so a marker that moves out of the container falls too');
+  ok(/data-qa="crew-flow-address-copy"/.test(inside || ''),
+    'No.720/B1: and a copy control is there, because DONE says «visible AND copyable» and copyability cannot be asserted from the address text alone');
+}
+
+// F2 — the live-NON-empty state: the address survives the first candidate. This is the arm
+// that catches a literal reading of the cancelled first-edition block, under which the
+// address hung on `empty_live` and vanished exactly when the loop started working.
+{
+  const rows = { items: [{ intake_id: 'L-1', candidate_name: 'A. B.', state: 'ranked',
+    source: 'inbound', source_trust: 'inbound_alias', version: 1, primary_profile_id: null,
+    content_sha256: '0'.repeat(64), content_bytes: 100, content_type: 'application/pdf',
+    created_at: '2026-09-29T01:10:00Z', issued_at: '2026-09-29T01:10:00Z', objects: [],
+    attachments: [], matches: [] }], limit: 50, offset: 0, total: 1 };
+  const M = cfBuild({ items: [CF_ALIAS] }, { address: CF_ADDR, reason: null }, rows);
+  const html = await cfMain(M);
+  const inside = cfSlice(html, 'crew-flow-live');
+  ok(inside !== null && inside.indexOf(CF_ADDR) !== -1,
+    'No.720/B2: with candidates in the queue the address is STILL inside the live container — it does not hang on the empty branch and does not vanish on the first arrival');
+}
+
+// F3 — unconnected: no container at all, and no address anywhere on the surface.
+{
+  const M = cfBuild({ items: [CF_ALIAS] }, { address: CF_ADDR, reason: null }, null);
+  M.state.settings = {};
+  const html = await cfMain(M);
+  ok(cfSlice(html, 'crew-flow-live') === null && html.indexOf(CF_ADDR) === -1
+     && !/data-qa="crew-flow-address"/.test(html),
+    'No.720/B3: with the company not connected there is no live container and no address — the surface where there is nowhere to go gets nothing');
+}
+
+// F4 — the demo render: its own path, its own copy, no address.
+{
+  store.set('skipi_crewing_demo', '1');
+  elements.clear();
+  const M = loadInlineModuleForCurrentStore();
+  const html = await cfMain(M);
+  store.delete('skipi_crewing_demo');
+  ok(html.indexOf(CF_ADDR) === -1 && !/data-qa="crew-flow-address"/.test(html),
+    'No.720/B4: the demonstration profile shows no inbound address — it is a separate render and nothing of a real tenant leaks into it');
+}
+
+// F5 — the mobile render, reached by calling the exported function DIRECTLY. The shell is
+// chosen at STARTUP, so setting a width would prove nothing. This fixture proves absence
+// from the mobile RENDER and claims nothing about which render a real phone receives.
+{
+  const M = cfBuild({ items: [CF_ALIAS] }, { address: CF_ADDR, reason: null }, null);
+  await cfMain(M);
+  const mob = typeof M.crewFlowLiveMobileHtml === 'function' ? String(M.crewFlowLiveMobileHtml('live')) : '';
+  ok(mob !== '' && mob.indexOf(CF_ADDR) === -1 && !/data-qa="crew-flow-address"/.test(mob),
+    'No.720/B5: the mobile render carries no address — declared surface of this unit is the desktop shell above 760px, and the sub-760 remainder is named to the owner in the card');
+}
+
+// F6 — the generation axis. A cached value must not outlive a rotation made elsewhere:
+// otherwise the operator copies a DEAD address with no server bug involved, and none of
+// the other six fixtures can see it because they all sit at one generation.
+{
+  const M = cfBuild({ items: [CF_ALIAS] }, { address: CF_ADDR, reason: null }, null);
+  const before = await cfMain(M);
+  ok(before.indexOf(CF_ADDR) !== -1, 'No.720/B6 CALIBRATION: the address is shown before the rotation, so the next assert measures a change and not an absence');
+  M.state.intakePilot.aliases = [Object.assign({}, CF_ALIAS, { generation: 3 })];
+  R2_FIXTURES.reveal = { address: null, reason: 'never_stored' };
+  const after = await cfMain(M);
+  ok(after.indexOf(CF_ADDR) === -1,
+    'No.720/B6: once the listing reports a NEW generation the previously revealed address is no longer shown — a value cached across a rotation made on another client is a dead address, and showing it is worse than showing nothing');
+}
+
+// F7 — the value states, by MARKER and by DICTIONARY TEXT, never by a literal of mine.
+// The card says the third state's wording goes to the OWNER at acceptance, so a literal
+// would go false-red exactly then; the expected string is read from the dictionary at run
+// time, anchored per language block rather than by match index.
+{
+  const dictRu = (HTML.match(/'crew_flow\.address_lost':'([^']*)'/g) || [])
+    .map((s) => s.replace(/^[^:]*:'/, '').replace(/'$/, ''));
+  ok(dictRu.length === 2, 'No.720/B7 CALIBRATION: crew_flow.address_lost exists in exactly two language blocks — got ' + dictRu.length);
+  // never stored
+  const M1 = cfBuild({ items: [CF_ALIAS] }, { address: null, reason: 'never_stored' }, null);
+  const h1 = cfSlice(await cfMain(M1), 'crew-flow-live') || '';
+  ok(/data-qa="crew-flow-address-lost"/.test(h1)
+     && !/data-qa="crew-flow-address-absent"/.test(h1)
+     && !/data-qa="crew-flow-address-unavailable"/.test(h1)
+     && dictRu.some((v) => v && h1.indexOf(v) !== -1),
+    'No.720/B7a: reason never_stored renders the VALUE-LOST state and neither of its neighbours, and the text comes from the dictionary key — so the owner may reword it at acceptance without reddening this');
+  // no alias at all
+  const M2 = cfBuild({ items: [] }, { address: null, reason: 'never_stored' }, null);
+  const h2 = cfSlice(await cfMain(M2), 'crew-flow-live') || '';
+  ok(/data-qa="crew-flow-address-absent"/.test(h2)
+     && !/data-qa="crew-flow-address-lost"/.test(h2)
+     && !/data-qa="crew-flow-address-unavailable"/.test(h2),
+    'No.720/B7b: with no alias issued the ABSENT state renders and the lost state does not — the two are adjacent and collapsing them would lie, because an issued alias did receive letters');
+  // the list itself failed
+  const M3 = cfBuild(new Error('network down'), { address: CF_ADDR, reason: null }, null);
+  const h3 = cfSlice(await cfMain(M3), 'crew-flow-live') || '';
+  ok(/data-qa="crew-flow-address-unavailable"/.test(h3)
+     && !/data-qa="crew-flow-address-absent"/.test(h3)
+     && !/data-qa="crew-flow-address-lost"/.test(h3),
+    'No.720/B7c: a FAILED list renders «could not be retrieved», never «none» — the failure path writes an empty list too, so without this the screen would tell a tenant who HAS an address that none was issued');
+}
+
+// P1 — probe of the SLICE. Not of the product: the product is untouched here. A method
+// promised without a probe is a method nobody measured.
+{
+  const inside = '<div data-qa="crew-flow-view"><div data-qa="crew-flow-live">'
+    + '<span data-qa="crew-flow-address">x</span></div></div>';
+  const moved = '<div data-qa="crew-flow-view"><div data-qa="crew-flow-live">'
+    + '</div><span data-qa="crew-flow-address">x</span></div>';
+  const inSlice = (h) => { const s = cfSlice(h, 'crew-flow-live'); return s !== null && /crew-flow-address/.test(s); };
+  const bySub = (h) => /data-qa="crew-flow-address"/.test(h);
+  ok(inSlice(inside) === true && inSlice(moved) === false && bySub(inside) === true && bySub(moved) === true,
+    'No.720/P1: the slice METHOD bites — moving the marker just OUTSIDE the container flips it to false while a substring search answers true in both cases, which is why the container is sliced by depth and not searched for');
+}
+
+// P2 — probe of the STATIC CASCADE over the ancestor chain. Boundary declared: all <style>
+// blocks of dist, predicates display:none and visibility:hidden, chain body → .app → #main.
+{
+  const hidersOver = (text, chain) => {
+    const blocks = text.match(/<style[^>]*>[\s\S]*?<\/style>/g) || [];
+    const sels = [];
+    for (const b of blocks) for (const m of b.matchAll(/([^{}]+)\{([^}]*)\}/g))
+      if (/display:\s*none|visibility:\s*hidden/.test(m[2])) sels.push(m[1].trim().replace(/\s+/g, ' '));
+    return sels.filter((s) => s.split(',').some((x) => x.trim().split(/\s+/).some((p) => chain.indexOf(p) !== -1)));
+  };
+  const chain = ['body', '.app', '#main'];
+  const found = hidersOver(HTML, chain);
+  ok(found.length === 1 && /mobile-shell/.test(found[0]),
+    'No.720/P2: over the ancestor chain body → .app → #main exactly ONE rule hides, and it is the mobile-shell rule — the declared mechanism of B5, not a defect; a SECOND hider over the chain would be one');
+  const mutant = HTML.replace('</style>', '#main { display: none; }</style>');
+  ok(hidersOver(mutant, chain).length === 2,
+    'No.720/P2: the cascade METHOD bites — adding one hider over #main takes the count from one to two, so the assert above is a measurement and not a tautology');
+  ok(hidersOver(HTML, ['#nothing-like-this']).length === 0,
+    'No.720/P2 CALIBRATION: and the scan is not blind-positive — a chain nothing hides returns zero');
+}
 console.log('\ncrewing_crew_flow_demo_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
