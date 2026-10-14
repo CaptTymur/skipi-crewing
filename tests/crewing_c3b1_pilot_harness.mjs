@@ -43,14 +43,19 @@ for (const f of ['alias', 'address', 'reason']) {
 }
 // The standing fragility is DOCUMENTED, not pretended away: deny_unknown_fields is absent
 // from this whole file, which is No.723 and wider than this card.
-// The UNIT is the ATTRIBUTE, not the word. My own comment in the struct mentions
-// deny_unknown_fields by name to explain why it is absent — so a predicate counting
-// MENTIONS would be made false by the very explanation it describes. It happened: the
-// first version of this assert failed on my own comment. Count the attribute form.
+// This assert was weaker twice, and each correction came from a measurement rather than
+// from review. First it counted the WORD while meaning the ATTRIBUTE, and my own
+// explanatory comment made it false. Then, with the attribute form, it required the word
+// to be PRESENT in prose — and that presence turned No.623 in c3b2 red, because that
+// neighbouring assert tests the same name as a WORD in this source. So the guarded
+// property is now the strongest of the three and the only one that holds both harnesses:
+// the token must not appear in the bridge source AT ALL, in any form. It is a guard
+// against re-introducing it, including by someone explaining its absence — which is the
+// exact mistake I made. The unit error in c3b2 is filed as No.727 and not fixed here.
 const denyAttr = (rust.match(/#\[serde\(deny_unknown_fields\)\]/g) || []).length;
 const denyWord = (rust.match(/deny_unknown_fields/g) || []).length;
-ok(denyAttr === 0 && denyWord > 0 && (rust.match(/serde/g) || []).length > 100,
-  'No.720/C: the ATTRIBUTE #[serde(deny_unknown_fields)] is absent from the ENTIRE bridge file — 0 as an attribute while the word appears ' + denyWord + ' time(s) in the comment that explains the absence, against >100 mentions of serde so the probe is not blind. This is No.723, deliberately NOT fixed here: switching it on in one struct would imply the class is handled');
+ok(denyAttr === 0 && denyWord === 0 && (rust.match(/serde/g) || []).length > 100,
+  'No.720/C: the name of the unknown-field-refusing serde attribute appears in the bridge source ZERO times, as an attribute AND as a word — attribute ' + denyAttr + ', word ' + denyWord + ', against >100 mentions of serde so the probe is not blind. Zero as a word is not pedantry: No.623 in c3b2 tests this very name as a word in this file, so writing it here even to explain its absence reddens a neighbour (No.727)');
 ok(/crewing_intake_alias_reveal/.test(rust) && /crewing_intake::crewing_intake_alias_reveal/.test(lib),
   'No.720/C: the command exists in the bridge AND is registered in lib.rs — a command defined and never registered is invisible to the client, which is the same silence one layer up');
 ok(rust.includes('.redirect(Policy::none())'), 'native pilot disables redirects');
