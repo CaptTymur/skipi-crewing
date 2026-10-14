@@ -24,6 +24,35 @@ ok(!/id="mt-intake_pilot"/.test(html), 'the pilot no longer claims a desktop mod
 ok(/data-qa="crew-flow-open-pilot"[^>]*onclick="crewFlowOpenPilot\(\)"/.test(html), 'desktop pilot entry is wired from Crew Flow');
 ok(/function crewFlowOpenPilot\(\) \{[\s\S]*?mobileShow\('intake_pilot'\)[\s\S]*?showView\('intake_pilot'\);/.test(html), 'the Crew Flow pilot entry routes through showView/mobileShow');
 ok(!/MOBILE_RAIL_QA\s*=\s*\{[^}]*intake_pilot/s.test(html), 'mobile rail remains unchanged');
+// No.720 unit C — the bridge must DECLARE what the server sends, because serde drops
+// what a struct does not name, and it drops it silently.
+const revealStruct = (rust.match(/pub\(crate\) struct IntakeAliasRevealed \{[\s\S]*?\n\}/) || [''])[0];
+ok(revealStruct !== '', 'No.720/C: the reveal answer has a struct of its OWN — reusing IntakeAliasIssued would have dropped the new fields with nothing to see it');
+for (const f of ['alias', 'address', 'reason']) {
+  ok(new RegExp('pub ' + f + ': Option<String>').test(revealStruct),
+    'No.720/C: the reveal struct DECLARES ' + f + ' as Option<String> — declared because serde silently drops undeclared fields, and Option because the card gives null for address on the never-stored outcome, omits reason on success, and says nothing at all about alias there');
+}
+ok(/#\[serde\(flatten\)\]\s*\n\s*pub public: IntakeAliasPublic/.test(revealStruct),
+  'No.720/C: and it still flattens the public part, so the reveal answer carries generation — which is what lets the client invalidate a cached address after a rotation made elsewhere');
+// THE DRILL. An assertion about a declared field must fall when the field goes. Without
+// this, we would be guarding against silent loss with a check that cannot see it.
+for (const f of ['alias', 'address', 'reason']) {
+  const mutant = revealStruct.replace(new RegExp('\\s*pub ' + f + ': Option<String>,'), '');
+  ok(mutant !== revealStruct && !new RegExp('pub ' + f + ': Option<String>').test(mutant),
+    'No.720/C DRILL: removing pub ' + f + ' from the struct makes the assertion above FALSE — the predicate reads the struct and not something merely nearby');
+}
+// The standing fragility is DOCUMENTED, not pretended away: deny_unknown_fields is absent
+// from this whole file, which is No.723 and wider than this card.
+// The UNIT is the ATTRIBUTE, not the word. My own comment in the struct mentions
+// deny_unknown_fields by name to explain why it is absent — so a predicate counting
+// MENTIONS would be made false by the very explanation it describes. It happened: the
+// first version of this assert failed on my own comment. Count the attribute form.
+const denyAttr = (rust.match(/#\[serde\(deny_unknown_fields\)\]/g) || []).length;
+const denyWord = (rust.match(/deny_unknown_fields/g) || []).length;
+ok(denyAttr === 0 && denyWord > 0 && (rust.match(/serde/g) || []).length > 100,
+  'No.720/C: the ATTRIBUTE #[serde(deny_unknown_fields)] is absent from the ENTIRE bridge file — 0 as an attribute while the word appears ' + denyWord + ' time(s) in the comment that explains the absence, against >100 mentions of serde so the probe is not blind. This is No.723, deliberately NOT fixed here: switching it on in one struct would imply the class is handled');
+ok(/crewing_intake_alias_reveal/.test(rust) && /crewing_intake::crewing_intake_alias_reveal/.test(lib),
+  'No.720/C: the command exists in the bridge AND is registered in lib.rs — a command defined and never registered is invisible to the client, which is the same silence one layer up');
 ok(rust.includes('.redirect(Policy::none())'), 'native pilot disables redirects');
 ok(rust.includes('spawn_blocking(operation)'), 'blocking HTTP work is kept off the UI command task');
 ok(!/api::(?:get|post|api_bases|primary_api_base)/.test(rust), 'pilot does not reuse fallback/retry API helpers');
