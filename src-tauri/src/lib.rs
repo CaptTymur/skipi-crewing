@@ -2251,6 +2251,7 @@ pub fn run() {
             reopen_mailing_request_remote,
             delete_mailing_request_remote,
             crewing_intake::crewing_intake_alias_list,
+            crewing_intake::crewing_intake_alias_reveal,
             crewing_intake::crewing_intake_alias_create,
             crewing_intake::crewing_intake_alias_rotate,
             crewing_intake::crewing_intake_alias_pause,
