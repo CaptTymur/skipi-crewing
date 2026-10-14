@@ -4562,8 +4562,28 @@ console.log('\n# No.623: the card says who responded');
   softOk(/#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_summary/.test(rust)
     && /#\[serde\(default[^\]]*\)\]\s*\n\s*pub response_headline/.test(rust),
     'No.623/bridge: both are #[serde(default)] — an older pilot server still parses');
-  softOk(!/deny_unknown_fields/.test(rust),
-    'No.623/bridge: nothing in the intake bridge denies unknown fields');
+  // No.727. Three defects in one line, and only the first was visible from outside.
+  // 1. NEGATIVE EXISTENCE WITH NO POSITIVE CONTROL: `!/…/.test(rust)` passes when `rust` is
+  //    empty, so renaming the file turned this green. Measured: on an empty string the old
+  //    form returns true. The controls below are what make a pass mean «read and absent»
+  //    rather than «nothing to find».
+  // 2. WORD, NOT ATTRIBUTE: the claim is about `#[serde(deny_unknown_fields)]`; the old
+  //    predicate matched the bare name anywhere, so a COMMENT explaining why the attribute
+  //    is deliberately not set reddened this assert. That cost No.720 unit C a fix-up commit.
+  // 3. ONE FILE: the claim says «the intake bridge» and the subject was `crewing_intake.rs`
+  //    alone. A struct in `lib.rs` or `messaging.rs` could deny unknown fields unseen.
+  const bridgeDir = 'src-tauri/src';
+  const bridgeFiles = fs.existsSync(bridgeDir)
+    ? fs.readdirSync(bridgeDir).filter((n) => n.endsWith('.rs')).sort() : [];
+  const bridgeSrc = bridgeFiles.map((n) => fs.readFileSync(bridgeDir + '/' + n, 'utf8')).join('\n');
+  const denyAttrAll = (bridgeSrc.match(/#\[serde\(deny_unknown_fields\)\]/g) || []).length;
+  const serdeAll = (bridgeSrc.match(/serde/g) || []).length;
+  softOk(denyAttrAll === 0 && bridgeFiles.length >= 3 && serdeAll > 100,
+    'No.623/bridge: no struct in the bridge denies unknown fields — attribute ' + denyAttrAll
+    + ' across ' + bridgeFiles.length + ' files, against ' + serdeAll + ' mentions of serde.'
+    + ' The last two are the POSITIVE CONTROL: today they measure 8 and 313, and both go to'
+    + ' zero if the directory is not read, which is the state that used to pass silently.'
+    + ' The thresholds sit far below the measurements so an ordinary refactor cannot trip them.');
 
   // ---- 2. THE HEADING IS CONDITIONAL --------------------------------------
   // Measured on the product (`dist/index.html` source table): inbound 9 ·

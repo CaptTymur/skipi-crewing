@@ -542,7 +542,20 @@ if (M) {
       'No.714/2: neither surface promises a test-document upload (owner 10.10)');
     // S3: connected + empty queue is the everyday pilot state; the copy must say
     // HOW candidates appear, in both interface languages.
-    const emptyLive = { en: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[0] || '', ru: (HTML.match(/'crew_flow\.empty_live':'([^']*)'/g) || [])[1] || '' };
+    // No.727. The extraction, not the predicates. `.match(/…/g)` returns WHOLE matches, so
+    // each element carried the KEY as well as the value and `/[A-Za-z]/` was satisfied by
+    // `crew_flow.empty_live` itself — true even on an empty value, measured. And `[0]`/`[1]`
+    // took the languages BY POSITION, so reordering the two dictionary blocks — a harmless
+    // refactor — reddened all three conjuncts below. That is a false alarm, not blindness:
+    // the swap was caught, by the neighbours, for the wrong reason. Taking the capture group
+    // and choosing each language BY CONTENT fixes both at the source: the predicates below
+    // are untouched and now measure the VALUE, and the accidental order-guard is no longer
+    // needed because order is no longer read.
+    const emptyLiveValues = [...HTML.matchAll(/'crew_flow\.empty_live':'([^']*)'/g)].map((m) => m[1]);
+    const emptyLive = {
+      en: emptyLiveValues.find((v) => /[A-Za-z]/.test(v) && !/[\u0400-\u04FF]/.test(v)) || '',
+      ru: emptyLiveValues.find((v) => /[\u0400-\u04FF]/.test(v)) || '',
+    };
     ok(/[A-Za-z]/.test(emptyLive.en) && !/[\u0400-\u04FF]/.test(emptyLive.en), 'crew_flow.empty_live has an en value without Cyrillic');
     ok(/[\u0400-\u04FF]/.test(emptyLive.ru), 'crew_flow.empty_live has a ru value in Cyrillic');
     ok(/identifier|inbound/i.test(emptyLive.en) && /идентификатор/i.test(emptyLive.ru),
