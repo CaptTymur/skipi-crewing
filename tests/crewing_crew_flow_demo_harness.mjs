@@ -3084,6 +3084,36 @@ async function cfMain(M) {
     'No.720/B7c: a FAILED list renders «could not be retrieved», never «none» — the failure path writes an empty list too, so without this the screen would tell a tenant who HAS an address that none was issued');
 }
 
+// F8 — No.720 unit D. The OMITTED `reason`, which no earlier fixture sent. The manager's
+// decision of 2026-10-14 (ops 2a1da9e4) is that a successful reveal carries `reason: null`
+// EXPLICITLY, and that null and an absent field are equivalent for this client. Six of the
+// seven fixtures above already send the explicit null; none sends the absence, so the
+// equivalence the decision rests on was true by construction and unmeasured by any run.
+//
+// The assert is DIFFERENTIAL rather than «the address is visible»: it requires the two
+// renders to be byte-identical. That is the property the decision actually needs, and it is
+// the one a future reading would break — a client that starts asking `rv.reason === undefined`
+// or `'reason' in rv` would still show the address and would still pass an is-it-visible
+// check, while failing this one.
+//
+// What it does NOT guard, stated so the green is not read wider than it is: removing the
+// `|| null` normalisation in the client would leave both renders identical anyway, because
+// neither `null` nor `undefined` equals 'never_stored'. This pins the OUTCOME's equivalence,
+// not the mechanism that currently produces it.
+{
+  const REVEAL_NULL = { address: CF_ADDR, reason: null };
+  const REVEAL_OMITTED = { address: CF_ADDR };
+  const omitted = !('reason' in REVEAL_OMITTED);
+  const sNull = cfSlice(await cfMain(cfBuild({ items: [CF_ALIAS] }, REVEAL_NULL, null)), 'crew-flow-live');
+  const sOmit = cfSlice(await cfMain(cfBuild({ items: [CF_ALIAS] }, REVEAL_OMITTED, null)), 'crew-flow-live');
+  const carries = sNull !== null && sNull.indexOf(CF_ADDR) !== -1;
+  const equal = sNull === sOmit;
+  ok(omitted && carries && equal,
+    'No.720/D1: a reveal answer with `reason` OMITTED renders the live container byte-identically to one with `reason: null` — fixture-omits-the-key=' + omitted
+    + ', null-render-carries-the-address=' + carries + ', byte-equal=' + equal
+    + '. The last two are both required: two empty slices would compare equal and prove nothing, so the calibration is inside the assert and not beside it');
+}
+
 // P1 — probe of the SLICE. Not of the product: the product is untouched here. A method
 // promised without a probe is a method nobody measured.
 {
