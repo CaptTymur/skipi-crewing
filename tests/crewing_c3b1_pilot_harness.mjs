@@ -54,8 +54,13 @@ for (const f of ['alias', 'address', 'reason']) {
 // exact mistake I made. The unit error in c3b2 is filed as No.727 and not fixed here.
 const denyAttr = (rust.match(/#\[serde\(deny_unknown_fields\)\]/g) || []).length;
 const denyWord = (rust.match(/deny_unknown_fields/g) || []).length;
-ok(denyAttr === 0 && denyWord === 0 && (rust.match(/serde/g) || []).length > 100,
-  'No.720/C: the name of the unknown-field-refusing serde attribute appears in the bridge source ZERO times, as an attribute AND as a word — attribute ' + denyAttr + ', word ' + denyWord + ', against >100 mentions of serde so the probe is not blind. Zero as a word is not pedantry: No.623 in c3b2 tests this very name as a word in this file, so writing it here even to explain its absence reddens a neighbour (No.727)');
+// No.727. The `denyWord === 0` clause is REMOVED, and that is not a weakening: it existed
+// only as a mirror of c3b2's word-level predicate, so that two harnesses could not disagree
+// about the same file. c3b2 now measures the ATTRIBUTE with a positive control, so the mirror
+// has no original left. What the clause actually forbade was naming the attribute in a comment
+// that explains its absence — which is the defect No.727 names, not a protection.
+ok(denyAttr === 0 && (rust.match(/serde/g) || []).length > 100,
+  'No.720/C: the unknown-field-refusing serde ATTRIBUTE is set on no struct of the bridge source — attribute ' + denyAttr + ' (the word itself occurs ' + denyWord + ' times and is NOT asserted on, because a comment naming it is an explanation and not a denial), against >100 mentions of serde so the probe is not blind');
 ok(/crewing_intake_alias_reveal/.test(rust) && /crewing_intake::crewing_intake_alias_reveal/.test(lib),
   'No.720/C: the command exists in the bridge AND is registered in lib.rs — a command defined and never registered is invisible to the client, which is the same silence one layer up');
 ok(rust.includes('.redirect(Policy::none())'), 'native pilot disables redirects');
