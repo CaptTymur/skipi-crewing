@@ -855,5 +855,93 @@ if (M && typeof M._crewingSettingsSections === 'function' && typeof M._crewingSe
 ok(!/["']settings\.crewing\.work_data["']\s*:/.test(HTML),
   'No.765-26: the old settings.crewing.work_data label key is gone from the string tables');
 
+// ── No.765b: the stand defect of 2026-10-16 — a wide control squeezed the row label into a
+// one-to-two-letter column («Вхо/дя/щи/й/адр/ес»). Cause, read from the vendored CSS: the
+// row is `grid-template-columns: minmax(0,1fr) auto` with `min-width:0` on the copy column
+// and `overflow-wrap:anywhere` on the label, so a control with a wide natural width
+// collapses the text column and the label then breaks mid-word.
+//
+// A PIXEL WIDTH CANNOT BE ASSERTED HERE and I will not pretend otherwise: this harness has
+// no layout engine — makeElement returns objects with an empty `style` and no geometry. So
+// the proof is a PAIR: the markup declares the module's stack layout, AND the module's
+// stylesheet really defines that layout as a single column. Either alone would be a token:
+// an attribute nothing acts on, or a rule nothing uses.
+section('No.765b settings row layout — the stand squeeze');
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const secs765b = M._crewingSettingsSections();
+  const sec765b = secs765b.filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  const ctx765b = {
+    t: (k) => k,
+    escapeAttr: (s) => String(s == null ? '' : s),
+    escapeHtml: (s) => String(s == null ? '' : s),
+    refresh: () => Promise.resolve(),
+  };
+  M.state.intakePilot = {
+    aliases: [{ id: 'a1', generation: 3, state: 'active' }],
+    aliasLoading: false, addressChecked: true, revealPending: false,
+    revealedAddress: { aliasId: 'a1', generation: 3, address: 'intake+765b@skipi.app', reason: null, copied: false },
+  };
+  M.state.settings = Object.assign({}, M.state.settings, { vault_path: '/home/op/vaults/a-very-long-vault-path-that-squeezes' });
+  const h765b = typeof sec765b.renderHtml === 'function' ? String(sec765b.renderHtml(ctx765b)) : '';
+  ok(h765b !== '', 'No.765b-27: the tab renders, so the layout assertions below have a subject');
+
+  // Split into rows and keep each row's own markup, so an assertion can say WHICH row.
+  const rowsOf = (html) => html.split('<div class="skipi-settings__row"').slice(1)
+    .map((chunk) => chunk.split('<div class="skipi-settings__row"')[0]);
+  const rows765b = rowsOf(h765b);
+  const rowWith = (needle) => rows765b.filter((r) => r.includes(needle))[0] || '';
+  const isStack = (r) => r.startsWith(' data-layout="stack"');
+  ok(rows765b.length >= 5, 'No.765b-28: the tab renders at least five rows — got ' + rows765b.length);
+
+  // The address row: stack, and no label of its own — the group heading already names it,
+  // and on the stand the two stood one under the other saying the same words.
+  const addrRow = rowWith('crew-flow-settings-address-copy') || rowWith('intake+765b@skipi.app');
+  ok(addrRow !== '', 'No.765b-29: the address row is identifiable in the markup');
+  ok(isStack(addrRow), 'No.765b-30: the address row declares data-layout="stack"');
+  ok(!addrRow.includes('skipi-settings__row-label'),
+    'No.765b-31: the address row carries no label of its own (the group heading names it)');
+
+  // Contact email: the label goes, the RULE stays. Losing the caption would be the worse bug.
+  const mailRow = rowWith('crewing-set-contact-email');
+  ok(mailRow !== '', 'No.765b-32: the contact-email row is identifiable');
+  ok(!mailRow.includes('skipi-settings__row-label'),
+    'No.765b-33: the contact-email row no longer repeats the group heading');
+  ok(mailRow.includes('settings.crewing.contact_email.only_from'),
+    'No.765b-34: the «accepted only from this address» caption SURVIVES as the row description');
+
+  // The other unbounded values. MLC is deliberately left alone: its value is number + date,
+  // and leaving it is what makes this a discrimination rather than a blanket.
+  ok(isStack(rowWith('settings.crewing.company')), 'No.765b-35: the company row declares stack');
+  ok(isStack(rowWith('settings.crewing.vault')), 'No.765b-36: the vault row declares stack');
+  ok(!isStack(rowWith('settings.crewing.mlc')),
+    'No.765b-37: the MLC row does NOT declare stack — the attribute is applied to rows with unbounded values, not sprayed over all of them');
+  M.state.intakePilot = null;
+} else {
+  ok(false, 'No.765b checks require _crewingSettingsSections');
+}
+
+// (b) The other half of the pair: the module's stylesheet must really define that layout as
+// a single column. dist/skipi-settings.css is READ here and not edited — reading does not
+// put it in the changed set, so the route is unaffected. If someone later drops the rule
+// from the vendored file, this fails instead of leaving a green assertion about an
+// attribute that no longer does anything.
+{
+  const cssPath = path.join(ROOT, 'dist', 'skipi-settings.css');
+  let css = '';
+  try { css = fs.readFileSync(cssPath, 'utf8'); } catch (e) { css = ''; }
+  ok(css !== '', 'No.765b-38: dist/skipi-settings.css is readable — the mechanism can be checked');
+  const stackIdx = css.indexOf('[data-layout="stack"]');
+  ok(stackIdx !== -1, 'No.765b-39: the module defines a [data-layout="stack"] rule');
+  const stackBody = stackIdx === -1 ? '' : css.slice(stackIdx, css.indexOf('}', stackIdx));
+  ok(/grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*;/.test(stackBody),
+    'No.765b-40: the stack rule collapses the row to ONE column — that is what stops the label being squeezed');
+  // Not vacuous: the DEFAULT row rule must still be the two-column grid that caused the
+  // defect, so assertion 40 is a real difference and not a restatement.
+  const baseIdx = css.indexOf('.skipi-settings__row {');
+  const baseBody = baseIdx === -1 ? '' : css.slice(baseIdx, css.indexOf('}', baseIdx));
+  ok(/grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)\s+auto\s*;/.test(baseBody),
+    'No.765b-41: the DEFAULT row is still the two-column grid — so stack is a real difference, not a restatement');
+}
+
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

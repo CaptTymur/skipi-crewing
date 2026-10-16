@@ -14373,9 +14373,20 @@ try{
 //     unified Profile row and the legacy form always see one value.
 
 // Small trusted-HTML helpers for the app-specific section (module classes).
-function _crewSetHtmlRow(ctx, labelKey, description, control){
-  return '<div class="skipi-settings__row"><div class="skipi-settings__row-copy">'
-    + '<div class="skipi-settings__row-label">'+ctx.escapeHtml(ctx.t(labelKey))+'</div>'
+// No.765b (stand 2026-10-16): `layout` is optional and reaches the module's own variant.
+// The module styles .skipi-settings__row as `grid-template-columns: minmax(0,1fr) auto`
+// with `min-width:0` on the copy column and `overflow-wrap:anywhere` on the label, so a
+// control with a wide natural width — a 60-character address chip plus a button — collapses
+// the text column to nothing and the label breaks mid-word: «Вхо/дя/щи/й/адр/ес» on the
+// stand. `data-layout="stack"` is the module's supported answer (it uses it itself in
+// dist/skipi-settings.js), giving one full-width column. The vendored CSS is NOT edited:
+// it is disallowed on this route, and overriding another module's grid from outside would
+// be a worse fix than using the mechanism it ships.
+// labelKey may be empty: a row whose group heading already names it should not repeat it.
+function _crewSetHtmlRow(ctx, labelKey, description, control, layout){
+  return '<div class="skipi-settings__row"'+(layout ? ' data-layout="'+ctx.escapeAttr(layout)+'"' : '')+'>'
+    + '<div class="skipi-settings__row-copy">'
+    + (labelKey ? '<div class="skipi-settings__row-label">'+ctx.escapeHtml(ctx.t(labelKey))+'</div>' : '')
     + (description ? '<div class="skipi-settings__row-description">'+ctx.escapeHtml(description)+'</div>' : '')
     + '</div><div class="skipi-settings__row-control">'+(control||'')+'</div></div>';
 }
@@ -14506,7 +14517,10 @@ function _crewingSettingsSections(){
         }
         var address = _crewSetHtmlGroup(ctx, 'settings.crewing.crew_flow.address_title',
           '<div data-qa="crew-flow-settings-address">'
-            + _crewSetHtmlRow(ctx, 'crew_flow.address_label', '', addrCtrl)
+            // No label: the group heading above already reads «Входящий адрес», and on the
+            // stand the two stood one under the other. Stack, because the value is the
+            // widest control on this tab.
+            + _crewSetHtmlRow(ctx, '', '', addrCtrl, 'stack')
             + '</div>');
         // (3) CONTACT EMAIL, promoted out of the disclosure with the caption the manager
         // dictated. It appears exactly ONCE in this tab: a second copy would emit
@@ -14517,8 +14531,11 @@ function _crewingSettingsSections(){
           + ' value="'+ctx.escapeAttr(email)+'" placeholder="hr@company.com" autocomplete="email">'
           + _crewSetHtmlButton(ctx, 'crewing-save-contact-email', 'settings.action.save')
           + '</div>';
+        // The group heading already reads «Контактный email»; the row no longer repeats it.
+        // The «accepted only from this address» caption SURVIVES as the row description —
+        // it is the rule the operator needs, not decoration.
         var contact = _crewSetHtmlGroup(ctx, 'settings.crewing.contact_email',
-          _crewSetHtmlRow(ctx, 'settings.crewing.contact_email',
+          _crewSetHtmlRow(ctx, '',
               ctx.t('settings.crewing.contact_email.only_from'), emailCtrl));
         // (4) THE AGENCY DATA, unchanged. Same keys, same operations, same mailbox row —
         // only the heading above them is new. mailbox_legacy stays here by OWNER (739) and
@@ -14531,11 +14548,11 @@ function _crewingSettingsSections(){
         var vault = (s.vault_path || '').trim() || na;
         var agencyRows =
             _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
-                _crewSetCode(ctx, legal + ' · ' + juris))
+                _crewSetCode(ctx, legal + ' · ' + juris), 'stack')
           + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
                 _crewSetCode(ctx, mlcVal))
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
-                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'))
+                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'), 'stack')
           + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
                 legacyMailboxRowHtml('module'));
         var agency = '<details data-qa="crew-flow-settings-agency" class="skipi-settings__section">'
