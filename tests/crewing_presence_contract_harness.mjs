@@ -776,12 +776,14 @@ if (M && typeof M._crewingSettingsSections === 'function' && typeof M._crewingSe
     'No.765-9: the section renders a non-empty body in all three address states');
 
   // (1) the schema: six steps, each named, so a missing one is reported by name
-  const stepKeys = [0, 1, 2, 3, 4, 5].map((i) => 'settings.crewing.crew_flow.step' + i);
-  const missingSteps = stepKeys.filter((k) => !htmlRevealed.includes(k));
-  ok(missingSteps.length === 0,
-    'No.765-10: the tab renders all six flow steps — missing [' + missingSteps.join(',') + ']');
-  ok(htmlRevealed.includes('data-qa="crew-flow-settings-steps"'),
-    'No.765-11: the steps carry their own QA slug');
+  // OWNER (1070): the prose steps are replaced by the diagram. The five nodes and the
+  // second entrance must all be present — the tab's job is still to explain the route.
+  const nodeKeys = ['n1','n2','n3','n4','n5','n2b'].map((k) => 'settings.crewing.cf.' + k);
+  const missingNodes = nodeKeys.filter((k) => !htmlRevealed.includes(k));
+  ok(missingNodes.length === 0,
+    'No.765-10: the diagram renders all five nodes and the second entrance — missing [' + missingNodes.join(',') + ']');
+  ok(htmlRevealed.includes('data-qa="cf-schema"') && htmlRevealed.includes('data-qa="cf-second-entrance"'),
+    'No.765-11: the diagram and the second entrance carry their own QA slugs');
 
   // (2) the inbound address — the value is this harness's own fixture, so a hit proves
   // the tab read the SHARED reveal state and did not store or invent a second one.
@@ -797,10 +799,14 @@ if (M && typeof M._crewingSettingsSections === 'function' && typeof M._crewingSe
     'No.765-16: an unrevealed address offers the reveal action');
 
   // (3) contact_email keeps its row AND gains the only-from caption
-  ok(htmlRevealed.includes('settings.crewing.contact_email'),
-    'No.765-17: the contact_email row survives');
-  ok(htmlRevealed.includes('settings.crewing.contact_email.only_from'),
-    'No.765-18: contact_email carries the «accepted only from this address» caption');
+  ok(htmlRevealed.includes('crewing-set-contact-email'),
+    'No.765-17: the sender-address input survives (node 2, second setting)');
+  // The caption key moved from settings.crewing.contact_email.only_from to
+  // settings.crewing.cf.from_note when the section was rebuilt. The GUARD follows the
+  // meaning, it is not deleted: losing the «only from this address» rule would be the
+  // worse bug, and the old key is now removed from the tables so nothing can pass on it.
+  ok(htmlRevealed.includes('settings.crewing.cf.from_note'),
+    'No.765-18: the sender section carries the «accepted only from this address» rule');
 
   // (4) the five prior rows, under the disclosure, keys and operations unchanged (739)
   ok(htmlRevealed.includes('settings.crewing.agency_data'),
@@ -906,8 +912,8 @@ if (M && typeof M._crewingSettingsSections === 'function') {
   ok(mailRow !== '', 'No.765b-32: the contact-email row is identifiable');
   ok(!mailRow.includes('skipi-settings__row-label'),
     'No.765b-33: the contact-email row no longer repeats the group heading');
-  ok(mailRow.includes('settings.crewing.contact_email.only_from'),
-    'No.765b-34: the «accepted only from this address» caption SURVIVES as the row description');
+  ok(mailRow.includes('settings.crewing.cf.from_note'),
+    'No.765b-34: the «accepted only from this address» rule SURVIVES the rebuild (key moved to cf.from_note)');
 
   // The other unbounded values. MLC is deliberately left alone: its value is number + date,
   // and leaving it is what makes this a discrimination rather than a blanket.
@@ -941,6 +947,92 @@ if (M && typeof M._crewingSettingsSections === 'function') {
   const baseBody = baseIdx === -1 ? '' : css.slice(baseIdx, css.indexOf('}', baseIdx));
   ok(/grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)\s+auto\s*;/.test(baseBody),
     'No.765b-41: the DEFAULT row is still the two-column grid — so stack is a real difference, not a restatement');
+}
+
+// ── No.765 slice 2 (OWNER 1070/1071): the diagram, and the promise that this tab is READ-ONLY
+// about the queue. Node 4 says «only on Refresh»; if opening Settings fetched the queue,
+// the tab's own caption would be false on the screen that states it.
+section('No.765c settings diagram — statuses from loaded client state only');
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const sec765c = M._crewingSettingsSections().filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  // `t` returns the key WITH a {n} placeholder, so fill() can substitute and the COUNT
+  // becomes assertable. With a plain key-returning stub there is no {n} to replace, the
+  // number never reaches the markup, and an assertion about it can only be vacuous — which
+  // is exactly what my first version of 765c-46 was: `(A && B) || html.indexOf('3') !== -1`.
+  const ctx765c = { t:(k)=>k+'|{n}', escapeAttr:(s)=>String(s==null?'':s), escapeHtml:(s)=>String(s==null?'':s), refresh:()=>Promise.resolve() };
+  const ALIAS = { aliases:[{id:'a1',generation:3,state:'active'}], aliasLoading:false, addressChecked:true,
+                  revealPending:false, revealedAddress:{aliasId:'a1',generation:3,address:'svc@in.skipi.app',reason:null,copied:false} };
+  const render = (pilot) => { M.state.intakePilot = pilot; try { return String(sec765c.renderHtml(ctx765c)); } catch(e){ return 'THREW: '+e; } };
+
+  // (1) no server call, no queue load — asserted on the SOURCE of the body and handlers,
+  // with comments stripped so an explanatory comment cannot satisfy or break it.
+  const strip = (f) => String(f).replace(/^[ \t]*\/\/.*$/gm, '');
+  const FETCHY = /\binvoke\s*\(|crewFlowEnsureLiveQueue\s*\(|pilotLoadQueue\s*\(|crewFlowRefreshQueue\s*\(/;
+  ok(typeof sec765c.renderHtml === 'function' && !FETCHY.test(strip(sec765c.renderHtml)),
+    'No.765c-42: the tab body issues no server call and does not load the queue');
+  const h765c = sec765c.handlers || {};
+  const hsrc = Object.keys(h765c).map((k) => strip(h765c[k])).join('\n');
+  ok(Object.keys(h765c).length > 0 && !FETCHY.test(hsrc),
+    'No.765c-43: no handler of the tab fetches or loads the queue');
+  ok(FETCHY.test('function f(){ pilotLoadQueue(0); }'),
+    'No.765c-43a: the fetch detector is not blind — it fires on a call that is there');
+
+  // (2) queue never loaded -> say so, and show no counts invented from nothing
+  const htmlUnloaded = render(Object.assign({}, ALIAS));
+  ok(htmlUnloaded.includes('settings.crewing.cf.s_unloaded'),
+    'No.765c-44: with no queue loaded the diagram says «the queue has not been loaded yet»');
+  ok(!htmlUnloaded.includes('settings.crewing.cf.s_mail7'),
+    'No.765c-45: and shows no 7-day count when there is nothing to count from');
+
+  // (3) the counters, on a fixture whose answer is known by construction
+  const now = Date.now();
+  const iso = (daysAgo) => new Date(now - daysAgo*24*3600*1000).toISOString();
+  const withQueue = Object.assign({}, ALIAS, {
+    queueLastUpdated: new Date(now).toISOString(),
+    queue: { offset:0, limit:50, total:6, items: [
+      { intake_id:'m1', source:'inbound',        created_at: iso(1) },
+      { intake_id:'m2', source:'inbound',        created_at: iso(6) },
+      { intake_id:'m3', source:'inbound',        created_at: iso(30) },   // outside 7 days
+      { intake_id:'a1', source:'skipi_response', created_at: iso(2) },
+      { intake_id:'s1', source:'synthetic',      created_at: iso(1) },    // a TEST record
+      { intake_id:'d1', source:'inbound',        created_at: iso(3) },
+    ]},
+  });
+  M.state.crewFlowReadState = { d1: { action:'ignored' }, m1: { action:'draft_opened' } };
+  const htmlQ = render(withQueue);
+  // 3 inbound inside 7 days: m1, m2, d1 — m3 is older, s1 is synthetic and counts nowhere
+  // Exact counts, by construction of the fixture:
+  //   inbound within 7 days: m1, m2, d1 = 3   (m3 is 30 days old; s1 is synthetic)
+  //   skipi_response within 7 days: a1 = 1
+  //   awaiting: 6 items minus d1 (ignored) = 5; m1 is draft_opened, which is activity
+  ok(htmlQ.includes('settings.crewing.cf.s_mail7|3'),
+    'No.765c-46: exactly 3 letters in 7 days — the 30-day-old one and the synthetic are excluded');
+  ok(htmlQ.includes('settings.crewing.cf.s_app7|1'),
+    'No.765c-47: exactly 1 application in 7 days, counted separately from letters');
+  ok(htmlQ.includes('settings.crewing.cf.s_waiting|5'),
+    'No.765c-48: exactly 5 awaiting a decision — only the ignored one is decided, draft_opened is not');
+  ok(!htmlQ.includes('settings.crewing.cf.s_mail7|4'),
+    'No.765c-48a: the synthetic record is NOT folded into the letter count');
+
+  // (4) the orange signal: an address IS issued and nothing arrived in seven days
+  const htmlQuiet = render(Object.assign({}, ALIAS, {
+    queueLastUpdated: new Date(now).toISOString(),
+    queue: { offset:0, limit:50, total:0, items: [] },
+  }));
+  ok(htmlQuiet.includes('#b45309'),
+    'No.765c-49: address issued and zero letters in 7 days is flagged, not shown as normal');
+  M.state.intakePilot = null; M.state.crewFlowReadState = {};
+} else {
+  ok(false, 'No.765c checks require _crewingSettingsSections');
+}
+
+// The service-address rule must be stated on the tab, in both tables, and the old
+// «give it to the candidate» reading must be gone from the file entirely.
+ok(/["']settings\.crewing\.cf\.where_note["']/.test(HTML),
+  'No.765c-50: the «service address, do not give it to candidates» note exists');
+{
+  const bad = (HTML.match(/Дайте этот адрес кандидату|Give that address to the candidate/g) || []).length;
+  ok(bad === 0, 'No.765c-51: no text tells the operator to give the inbound address to a candidate — found ' + bad);
 }
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
