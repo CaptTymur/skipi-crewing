@@ -2120,8 +2120,20 @@ var UI_STRINGS = {
     "settings.team.remove.protected_admin": "Administrators cannot be removed here.",
     "settings.team.remove.last_admin": "The last administrator cannot be removed.",
     "settings.crewing.devices.revoke_confirm": "Revoke this device's access?",
-    "settings.crewing.work_data": "Work data",
-    "settings.crewing.work_data.description": "Crewing agency data used across the app.",
+    "settings.crewing.crew_flow": "Crew Flow",
+    "settings.crewing.crew_flow.description": "How candidates reach you, and the one inbound address they write to.",
+    "settings.crewing.crew_flow.steps_title": "How a candidate reaches you",
+    "settings.crewing.crew_flow.step0": "Connect your company: Settings -> Connection.",
+    "settings.crewing.crew_flow.step1": "Take the inbound address below and press Copy.",
+    "settings.crewing.crew_flow.step2": "Give that address to the candidate — in the vacancy, an email or a message.",
+    "settings.crewing.crew_flow.step3": "The candidate sends documents to that address. Nothing to press here.",
+    "settings.crewing.crew_flow.step4": "Open Crew Flow and press «Refresh queue» — the queue does not refresh itself.",
+    "settings.crewing.crew_flow.step5": "Open the candidate row and decide: save to the Seafarers DB, ignore, or keep for later.",
+    "settings.crewing.crew_flow.address_title": "Inbound address",
+    "settings.crewing.crew_flow.address_reveal": "Show address",
+    "settings.crewing.contact_email.only_from": "Mail is accepted only from this address; letters from any other address are neither accepted nor shown.",
+    "settings.crewing.agency_data": "Agency data",
+    "settings.crewing.agency_data.description": "Company, certificate, vault and mailbox — unchanged, moved under this heading.",
     "settings.crewing.company": "Company profile",
     "settings.crewing.company.description": "Legal name, jurisdiction and MLC certificate.",
     "settings.crewing.mlc": "MLC certificate",
@@ -2309,8 +2321,20 @@ var UI_STRINGS = {
     "settings.team.remove.protected_admin": "Администратора здесь удалить нельзя.",
     "settings.team.remove.last_admin": "Последнего администратора удалить нельзя.",
     "settings.crewing.devices.revoke_confirm": "Отозвать доступ этого устройства?",
-    "settings.crewing.work_data": "Рабочие данные",
-    "settings.crewing.work_data.description": "Данные крюингового агентства, используемые в приложении.",
+    "settings.crewing.crew_flow": "Crew Flow",
+    "settings.crewing.crew_flow.description": "Как кандидаты доходят до вас и единственный входящий адрес, на который они пишут.",
+    "settings.crewing.crew_flow.steps_title": "Как доходит кандидат",
+    "settings.crewing.crew_flow.step0": "Подключите компанию: Настройки -> Подключение.",
+    "settings.crewing.crew_flow.step1": "Возьмите входящий адрес ниже и нажмите «Копировать».",
+    "settings.crewing.crew_flow.step2": "Дайте этот адрес кандидату — в вакансии, письме или сообщении.",
+    "settings.crewing.crew_flow.step3": "Кандидат присылает документы на этот адрес. Здесь нажимать нечего.",
+    "settings.crewing.crew_flow.step4": "Откройте Crew Flow и нажмите «Обновить очередь» — очередь сама не обновляется.",
+    "settings.crewing.crew_flow.step5": "Откройте строку кандидата и решите: в базу моряков, игнорировать или отложить.",
+    "settings.crewing.crew_flow.address_title": "Входящий адрес",
+    "settings.crewing.crew_flow.address_reveal": "Показать адрес",
+    "settings.crewing.contact_email.only_from": "Письма принимаются только с этого адреса; с других адресов не принимаются и не показываются.",
+    "settings.crewing.agency_data": "Данные агентства",
+    "settings.crewing.agency_data.description": "Компания, сертификат, хранилище и почтовый ящик — без изменений, перенесены под этот заголовок.",
     "settings.crewing.company": "Профиль компании",
     "settings.crewing.company.description": "Юридическое название, юрисдикция и сертификат MLC.",
     "settings.crewing.mlc": "Сертификат MLC",
@@ -6302,47 +6326,53 @@ function crewFlowHeadHtml(mode) {
 // **Three states, and silence while unknown.** A list not yet loaded is NOT «no address»:
 // until it is in hand this renders nothing at all, so no marker claims a state we have
 // not measured.
-function crewFlowAddressHtml() {
+// No.765: ONE decision about which address state to show, so the Crew Flow screen and
+// the settings tab can never disagree about it. The ordering and every guard below are
+// the ones crewFlowAddressHtml() carried before this split; only the place changed.
+function crewFlowAddressState() {
   var p = state.intakePilot || {};
-  var unavailable = '<div class="cf-address" data-qa="crew-flow-address-unavailable">'
-    + escapeHtml(crewFlowTr('address_unavailable')) + '</div>';
-  // The boundary, and it is the manager's decision, not a convenience: SILENCE is
-  // allowed only while an operation is IN FLIGHT, and forbidden once one has ended with
-  // any outcome. Emptiness after a failure is a lie by omission — the reader concludes
-  // there is no address, when in truth we could not ask.
-  if (!Array.isArray(p.aliases) || p.aliasLoading) return '';          // list in flight
-  if (p.aliasError) return unavailable;                                 // list ended: failed
+  if (!Array.isArray(p.aliases) || p.aliasLoading) return { kind: 'silent' };   // list in flight
+  if (p.aliasError) return { kind: 'unavailable' };                              // list ended: failed
   var rows = p.aliases, active = null;
   for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].state === 'active') active = rows[i];
-  if (!active) return '<div class="cf-address" data-qa="crew-flow-address-absent">'
-    + escapeHtml(crewFlowTr('address_absent')) + '</div>';
-  if (p.revealError) return unavailable;                                // reveal ended: failed
-  if (p.revealPending || !p.addressChecked) return '';                  // reveal in flight
+  if (!active) return { kind: 'absent' };
+  if (p.revealError) return { kind: 'unavailable' };                             // reveal ended: failed
+  if (p.revealPending || !p.addressChecked) return { kind: 'silent' };           // reveal in flight
   var rv = p.revealedAddress;
   var fresh = !!rv && rv.aliasId === active.id && rv.generation === active.generation;
-  if (fresh && rv.address) return '<div class="cf-address" data-qa="crew-flow-address">'
-    + '<span class="cf-address-label">' + escapeHtml(crewFlowTr('address_label')) + '</span>'
-    + '<code class="cf-address-value">' + escapeHtml(rv.address) + '</code>'
-    + '<button data-qa="crew-flow-address-copy" onclick="crewFlowCopyAddress()" class="ghost" style="padding:4px 10px;font-size:11px;">'
-    + escapeHtml(crewFlowTr(rv.copied ? 'address_copied' : 'address_copy')) + '</button></div>';
-  if (fresh && rv.reason === 'never_stored') return '<div class="cf-address" data-qa="crew-flow-address-lost">'
+  if (fresh && rv.address) return { kind: 'address', address: rv.address, copied: !!rv.copied };
+  if (fresh && rv.reason === 'never_stored') return { kind: 'lost' };
+  return { kind: 'silent' };                                                     // rotation seen, refresh in flight
+}
+function crewFlowAddressHtml() {
+  var st = crewFlowAddressState();
+  if (st.kind === 'silent') return '';
+  if (st.kind === 'unavailable') return '<div class="cf-address" data-qa="crew-flow-address-unavailable">'
+    + escapeHtml(crewFlowTr('address_unavailable')) + '</div>';
+  if (st.kind === 'absent') return '<div class="cf-address" data-qa="crew-flow-address-absent">'
+    + escapeHtml(crewFlowTr('address_absent')) + '</div>';
+  if (st.kind === 'lost') return '<div class="cf-address" data-qa="crew-flow-address-lost">'
     + escapeHtml(crewFlowTr('address_lost')) + '</div>';
-  return '';                                                            // rotation seen, refresh in flight
+  return '<div class="cf-address" data-qa="crew-flow-address">'
+    + '<span class="cf-address-label">' + escapeHtml(crewFlowTr('address_label')) + '</span>'
+    + '<code class="cf-address-value">' + escapeHtml(st.address) + '</code>'
+    + '<button data-qa="crew-flow-address-copy" onclick="crewFlowCopyAddress()" class="ghost" style="padding:4px 10px;font-size:11px;">'
+    + escapeHtml(crewFlowTr(st.copied ? 'address_copied' : 'address_copy')) + '</button></div>';
 }
 // One reveal per app session per alias generation. The handle writes an audit row on
 // every call, so a per-render call would flood the ledger; and a click-to-reveal is the
 // folded door the card forbids. The generation guard is what keeps a cached value from
 // outliving a rotation made on another client.
-async function crewFlowRevealAddress() {
+async function crewFlowRevealAddressState() {
   var p = state.intakePilot, context = pilotContextSnapshot();
-  if (!p || !pilotContextReady(context)) return;
+  if (!p || !pilotContextReady(context)) return false;
   var rows = Array.isArray(p.aliases) ? p.aliases : [], active = null;
   for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].state === 'active') active = rows[i];
-  if (p.aliasError) return;            // list failed: the block renders «unavailable» from that field
-  if (!active) { p.addressChecked = true; renderCrewFlowView(); return; }
+  if (p.aliasError) return false;      // list failed: the block renders «unavailable» from that field
+  if (!active) { p.addressChecked = true; return true; }
   var rv = p.revealedAddress;
-  if (rv && rv.aliasId === active.id && rv.generation === active.generation) return;
-  if (p.revealPending) return;
+  if (rv && rv.aliasId === active.id && rv.generation === active.generation) return false;
+  if (p.revealPending) return false;
   p.revealPending = true;
   try {
     var args = pilotExpected(context); args.aliasId = active.id;
@@ -6360,14 +6390,20 @@ async function crewFlowRevealAddress() {
     p.revealError = error;
   }
   p.revealPending = false; p.addressChecked = true;
-  renderCrewFlowView();
+  return true;
 }
-async function crewFlowCopyAddress() {
+async function crewFlowRevealAddress() {
+  if (await crewFlowRevealAddressState()) renderCrewFlowView();
+}
+async function crewFlowCopyAddressState() {
   var p = state.intakePilot, rv = p && p.revealedAddress;
-  if (!rv || !rv.address) return;
+  if (!rv || !rv.address) return false;
   try { await navigator.clipboard.writeText(rv.address); rv.copied = true; }
   catch (_) { rv.copied = false; }
-  renderCrewFlowView();
+  return true;
+}
+async function crewFlowCopyAddress() {
+  if (await crewFlowCopyAddressState()) renderCrewFlowView();
 }
 function crewFlowLiveMainHtml(mode) {
   var head = '<div data-qa="crew-flow-view">' + crewFlowHeadHtml(mode);
@@ -14228,7 +14264,10 @@ function _crewingSettingsSectionFor(tab){
     case 'appearance': case 'interface': case 'app': case 'language': return 'application';
     case 'devices': return 'devices';
     case 'team': case 'access': return 'team';
-    case 'work_data': return 'home-crewing-work-data';
+    // No.765 (OWNER 1067): the tab is «Crew Flow» now. The legacy id stays as an
+    // ALIAS, so every existing openSettings('work_data') call site keeps landing on a
+    // real screen instead of falling to the default arm and showing 'profile' silently.
+    case 'work_data': case 'crew_flow': return 'home-crewing-crew-flow';
     default: return 'profile';
   }
 }
@@ -14426,41 +14465,84 @@ function _crewingSettingsSections(){
         }
       }
     },
-    { id:'home-crewing-work-data', order:450, icon:'W',
-      labelKey:'settings.crewing.work_data', descriptionKey:'settings.crewing.work_data.description',
+    { id:'home-crewing-crew-flow', order:450, icon:'C',
+      labelKey:'settings.crewing.crew_flow', descriptionKey:'settings.crewing.crew_flow.description',
       renderHtml: function(ctx){
         legacyMailboxEnsureStatus();
         var s = state.settings || {};
         var p = s.profile || {};
         var na = ctx.t('settings.crewing.not_set');
-        var legal = (p.legal_name || s.company_name || '').trim() || na;
-        var juris = (p.jurisdiction || '').trim() || na;
-        var mlcNo = (p.mlc_cert_number || '').trim() || na;
-        var mlcTo = (p.mlc_cert_valid_to || '').trim();
-        var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' · ' + mlcTo) : ''));
-        var vault = (s.vault_path || '').trim() || na;
+        // (1) THE SCHEMA. One action per step. Step 4 says «press Refresh queue» because
+        // there is no Crew Flow poll in this file: the only repeating list timer refreshes
+        // vacancies, so without that press the queue stays exactly as it was.
+        var steps = '';
+        for (var i = 0; i <= 5; i++) {
+          steps += '<li class="skipi-settings__row-description">'
+            + ctx.escapeHtml(ctx.t('settings.crewing.crew_flow.step' + i)) + '</li>';
+        }
+        var schema = _crewSetHtmlGroup(ctx, 'settings.crewing.crew_flow.steps_title',
+          '<ol data-qa="crew-flow-settings-steps" style="margin:0;padding-left:20px;">' + steps + '</ol>');
+        // (2) THE INBOUND ADDRESS. crewFlowAddressState() is the ONE decision this tab and
+        // the Crew Flow screen both read, and state.intakePilot.revealedAddress stays the
+        // single stored value with its aliasId+generation guard — no second storage. The
+        // handlers below deliberately never call renderCrewFlowView(): that would repaint an
+        // unmounted view and, through crewFlowEnsureLiveQueue(), load the candidate queue
+        // from a settings screen, which would make step 4 above false on the screen stating it.
+        var st = crewFlowAddressState();
+        var addrCtrl;
+        if (st.kind === 'address') {
+          addrCtrl = _crewSetCode(ctx, st.address) + ' '
+            + _crewSetHtmlButton(ctx, 'crew-flow-settings-address-copy',
+                st.copied ? 'crew_flow.address_copied' : 'crew_flow.address_copy');
+        } else if (st.kind === 'absent') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_absent'));
+        } else if (st.kind === 'lost') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_lost'));
+        } else if (st.kind === 'unavailable') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_unavailable')) + ' '
+            + _crewSetHtmlButton(ctx, 'crew-flow-settings-address-reveal', 'settings.crewing.crew_flow.address_reveal');
+        } else {
+          addrCtrl = _crewSetHtmlButton(ctx, 'crew-flow-settings-address-reveal', 'settings.crewing.crew_flow.address_reveal');
+        }
+        var address = _crewSetHtmlGroup(ctx, 'settings.crewing.crew_flow.address_title',
+          '<div data-qa="crew-flow-settings-address">'
+            + _crewSetHtmlRow(ctx, 'crew_flow.address_label', '', addrCtrl)
+            + '</div>');
+        // (3) CONTACT EMAIL, promoted out of the disclosure with the caption the manager
+        // dictated. It appears exactly ONCE in this tab: a second copy would emit
+        // id="crewing-set-contact-email" twice and the save handler reads that id.
         var email = (p.contact_email || '').trim();
         var emailCtrl = '<div class="skipi-settings__actions">'
           + '<input class="skipi-settings__input" type="email" id="crewing-set-contact-email"'
           + ' value="'+ctx.escapeAttr(email)+'" placeholder="hr@company.com" autocomplete="email">'
           + _crewSetHtmlButton(ctx, 'crewing-save-contact-email', 'settings.action.save')
           + '</div>';
-        return _crewSetHtmlGroup(ctx, 'settings.crewing.work_data',
+        var contact = _crewSetHtmlGroup(ctx, 'settings.crewing.contact_email',
+          _crewSetHtmlRow(ctx, 'settings.crewing.contact_email',
+              ctx.t('settings.crewing.contact_email.only_from'), emailCtrl));
+        // (4) THE AGENCY DATA, unchanged. Same keys, same operations, same mailbox row —
+        // only the heading above them is new. mailbox_legacy stays here by OWNER (739) and
+        // the Supervisor REJECT on ffe0573c: it is the one surviving mailbox operation.
+        var legal = (p.legal_name || s.company_name || '').trim() || na;
+        var juris = (p.jurisdiction || '').trim() || na;
+        var mlcNo = (p.mlc_cert_number || '').trim() || na;
+        var mlcTo = (p.mlc_cert_valid_to || '').trim();
+        var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' · ' + mlcTo) : ''));
+        var vault = (s.vault_path || '').trim() || na;
+        var agencyRows =
             _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
                 _crewSetCode(ctx, legal + ' · ' + juris))
           + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
                 _crewSetCode(ctx, mlcVal))
-          + _crewSetHtmlRow(ctx, 'settings.crewing.contact_email', ctx.t('settings.crewing.contact_email.description'),
-                emailCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
                 _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'))
-          // K2.1 (OWNER (739), Супервайзор REJECT на ffe0573c): the ONE surviving
-          // mailbox operation lives HERE, in the sections handed to
-          // window.SkipiSettings.mount — that is the settings screen the product
-          // actually shows in both modes. The four legacy renderers carry the same
-          // row, but they are only the fallback for a module that failed to load.
           + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
-                legacyMailboxRowHtml('module')));
+                legacyMailboxRowHtml('module'));
+        var agency = '<details data-qa="crew-flow-settings-agency" class="skipi-settings__section">'
+          + '<summary class="skipi-settings__section-title" style="cursor:pointer;">'
+          + ctx.escapeHtml(ctx.t('settings.crewing.agency_data')) + '</summary>'
+          + '<div class="skipi-settings__group">' + agencyRows + '</div></details>';
+        return schema + address + contact + agency;
       },
       handlers: {
         // The same revoke path as every other surface: confirm, then
@@ -14487,6 +14569,14 @@ function _crewingSettingsSections(){
           if (!next.profile || typeof next.profile !== 'object' || Array.isArray(next.profile)) next.profile = {};
           next.profile.contact_email = value; // '' = как раньше, без фейкового дефолта
           return ctx.saveSettings(next);
+        },
+        // No.765: the same reveal, one storage, and the repaint goes to the mounted
+        // surface only — ctx.refresh(), never renderCrewFlowView().
+        'crew-flow-settings-address-reveal': function(ctx){
+          return Promise.resolve(crewFlowRevealAddressState()).then(function(){ return ctx.refresh(); });
+        },
+        'crew-flow-settings-address-copy': function(ctx){
+          return Promise.resolve(crewFlowCopyAddressState()).then(function(){ return ctx.refresh(); });
         }
       }
     }

@@ -257,6 +257,8 @@ const exportsNeeded = [
   'mobileSetLanguage',
   'mobileBack',
   'mobileState',
+  '_crewingSettingsSections',
+  '_crewingSettingsSectionFor',
 ];
 let M = null;
 try {
@@ -712,6 +714,146 @@ if (M) {
 } else {
   ok(false, 'mobile rail canon checks require runtime module (script failed to load)');
 }
+
+// ── No.765: settings tab «Crew Flow» (OWNER 1067; manager R2 + alias, 2026-10-16) ──
+// The tab lives in appSpecificSections, reached through the two exports added above and
+// NOT through openSettings(): this harness installs no window.SkipiSettings, so
+// openSettings() here takes the legacy fallback renderer and would assert about a
+// different screen than the product actually shows.
+section('No.765 settings tab «Crew Flow»');
+const SEC_ID = 'home-crewing-crew-flow';
+if (M && typeof M._crewingSettingsSections === 'function' && typeof M._crewingSettingsSectionFor === 'function') {
+  ok(M._crewingSettingsSectionFor('work_data') === SEC_ID,
+    'No.765-1: legacy tab id work_data still resolves to ' + SEC_ID + ' (got ' + M._crewingSettingsSectionFor('work_data') + ')');
+  ok(M._crewingSettingsSectionFor('crew_flow') === SEC_ID,
+    'No.765-2: new tab id crew_flow resolves to ' + SEC_ID + ' (got ' + M._crewingSettingsSectionFor('crew_flow') + ')');
+  // Not a tautology against the two above: 'profile' is the default arm, so this shows
+  // the switch still HAS a default and the two ids above are not matching everything.
+  ok(M._crewingSettingsSectionFor('no-such-tab') === 'profile',
+    'No.765-3: an unknown tab id still falls to profile (the default arm survives)');
+
+  const secs = M._crewingSettingsSections();
+  const mine = secs.filter((s) => s && s.id === SEC_ID);
+  ok(mine.length === 1, 'No.765-4: exactly one ' + SEC_ID + ' section (got ' + mine.length + ')');
+  ok(secs.filter((s) => s && s.id === 'home-crewing-work-data').length === 0,
+    'No.765-5: the work-data section id is gone, not left alongside');
+  const sec = mine[0] || {};
+  ok(sec.labelKey === 'settings.crewing.crew_flow',
+    'No.765-6: the section carries labelKey settings.crewing.crew_flow (got ' + sec.labelKey + ')');
+  ok(typeof sec.renderHtml === 'function', 'No.765-7: the section HAS a renderHtml');
+
+  // ctx.t returns the key, so the rendered HTML names the keys it asked for — these
+  // assertions are about which rows the tab builds, independent of any translation.
+  const ctx = {
+    t: (k) => k,
+    escapeAttr: (s) => String(s == null ? '' : s),
+    escapeHtml: (s) => String(s == null ? '' : s),
+    refresh: () => Promise.resolve(),
+  };
+  const renderWith = (pilot) => {
+    M.state.intakePilot = pilot;
+    try { return String(sec.renderHtml ? sec.renderHtml(ctx) : ''); } catch (e) { return 'THREW: ' + e; }
+  };
+
+  // Three POPULATION-MATCHED renders. A single render could not tell «the copy control is
+  // absent because the address is not revealed» from «the copy control was never built».
+  const ADDR = 'intake+765harness@skipi.app';
+  const htmlRevealed = renderWith({
+    aliases: [{ id: 'a1', generation: 3, state: 'active' }],
+    aliasLoading: false, addressChecked: true, revealPending: false,
+    revealedAddress: { aliasId: 'a1', generation: 3, address: ADDR, reason: null, copied: false },
+  });
+  const htmlAbsent = renderWith({ aliases: [], addressChecked: true });
+  const htmlSilent = renderWith({});
+
+  // Each of the four assertions below carries its own «there is a subject» condition.
+  // Without it they report green on a tree where the section does not exist at all:
+  // nothing throws, nothing shows an address and nothing calls the queue.
+  const built = typeof sec.renderHtml === 'function';
+  ok(built && !htmlRevealed.startsWith('THREW:') && !htmlAbsent.startsWith('THREW:') && !htmlSilent.startsWith('THREW:'),
+    'No.765-8: the section exists and renders in all three address states without throwing');
+  ok(htmlRevealed !== '' && htmlAbsent !== '' && htmlSilent !== '',
+    'No.765-9: the section renders a non-empty body in all three address states');
+
+  // (1) the schema: six steps, each named, so a missing one is reported by name
+  const stepKeys = [0, 1, 2, 3, 4, 5].map((i) => 'settings.crewing.crew_flow.step' + i);
+  const missingSteps = stepKeys.filter((k) => !htmlRevealed.includes(k));
+  ok(missingSteps.length === 0,
+    'No.765-10: the tab renders all six flow steps — missing [' + missingSteps.join(',') + ']');
+  ok(htmlRevealed.includes('data-qa="crew-flow-settings-steps"'),
+    'No.765-11: the steps carry their own QA slug');
+
+  // (2) the inbound address — the value is this harness's own fixture, so a hit proves
+  // the tab read the SHARED reveal state and did not store or invent a second one.
+  ok(htmlRevealed.includes('data-qa="crew-flow-settings-address"'),
+    'No.765-12: the tab renders the inbound-address block');
+  ok(htmlRevealed.includes(ADDR),
+    'No.765-13: a revealed address is shown from the shared state (the fixture value appears)');
+  ok(htmlRevealed.includes('data-settings-action="crew-flow-settings-address-copy"'),
+    'No.765-14: a revealed address offers the copy action');
+  ok(htmlAbsent !== '' && htmlSilent !== '' && !htmlAbsent.includes(ADDR) && !htmlSilent.includes(ADDR),
+    'No.765-15: a rendered tab shows no address when none is revealed — not a cached literal');
+  ok(htmlSilent.includes('data-settings-action="crew-flow-settings-address-reveal"'),
+    'No.765-16: an unrevealed address offers the reveal action');
+
+  // (3) contact_email keeps its row AND gains the only-from caption
+  ok(htmlRevealed.includes('settings.crewing.contact_email'),
+    'No.765-17: the contact_email row survives');
+  ok(htmlRevealed.includes('settings.crewing.contact_email.only_from'),
+    'No.765-18: contact_email carries the «accepted only from this address» caption');
+
+  // (4) the five prior rows, under the disclosure, keys and operations unchanged (739)
+  ok(htmlRevealed.includes('settings.crewing.agency_data'),
+    'No.765-19: the agency-data disclosure is present');
+  const legacyRows = ['settings.crewing.company', 'settings.crewing.mlc',
+                      'settings.crewing.vault', 'settings.mailbox_legacy'];
+  const missingRows = legacyRows.filter((k) => !htmlRevealed.includes(k));
+  ok(missingRows.length === 0,
+    'No.765-20: the prior rows keep their keys — missing [' + missingRows.join(',') + ']');
+  const h = sec.handlers || {};
+  ok(typeof h['crewing-mailbox-disconnect'] === 'function' && typeof h['crewing-open-profile'] === 'function',
+    'No.765-21: the mailbox-disconnect and open-profile operations are unchanged (OWNER 739)');
+
+  // The STOP from this task's PREP, and its ground is measured: «Crew Flow» as plain text
+  // is already an unfalsifiable marker (42 occurrences, 23 of them in comments), so
+  // data-qa="crew-flow-view" is the ONLY surface marker of module crew_flow that can still
+  // fail. A settings tab carrying it would retire that last check too. The non-empty guard
+  // is deliberate — an empty render lacks the marker as well, and would prove nothing.
+  ok(htmlRevealed !== '' && !htmlRevealed.includes('data-qa="crew-flow-view"'),
+    'No.765-22: a rendered tab does NOT carry the module marker data-qa="crew-flow-view"'
+    + (htmlRevealed === '' ? ' — VACUOUS: nothing rendered' : ''));
+
+  // The queue must not load from a settings screen: if it did, the tab's own step 4
+  // («press Refresh queue») would be false on the very screen that states it.
+  // Line comments are stripped first. Without that these two matched the very comment
+  // that explains why the calls are absent — a class check catching its own prose, and
+  // it failed on the first candidate for exactly that reason. Only // comments are
+  // stripped, so a '//' inside a string literal would still be seen; there is none in
+  // these functions, and a false POSITIVE here is loud, never silent.
+  const decomment = (f) => String(f).replace(/^[ \t]*\/\/.*$/gm, '');
+  const QUEUE_CALL = /renderCrewFlowView\s*\(|crewFlowEnsureLiveQueue\s*\(/;
+  ok(built && !QUEUE_CALL.test(decomment(sec.renderHtml)),
+    'No.765-23: the tab body exists and neither repaints Crew Flow nor loads the candidate queue');
+  const handlerSrc = Object.keys(h).map((k) => decomment(h[k])).join('\n');
+  ok(Object.keys(h).length > 0 && !QUEUE_CALL.test(handlerSrc),
+    'No.765-24: the tab HAS handlers and none repaints Crew Flow or loads the candidate queue');
+  // A positive control, because an always-true regex would pass both of the above:
+  // the real crewFlowRevealAddress wrapper DOES repaint, and this must see it.
+  ok(QUEUE_CALL.test('function w(){ renderCrewFlowView(); }'),
+    'No.765-23a: the queue/repaint detector is not blind — it fires on a call that is there');
+  M.state.intakePilot = null;
+} else {
+  ok(false, 'No.765 checks require _crewingSettingsSections/_crewingSettingsSectionFor exports');
+}
+
+// The label is the owner's word (1067): «Crew Flow», untranslated in BOTH tables.
+{
+  const hits = HTML.match(/["']settings\.crewing\.crew_flow["']\s*:\s*["']Crew Flow["']/g) || [];
+  ok(hits.length === 2,
+    'No.765-25: BOTH language tables carry «Crew Flow» untranslated (OWNER 1067) — got ' + hits.length);
+}
+ok(!/["']settings\.crewing\.work_data["']\s*:/.test(HTML),
+  'No.765-26: the old settings.crewing.work_data label key is gone from the string tables');
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

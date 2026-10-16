@@ -707,7 +707,7 @@ if (M) {
 
   const r2Sections = M.crewingSettingsSections ? M.crewingSettingsSections() : [];
   const r2Conn = r2Sections.filter((s) => s && s.id === 'home-crewing-connection')[0] || null;
-  const r2Work = r2Sections.filter((s) => s && s.id === 'home-crewing-work-data')[0] || null;
+  const r2Work = r2Sections.filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || null;
   ok(!!r2Conn, 'R2/1: the unified shell carries a Crewing-owned connection section');
 
   const r2Opened = [];
@@ -761,7 +761,7 @@ if (M) {
       'R2/1: «Open profile» opens a real section through the module instead of closing the overlay — got ['
       + r2Opened.join(',') + ']');
   } else {
-    ok(false, 'R2/1: the work-data section still needs its open-profile handler');
+    ok(false, 'R2/1: the Crew Flow settings section still needs its open-profile handler');
   }
 
   // the empty-queue hint must name a screen that exists
