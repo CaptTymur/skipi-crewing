@@ -259,6 +259,10 @@ const exportsNeeded = [
   'mobileState',
   '_crewingSettingsSections',
   '_crewingSettingsSectionFor',
+  // An expression, not a bare name: before the fix exists this identifier is undeclared,
+  // and a bare name here throws at construction, nulls M and cancels ~250 unrelated
+  // assertions — a failing-first test must not take the rest of the suite with it.
+  'uiPluralCategory: (typeof uiPluralCategory === "function" ? uiPluralCategory : null)',
 ];
 let M = null;
 try {
@@ -1005,14 +1009,27 @@ if (M && typeof M._crewingSettingsSections === 'function') {
   //   inbound within 7 days: m1, m2, d1 = 3   (m3 is 30 days old; s1 is synthetic)
   //   skipi_response within 7 days: a1 = 1
   //   awaiting: 6 items minus d1 (ignored) = 5; m1 is draft_opened, which is activity
-  ok(htmlQ.includes('settings.crewing.cf.s_mail7|3'),
+  // The key now carries the plural form (No.765d), so these read the NUMBER out of
+  // whichever form was chosen: the count is this block's claim, the form is 765d's. Reading
+  // it form-agnostically also keeps them independent of the active language.
+  const countFor = (html, base) => {
+    const m = html.match(new RegExp(base.replace(/\./g, '\\.') + '_(?:one|few|many)\\|(\\d+)'));
+    return m ? Number(m[1]) : null;
+  };
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_mail7') === 3,
     'No.765c-46: exactly 3 letters in 7 days — the 30-day-old one and the synthetic are excluded');
-  ok(htmlQ.includes('settings.crewing.cf.s_app7|1'),
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_app7') === 1,
     'No.765c-47: exactly 1 application in 7 days, counted separately from letters');
-  ok(htmlQ.includes('settings.crewing.cf.s_waiting|5'),
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_waiting') === 5,
     'No.765c-48: exactly 5 awaiting a decision — only the ignored one is decided, draft_opened is not');
-  ok(!htmlQ.includes('settings.crewing.cf.s_mail7|4'),
-    'No.765c-48a: the synthetic record is NOT folded into the letter count');
+  // Non-vacuous by construction, and this is why the premise is asserted beside the
+  // outcome: the old form of this control compared against «s_mail7|4», a string the
+  // form-bearing key can no longer produce, so it would have passed for the wrong reason
+  // and gone on passing had the synthetic ever been folded in.
+  const synthInWindow = withQueue.queue.items.some((it) =>
+    it.source === 'synthetic' && Date.parse(it.created_at) >= now - 7*24*3600*1000);
+  ok(synthInWindow && countFor(htmlQ, 'settings.crewing.cf.s_mail7') === 3,
+    'No.765c-48a: a synthetic record DOES sit inside the window and is still not folded into the letter count');
 
   // (4) the orange signal: an address IS issued and nothing arrived in seven days
   const htmlQuiet = render(Object.assign({}, ALIAS, {
@@ -1034,6 +1051,173 @@ ok(/["']settings\.crewing\.cf\.where_note["']/.test(HTML),
   const bad = (HTML.match(/Дайте этот адрес кандидату|Give that address to the candidate/g) || []).length;
   ok(bad === 0, 'No.765c-51: no text tells the operator to give the inbound address to a candidate — found ' + bad);
 }
+
+// ── No.765d: a numeral must agree with the noun it counts.
+// The manager's stand reading of frames 11/12/13/14: «1 кандидатов ждут решения» — the
+// number does not decline. Russian takes three forms (1 / 2-4 / 5+ and 0), and the teens
+// 11-14 take the many-form although they end in 1-4; English takes two. The agreement is
+// part of the TEXT and not of the number — the verb moves too (ждёт -> ждут) — so each
+// form is its own KEY, and the name of the chosen key reaches the markup. That is what
+// makes the choice assertable rather than merely plausible: a render can be asked which
+// form it picked instead of being pattern-matched for a word.
+section('No.765d numeral agreement — the count chooses the form, and the form is a key');
+
+// (1) the rule itself, on the numbers the card named plus the boundaries that defeat the
+// naive `n === 1` and `n % 10` implementations: the teens, and the tens that return to the
+// one-form (21, 101).
+if (M && typeof M.uiPluralCategory === 'function') {
+  const cat = (n, lang) => M.uiPluralCategory(n, lang);
+  const RU = [[1,'one'],[2,'few'],[5,'many'],[11,'many'],[21,'one'],[0,'many'],
+              [12,'many'],[13,'many'],[14,'many'],[22,'few'],[25,'many'],
+              [101,'one'],[102,'few'],[111,'many'],[114,'many'],[1002,'few']];
+  const ruBad = RU.filter((r) => cat(r[0],'ru') !== r[1])
+                  .map((r) => r[0] + ' wanted ' + r[1] + ' got ' + cat(r[0],'ru'));
+  ok(ruBad.length === 0,
+    'No.765d-52: the Russian rule is right on 1/2/5/11/21/0 and on the teens and tens — wrong [' + ruBad.join('; ') + ']');
+
+  const EN = [[1,'one'],[2,'many'],[5,'many'],[11,'many'],[21,'many'],[0,'many']];
+  const enBad = EN.filter((r) => cat(r[0],'en') !== r[1])
+                  .map((r) => r[0] + ' wanted ' + r[1] + ' got ' + cat(r[0],'en'));
+  ok(enBad.length === 0,
+    'No.765d-53: the English rule is right on the same numbers — wrong [' + enBad.join('; ') + ']');
+
+  // Not vacuous: a rule that returned one constant could not fail the lists above by
+  // accident, so the distinctions are asserted in both directions.
+  ok(new Set([cat(1,'ru'), cat(2,'ru'), cat(5,'ru')]).size === 3,
+    'No.765d-54: Russian genuinely distinguishes three forms for 1, 2 and 5');
+  ok(new Set([cat(1,'en'), cat(2,'en')]).size === 2 && cat(2,'en') === cat(5,'en'),
+    'No.765d-55: English distinguishes exactly two forms — and 2 and 5 share one');
+
+  // A negative is a real number: 0 and a negative count must not throw or invent a form.
+  ok(['one','few','many'].indexOf(cat(-1,'ru')) !== -1 && ['one','few','many'].indexOf(cat(-5,'ru')) !== -1,
+    'No.765d-56: a negative count still yields a known form rather than throwing');
+  ok(cat(NaN,'ru') === 'many' && cat(undefined,'ru') === 'many',
+    'No.765d-57: an unreadable count falls to the many-form, which is the one that reads as a plain total');
+
+  // (2) A language whose own table does not carry these keys falls back to the ENGLISH
+  // text, so the ENGLISH rule is the right one for it. The form must follow the STRING
+  // that will be shown, not the language the operator picked. The premise — that tl/hi/id
+  // carry none of these keys — is asserted separately by 765d-59's count of exactly two.
+  const fellBack = ['tl','hi','id'].filter((l) => [1,2,5,11,21,0].some((n) => cat(n,l) !== cat(n,'en')));
+  ok(fellBack.length === 0,
+    'No.765d-58: a language that falls back to the English text uses the English rule — differs for [' + fellBack.join(',') + ']');
+} else {
+  ok(false, 'No.765d-52..58: the numeral rule is not exported as uiPluralCategory');
+}
+
+// (3) the forms must EXIST as keys, in the tables that need them, and the old
+// form-blind keys must be gone so a leftover cannot silently serve the old text.
+{
+  const vals = (key) => {
+    const re = new RegExp('"' + key.replace(/\./g, '\\.') + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"', 'g');
+    const out = []; let m;
+    while ((m = re.exec(HTML)) !== null) out.push(m[1]);
+    return out;   // file order: the en table precedes the ru table
+  };
+  const BASES = ['settings.crewing.cf.s_waiting','settings.crewing.cf.s_mail7','settings.crewing.cf.s_app7'];
+  const missing = [];
+  BASES.forEach((b) => {
+    if (vals(b + '_one').length !== 2) missing.push(b + '_one x' + vals(b + '_one').length);
+    if (vals(b + '_many').length !== 2) missing.push(b + '_many x' + vals(b + '_many').length);
+    if (vals(b + '_few').length !== 1) missing.push(b + '_few x' + vals(b + '_few').length + ' (ru only)');
+  });
+  ok(missing.length === 0,
+    'No.765d-59: one/many in both tables and few in Russian only, for all three counted nouns — wrong [' + missing.join('; ') + ']');
+  const leftovers = BASES.filter((b) => vals(b).length !== 0);
+  ok(leftovers.length === 0,
+    'No.765d-60: the form-blind keys are gone from the tables — still present [' + leftovers.join(',') + ']');
+
+  // (4) and the forms must carry the right agreement, which is the defect itself: the
+  // card specified the words, so they are asserted as words, in both languages.
+  const ru = (k) => { const v = vals(k); return v.length === 2 ? v[1] : ''; };
+  const en = (k) => { const v = vals(k); return v.length >= 1 ? v[0] : ''; };
+  const ruFew = (k) => { const v = vals(k); return v.length === 1 ? v[0] : ''; };
+  ok(ru('settings.crewing.cf.s_waiting_one').indexOf('кандидат ждёт решения') !== -1
+     && ruFew('settings.crewing.cf.s_waiting_few').indexOf('кандидата ждут решения') !== -1
+     && ru('settings.crewing.cf.s_waiting_many').indexOf('кандидатов ждут решения') !== -1,
+    'No.765d-61: Russian «кандидат ждёт» / «кандидата ждут» / «кандидатов ждут» — the verb agrees too');
+  ok(ru('settings.crewing.cf.s_mail7_one').indexOf('письмо') !== -1
+     && ruFew('settings.crewing.cf.s_mail7_few').indexOf('письма') !== -1
+     && ru('settings.crewing.cf.s_mail7_many').indexOf('писем') !== -1,
+    'No.765d-62: Russian письмо / письма / писем');
+  ok(ru('settings.crewing.cf.s_app7_one').indexOf('отклик') !== -1
+     && ruFew('settings.crewing.cf.s_app7_few').indexOf('отклика') !== -1
+     && ru('settings.crewing.cf.s_app7_many').indexOf('откликов') !== -1,
+    'No.765d-63: Russian отклик / отклика / откликов');
+  ok(en('settings.crewing.cf.s_waiting_one').indexOf('candidate awaiting a decision') !== -1
+     && en('settings.crewing.cf.s_waiting_many').indexOf('candidates awaiting a decision') !== -1,
+    'No.765d-64: English candidate / candidates awaiting a decision');
+  // every form keeps its {n}, or the number disappears from the sentence
+  const nogap = [];
+  let formsSeen = 0;
+  BASES.forEach((b) => ['_one','_few','_many'].forEach((s) => {
+    vals(b + s).forEach((v, i) => { formsSeen++; if (v.indexOf('{n}') === -1) nogap.push(b + s + '[' + i + ']'); });
+  }));
+  // The count of the population is part of the assertion: without it this passes while no
+  // form exists at all, which is exactly how it read on the first failing-first run.
+  ok(formsSeen === 15 && nogap.length === 0,
+    'No.765d-65: all 15 forms exist (3 nouns x en{one,many} + ru{one,few,many}) and every one carries {n} — saw '
+      + formsSeen + ', missing {n} in [' + nogap.join(',') + ']');
+}
+
+// (5) the wiring: a rendered tab must carry the CHOSEN form at BOTH places that count
+// candidates — node 5's caption and the queue row. One site converted and the other
+// missed would show here as a count of 1 instead of 2.
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const sec765d = M._crewingSettingsSections().filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  const ctx765d = { t:(k)=>k+'|{n}', escapeAttr:(s)=>String(s==null?'':s), escapeHtml:(s)=>String(s==null?'':s), refresh:()=>Promise.resolve() };
+  const ALIAS765d = { aliases:[{id:'a1',generation:3,state:'active'}], aliasLoading:false, addressChecked:true,
+    revealPending:false, revealedAddress:{aliasId:'a1',generation:3,address:'svc@in.skipi.app',reason:null,copied:false} };
+  const LANGK = 'skipi-crewing-ui-language';
+  const prevLang = globalThis.localStorage.getItem(LANGK);
+  // 30 days old, so the 7-day counters stay 0 and only `waiting` varies with n
+  const stale = new Date(Date.now() - 30*24*3600*1000).toISOString();
+  const renderN = (n, lang) => {
+    globalThis.localStorage.setItem(LANGK, lang);
+    const items = [];
+    for (let i = 0; i < n; i++) items.push({ intake_id:'w'+i, source:'inbound', created_at: stale });
+    M.state.crewFlowReadState = {};
+    M.state.intakePilot = Object.assign({}, ALIAS765d, {
+      queueLastUpdated: new Date().toISOString(),
+      queue: { offset:0, limit:50, total:n, items },
+    });
+    try { return String(sec765d.renderHtml(ctx765d)); } catch (e) { return 'THREW: ' + e; }
+  };
+  const WANT = [[1,'one'],[2,'few'],[5,'many'],[11,'many'],[21,'one'],[0,'many']];
+  const wrong = [];
+  WANT.forEach((r) => {
+    const html = renderN(r[0], 'ru');
+    const needle = 'settings.crewing.cf.s_waiting_' + r[1] + '|' + r[0];
+    const hits = html.split(needle).length - 1;
+    if (hits < 2) wrong.push(r[0] + ' -> ' + r[1] + ' (' + hits + ' of 2 sites)');
+  });
+  ok(wrong.length === 0,
+    'No.765d-66: both counting sites render the chosen form for 1/2/5/11/21/0 — wrong [' + wrong.join('; ') + ']');
+
+  // not vacuous: the one-form render must carry ONLY the one-form, so a helper that
+  // emitted every form and let CSS hide the rest would fail here.
+  const h1 = renderN(1, 'ru');
+  ok(h1.indexOf('settings.crewing.cf.s_waiting_one|1') !== -1
+     && h1.indexOf('settings.crewing.cf.s_waiting_few') === -1
+     && h1.indexOf('settings.crewing.cf.s_waiting_many') === -1,
+    'No.765d-67: the one-form render carries only the one-form, not every form at once');
+
+  // English is wired through the same helper and must move at 1 -> 2, where Russian does too
+  ok(renderN(1,'en').indexOf('settings.crewing.cf.s_waiting_one|1') !== -1
+     && renderN(2,'en').indexOf('settings.crewing.cf.s_waiting_many|2') !== -1,
+    'No.765d-68: English picks one at 1 and many at 2 through the same helper');
+
+  // the 7-day counters decline as well — the card asked for the same helper where it applies
+  const h3 = renderN(0, 'ru');
+  ok(h3.indexOf('settings.crewing.cf.s_mail7_many|0') !== -1,
+    'No.765d-69: «за 7 дней: 0 писем» keeps the many-form — the orange empty-route status still reads right');
+
+  if (prevLang === null) globalThis.localStorage.removeItem(LANGK); else globalThis.localStorage.setItem(LANGK, prevLang);
+  M.state.intakePilot = null; M.state.crewFlowReadState = {};
+} else {
+  ok(false, 'No.765d-66..69: the wiring checks require _crewingSettingsSections');
+}
+
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

@@ -2132,9 +2132,12 @@ var UI_STRINGS = {
     "settings.crewing.cf.s4": "only on «Refresh»",
     "settings.crewing.cf.s_issued": "address issued",
     "settings.crewing.cf.s_absent": "no address issued",
-    "settings.crewing.cf.s_mail7": "last 7 days: {n} letters",
-    "settings.crewing.cf.s_app7": "last 7 days: {n} applications",
-    "settings.crewing.cf.s_waiting": "{n} candidates awaiting a decision",
+    "settings.crewing.cf.s_mail7_one": "last 7 days: {n} letter",
+    "settings.crewing.cf.s_mail7_many": "last 7 days: {n} letters",
+    "settings.crewing.cf.s_app7_one": "last 7 days: {n} application",
+    "settings.crewing.cf.s_app7_many": "last 7 days: {n} applications",
+    "settings.crewing.cf.s_waiting_one": "{n} candidate awaiting a decision",
+    "settings.crewing.cf.s_waiting_many": "{n} candidates awaiting a decision",
     "settings.crewing.cf.s_unloaded": "the queue has not been loaded yet",
     "settings.crewing.cf.where": "Where to forward: your Skipi inbound address",
     "settings.crewing.cf.where_note": "This is a SERVICE address for forwarding: send CV letters to it from your own mailbox. Do not give it to candidates.",
@@ -2342,9 +2345,15 @@ var UI_STRINGS = {
     "settings.crewing.cf.s4": "только по «Обновить»",
     "settings.crewing.cf.s_issued": "адрес выдан",
     "settings.crewing.cf.s_absent": "адрес не выдан",
-    "settings.crewing.cf.s_mail7": "за 7 дней: {n} писем",
-    "settings.crewing.cf.s_app7": "за 7 дней: {n} откликов",
-    "settings.crewing.cf.s_waiting": "{n} кандидатов ждут решения",
+    "settings.crewing.cf.s_mail7_one": "за 7 дней: {n} письмо",
+    "settings.crewing.cf.s_mail7_few": "за 7 дней: {n} письма",
+    "settings.crewing.cf.s_mail7_many": "за 7 дней: {n} писем",
+    "settings.crewing.cf.s_app7_one": "за 7 дней: {n} отклик",
+    "settings.crewing.cf.s_app7_few": "за 7 дней: {n} отклика",
+    "settings.crewing.cf.s_app7_many": "за 7 дней: {n} откликов",
+    "settings.crewing.cf.s_waiting_one": "{n} кандидат ждёт решения",
+    "settings.crewing.cf.s_waiting_few": "{n} кандидата ждут решения",
+    "settings.crewing.cf.s_waiting_many": "{n} кандидатов ждут решения",
     "settings.crewing.cf.s_unloaded": "очередь ещё не загружалась",
     "settings.crewing.cf.where": "Куда переадресовать: ваш входящий адрес Skipi",
     "settings.crewing.cf.where_note": "Это СЛУЖЕБНЫЙ адрес для переадресации: пересылайте на него письма с резюме из своего ящика. Кандидатам его не давайте.",
@@ -2397,6 +2406,28 @@ function getUiLang() {
 function tr(key) {
   var lang = getUiLang();
   return (UI_STRINGS[lang] && UI_STRINGS[lang][key]) || UI_STRINGS.en[key] || key;
+}
+// A numeral must agree with the noun it counts, and the agreement belongs to the TEXT, not
+// to the number: in Russian the verb moves too («1 кандидат ждёт» vs «2 кандидата ждут»), so
+// a helper that inflected only a noun would still print a wrong sentence. Each form is its
+// own key — `<base>_one` / `_few` / `_many` — and this says which one to ask for.
+//
+// Russian: 1 but not 11; 2-4 but not 12-14; everything else, 0 included, takes the many-form.
+// The teens are the case that defeats a bare `n % 10`, and the tens (21, 101) are the case
+// that defeats a bare `n === 1`.
+//
+// Every other language takes the English two-form rule, and that is MEASURED rather than
+// assumed: only the en and ru tables carry these keys, so under tl/hi/id `tr()` falls back to
+// the ENGLISH string and the form must follow the string that will actually be shown. Should
+// a tl/hi/id table ever gain these keys, this function needs a branch for that language.
+function uiPluralCategory(n, lang) {
+  var a = Math.abs(Math.trunc(Number(n)));
+  if (!isFinite(a)) a = 0;
+  if ((lang || getUiLang()) !== 'ru') return a === 1 ? 'one' : 'many';
+  var m10 = a % 10, m100 = a % 100;
+  if (m10 === 1 && m100 !== 11) return 'one';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'few';
+  return 'many';
 }
 function setUiLang(lang) {
   if (!UI_STRINGS[lang]) lang = 'ru';
@@ -14551,7 +14582,9 @@ function _crewingSettingsSections(){
         var st = crewFlowAddressState();
         var stats = crewFlowSettingsStats();
         var T = function(k){ return ctx.t(k); };
-        var fill = function(k, n){ return String(T(k)).replace('{n}', String(n)); };
+        // The form is chosen first and the text for THAT form is then fetched, so the key
+        // carries the agreement and both call sites below stay as they were.
+        var fill = function(k, n){ return String(T(k + '_' + uiPluralCategory(n))).replace('{n}', String(n)); };
 
         // (б) THE DIAGRAM. The mockup positions five 116px nodes absolutely across 700px.
         // Measured, the settings pane is min(980px,96vw) minus a ~230px rail, so ~670px at
