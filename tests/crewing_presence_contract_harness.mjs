@@ -257,6 +257,12 @@ const exportsNeeded = [
   'mobileSetLanguage',
   'mobileBack',
   'mobileState',
+  '_crewingSettingsSections',
+  '_crewingSettingsSectionFor',
+  // An expression, not a bare name: before the fix exists this identifier is undeclared,
+  // and a bare name here throws at construction, nulls M and cancels ~250 unrelated
+  // assertions — a failing-first test must not take the rest of the suite with it.
+  'uiPluralCategory: (typeof uiPluralCategory === "function" ? uiPluralCategory : null)',
 ];
 let M = null;
 try {
@@ -712,6 +718,506 @@ if (M) {
 } else {
   ok(false, 'mobile rail canon checks require runtime module (script failed to load)');
 }
+
+// ── No.765: settings tab «Crew Flow» (OWNER 1067; manager R2 + alias, 2026-10-16) ──
+// The tab lives in appSpecificSections, reached through the two exports added above and
+// NOT through openSettings(): this harness installs no window.SkipiSettings, so
+// openSettings() here takes the legacy fallback renderer and would assert about a
+// different screen than the product actually shows.
+section('No.765 settings tab «Crew Flow»');
+const SEC_ID = 'home-crewing-crew-flow';
+if (M && typeof M._crewingSettingsSections === 'function' && typeof M._crewingSettingsSectionFor === 'function') {
+  ok(M._crewingSettingsSectionFor('work_data') === SEC_ID,
+    'No.765-1: legacy tab id work_data still resolves to ' + SEC_ID + ' (got ' + M._crewingSettingsSectionFor('work_data') + ')');
+  ok(M._crewingSettingsSectionFor('crew_flow') === SEC_ID,
+    'No.765-2: new tab id crew_flow resolves to ' + SEC_ID + ' (got ' + M._crewingSettingsSectionFor('crew_flow') + ')');
+  // Not a tautology against the two above: 'profile' is the default arm, so this shows
+  // the switch still HAS a default and the two ids above are not matching everything.
+  ok(M._crewingSettingsSectionFor('no-such-tab') === 'profile',
+    'No.765-3: an unknown tab id still falls to profile (the default arm survives)');
+
+  const secs = M._crewingSettingsSections();
+  const mine = secs.filter((s) => s && s.id === SEC_ID);
+  ok(mine.length === 1, 'No.765-4: exactly one ' + SEC_ID + ' section (got ' + mine.length + ')');
+  ok(secs.filter((s) => s && s.id === 'home-crewing-work-data').length === 0,
+    'No.765-5: the work-data section id is gone, not left alongside');
+  const sec = mine[0] || {};
+  ok(sec.labelKey === 'settings.crewing.crew_flow',
+    'No.765-6: the section carries labelKey settings.crewing.crew_flow (got ' + sec.labelKey + ')');
+  ok(typeof sec.renderHtml === 'function', 'No.765-7: the section HAS a renderHtml');
+
+  // ctx.t returns the key, so the rendered HTML names the keys it asked for — these
+  // assertions are about which rows the tab builds, independent of any translation.
+  const ctx = {
+    t: (k) => k,
+    escapeAttr: (s) => String(s == null ? '' : s),
+    escapeHtml: (s) => String(s == null ? '' : s),
+    refresh: () => Promise.resolve(),
+  };
+  const renderWith = (pilot) => {
+    M.state.intakePilot = pilot;
+    try { return String(sec.renderHtml ? sec.renderHtml(ctx) : ''); } catch (e) { return 'THREW: ' + e; }
+  };
+
+  // Three POPULATION-MATCHED renders. A single render could not tell «the copy control is
+  // absent because the address is not revealed» from «the copy control was never built».
+  const ADDR = 'intake+765harness@skipi.app';
+  const htmlRevealed = renderWith({
+    aliases: [{ id: 'a1', generation: 3, state: 'active' }],
+    aliasLoading: false, addressChecked: true, revealPending: false,
+    revealedAddress: { aliasId: 'a1', generation: 3, address: ADDR, reason: null, copied: false },
+  });
+  const htmlAbsent = renderWith({ aliases: [], addressChecked: true });
+  const htmlSilent = renderWith({});
+
+  // Each of the four assertions below carries its own «there is a subject» condition.
+  // Without it they report green on a tree where the section does not exist at all:
+  // nothing throws, nothing shows an address and nothing calls the queue.
+  const built = typeof sec.renderHtml === 'function';
+  ok(built && !htmlRevealed.startsWith('THREW:') && !htmlAbsent.startsWith('THREW:') && !htmlSilent.startsWith('THREW:'),
+    'No.765-8: the section exists and renders in all three address states without throwing');
+  ok(htmlRevealed !== '' && htmlAbsent !== '' && htmlSilent !== '',
+    'No.765-9: the section renders a non-empty body in all three address states');
+
+  // (1) the schema: six steps, each named, so a missing one is reported by name
+  // OWNER (1070): the prose steps are replaced by the diagram. The five nodes and the
+  // second entrance must all be present — the tab's job is still to explain the route.
+  const nodeKeys = ['n1','n2','n3','n4','n5','n2b'].map((k) => 'settings.crewing.cf.' + k);
+  const missingNodes = nodeKeys.filter((k) => !htmlRevealed.includes(k));
+  ok(missingNodes.length === 0,
+    'No.765-10: the diagram renders all five nodes and the second entrance — missing [' + missingNodes.join(',') + ']');
+  ok(htmlRevealed.includes('data-qa="cf-schema"') && htmlRevealed.includes('data-qa="cf-second-entrance"'),
+    'No.765-11: the diagram and the second entrance carry their own QA slugs');
+
+  // (2) the inbound address — the value is this harness's own fixture, so a hit proves
+  // the tab read the SHARED reveal state and did not store or invent a second one.
+  ok(htmlRevealed.includes('data-qa="crew-flow-settings-address"'),
+    'No.765-12: the tab renders the inbound-address block');
+  ok(htmlRevealed.includes(ADDR),
+    'No.765-13: a revealed address is shown from the shared state (the fixture value appears)');
+  ok(htmlRevealed.includes('data-settings-action="crew-flow-settings-address-copy"'),
+    'No.765-14: a revealed address offers the copy action');
+  ok(htmlAbsent !== '' && htmlSilent !== '' && !htmlAbsent.includes(ADDR) && !htmlSilent.includes(ADDR),
+    'No.765-15: a rendered tab shows no address when none is revealed — not a cached literal');
+  ok(htmlSilent.includes('data-settings-action="crew-flow-settings-address-reveal"'),
+    'No.765-16: an unrevealed address offers the reveal action');
+
+  // (3) contact_email keeps its row AND gains the only-from caption
+  ok(htmlRevealed.includes('crewing-set-contact-email'),
+    'No.765-17: the sender-address input survives (node 2, second setting)');
+  // The caption key moved from settings.crewing.contact_email.only_from to
+  // settings.crewing.cf.from_note when the section was rebuilt. The GUARD follows the
+  // meaning, it is not deleted: losing the «only from this address» rule would be the
+  // worse bug, and the old key is now removed from the tables so nothing can pass on it.
+  ok(htmlRevealed.includes('settings.crewing.cf.from_note'),
+    'No.765-18: the sender section carries the «accepted only from this address» rule');
+
+  // (4) the five prior rows, under the disclosure, keys and operations unchanged (739)
+  ok(htmlRevealed.includes('settings.crewing.agency_data'),
+    'No.765-19: the agency-data disclosure is present');
+  const legacyRows = ['settings.crewing.company', 'settings.crewing.mlc',
+                      'settings.crewing.vault', 'settings.mailbox_legacy'];
+  const missingRows = legacyRows.filter((k) => !htmlRevealed.includes(k));
+  ok(missingRows.length === 0,
+    'No.765-20: the prior rows keep their keys — missing [' + missingRows.join(',') + ']');
+  const h = sec.handlers || {};
+  ok(typeof h['crewing-mailbox-disconnect'] === 'function' && typeof h['crewing-open-profile'] === 'function',
+    'No.765-21: the mailbox-disconnect and open-profile operations are unchanged (OWNER 739)');
+
+  // The STOP from this task's PREP, and its ground is measured: «Crew Flow» as plain text
+  // is already an unfalsifiable marker (42 occurrences, 23 of them in comments), so
+  // data-qa="crew-flow-view" is the ONLY surface marker of module crew_flow that can still
+  // fail. A settings tab carrying it would retire that last check too. The non-empty guard
+  // is deliberate — an empty render lacks the marker as well, and would prove nothing.
+  ok(htmlRevealed !== '' && !htmlRevealed.includes('data-qa="crew-flow-view"'),
+    'No.765-22: a rendered tab does NOT carry the module marker data-qa="crew-flow-view"'
+    + (htmlRevealed === '' ? ' — VACUOUS: nothing rendered' : ''));
+
+  // The queue must not load from a settings screen: if it did, the tab's own step 4
+  // («press Refresh queue») would be false on the very screen that states it.
+  // Line comments are stripped first. Without that these two matched the very comment
+  // that explains why the calls are absent — a class check catching its own prose, and
+  // it failed on the first candidate for exactly that reason. Only // comments are
+  // stripped, so a '//' inside a string literal would still be seen; there is none in
+  // these functions, and a false POSITIVE here is loud, never silent.
+  const decomment = (f) => String(f).replace(/^[ \t]*\/\/.*$/gm, '');
+  const QUEUE_CALL = /renderCrewFlowView\s*\(|crewFlowEnsureLiveQueue\s*\(/;
+  ok(built && !QUEUE_CALL.test(decomment(sec.renderHtml)),
+    'No.765-23: the tab body exists and neither repaints Crew Flow nor loads the candidate queue');
+  const handlerSrc = Object.keys(h).map((k) => decomment(h[k])).join('\n');
+  ok(Object.keys(h).length > 0 && !QUEUE_CALL.test(handlerSrc),
+    'No.765-24: the tab HAS handlers and none repaints Crew Flow or loads the candidate queue');
+  // A positive control, because an always-true regex would pass both of the above:
+  // the real crewFlowRevealAddress wrapper DOES repaint, and this must see it.
+  ok(QUEUE_CALL.test('function w(){ renderCrewFlowView(); }'),
+    'No.765-23a: the queue/repaint detector is not blind — it fires on a call that is there');
+  M.state.intakePilot = null;
+} else {
+  ok(false, 'No.765 checks require _crewingSettingsSections/_crewingSettingsSectionFor exports');
+}
+
+// The label is the owner's word (1067): «Crew Flow», untranslated in BOTH tables.
+{
+  const hits = HTML.match(/["']settings\.crewing\.crew_flow["']\s*:\s*["']Crew Flow["']/g) || [];
+  ok(hits.length === 2,
+    'No.765-25: BOTH language tables carry «Crew Flow» untranslated (OWNER 1067) — got ' + hits.length);
+}
+ok(!/["']settings\.crewing\.work_data["']\s*:/.test(HTML),
+  'No.765-26: the old settings.crewing.work_data label key is gone from the string tables');
+
+// ── No.765b: the stand defect of 2026-10-16 — a wide control squeezed the row label into a
+// one-to-two-letter column («Вхо/дя/щи/й/адр/ес»). Cause, read from the vendored CSS: the
+// row is `grid-template-columns: minmax(0,1fr) auto` with `min-width:0` on the copy column
+// and `overflow-wrap:anywhere` on the label, so a control with a wide natural width
+// collapses the text column and the label then breaks mid-word.
+//
+// A PIXEL WIDTH CANNOT BE ASSERTED HERE and I will not pretend otherwise: this harness has
+// no layout engine — makeElement returns objects with an empty `style` and no geometry. So
+// the proof is a PAIR: the markup declares the module's stack layout, AND the module's
+// stylesheet really defines that layout as a single column. Either alone would be a token:
+// an attribute nothing acts on, or a rule nothing uses.
+section('No.765b settings row layout — the stand squeeze');
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const secs765b = M._crewingSettingsSections();
+  const sec765b = secs765b.filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  const ctx765b = {
+    t: (k) => k,
+    escapeAttr: (s) => String(s == null ? '' : s),
+    escapeHtml: (s) => String(s == null ? '' : s),
+    refresh: () => Promise.resolve(),
+  };
+  M.state.intakePilot = {
+    aliases: [{ id: 'a1', generation: 3, state: 'active' }],
+    aliasLoading: false, addressChecked: true, revealPending: false,
+    revealedAddress: { aliasId: 'a1', generation: 3, address: 'intake+765b@skipi.app', reason: null, copied: false },
+  };
+  M.state.settings = Object.assign({}, M.state.settings, { vault_path: '/home/op/vaults/a-very-long-vault-path-that-squeezes' });
+  const h765b = typeof sec765b.renderHtml === 'function' ? String(sec765b.renderHtml(ctx765b)) : '';
+  ok(h765b !== '', 'No.765b-27: the tab renders, so the layout assertions below have a subject');
+
+  // Split into rows and keep each row's own markup, so an assertion can say WHICH row.
+  const rowsOf = (html) => html.split('<div class="skipi-settings__row"').slice(1)
+    .map((chunk) => chunk.split('<div class="skipi-settings__row"')[0]);
+  const rows765b = rowsOf(h765b);
+  const rowWith = (needle) => rows765b.filter((r) => r.includes(needle))[0] || '';
+  const isStack = (r) => r.startsWith(' data-layout="stack"');
+  ok(rows765b.length >= 5, 'No.765b-28: the tab renders at least five rows — got ' + rows765b.length);
+
+  // The address row: stack, and no label of its own — the group heading already names it,
+  // and on the stand the two stood one under the other saying the same words.
+  const addrRow = rowWith('crew-flow-settings-address-copy') || rowWith('intake+765b@skipi.app');
+  ok(addrRow !== '', 'No.765b-29: the address row is identifiable in the markup');
+  ok(isStack(addrRow), 'No.765b-30: the address row declares data-layout="stack"');
+  ok(!addrRow.includes('skipi-settings__row-label'),
+    'No.765b-31: the address row carries no label of its own (the group heading names it)');
+
+  // Contact email: the label goes, the RULE stays. Losing the caption would be the worse bug.
+  const mailRow = rowWith('crewing-set-contact-email');
+  ok(mailRow !== '', 'No.765b-32: the contact-email row is identifiable');
+  ok(!mailRow.includes('skipi-settings__row-label'),
+    'No.765b-33: the contact-email row no longer repeats the group heading');
+  ok(mailRow.includes('settings.crewing.cf.from_note'),
+    'No.765b-34: the «accepted only from this address» rule SURVIVES the rebuild (key moved to cf.from_note)');
+
+  // The other unbounded values. MLC is deliberately left alone: its value is number + date,
+  // and leaving it is what makes this a discrimination rather than a blanket.
+  ok(isStack(rowWith('settings.crewing.company')), 'No.765b-35: the company row declares stack');
+  ok(isStack(rowWith('settings.crewing.vault')), 'No.765b-36: the vault row declares stack');
+  ok(!isStack(rowWith('settings.crewing.mlc')),
+    'No.765b-37: the MLC row does NOT declare stack — the attribute is applied to rows with unbounded values, not sprayed over all of them');
+  M.state.intakePilot = null;
+} else {
+  ok(false, 'No.765b checks require _crewingSettingsSections');
+}
+
+// (b) The other half of the pair: the module's stylesheet must really define that layout as
+// a single column. dist/skipi-settings.css is READ here and not edited — reading does not
+// put it in the changed set, so the route is unaffected. If someone later drops the rule
+// from the vendored file, this fails instead of leaving a green assertion about an
+// attribute that no longer does anything.
+{
+  const cssPath = path.join(ROOT, 'dist', 'skipi-settings.css');
+  let css = '';
+  try { css = fs.readFileSync(cssPath, 'utf8'); } catch (e) { css = ''; }
+  ok(css !== '', 'No.765b-38: dist/skipi-settings.css is readable — the mechanism can be checked');
+  const stackIdx = css.indexOf('[data-layout="stack"]');
+  ok(stackIdx !== -1, 'No.765b-39: the module defines a [data-layout="stack"] rule');
+  const stackBody = stackIdx === -1 ? '' : css.slice(stackIdx, css.indexOf('}', stackIdx));
+  ok(/grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)\s*;/.test(stackBody),
+    'No.765b-40: the stack rule collapses the row to ONE column — that is what stops the label being squeezed');
+  // Not vacuous: the DEFAULT row rule must still be the two-column grid that caused the
+  // defect, so assertion 40 is a real difference and not a restatement.
+  const baseIdx = css.indexOf('.skipi-settings__row {');
+  const baseBody = baseIdx === -1 ? '' : css.slice(baseIdx, css.indexOf('}', baseIdx));
+  ok(/grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)\s+auto\s*;/.test(baseBody),
+    'No.765b-41: the DEFAULT row is still the two-column grid — so stack is a real difference, not a restatement');
+}
+
+// ── No.765 slice 2 (OWNER 1070/1071): the diagram, and the promise that this tab is READ-ONLY
+// about the queue. Node 4 says «only on Refresh»; if opening Settings fetched the queue,
+// the tab's own caption would be false on the screen that states it.
+section('No.765c settings diagram — statuses from loaded client state only');
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const sec765c = M._crewingSettingsSections().filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  // `t` returns the key WITH a {n} placeholder, so fill() can substitute and the COUNT
+  // becomes assertable. With a plain key-returning stub there is no {n} to replace, the
+  // number never reaches the markup, and an assertion about it can only be vacuous — which
+  // is exactly what my first version of 765c-46 was: `(A && B) || html.indexOf('3') !== -1`.
+  const ctx765c = { t:(k)=>k+'|{n}', escapeAttr:(s)=>String(s==null?'':s), escapeHtml:(s)=>String(s==null?'':s), refresh:()=>Promise.resolve() };
+  const ALIAS = { aliases:[{id:'a1',generation:3,state:'active'}], aliasLoading:false, addressChecked:true,
+                  revealPending:false, revealedAddress:{aliasId:'a1',generation:3,address:'svc@in.skipi.app',reason:null,copied:false} };
+  const render = (pilot) => { M.state.intakePilot = pilot; try { return String(sec765c.renderHtml(ctx765c)); } catch(e){ return 'THREW: '+e; } };
+
+  // (1) no server call, no queue load — asserted on the SOURCE of the body and handlers,
+  // with comments stripped so an explanatory comment cannot satisfy or break it.
+  const strip = (f) => String(f).replace(/^[ \t]*\/\/.*$/gm, '');
+  const FETCHY = /\binvoke\s*\(|crewFlowEnsureLiveQueue\s*\(|pilotLoadQueue\s*\(|crewFlowRefreshQueue\s*\(/;
+  ok(typeof sec765c.renderHtml === 'function' && !FETCHY.test(strip(sec765c.renderHtml)),
+    'No.765c-42: the tab body issues no server call and does not load the queue');
+  const h765c = sec765c.handlers || {};
+  const hsrc = Object.keys(h765c).map((k) => strip(h765c[k])).join('\n');
+  ok(Object.keys(h765c).length > 0 && !FETCHY.test(hsrc),
+    'No.765c-43: no handler of the tab fetches or loads the queue');
+  ok(FETCHY.test('function f(){ pilotLoadQueue(0); }'),
+    'No.765c-43a: the fetch detector is not blind — it fires on a call that is there');
+
+  // (2) queue never loaded -> say so, and show no counts invented from nothing
+  const htmlUnloaded = render(Object.assign({}, ALIAS));
+  ok(htmlUnloaded.includes('settings.crewing.cf.s_unloaded'),
+    'No.765c-44: with no queue loaded the diagram says «the queue has not been loaded yet»');
+  ok(!htmlUnloaded.includes('settings.crewing.cf.s_mail7'),
+    'No.765c-45: and shows no 7-day count when there is nothing to count from');
+
+  // (3) the counters, on a fixture whose answer is known by construction
+  const now = Date.now();
+  const iso = (daysAgo) => new Date(now - daysAgo*24*3600*1000).toISOString();
+  const withQueue = Object.assign({}, ALIAS, {
+    queueLastUpdated: new Date(now).toISOString(),
+    queue: { offset:0, limit:50, total:6, items: [
+      { intake_id:'m1', source:'inbound',        created_at: iso(1) },
+      { intake_id:'m2', source:'inbound',        created_at: iso(6) },
+      { intake_id:'m3', source:'inbound',        created_at: iso(30) },   // outside 7 days
+      { intake_id:'a1', source:'skipi_response', created_at: iso(2) },
+      { intake_id:'s1', source:'synthetic',      created_at: iso(1) },    // a TEST record
+      { intake_id:'d1', source:'inbound',        created_at: iso(3) },
+    ]},
+  });
+  M.state.crewFlowReadState = { d1: { action:'ignored' }, m1: { action:'draft_opened' } };
+  const htmlQ = render(withQueue);
+  // 3 inbound inside 7 days: m1, m2, d1 — m3 is older, s1 is synthetic and counts nowhere
+  // Exact counts, by construction of the fixture:
+  //   inbound within 7 days: m1, m2, d1 = 3   (m3 is 30 days old; s1 is synthetic)
+  //   skipi_response within 7 days: a1 = 1
+  //   awaiting: 6 items minus d1 (ignored) = 5; m1 is draft_opened, which is activity
+  // The key now carries the plural form (No.765d), so these read the NUMBER out of
+  // whichever form was chosen: the count is this block's claim, the form is 765d's. Reading
+  // it form-agnostically also keeps them independent of the active language.
+  const countFor = (html, base) => {
+    const m = html.match(new RegExp(base.replace(/\./g, '\\.') + '_(?:one|few|many)\\|(\\d+)'));
+    return m ? Number(m[1]) : null;
+  };
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_mail7') === 3,
+    'No.765c-46: exactly 3 letters in 7 days — the 30-day-old one and the synthetic are excluded');
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_app7') === 1,
+    'No.765c-47: exactly 1 application in 7 days, counted separately from letters');
+  ok(countFor(htmlQ, 'settings.crewing.cf.s_waiting') === 5,
+    'No.765c-48: exactly 5 awaiting a decision — only the ignored one is decided, draft_opened is not');
+  // Non-vacuous by construction, and this is why the premise is asserted beside the
+  // outcome: the old form of this control compared against «s_mail7|4», a string the
+  // form-bearing key can no longer produce, so it would have passed for the wrong reason
+  // and gone on passing had the synthetic ever been folded in.
+  const synthInWindow = withQueue.queue.items.some((it) =>
+    it.source === 'synthetic' && Date.parse(it.created_at) >= now - 7*24*3600*1000);
+  ok(synthInWindow && countFor(htmlQ, 'settings.crewing.cf.s_mail7') === 3,
+    'No.765c-48a: a synthetic record DOES sit inside the window and is still not folded into the letter count');
+
+  // (4) the orange signal: an address IS issued and nothing arrived in seven days
+  const htmlQuiet = render(Object.assign({}, ALIAS, {
+    queueLastUpdated: new Date(now).toISOString(),
+    queue: { offset:0, limit:50, total:0, items: [] },
+  }));
+  ok(htmlQuiet.includes('#b45309'),
+    'No.765c-49: address issued and zero letters in 7 days is flagged, not shown as normal');
+  M.state.intakePilot = null; M.state.crewFlowReadState = {};
+} else {
+  ok(false, 'No.765c checks require _crewingSettingsSections');
+}
+
+// The service-address rule must be stated on the tab, in both tables, and the old
+// «give it to the candidate» reading must be gone from the file entirely.
+ok(/["']settings\.crewing\.cf\.where_note["']/.test(HTML),
+  'No.765c-50: the «service address, do not give it to candidates» note exists');
+{
+  const bad = (HTML.match(/Дайте этот адрес кандидату|Give that address to the candidate/g) || []).length;
+  ok(bad === 0, 'No.765c-51: no text tells the operator to give the inbound address to a candidate — found ' + bad);
+}
+
+// ── No.765d: a numeral must agree with the noun it counts.
+// The manager's stand reading of frames 11/12/13/14: «1 кандидатов ждут решения» — the
+// number does not decline. Russian takes three forms (1 / 2-4 / 5+ and 0), and the teens
+// 11-14 take the many-form although they end in 1-4; English takes two. The agreement is
+// part of the TEXT and not of the number — the verb moves too (ждёт -> ждут) — so each
+// form is its own KEY, and the name of the chosen key reaches the markup. That is what
+// makes the choice assertable rather than merely plausible: a render can be asked which
+// form it picked instead of being pattern-matched for a word.
+section('No.765d numeral agreement — the count chooses the form, and the form is a key');
+
+// (1) the rule itself, on the numbers the card named plus the boundaries that defeat the
+// naive `n === 1` and `n % 10` implementations: the teens, and the tens that return to the
+// one-form (21, 101).
+if (M && typeof M.uiPluralCategory === 'function') {
+  const cat = (n, lang) => M.uiPluralCategory(n, lang);
+  const RU = [[1,'one'],[2,'few'],[5,'many'],[11,'many'],[21,'one'],[0,'many'],
+              [12,'many'],[13,'many'],[14,'many'],[22,'few'],[25,'many'],
+              [101,'one'],[102,'few'],[111,'many'],[114,'many'],[1002,'few']];
+  const ruBad = RU.filter((r) => cat(r[0],'ru') !== r[1])
+                  .map((r) => r[0] + ' wanted ' + r[1] + ' got ' + cat(r[0],'ru'));
+  ok(ruBad.length === 0,
+    'No.765d-52: the Russian rule is right on 1/2/5/11/21/0 and on the teens and tens — wrong [' + ruBad.join('; ') + ']');
+
+  const EN = [[1,'one'],[2,'many'],[5,'many'],[11,'many'],[21,'many'],[0,'many']];
+  const enBad = EN.filter((r) => cat(r[0],'en') !== r[1])
+                  .map((r) => r[0] + ' wanted ' + r[1] + ' got ' + cat(r[0],'en'));
+  ok(enBad.length === 0,
+    'No.765d-53: the English rule is right on the same numbers — wrong [' + enBad.join('; ') + ']');
+
+  // Not vacuous: a rule that returned one constant could not fail the lists above by
+  // accident, so the distinctions are asserted in both directions.
+  ok(new Set([cat(1,'ru'), cat(2,'ru'), cat(5,'ru')]).size === 3,
+    'No.765d-54: Russian genuinely distinguishes three forms for 1, 2 and 5');
+  ok(new Set([cat(1,'en'), cat(2,'en')]).size === 2 && cat(2,'en') === cat(5,'en'),
+    'No.765d-55: English distinguishes exactly two forms — and 2 and 5 share one');
+
+  // A negative is a real number: 0 and a negative count must not throw or invent a form.
+  ok(['one','few','many'].indexOf(cat(-1,'ru')) !== -1 && ['one','few','many'].indexOf(cat(-5,'ru')) !== -1,
+    'No.765d-56: a negative count still yields a known form rather than throwing');
+  ok(cat(NaN,'ru') === 'many' && cat(undefined,'ru') === 'many',
+    'No.765d-57: an unreadable count falls to the many-form, which is the one that reads as a plain total');
+
+  // (2) A language whose own table does not carry these keys falls back to the ENGLISH
+  // text, so the ENGLISH rule is the right one for it. The form must follow the STRING
+  // that will be shown, not the language the operator picked. The premise — that tl/hi/id
+  // carry none of these keys — is asserted separately by 765d-59's count of exactly two.
+  const fellBack = ['tl','hi','id'].filter((l) => [1,2,5,11,21,0].some((n) => cat(n,l) !== cat(n,'en')));
+  ok(fellBack.length === 0,
+    'No.765d-58: a language that falls back to the English text uses the English rule — differs for [' + fellBack.join(',') + ']');
+} else {
+  ok(false, 'No.765d-52..58: the numeral rule is not exported as uiPluralCategory');
+}
+
+// (3) the forms must EXIST as keys, in the tables that need them, and the old
+// form-blind keys must be gone so a leftover cannot silently serve the old text.
+{
+  const vals = (key) => {
+    const re = new RegExp('"' + key.replace(/\./g, '\\.') + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"', 'g');
+    const out = []; let m;
+    while ((m = re.exec(HTML)) !== null) out.push(m[1]);
+    return out;   // file order: the en table precedes the ru table
+  };
+  const BASES = ['settings.crewing.cf.s_waiting','settings.crewing.cf.s_mail7','settings.crewing.cf.s_app7'];
+  const missing = [];
+  BASES.forEach((b) => {
+    if (vals(b + '_one').length !== 2) missing.push(b + '_one x' + vals(b + '_one').length);
+    if (vals(b + '_many').length !== 2) missing.push(b + '_many x' + vals(b + '_many').length);
+    if (vals(b + '_few').length !== 1) missing.push(b + '_few x' + vals(b + '_few').length + ' (ru only)');
+  });
+  ok(missing.length === 0,
+    'No.765d-59: one/many in both tables and few in Russian only, for all three counted nouns — wrong [' + missing.join('; ') + ']');
+  const leftovers = BASES.filter((b) => vals(b).length !== 0);
+  ok(leftovers.length === 0,
+    'No.765d-60: the form-blind keys are gone from the tables — still present [' + leftovers.join(',') + ']');
+
+  // (4) and the forms must carry the right agreement, which is the defect itself: the
+  // card specified the words, so they are asserted as words, in both languages.
+  const ru = (k) => { const v = vals(k); return v.length === 2 ? v[1] : ''; };
+  const en = (k) => { const v = vals(k); return v.length >= 1 ? v[0] : ''; };
+  const ruFew = (k) => { const v = vals(k); return v.length === 1 ? v[0] : ''; };
+  ok(ru('settings.crewing.cf.s_waiting_one').indexOf('кандидат ждёт решения') !== -1
+     && ruFew('settings.crewing.cf.s_waiting_few').indexOf('кандидата ждут решения') !== -1
+     && ru('settings.crewing.cf.s_waiting_many').indexOf('кандидатов ждут решения') !== -1,
+    'No.765d-61: Russian «кандидат ждёт» / «кандидата ждут» / «кандидатов ждут» — the verb agrees too');
+  ok(ru('settings.crewing.cf.s_mail7_one').indexOf('письмо') !== -1
+     && ruFew('settings.crewing.cf.s_mail7_few').indexOf('письма') !== -1
+     && ru('settings.crewing.cf.s_mail7_many').indexOf('писем') !== -1,
+    'No.765d-62: Russian письмо / письма / писем');
+  ok(ru('settings.crewing.cf.s_app7_one').indexOf('отклик') !== -1
+     && ruFew('settings.crewing.cf.s_app7_few').indexOf('отклика') !== -1
+     && ru('settings.crewing.cf.s_app7_many').indexOf('откликов') !== -1,
+    'No.765d-63: Russian отклик / отклика / откликов');
+  ok(en('settings.crewing.cf.s_waiting_one').indexOf('candidate awaiting a decision') !== -1
+     && en('settings.crewing.cf.s_waiting_many').indexOf('candidates awaiting a decision') !== -1,
+    'No.765d-64: English candidate / candidates awaiting a decision');
+  // every form keeps its {n}, or the number disappears from the sentence
+  const nogap = [];
+  let formsSeen = 0;
+  BASES.forEach((b) => ['_one','_few','_many'].forEach((s) => {
+    vals(b + s).forEach((v, i) => { formsSeen++; if (v.indexOf('{n}') === -1) nogap.push(b + s + '[' + i + ']'); });
+  }));
+  // The count of the population is part of the assertion: without it this passes while no
+  // form exists at all, which is exactly how it read on the first failing-first run.
+  ok(formsSeen === 15 && nogap.length === 0,
+    'No.765d-65: all 15 forms exist (3 nouns x en{one,many} + ru{one,few,many}) and every one carries {n} — saw '
+      + formsSeen + ', missing {n} in [' + nogap.join(',') + ']');
+}
+
+// (5) the wiring: a rendered tab must carry the CHOSEN form at BOTH places that count
+// candidates — node 5's caption and the queue row. One site converted and the other
+// missed would show here as a count of 1 instead of 2.
+if (M && typeof M._crewingSettingsSections === 'function') {
+  const sec765d = M._crewingSettingsSections().filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || {};
+  const ctx765d = { t:(k)=>k+'|{n}', escapeAttr:(s)=>String(s==null?'':s), escapeHtml:(s)=>String(s==null?'':s), refresh:()=>Promise.resolve() };
+  const ALIAS765d = { aliases:[{id:'a1',generation:3,state:'active'}], aliasLoading:false, addressChecked:true,
+    revealPending:false, revealedAddress:{aliasId:'a1',generation:3,address:'svc@in.skipi.app',reason:null,copied:false} };
+  const LANGK = 'skipi-crewing-ui-language';
+  const prevLang = globalThis.localStorage.getItem(LANGK);
+  // 30 days old, so the 7-day counters stay 0 and only `waiting` varies with n
+  const stale = new Date(Date.now() - 30*24*3600*1000).toISOString();
+  const renderN = (n, lang) => {
+    globalThis.localStorage.setItem(LANGK, lang);
+    const items = [];
+    for (let i = 0; i < n; i++) items.push({ intake_id:'w'+i, source:'inbound', created_at: stale });
+    M.state.crewFlowReadState = {};
+    M.state.intakePilot = Object.assign({}, ALIAS765d, {
+      queueLastUpdated: new Date().toISOString(),
+      queue: { offset:0, limit:50, total:n, items },
+    });
+    try { return String(sec765d.renderHtml(ctx765d)); } catch (e) { return 'THREW: ' + e; }
+  };
+  const WANT = [[1,'one'],[2,'few'],[5,'many'],[11,'many'],[21,'one'],[0,'many']];
+  const wrong = [];
+  WANT.forEach((r) => {
+    const html = renderN(r[0], 'ru');
+    const needle = 'settings.crewing.cf.s_waiting_' + r[1] + '|' + r[0];
+    const hits = html.split(needle).length - 1;
+    if (hits < 2) wrong.push(r[0] + ' -> ' + r[1] + ' (' + hits + ' of 2 sites)');
+  });
+  ok(wrong.length === 0,
+    'No.765d-66: both counting sites render the chosen form for 1/2/5/11/21/0 — wrong [' + wrong.join('; ') + ']');
+
+  // not vacuous: the one-form render must carry ONLY the one-form, so a helper that
+  // emitted every form and let CSS hide the rest would fail here.
+  const h1 = renderN(1, 'ru');
+  ok(h1.indexOf('settings.crewing.cf.s_waiting_one|1') !== -1
+     && h1.indexOf('settings.crewing.cf.s_waiting_few') === -1
+     && h1.indexOf('settings.crewing.cf.s_waiting_many') === -1,
+    'No.765d-67: the one-form render carries only the one-form, not every form at once');
+
+  // English is wired through the same helper and must move at 1 -> 2, where Russian does too
+  ok(renderN(1,'en').indexOf('settings.crewing.cf.s_waiting_one|1') !== -1
+     && renderN(2,'en').indexOf('settings.crewing.cf.s_waiting_many|2') !== -1,
+    'No.765d-68: English picks one at 1 and many at 2 through the same helper');
+
+  // the 7-day counters decline as well — the card asked for the same helper where it applies
+  const h3 = renderN(0, 'ru');
+  ok(h3.indexOf('settings.crewing.cf.s_mail7_many|0') !== -1,
+    'No.765d-69: «за 7 дней: 0 писем» keeps the many-form — the orange empty-route status still reads right');
+
+  if (prevLang === null) globalThis.localStorage.removeItem(LANGK); else globalThis.localStorage.setItem(LANGK, prevLang);
+  M.state.intakePilot = null; M.state.crewFlowReadState = {};
+} else {
+  ok(false, 'No.765d-66..69: the wiring checks require _crewingSettingsSections');
+}
+
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

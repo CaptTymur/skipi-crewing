@@ -2120,13 +2120,37 @@ var UI_STRINGS = {
     "settings.team.remove.protected_admin": "Administrators cannot be removed here.",
     "settings.team.remove.last_admin": "The last administrator cannot be removed.",
     "settings.crewing.devices.revoke_confirm": "Revoke this device's access?",
-    "settings.crewing.work_data": "Work data",
-    "settings.crewing.work_data.description": "Crewing agency data used across the app.",
+    "settings.crewing.crew_flow": "Crew Flow",
+    "settings.crewing.crew_flow.description": "How candidate applications reach the queue. The two settings below are node 2.",
+    "settings.crewing.cf.n1": "An email with a CV arrives",
+    "settings.crewing.cf.n2": "You forward it to Skipi",
+    "settings.crewing.cf.n3": "The server reads the letter and the CV",
+    "settings.crewing.cf.n4": "Crew Flow queue",
+    "settings.crewing.cf.n5": "Contact · to the database · ignore",
+    "settings.crewing.cf.n2b": "Application from the Skipi Seafarer app",
+    "settings.crewing.cf.s1": "your mailbox",
+    "settings.crewing.cf.s4": "only on «Refresh»",
+    "settings.crewing.cf.s_issued": "address issued",
+    "settings.crewing.cf.s_absent": "no address issued",
+    "settings.crewing.cf.s_mail7_one": "last 7 days: {n} letter",
+    "settings.crewing.cf.s_mail7_many": "last 7 days: {n} letters",
+    "settings.crewing.cf.s_app7_one": "last 7 days: {n} application",
+    "settings.crewing.cf.s_app7_many": "last 7 days: {n} applications",
+    "settings.crewing.cf.s_waiting_one": "{n} candidate awaiting a decision",
+    "settings.crewing.cf.s_waiting_many": "{n} candidates awaiting a decision",
+    "settings.crewing.cf.s_unloaded": "the queue has not been loaded yet",
+    "settings.crewing.cf.where": "Where to forward: your Skipi inbound address",
+    "settings.crewing.cf.where_note": "This is a SERVICE address for forwarding: send CV letters to it from your own mailbox. Do not give it to candidates.",
+    "settings.crewing.cf.from": "Which address you forward from",
+    "settings.crewing.cf.from_note": "Mail is accepted only from this address; letters forwarded from any other address are neither accepted nor shown.",
+    "settings.crewing.cf.queue": "The queue",
+    "settings.crewing.cf.open": "Open Crew Flow",
+    "settings.crewing.agency_data": "Agency data",
+    "settings.crewing.agency_data.description": "Company, certificate, vault and mailbox — unchanged, moved under this heading.",
     "settings.crewing.company": "Company profile",
     "settings.crewing.company.description": "Legal name, jurisdiction and MLC certificate.",
     "settings.crewing.mlc": "MLC certificate",
     "settings.crewing.mlc.description": "Certificate number and validity.",
-    "settings.crewing.contact_email": "Contact email",
     "settings.crewing.contact_email.description": "For verification correspondence and contacting the organisation.",
     "settings.crewing.vault": "Vault",
     "settings.crewing.vault.description": "Local shared storage folder for this device.",
@@ -2309,13 +2333,40 @@ var UI_STRINGS = {
     "settings.team.remove.protected_admin": "Администратора здесь удалить нельзя.",
     "settings.team.remove.last_admin": "Последнего администратора удалить нельзя.",
     "settings.crewing.devices.revoke_confirm": "Отозвать доступ этого устройства?",
-    "settings.crewing.work_data": "Рабочие данные",
-    "settings.crewing.work_data.description": "Данные крюингового агентства, используемые в приложении.",
+    "settings.crewing.crew_flow": "Crew Flow",
+    "settings.crewing.crew_flow.description": "Как заявки кандидатов доходят до очереди. Две настройки ниже — это узел 2.",
+    "settings.crewing.cf.n1": "Вам приходит письмо с резюме",
+    "settings.crewing.cf.n2": "Переадресуете его в Skipi",
+    "settings.crewing.cf.n3": "Сервер разбирает письмо и резюме",
+    "settings.crewing.cf.n4": "Очередь Crew Flow",
+    "settings.crewing.cf.n5": "Связаться · в базу · игнорировать",
+    "settings.crewing.cf.n2b": "Отклик из приложения Skipi Моряк",
+    "settings.crewing.cf.s1": "ваш ящик",
+    "settings.crewing.cf.s4": "только по «Обновить»",
+    "settings.crewing.cf.s_issued": "адрес выдан",
+    "settings.crewing.cf.s_absent": "адрес не выдан",
+    "settings.crewing.cf.s_mail7_one": "за 7 дней: {n} письмо",
+    "settings.crewing.cf.s_mail7_few": "за 7 дней: {n} письма",
+    "settings.crewing.cf.s_mail7_many": "за 7 дней: {n} писем",
+    "settings.crewing.cf.s_app7_one": "за 7 дней: {n} отклик",
+    "settings.crewing.cf.s_app7_few": "за 7 дней: {n} отклика",
+    "settings.crewing.cf.s_app7_many": "за 7 дней: {n} откликов",
+    "settings.crewing.cf.s_waiting_one": "{n} кандидат ждёт решения",
+    "settings.crewing.cf.s_waiting_few": "{n} кандидата ждут решения",
+    "settings.crewing.cf.s_waiting_many": "{n} кандидатов ждут решения",
+    "settings.crewing.cf.s_unloaded": "очередь ещё не загружалась",
+    "settings.crewing.cf.where": "Куда переадресовать: ваш входящий адрес Skipi",
+    "settings.crewing.cf.where_note": "Это СЛУЖЕБНЫЙ адрес для переадресации: пересылайте на него письма с резюме из своего ящика. Кандидатам его не давайте.",
+    "settings.crewing.cf.from": "С какого адреса вы переадресуете",
+    "settings.crewing.cf.from_note": "Письма принимаются только с этого адреса; пересланные с других адресов не принимаются и не показываются.",
+    "settings.crewing.cf.queue": "Очередь",
+    "settings.crewing.cf.open": "Открыть Crew Flow",
+    "settings.crewing.agency_data": "Данные агентства",
+    "settings.crewing.agency_data.description": "Компания, сертификат, хранилище и почтовый ящик — без изменений, перенесены под этот заголовок.",
     "settings.crewing.company": "Профиль компании",
     "settings.crewing.company.description": "Юридическое название, юрисдикция и сертификат MLC.",
     "settings.crewing.mlc": "Сертификат MLC",
     "settings.crewing.mlc.description": "Номер сертификата и срок действия.",
-    "settings.crewing.contact_email": "Контактный email",
     "settings.crewing.contact_email.description": "Для переписки по верификации и связи с организацией.",
     "settings.crewing.vault": "Профиль (vault)",
     "settings.crewing.vault.description": "Локальная общая папка хранилища на этом устройстве.",
@@ -2355,6 +2406,28 @@ function getUiLang() {
 function tr(key) {
   var lang = getUiLang();
   return (UI_STRINGS[lang] && UI_STRINGS[lang][key]) || UI_STRINGS.en[key] || key;
+}
+// A numeral must agree with the noun it counts, and the agreement belongs to the TEXT, not
+// to the number: in Russian the verb moves too («1 кандидат ждёт» vs «2 кандидата ждут»), so
+// a helper that inflected only a noun would still print a wrong sentence. Each form is its
+// own key — `<base>_one` / `_few` / `_many` — and this says which one to ask for.
+//
+// Russian: 1 but not 11; 2-4 but not 12-14; everything else, 0 included, takes the many-form.
+// The teens are the case that defeats a bare `n % 10`, and the tens (21, 101) are the case
+// that defeats a bare `n === 1`.
+//
+// Every other language takes the English two-form rule, and that is MEASURED rather than
+// assumed: only the en and ru tables carry these keys, so under tl/hi/id `tr()` falls back to
+// the ENGLISH string and the form must follow the string that will actually be shown. Should
+// a tl/hi/id table ever gain these keys, this function needs a branch for that language.
+function uiPluralCategory(n, lang) {
+  var a = Math.abs(Math.trunc(Number(n)));
+  if (!isFinite(a)) a = 0;
+  if ((lang || getUiLang()) !== 'ru') return a === 1 ? 'one' : 'many';
+  var m10 = a % 10, m100 = a % 100;
+  if (m10 === 1 && m100 !== 11) return 'one';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'few';
+  return 'many';
 }
 function setUiLang(lang) {
   if (!UI_STRINGS[lang]) lang = 'ru';
@@ -6302,47 +6375,100 @@ function crewFlowHeadHtml(mode) {
 // **Three states, and silence while unknown.** A list not yet loaded is NOT «no address»:
 // until it is in hand this renders nothing at all, so no marker claims a state we have
 // not measured.
-function crewFlowAddressHtml() {
+// No.765: ONE decision about which address state to show, so the Crew Flow screen and
+// the settings tab can never disagree about it. The ordering and every guard below are
+// the ones crewFlowAddressHtml() carried before this split; only the place changed.
+// ── No.765 slice 2 (OWNER 1070/1071): statistics for the settings diagram.
+// EVERY figure here comes from state ALREADY in the client. This tab issues no server
+// call and never loads the queue: if the list has not been fetched by the Crew Flow
+// screen, the diagram says so rather than fetching it, because a settings screen that
+// quietly pulls the queue would make its own node-4 caption («only on Refresh») false.
+function crewFlowSettingsStats() {
   var p = state.intakePilot || {};
-  var unavailable = '<div class="cf-address" data-qa="crew-flow-address-unavailable">'
-    + escapeHtml(crewFlowTr('address_unavailable')) + '</div>';
-  // The boundary, and it is the manager's decision, not a convenience: SILENCE is
-  // allowed only while an operation is IN FLIGHT, and forbidden once one has ended with
-  // any outcome. Emptiness after a failure is a lie by omission — the reader concludes
-  // there is no address, when in truth we could not ask.
-  if (!Array.isArray(p.aliases) || p.aliasLoading) return '';          // list in flight
-  if (p.aliasError) return unavailable;                                 // list ended: failed
+  var loaded = !!(p.queue && Array.isArray(p.queue.items) && p.queueLastUpdated);
+  var out = { loaded: loaded, updatedAt: p.queueLastUpdated || '', mail7: 0, app7: 0, waiting: 0, total: 0 };
+  if (!loaded) return out;
+  var items = p.queue.items;
+  var cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  // The source vocabulary is exactly three values (CREW_FLOW_SOURCE_TEXT): `inbound` is a
+  // forwarded letter, `skipi_response` an application from the Seafarer app, `synthetic` a
+  // TEST record. A test record is counted in NEITHER bucket — folding it into «letters»
+  // would inflate what the operator reads as real mail.
+  // «Awaiting a decision» is not a field: nine call sites write a read-state action, and
+  // only four of them are decisions. `matched`, `draft_opened`, `draft_copied`,
+  // `requested_documents`, `needs_documents` and `seen` are activity — you can have opened
+  // a draft and still not decided.
+  var DECIDED = { saved_to_db:1, added:1, kept_for_later:1, ignored:1 };
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i]; if (!it) continue;
+    out.total++;
+    var src2 = String(it.source || '').toLowerCase();
+    var t = Date.parse(it.created_at || '');
+    if (!isNaN(t) && t >= cutoff) {
+      if (src2 === 'inbound') out.mail7++;
+      else if (src2 === 'skipi_response') out.app7++;
+    }
+    var info = crewFlowReadInfo(String(it.intake_id || ''));
+    if (!info || !DECIDED[String(info.action || '')]) out.waiting++;
+  }
+  return out;
+}
+function _cfNode(ctx, n, key, accent) {
+  return '<div data-qa="cf-node-' + n + '" style="box-sizing:border-box;padding:8px;display:flex;'
+    + 'align-items:center;justify-content:center;text-align:center;border-radius:10px;font-size:13px;'
+    + 'line-height:18px;min-height:96px;'
+    + (accent ? 'background:var(--ss-accent-soft,#e7ebf1);border:2px solid var(--ss-accent,#2f6fed);'
+              : 'background:var(--ss-panel,#fff);border:1px solid var(--ss-border,#c9d0d8);') + '">'
+    + '<span><b>' + n + '</b><br>' + ctx.escapeHtml(ctx.t(key)) + '</span></div>';
+}
+function _cfCap(ctx, text, warn) {
+  return '<div style="text-align:center;font-size:12px;line-height:16px;padding:4px 2px;'
+    + (warn ? 'color:#b45309;' : 'color:var(--ss-muted,#5c6670);') + '">' + ctx.escapeHtml(text) + '</div>';
+}
+function crewFlowAddressState() {
+  var p = state.intakePilot || {};
+  if (!Array.isArray(p.aliases) || p.aliasLoading) return { kind: 'silent' };   // list in flight
+  if (p.aliasError) return { kind: 'unavailable' };                              // list ended: failed
   var rows = p.aliases, active = null;
   for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].state === 'active') active = rows[i];
-  if (!active) return '<div class="cf-address" data-qa="crew-flow-address-absent">'
-    + escapeHtml(crewFlowTr('address_absent')) + '</div>';
-  if (p.revealError) return unavailable;                                // reveal ended: failed
-  if (p.revealPending || !p.addressChecked) return '';                  // reveal in flight
+  if (!active) return { kind: 'absent' };
+  if (p.revealError) return { kind: 'unavailable' };                             // reveal ended: failed
+  if (p.revealPending || !p.addressChecked) return { kind: 'silent' };           // reveal in flight
   var rv = p.revealedAddress;
   var fresh = !!rv && rv.aliasId === active.id && rv.generation === active.generation;
-  if (fresh && rv.address) return '<div class="cf-address" data-qa="crew-flow-address">'
-    + '<span class="cf-address-label">' + escapeHtml(crewFlowTr('address_label')) + '</span>'
-    + '<code class="cf-address-value">' + escapeHtml(rv.address) + '</code>'
-    + '<button data-qa="crew-flow-address-copy" onclick="crewFlowCopyAddress()" class="ghost" style="padding:4px 10px;font-size:11px;">'
-    + escapeHtml(crewFlowTr(rv.copied ? 'address_copied' : 'address_copy')) + '</button></div>';
-  if (fresh && rv.reason === 'never_stored') return '<div class="cf-address" data-qa="crew-flow-address-lost">'
+  if (fresh && rv.address) return { kind: 'address', address: rv.address, copied: !!rv.copied };
+  if (fresh && rv.reason === 'never_stored') return { kind: 'lost' };
+  return { kind: 'silent' };                                                     // rotation seen, refresh in flight
+}
+function crewFlowAddressHtml() {
+  var st = crewFlowAddressState();
+  if (st.kind === 'silent') return '';
+  if (st.kind === 'unavailable') return '<div class="cf-address" data-qa="crew-flow-address-unavailable">'
+    + escapeHtml(crewFlowTr('address_unavailable')) + '</div>';
+  if (st.kind === 'absent') return '<div class="cf-address" data-qa="crew-flow-address-absent">'
+    + escapeHtml(crewFlowTr('address_absent')) + '</div>';
+  if (st.kind === 'lost') return '<div class="cf-address" data-qa="crew-flow-address-lost">'
     + escapeHtml(crewFlowTr('address_lost')) + '</div>';
-  return '';                                                            // rotation seen, refresh in flight
+  return '<div class="cf-address" data-qa="crew-flow-address">'
+    + '<span class="cf-address-label">' + escapeHtml(crewFlowTr('address_label')) + '</span>'
+    + '<code class="cf-address-value">' + escapeHtml(st.address) + '</code>'
+    + '<button data-qa="crew-flow-address-copy" onclick="crewFlowCopyAddress()" class="ghost" style="padding:4px 10px;font-size:11px;">'
+    + escapeHtml(crewFlowTr(st.copied ? 'address_copied' : 'address_copy')) + '</button></div>';
 }
 // One reveal per app session per alias generation. The handle writes an audit row on
 // every call, so a per-render call would flood the ledger; and a click-to-reveal is the
 // folded door the card forbids. The generation guard is what keeps a cached value from
 // outliving a rotation made on another client.
-async function crewFlowRevealAddress() {
+async function crewFlowRevealAddressState() {
   var p = state.intakePilot, context = pilotContextSnapshot();
-  if (!p || !pilotContextReady(context)) return;
+  if (!p || !pilotContextReady(context)) return false;
   var rows = Array.isArray(p.aliases) ? p.aliases : [], active = null;
   for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].state === 'active') active = rows[i];
-  if (p.aliasError) return;            // list failed: the block renders «unavailable» from that field
-  if (!active) { p.addressChecked = true; renderCrewFlowView(); return; }
+  if (p.aliasError) return false;      // list failed: the block renders «unavailable» from that field
+  if (!active) { p.addressChecked = true; return true; }
   var rv = p.revealedAddress;
-  if (rv && rv.aliasId === active.id && rv.generation === active.generation) return;
-  if (p.revealPending) return;
+  if (rv && rv.aliasId === active.id && rv.generation === active.generation) return false;
+  if (p.revealPending) return false;
   p.revealPending = true;
   try {
     var args = pilotExpected(context); args.aliasId = active.id;
@@ -6360,14 +6486,20 @@ async function crewFlowRevealAddress() {
     p.revealError = error;
   }
   p.revealPending = false; p.addressChecked = true;
-  renderCrewFlowView();
+  return true;
 }
-async function crewFlowCopyAddress() {
+async function crewFlowRevealAddress() {
+  if (await crewFlowRevealAddressState()) renderCrewFlowView();
+}
+async function crewFlowCopyAddressState() {
   var p = state.intakePilot, rv = p && p.revealedAddress;
-  if (!rv || !rv.address) return;
+  if (!rv || !rv.address) return false;
   try { await navigator.clipboard.writeText(rv.address); rv.copied = true; }
   catch (_) { rv.copied = false; }
-  renderCrewFlowView();
+  return true;
+}
+async function crewFlowCopyAddress() {
+  if (await crewFlowCopyAddressState()) renderCrewFlowView();
 }
 function crewFlowLiveMainHtml(mode) {
   var head = '<div data-qa="crew-flow-view">' + crewFlowHeadHtml(mode);
@@ -14228,7 +14360,10 @@ function _crewingSettingsSectionFor(tab){
     case 'appearance': case 'interface': case 'app': case 'language': return 'application';
     case 'devices': return 'devices';
     case 'team': case 'access': return 'team';
-    case 'work_data': return 'home-crewing-work-data';
+    // No.765 (OWNER 1067): the tab is «Crew Flow» now. The legacy id stays as an
+    // ALIAS, so every existing openSettings('work_data') call site keeps landing on a
+    // real screen instead of falling to the default arm and showing 'profile' silently.
+    case 'work_data': case 'crew_flow': return 'home-crewing-crew-flow';
     default: return 'profile';
   }
 }
@@ -14334,9 +14469,20 @@ try{
 //     unified Profile row and the legacy form always see one value.
 
 // Small trusted-HTML helpers for the app-specific section (module classes).
-function _crewSetHtmlRow(ctx, labelKey, description, control){
-  return '<div class="skipi-settings__row"><div class="skipi-settings__row-copy">'
-    + '<div class="skipi-settings__row-label">'+ctx.escapeHtml(ctx.t(labelKey))+'</div>'
+// No.765b (stand 2026-10-16): `layout` is optional and reaches the module's own variant.
+// The module styles .skipi-settings__row as `grid-template-columns: minmax(0,1fr) auto`
+// with `min-width:0` on the copy column and `overflow-wrap:anywhere` on the label, so a
+// control with a wide natural width — a 60-character address chip plus a button — collapses
+// the text column to nothing and the label breaks mid-word: «Вхо/дя/щи/й/адр/ес» on the
+// stand. `data-layout="stack"` is the module's supported answer (it uses it itself in
+// dist/skipi-settings.js), giving one full-width column. The vendored CSS is NOT edited:
+// it is disallowed on this route, and overriding another module's grid from outside would
+// be a worse fix than using the mechanism it ships.
+// labelKey may be empty: a row whose group heading already names it should not repeat it.
+function _crewSetHtmlRow(ctx, labelKey, description, control, layout){
+  return '<div class="skipi-settings__row"'+(layout ? ' data-layout="'+ctx.escapeAttr(layout)+'"' : '')+'>'
+    + '<div class="skipi-settings__row-copy">'
+    + (labelKey ? '<div class="skipi-settings__row-label">'+ctx.escapeHtml(ctx.t(labelKey))+'</div>' : '')
     + (description ? '<div class="skipi-settings__row-description">'+ctx.escapeHtml(description)+'</div>' : '')
     + '</div><div class="skipi-settings__row-control">'+(control||'')+'</div></div>';
 }
@@ -14426,67 +14572,152 @@ function _crewingSettingsSections(){
         }
       }
     },
-    { id:'home-crewing-work-data', order:450, icon:'W',
-      labelKey:'settings.crewing.work_data', descriptionKey:'settings.crewing.work_data.description',
+    { id:'home-crewing-crew-flow', order:450, icon:'C',
+      labelKey:'settings.crewing.crew_flow', descriptionKey:'settings.crewing.crew_flow.description',
       renderHtml: function(ctx){
         legacyMailboxEnsureStatus();
         var s = state.settings || {};
         var p = s.profile || {};
         var na = ctx.t('settings.crewing.not_set');
-        var legal = (p.legal_name || s.company_name || '').trim() || na;
-        var juris = (p.jurisdiction || '').trim() || na;
-        var mlcNo = (p.mlc_cert_number || '').trim() || na;
-        var mlcTo = (p.mlc_cert_valid_to || '').trim();
-        var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' · ' + mlcTo) : ''));
-        var vault = (s.vault_path || '').trim() || na;
+        var st = crewFlowAddressState();
+        var stats = crewFlowSettingsStats();
+        var T = function(k){ return ctx.t(k); };
+        // The form is chosen first and the text for THAT form is then fetched, so the key
+        // carries the agreement and both call sites below stay as they were.
+        var fill = function(k, n){ return String(T(k + '_' + uiPluralCategory(n))).replace('{n}', String(n)); };
+
+        // (б) THE DIAGRAM. The mockup positions five 116px nodes absolutely across 700px.
+        // Measured, the settings pane is min(980px,96vw) minus a ~230px rail, so ~670px at
+        // full width and less on the stand — a fixed 700px block would overflow. The card
+        // permits flex/grid, so the row is a 5-column grid that reflows and keeps the
+        // mockup's structure: five nodes, arrows between, second entrance under node 3.
+        var arrow = '<div aria-hidden="true" style="display:flex;align-items:center;justify-content:center;color:var(--ss-muted,#8a9099);font-size:16px;">\u2192</div>';
+        var row = '<div data-qa="cf-schema" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 4px;align-items:stretch;">'
+          + _cfNode(ctx,1,'settings.crewing.cf.n1',false)
+          + _cfNode(ctx,2,'settings.crewing.cf.n2',true)
+          + _cfNode(ctx,3,'settings.crewing.cf.n3',false)
+          + _cfNode(ctx,4,'settings.crewing.cf.n4',false)
+          + _cfNode(ctx,5,'settings.crewing.cf.n5',false);
+        // statuses, each under its node
+        var cap2 = stats.loaded
+          ? (st.kind === 'absent' ? T('settings.crewing.cf.s_absent')
+                                  : T('settings.crewing.cf.s_issued') + ' \u00b7 ' + fill('settings.crewing.cf.s_mail7', stats.mail7))
+          : T('settings.crewing.cf.s_unloaded');
+        // orange exactly when an address IS issued and nothing arrived in seven days: that
+        // pair is the operator's problem signal — the route exists and is carrying nothing.
+        var warn2 = stats.loaded && st.kind !== 'absent' && stats.mail7 === 0;
+        var cap5 = stats.loaded ? fill('settings.crewing.cf.s_waiting', stats.waiting)
+                                : T('settings.crewing.cf.s_unloaded');
+        row += _cfCap(ctx, T('settings.crewing.cf.s1'), false)
+             + _cfCap(ctx, cap2, warn2)
+             + '<div></div>'
+             + _cfCap(ctx, T('settings.crewing.cf.s4'), false)
+             + _cfCap(ctx, cap5, false)
+             + '</div>';
+        // the second entrance, under node 3, with an arrow up into it
+        var cap2b = stats.loaded ? fill('settings.crewing.cf.s_app7', stats.app7)
+                                 : T('settings.crewing.cf.s_unloaded');
+        var second = '<div data-qa="cf-second-entrance" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;">'
+          + '<div></div><div></div>'
+          + '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
+          +   '<div aria-hidden="true" style="color:var(--ss-muted,#8a9099);font-size:16px;line-height:1;">\u2191</div>'
+          +   '<div data-qa="cf-node-2b" style="box-sizing:border-box;padding:8px;text-align:center;font-size:13px;line-height:18px;'
+          +     'border-radius:10px;background:var(--ss-warn-soft,#fbf7ee);border:1px dashed var(--ss-border,#c9d0d8);width:100%;">'
+          +     ctx.escapeHtml(T('settings.crewing.cf.n2b')) + '</div>'
+          +   _cfCap(ctx, cap2b, false)
+          + '</div><div></div><div></div></div>';
+        var schema = _crewSetHtmlGroup(ctx, 'settings.crewing.crew_flow', row + second);
+
+        // (в) NODE 2, first setting: WHERE to forward. A service address, not a public one.
+        var addrCtrl;
+        if (st.kind === 'address') {
+          addrCtrl = _crewSetCode(ctx, st.address) + ' '
+            + _crewSetHtmlButton(ctx, 'crew-flow-settings-address-copy',
+                st.copied ? 'crew_flow.address_copied' : 'crew_flow.address_copy');
+        } else if (st.kind === 'absent') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_absent'));
+        } else if (st.kind === 'lost') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_lost'));
+        } else if (st.kind === 'unavailable') {
+          addrCtrl = ctx.escapeHtml(crewFlowTr('address_unavailable')) + ' '
+            + _crewSetHtmlButton(ctx, 'crew-flow-settings-address-reveal', 'settings.crewing.crew_flow.address_reveal');
+        } else {
+          addrCtrl = _crewSetHtmlButton(ctx, 'crew-flow-settings-address-reveal', 'settings.crewing.crew_flow.address_reveal');
+        }
+        var where = _crewSetHtmlGroup(ctx, 'settings.crewing.cf.where',
+          '<div data-qa="crew-flow-settings-address">'
+            + _crewSetHtmlRow(ctx, '', T('settings.crewing.cf.where_note'), addrCtrl, 'stack')
+            + '</div>');
+
+        // (г) NODE 2, second setting: WHICH address you forward from.
         var email = (p.contact_email || '').trim();
         var emailCtrl = '<div class="skipi-settings__actions">'
           + '<input class="skipi-settings__input" type="email" id="crewing-set-contact-email"'
           + ' value="'+ctx.escapeAttr(email)+'" placeholder="hr@company.com" autocomplete="email">'
           + _crewSetHtmlButton(ctx, 'crewing-save-contact-email', 'settings.action.save')
           + '</div>';
-        return _crewSetHtmlGroup(ctx, 'settings.crewing.work_data',
+        var from = _crewSetHtmlGroup(ctx, 'settings.crewing.cf.from',
+          '<div data-qa="crew-flow-settings-sender">'
+            + _crewSetHtmlRow(ctx, '', T('settings.crewing.cf.from_note'), emailCtrl)
+            + '</div>');
+
+        // (д) NODE 4: what the queue says, and a way to it. Read-only, no fetch.
+        var qline = stats.loaded
+          ? (crewFlowTr('updated_at') + ': ' + pilotFormatTime(stats.updatedAt)
+             + ' \u00b7 ' + fill('settings.crewing.cf.s_waiting', stats.waiting))
+          : T('settings.crewing.cf.s_unloaded');
+        var queue = _crewSetHtmlGroup(ctx, 'settings.crewing.cf.queue',
+          '<div data-qa="crew-flow-settings-queue">'
+            + _crewSetHtmlRow(ctx, '', qline,
+                _crewSetHtmlButton(ctx, 'crew-flow-settings-open', 'settings.crewing.cf.open'))
+            + '</div>');
+
+        // (е) the agency data, unchanged, still behind its disclosure.
+        var legal = (p.legal_name || s.company_name || '').trim() || na;
+        var juris = (p.jurisdiction || '').trim() || na;
+        var mlcNo = (p.mlc_cert_number || '').trim() || na;
+        var mlcTo = (p.mlc_cert_valid_to || '').trim();
+        var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' \u00b7 ' + mlcTo) : ''));
+        var vault = (s.vault_path || '').trim() || na;
+        var agencyRows =
             _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
-                _crewSetCode(ctx, legal + ' · ' + juris))
+                _crewSetCode(ctx, legal + ' \u00b7 ' + juris), 'stack')
           + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
                 _crewSetCode(ctx, mlcVal))
-          + _crewSetHtmlRow(ctx, 'settings.crewing.contact_email', ctx.t('settings.crewing.contact_email.description'),
-                emailCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
-                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'))
-          // K2.1 (OWNER (739), Супервайзор REJECT на ffe0573c): the ONE surviving
-          // mailbox operation lives HERE, in the sections handed to
-          // window.SkipiSettings.mount — that is the settings screen the product
-          // actually shows in both modes. The four legacy renderers carry the same
-          // row, but they are only the fallback for a module that failed to load.
+                _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'), 'stack')
           + _crewSetHtmlRow(ctx, 'settings.mailbox_legacy', ctx.t('settings.mailbox_legacy_desc'),
-                legacyMailboxRowHtml('module')));
+                legacyMailboxRowHtml('module'));
+        var agency = '<details data-qa="crew-flow-settings-agency" class="skipi-settings__section">'
+          + '<summary class="skipi-settings__section-title" style="cursor:pointer;">'
+          + ctx.escapeHtml(T('settings.crewing.agency_data')) + '</summary>'
+          + '<div class="skipi-settings__group">' + agencyRows + '</div></details>';
+        return schema + where + from + queue + agency;
       },
       handlers: {
-        // The same revoke path as every other surface: confirm, then
-        // disconnect_mailbox, then an honest toast if the server refuses.
         'crewing-mailbox-disconnect': function(){ return legacyMailboxDisconnect(); },
-        'crewing-open-profile': function(ctx){
-          // R2 (OWNER 2026-09-29): this used to close the overlay and then call
-          // openSettings('connection') again. The reopened overlay pushed a fresh
-          // history marker while the close was still consuming the old one, so the
-          // popstate handler closed the overlay right back — the button landed
-          // nowhere (measured by frames on 0.4.136). The module already knows how
-          // to switch sections in place, so switch in place.
-          try { ctx.open('profile'); } catch(_){}
-        },
+        'crewing-open-profile': function(ctx){ try { ctx.open('profile'); } catch(_){} },
         'crewing-save-contact-email': function(ctx){
-          // Persist through ctx.saveSettings (module round-trip: notice,
-          // supplemental reload, redraw) into the SAME key the legacy form
-          // writes (profile.contact_email) — after save getProfile() serves
-          // the new value and the Profile row stops showing «Недоступно».
           var el = document.getElementById('crewing-set-contact-email');
           var value = (el && el.value != null) ? String(el.value).replace(/^\s+|\s+$/g,'') : '';
           var next;
           try { next = JSON.parse(JSON.stringify(state.settings || {})); } catch(_){ next = {}; }
           if (!next.profile || typeof next.profile !== 'object' || Array.isArray(next.profile)) next.profile = {};
-          next.profile.contact_email = value; // '' = как раньше, без фейкового дефолта
+          next.profile.contact_email = value;
           return ctx.saveSettings(next);
+        },
+        // The same reveal, one storage, repaint only to the mounted surface.
+        'crew-flow-settings-address-reveal': function(ctx){
+          return Promise.resolve(crewFlowRevealAddressState()).then(function(){ return ctx.refresh(); });
+        },
+        'crew-flow-settings-address-copy': function(ctx){
+          return Promise.resolve(crewFlowCopyAddressState()).then(function(){ return ctx.refresh(); });
+        },
+        // Leaving Settings for the queue is navigation, not a fetch: the queue loads on
+        // the Crew Flow screen, by its own Refresh, exactly as node 4 states.
+        'crew-flow-settings-open': function(){
+          try { if (typeof closeSettings === 'function') closeSettings(); } catch(_){}
+          try { crewFlowOpenPilot ? showView('crew_flow') : showView('crew_flow'); } catch(_){}
         }
       }
     }
