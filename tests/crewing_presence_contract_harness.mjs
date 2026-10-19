@@ -1219,5 +1219,188 @@ if (M && typeof M._crewingSettingsSections === 'function') {
 }
 
 
+section('No.635 single-user Team retirement — real callers, unchanged connection');
+{
+  const oldNative = globalThis.__TAURI__.core.invoke;
+  const oldConfirm = globalThis.confirm;
+  let confirmations = 0;
+  globalThis.confirm = () => { confirmations++; return true; };
+  const savedRole = localStorage.getItem('skipi_crewing_work_role');
+  const savedEntry = localStorage.getItem('skipi_crewing_entry');
+  const savedDemo = localStorage.getItem('skipi_crewing_demo');
+  const savedLang = localStorage.getItem('skipi-crewing-ui-language');
+  let fixture = {};
+  const calls = [];
+  let deferIdentity = false;
+  const identities = [];
+  globalThis.__TAURI__.core.invoke = async (cmd, args) => {
+    calls.push(cmd);
+    if (cmd === 'get_settings') return fixture;
+    if (cmd === 'get_my_identity') {
+      if (deferIdentity) return new Promise((resolve) => identities.push(resolve));
+      return { user_id: 'synthetic-single-user' };
+    }
+    if (cmd === 'save_settings') throw new Error('unexpected settings write from retired Team entrypoint');
+    if (cmd === 'get_mailbox_status') return { configured: false };
+    if (cmd.startsWith('fetch_') || cmd.startsWith('list_')) return [];
+    return {};
+  };
+  localStorage.removeItem('skipi_crewing_demo');
+  localStorage.setItem('skipi_crewing_entry', 'use');
+  const names = [
+    'renderEntryChoice', '_crewingTeamRemoveMember',
+    'seedRetiredTeamCache: function(){ _crewingTeamMemberCache = [{ user_id: "synthetic-other-user", role: "member" }]; }',
+    'state', 'mobileState', 'hasTeamAccess', 'crewingSettingsHost', '_crewingSettingsSectionFor',
+    'showView', 'mobileShow', 'shouldShowTeamOnboarding', 'maybeShowTeamOnboarding',
+    'openTeamOnboarding', 'closeTeamOnboarding', 'renderTeamOnboarding',
+    'renderTeamView', 'renderTeamTree', 'renderTeamMain', 'mobileRenderTeam',
+    'shouldShowMobileWorkRoleChoice', 'mobileChooseWorkRole', 'mobileChangeWorkRole',
+    'mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin', 'mobileConnectionIntroHtml',
+    'mobileSettingsOrgHtml', 'mobileSettingsFiveIdentityHtml',
+    'claimOwnerAccess', 'addTeamMember', 'removeTeamMember', 'refreshTeamMembers',
+    'startTeamChatPoll', 'teamChatPollOnce', 'copyIssuedTeamToken'
+  ];
+  let C;
+  const pendingRenders = [];
+  try {
+    C = new Function('invoke', 'showToast', '__testConfirm', '__testPending',
+      'requestAnimationFrame', 'clearInterval',
+      scriptNoBoot + '\ninAppConfirm = __testConfirm;'
+      + '\nfunction _recomputeTeamChatUnread() {}'
+      + '\nfunction renderTeamChatUnread() {}'
+      + '\nfunction _hideTeamChatNewBadge() {}'
+      + '\nfunction _playTeamChatBeep() {}'
+      + '\nvar __oldTeamRender = renderTeamView;'
+      + '\nrenderTeamView = function(){ var p = Promise.resolve(__oldTeamRender.apply(this, arguments)); p.catch(function(){}); __testPending.push(p); return p; };'
+      + '\nvar __oldTeamPoll = teamChatPollOnce;'
+      + '\nteamChatPollOnce = function(){ var p = Promise.resolve(__oldTeamPoll.apply(this, arguments)); p.catch(function(){}); __testPending.push(p); return p; };'
+      + '\nreturn {' + names.join(',') + '};')(
+        globalThis.__TAURI__.core.invoke, () => {}, async () => true, pendingRenders,
+        () => 0, () => {});
+    const teamRpc = new Set([
+      'list_team_members', 'claim_team_owner', 'add_team_member', 'remove_team_member',
+      'fetch_team_chat_messages', 'send_team_chat_message'
+    ]);
+    const teamMarkup = /team-onboarding-modal|team-onboarding-id|team-onboarding-choice|team-members-table|team-chat-stream|mobile-role-choice|mobile-team-user-id/;
+    for (const lang of ['ru', 'en']) {
+      for (const variant of [
+        { name: 'fresh', role: '', scopes: [], connected: false },
+        { name: 'owner', role: 'owner', scopes: ['*'], connected: true },
+        { name: 'member', role: 'member', scopes: ['team:read', 'team:write'], connected: true }
+      ]) {
+        const label = '635/' + lang + '/' + variant.name;
+        fixture = {
+          server_url: 'https://synthetic.invalid',
+          bearer_token: variant.connected ? 'SYNTHETIC-PRIVATE' : '',
+          crewing_id: variant.connected ? 'own-company' : '',
+          organization_id: variant.connected ? 'own-org' : '',
+          company_name: 'Synthetic company', team_role: variant.role,
+          token_scopes: variant.scopes, token_expires_at: null,
+          profile: { contact_email: 'synthetic@example.invalid', legal_name: 'Synthetic company' },
+          interface: { theme: 'light', language: lang }
+        };
+        C.state.settings = fixture;
+        C.state.myIdentity = { user_id: 'synthetic-single-user' };
+        localStorage.setItem('skipi-crewing-ui-language', lang);
+        localStorage.setItem('skipi_crewing_work_role', variant.role || 'member');
+        calls.length = 0;
+        const before = JSON.stringify(fixture);
+        // Exercise the real first-run renderer; the permissive shared fake DOM
+        // otherwise always reports an overlay as already mounted.
+        const oldLookup = document.getElementById;
+        const oldAppend = document.body.appendChild;
+        let entryOverlay = null;
+        document.getElementById = (id) => id === 'entry-choice-overlay' ? null : oldLookup(id);
+        document.body.appendChild = (child) => {
+          if (child.id === 'entry-choice-overlay') entryOverlay = child;
+          return child;
+        };
+        try { C.renderEntryChoice(() => {}); }
+        finally {
+          document.getElementById = oldLookup;
+          document.body.appendChild = oldAppend;
+        }
+        ok(!!entryOverlay && /id="ec-create"/.test(entryOverlay.innerHTML)
+          && !/team|команд/i.test(entryOverlay.innerHTML),
+          label + ': real first-run entry choice never offers a team');
+        ok(!C.hasTeamAccess(), label + ': old Team scopes do not enable a retired module');
+        ok(!C.crewingSettingsHost().team, label + ': shared Settings receives no Team capability');
+        ok(C._crewingSettingsSectionFor('team') === 'profile'
+          && C._crewingSettingsSectionFor('access') === 'profile',
+          label + ': old Settings aliases land on Profile');
+        ok(C._crewingSettingsSectionFor('connection') === 'home-crewing-connection',
+          label + ': existing connection stays reachable');
+        ok(!C.shouldShowTeamOnboarding() && !C.shouldShowMobileWorkRoleChoice(),
+          label + ': neither first-run role gate can reopen');
+        C.showView('team');
+        ok(C.state.view === 'crew_flow', label + ': desktop Team alias lands on Crew Flow');
+        for (const route of ['work_role', 'member_join']) {
+          C.mobileShow(route);
+          ok(C.mobileState.view === 'connection', label + ': mobile ' + route + ' is inert');
+        }
+        for (const render of ['renderTeamView', 'renderTeamTree', 'renderTeamMain']) {
+          const container = render === 'renderTeamTree' ? 'left-panel' : 'main';
+          elFor(container).innerHTML = '';
+          await C[render]();
+          const rendered = elFor(container).innerHTML;
+          ok(!teamMarkup.test(rendered) && !/openTeamOnboarding|refreshTeamMembers/.test(rendered), label + ': direct ' + render + ' cannot restore Team');
+        }
+        for (const render of ['mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin', 'mobileRenderTeam']) {
+          elFor('mobile-main').innerHTML = '';
+          await C[render]();
+          ok(!teamMarkup.test(elFor('mobile-main').innerHTML), label + ': direct ' + render + ' cannot restore Team');
+        }
+        const roleHtml = C.mobileConnectionIntroHtml() + C.mobileSettingsOrgHtml()
+          + C.mobileSettingsFiveIdentityHtml();
+        ok(!/mobileChangeWorkRole|member_join|mobileChooseWorkRole/.test(roleHtml),
+          label + ': connection and both fallback settings have no membership controls');
+        elFor('team-new-user-id').value = 'synthetic-other-user';
+        await C.claimOwnerAccess();
+        await C.addTeamMember();
+        await C.removeTeamMember('synthetic-other-user');
+        await C.refreshTeamMembers(true);
+        C.seedRetiredTeamCache();
+        const helperCallStart = calls.length;
+        const confirmsBefore = confirmations;
+        await Promise.resolve(C._crewingTeamRemoveMember('synthetic-other-user')).catch(() => {});
+        ok(confirmations === confirmsBefore
+          && !calls.slice(helperCallStart).includes('remove_team_member'),
+          label + ': cached direct Team remove helper does not confirm or revoke access');
+        C.startTeamChatPoll();
+        await C.teamChatPollOnce(true, true);
+        const settled = await Promise.allSettled(pendingRenders.splice(0));
+        ok(settled.every((r) => r.status === 'fulfilled'),
+          label + ': all started Team render/poll calls terminate without setup errors');
+        ok(!calls.some((cmd) => teamRpc.has(cmd)), label + ': stale Team callers issue no Team RPC');
+        ok(!calls.includes('save_settings') && JSON.stringify(C.state.settings) === before,
+          label + ': credential, tenant, profile and role are preserved without a settings write');
+      }
+    }
+    // A pre-existing member onboarding callback must not resurrect the removed screen
+    // after it has been closed. The real native boundary is delayed, not its renderer.
+    fixture = { server_url: 'https://synthetic.invalid', bearer_token: '', crewing_id: '',
+      organization_id: '', token_scopes: [], profile: {}, interface: { language: 'en' } };
+    C.state.settings = fixture;
+    C.state.myIdentity = null;
+    deferIdentity = true;
+    elFor('modal-host').innerHTML = '';
+    C.openTeamOnboarding('member');
+    await C.closeTeamOnboarding(false);
+    for (const resolve of identities.splice(0)) resolve({ user_id: 'late-synthetic-user' });
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+    ok(!teamMarkup.test(elFor('modal-host').innerHTML),
+      '635: delayed identity completion cannot recreate Member onboarding after close');
+  } finally {
+    globalThis.__TAURI__.core.invoke = oldNative;
+    if (oldConfirm === undefined) delete globalThis.confirm; else globalThis.confirm = oldConfirm;
+    for (const [key, value] of [
+      ['skipi_crewing_work_role', savedRole], ['skipi_crewing_entry', savedEntry],
+      ['skipi_crewing_demo', savedDemo], ['skipi-crewing-ui-language', savedLang]
+    ]) {
+      if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+    }
+  }
+}
+
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);
