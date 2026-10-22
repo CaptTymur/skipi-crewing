@@ -1605,3 +1605,13 @@ mod tests {
     }
 
 }
+
+// Isolated empirical SQLite fixtures; not compiled into the application.
+#[cfg(all(test, target_os = "linux"))]
+#[path = "native_database_probe.rs"]
+mod native_database_probe;
+
+// Native Linux foundation only; no startup/command activation.
+#[cfg(target_os = "linux")]
+#[path = "native_database.rs"]
+pub(crate) mod native_database;

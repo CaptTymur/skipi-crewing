@@ -78,7 +78,7 @@ function loadCtx({ crewingId }) {
     document,
     window: {},
     posts, nav,
-    state: { settings: { server_url: 'https://api.skipi.app', bearer_token: 'crew-token', crewing_id: crewingId } },
+    state: { settings: { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_trial_fixture', crewing_id: crewingId } },
     escapeHtml(v) { return String(v == null ? '' : v); },
     showToast() {},
     shouldUseMobileShell() { return false; },

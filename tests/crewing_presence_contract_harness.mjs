@@ -1,3 +1,4 @@
+import { crewingPublicSettingsFixture } from './fixtures/crewing_public_settings.mjs';
 // Presence contract for Skipi Crewing required modules.
 //
 // Closes the "module silently disappears from UI" regression class before
@@ -199,9 +200,12 @@ globalThis.document = {
 globalThis.window = globalThis;
 globalThis.__TAURI__ = {
   core: {
-    invoke: async (cmd) => {
-      if (cmd === 'get_settings') return {};
-      if (cmd === 'save_settings') return 'ok';
+    invoke: async (cmd, args = {}) => {
+      if (cmd === 'get_settings') return crewingPublicSettingsFixture();
+      if (cmd === 'save_settings') {
+        if (!args.expectedContext || args.expectedContext !== args.newSettings.connection_context) throw new Error('settings_changed');
+        return crewingPublicSettingsFixture(args.newSettings);
+      }
       if (cmd === 'sync_crewing_profile') return 'synced';
       if (cmd === 'activate_crewing_token') return {
         crewing_id: 'presence-harness',
@@ -271,9 +275,12 @@ try {
     'showToast',
     scriptNoBoot + '\nreturn {' + exportsNeeded.join(',') + '};'
   )(
-    async (cmd) => {
-      if (cmd === 'get_settings') return {};
-      if (cmd === 'save_settings') return 'ok';
+    async (cmd, args = {}) => {
+      if (cmd === 'get_settings') return crewingPublicSettingsFixture();
+      if (cmd === 'save_settings') {
+        if (!args.expectedContext || args.expectedContext !== args.newSettings.connection_context) throw new Error('settings_changed');
+        return crewingPublicSettingsFixture(args.newSettings);
+      }
       if (cmd === 'sync_crewing_profile') return 'synced';
       if (cmd === 'activate_crewing_token') return {
         crewing_id: 'presence-harness',
@@ -308,7 +315,7 @@ ok(!!M, 'real inline script loads without boot IIFE');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     token_scopes: ['team:read', 'team:write'],
     interface: { theme: 'light', language: 'en' },
@@ -342,7 +349,7 @@ section('settings 5-section shell anti-regression');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     organization_id: 'org-presence',
     company_name: 'Presence Harness Crewing',
@@ -564,7 +571,7 @@ if (M) {
     // attributes, string literals) and followed by a quote/paren/space/'>'/';'/',' — not by function name.
     const RETIRED_NAV = /(['"(=])(vacancies|mailings|mail|documents|apps)(?=['")\s>;,])/g;
     const b2 = { badBack: [], rendered: [], errors: [] };
-    M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
+    M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_presence', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
     const mobileShowSrc = (HTML.match(/function mobileShow\(view\) \{([\s\S]*?)\nfunction mobileBack\(\)/) || [])[1] || '';
     const renderViews = [...new Set([...mobileShowSrc.matchAll(/if \(view === '([a-z_]+)'\) return mobileRender/g)].map((m) => m[1]))];
     ok(renderViews.length >= 18, 'B2: the mobileShow render branches are enumerated from the source — got ' + renderViews.length);
@@ -661,7 +668,7 @@ section('mobile rail canon — 3 slots since K2.2 (was 5), canonical QA, no scro
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     interface: { theme: 'light', language: 'en' },
   };
@@ -1291,7 +1298,7 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
         const label = '635/' + lang + '/' + variant.name;
         fixture = {
           server_url: 'https://synthetic.invalid',
-          bearer_token: variant.connected ? 'SYNTHETIC-PRIVATE' : '',
+          has_bearer_token: variant.connected, connection_context: 'ctx_retired_fixture',
           crewing_id: variant.connected ? 'own-company' : '',
           organization_id: variant.connected ? 'own-org' : '',
           company_name: 'Synthetic company', team_role: variant.role,
@@ -1378,7 +1385,7 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
     }
     // A pre-existing member onboarding callback must not resurrect the removed screen
     // after it has been closed. The real native boundary is delayed, not its renderer.
-    fixture = { server_url: 'https://synthetic.invalid', bearer_token: '', crewing_id: '',
+    fixture = { server_url: 'https://synthetic.invalid', has_bearer_token: false, connection_context: 'ctx_retired_fresh', crewing_id: '',
       organization_id: '', token_scopes: [], profile: {}, interface: { language: 'en' } };
     C.state.settings = fixture;
     C.state.myIdentity = null;
@@ -1401,6 +1408,307 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
     }
   }
 }
+
+// No.635 — exercise the shipped Settings renderer and the actual credential screens.
+// These are product regressions, not an account wire-contract or an expected-red exemption.
+section('635 real Settings and no manual credential entry');
+{
+  const { createContext, runInContext } = await import('node:vm');
+  const settingsVendor = fs.readFileSync(path.join(ROOT, 'dist/skipi-settings.js'), 'utf8');
+  function credentialFixture(language, mode, phase) {
+    const nodes = new Map();
+    const storage = new Map([
+      ['skipi-crewing-ui-language', language],
+      ['skipi_crewing_settings5', '0'],
+      ['skipi_crewing_demo', phase === 'demo' ? '1' : '0'],
+    ]);
+    const document = {};
+    function node(id = '', tag = 'div') {
+      const attributes = {};
+      const classes = new Set();
+      const listeners = new Map();
+      const value = {
+        id, tagName: tag.toUpperCase(), nodeType: 1, ownerDocument: document,
+        parentNode: null, children: [], style: {}, value: '', textContent: '',
+        _html: '', _derived: new Map(), className: '',
+        get innerHTML() { return this._html; },
+        set innerHTML(html) {
+          for (const child of [...this.children, ...this._derived.values()]) child.parentNode = null;
+          this.children = [];
+          this._derived.clear();
+          this._html = String(html);
+        },
+        classList: {
+          add(...names) { names.forEach((name) => classes.add(name)); },
+          remove(...names) { names.forEach((name) => classes.delete(name)); },
+          contains(name) { return classes.has(name); },
+          toggle(name, force) {
+            const next = force === undefined ? !classes.has(name) : !!force;
+            if (next) classes.add(name); else classes.delete(name);
+            return next;
+          },
+        },
+        setAttribute(name, val) { attributes[name] = String(val); if (name === 'id') this.id = String(val); },
+        getAttribute(name) { return name === 'id' ? this.id || null : (attributes[name] ?? null); },
+        hasAttribute(name) { return this.getAttribute(name) !== null; },
+        addEventListener(type, fn) {
+          if (!listeners.has(type)) listeners.set(type, new Set());
+          listeners.get(type).add(fn);
+        },
+        removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
+        appendChild(child) { child.parentNode = this; this.children.push(child); return child; },
+        removeChild(child) {
+          this.children = this.children.filter((item) => item !== child); child.parentNode = null;
+        },
+        remove() {
+          if (this.parentNode) this.parentNode.removeChild(this);
+          if (nodes.get(this.id) === this) nodes.delete(this.id);
+        },
+        contains(other) {
+          for (let current = other; current; current = current.parentNode) if (current === this) return true;
+          return false;
+        },
+        focus() { document.activeElement = this; },
+        querySelector(selector) {
+          if (selector.startsWith('#')) {
+            const found = document.getElementById(selector.slice(1));
+            return found && this.contains(found) ? found : null;
+          }
+          return null;
+        },
+        querySelectorAll() { return []; },
+        getBoundingClientRect() { return { width: mode === 'mobile' ? 680 : 1100, height: 750 }; },
+      };
+      return value;
+    }
+    document.body = node('body', 'body');
+    document.head = node('head', 'head');
+    document.documentElement = node('html', 'html');
+    document.activeElement = null;
+    for (const id of ['body', 'head', 'settings-root', 'skipi-settings-overlay',
+      'modal-host', 'mobile-root', 'mobile-main', 'main', 'tree']) {
+      const item = id === 'body' ? document.body : id === 'head' ? document.head : node(id);
+      nodes.set(id, item);
+      if (id !== 'body' && id !== 'head') document.body.appendChild(item);
+    }
+    function findIn(parent, id) {
+      if (parent.id === id) return parent;
+      for (const child of parent.children) {
+        const found = findIn(child, id);
+        if (found) return found;
+      }
+      const escaped = escapeRe(id);
+      const opening = parent.innerHTML.match(new RegExp('<([A-Za-z][\\w-]*)\\b[^>]*\\s+id=["\\x27]' + escaped + '["\\x27][^>]*>'));
+      if (!opening) return null;
+      if (!parent._derived.has(id)) {
+        const child = node(id, opening[1]);
+        child.parentNode = parent;
+        for (const attr of opening[0].matchAll(/([\w-]+)=["']([^"']*)["']/g)) child.setAttribute(attr[1], attr[2]);
+        parent._derived.set(id, child);
+      }
+      return parent._derived.get(id);
+    }
+    document.getElementById = (id) => nodes.get(id) || findIn(document.body, id) || null;
+    document.createElement = (tag) => node('', tag);
+    document.querySelector = (selector) => selector.startsWith('#') ? document.getElementById(selector.slice(1)) : null;
+    document.querySelectorAll = () => [];
+    document.addEventListener = () => {};
+    document.removeEventListener = () => {};
+    document.dispatchEvent = () => true;
+    if (mode === 'mobile') document.body.classList.add('mobile-shell');
+    const connected = phase !== 'fresh';
+    const fixture = {
+      server_url: 'https://synthetic.invalid',
+      has_bearer_token: connected, connection_context: 'ctx_actual_vendor_fixture',
+      crewing_id: connected ? 'company-a' : '', organization_id: connected ? 'org-a' : '',
+      company_name: '635 regression company', user_display_name: '635 regression person',
+      team_role: phase === 'owner' ? 'owner' : 'member', team_onboarding_seen: true,
+      token_scopes: ['applications:read'], token_expires_at: phase === 'blocked' ? '2000-01-01T00:00:00Z' : '2099-01-01T00:00:00Z',
+      reply_to: 'owner@example.test', vault_path: '', recent_vaults: [],
+      profile: { legal_name: '635 regression company', contact_email: 'owner@example.test' },
+      interface: { language, theme: 'light' },
+    };
+    const nativeCalls = [];
+    const fetchCalls = [];
+    const pendingReads = [];
+    const nativeRead = (command) => {
+      const pending = Promise.resolve().then(() => {
+      nativeCalls.push(command);
+      if (command === 'get_settings') return JSON.parse(JSON.stringify(fixture));
+      if (command === 'get_build_info') return { version: 'fixture', build_sha: 'fixture' };
+      if (command === 'get_mailbox_status') return { configured: false, status: 'not_configured' };
+      if (command === 'get_my_identity') return { user_id: 'fixture-device', pubkey_b64: 'fixture-public-key' };
+      throw new Error('635 fixture forbids native command: ' + command);
+      });
+      pendingReads.push(pending);
+      return pending;
+    };
+    async function drainReads() {
+      for (let turn = 0; turn < 20; turn++) {
+        const count = pendingReads.length;
+        await Promise.all(pendingReads);
+        for (let tick = 0; tick < 8; tick++) await Promise.resolve();
+        if (pendingReads.length === count) return;
+      }
+      throw new Error('635 fixture native reads did not settle');
+    }
+    const sandbox = {
+      console, document, navigator: { userAgent: mode === 'mobile' ? 'Android fixture' : 'desktop fixture', onLine: false },
+      location: { hash: mode === 'mobile' ? '#mobile' : '#desktop', reload() {} },
+      innerWidth: mode === 'mobile' ? 680 : 1100,
+      localStorage: {
+        getItem: (key) => storage.has(key) ? storage.get(key) : null,
+        setItem: (key, val) => storage.set(key, String(val)), removeItem: (key) => storage.delete(key),
+      },
+      history: { pushState() {}, replaceState() {}, back() {}, state: null },
+      __TAURI__: { core: { invoke: nativeRead, convertFileSrc: (p) => 'fixture://' + p } },
+      setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+      requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+      addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+      getComputedStyle: () => ({ getPropertyValue: () => '' }),
+      matchMedia: () => ({ matches: false, addListener() {}, removeListener() {} }),
+      fetch: async (...args) => {
+        fetchCalls.push(args);
+        throw new Error('635 fixture forbids network');
+      },
+      alert() {}, confirm: () => false, URL, URLSearchParams, performance: { now: () => 0 },
+    };
+    sandbox.window = sandbox;
+    const context = createContext(sandbox);
+    runInContext(scriptNoBoot + '\nglobalThis.__fixture = {' +
+      'state, mobileState, openSettings, mobileOpenSettingsHome, mobileOpenSettings, mobileShow,' +
+      'crewingSettingsHost, renderEntryChoice, openConnectDialog, closeConnectDialog, connectShowTab,' +
+      'trialShowBlockedOverlay, trialHideOverlay,' +
+      'getInstance: function(){return _skipiSettingsInstance;}};', context);
+    const app = sandbox.__fixture;
+    app.state.settings = JSON.parse(JSON.stringify(fixture));
+    return {
+      app, sandbox, context, document, storage, nativeCalls, fetchCalls, drainReads,
+      target: document.getElementById('settings-root'),
+      loadVendor() { runInContext(settingsVendor, context); return sandbox.SkipiSettings; },
+      cleanup() { app.getInstance()?.unmount(); storage.clear(); nodes.clear(); },
+    };
+  }
+  const forbiddenControl = /<input\b[^>]*\bid=["'](?:s-token|m-token|connect-token-input|trial-license|s-crewing-id|m-crewing-id)["']|(?:crewing-activate-token|crewing-start-trial|connectSubmitToken|activateCompanyToken|startTrialAccess|mobileValidateConnection|mobileStartTrialAccess|trialActivateLicense|trialGoConnect)\s*(?:["'(])/i;
+  const manualHelp = /(?:company|license)[ -]?token|токен(?:а|у|ом|ы)?(?: компании)?|enter (?:the |a )?token|ввести токен/i;
+  function noManual(markup, label) {
+    ok(typeof markup === 'string' && markup.replace(/<[^>]*>/g, ' ').trim().length > 15,
+      label + ': actual caller produced a nonempty screen');
+    ok(!forbiddenControl.test(markup) && !manualHelp.test(markup.replace(/<[^>]*>/g, ' '))
+      && !markup.includes('INTERNAL-COMPANY-CREDENTIAL'),
+      label + ': no manual Company/license credential, Validate, trial-token control or internal secret in DOM');
+  }
+  for (const language of ['ru', 'en']) for (const mode of ['desktop', 'mobile']) {
+    for (const phase of ['fresh', 'member', 'owner', 'blocked', 'demo']) {
+      const label = '635 real UI ' + language + '/' + mode + '/' + phase;
+      let fixture;
+      let control;
+      try {
+        fixture = credentialFixture(language, mode, phase);
+        const { app, sandbox, document, target, storage } = fixture;
+        const vendor = fixture.loadVendor();
+        if (mode === 'mobile') await app.mobileOpenSettingsHome(); else await app.openSettings('profile');
+        const instance = app.getInstance();
+        ok(!!instance, label + ': real gear caller mounts vendored Settings');
+        if (!instance) continue;
+        await instance.ready;
+        const loaded = instance.getState();
+        ok(!loaded.loading && loaded.version === vendor.version && loaded.sections.includes('profile'),
+          label + ': real vendor finishes loading a valid Profile');
+        ok(instance.open('profile') && target.innerHTML.includes('data-qa="settings.profile.user"'),
+          label + ': actual Profile content renders');
+        ok(!loaded.sections.includes('team') && instance.open('team') === false,
+          label + ': real navigation cannot open Team');
+        ok(!/settings\.profile\.team_role|profile-team|settings\.team\.join|settings\.team\.role/.test(target.innerHTML),
+          label + ': real Profile contains no membership, role or Open Team');
+        ok(instance.open('home-crewing-connection'), label + ': actual Connection section is reachable');
+        noManual(target.innerHTML, label + ' shared Connection');
+        const settingsBefore = JSON.stringify(app.state.settings);
+        instance.unmount();
+
+        if (phase === 'owner') {
+          const host = app.crewingSettingsHost();
+          host.team = {
+            getTeam: async () => ({ name: 'Synthetic positive control', role: 'member', replyTo: 'fixture@example.test', serverStatus: 'fixture' }),
+            getRole: async () => 'member',
+            join: async () => { throw new Error('positive-control join is never executed'); },
+          };
+          control = vendor.mount(target, host, { mode, initialSection: 'profile', mobileInitialView: 'section' });
+          await control.ready;
+          ok(!control.getState().loading && control.getState().sections.includes('team')
+            && target.innerHTML.includes('settings.profile.team_role'),
+            label + ': positive control real vendor renders Team navigation and Profile role');
+          ok(control.open('team') && target.innerHTML.includes('settings.team.role')
+            && target.innerHTML.includes('settings.team.join.root'),
+            label + ': positive control real vendor renders Membership and Join');
+          control.unmount(); control = null;
+        }
+
+        if (phase === 'fresh') {
+          let continuationCalls = 0;
+          const next = mode === 'mobile'
+            ? runInContext('(function(){ mobileShow("work_role"); })', fixture.context)
+            : () => { continuationCalls++; };
+          app.renderEntryChoice(next);
+          noManual(document.getElementById('entry-choice-overlay')?.innerHTML || '', label + ' first-run choice');
+          const open = document.getElementById('ec-open');
+          ok(!!open && typeof open.onclick === 'function', label + ': real first-run profile button is wired');
+          if (open && typeof open.onclick === 'function') open.onclick();
+          noManual(document.getElementById('connect-dialog-overlay')?.innerHTML || '', label + ' first-run connect');
+          app.connectShowTab('qr');
+          noManual(document.getElementById('connect-dialog-overlay')?.innerHTML || '', label + ' QR fallback');
+          app.closeConnectDialog();
+          const create = document.getElementById('ec-create');
+          ok(!!create && typeof create.onclick === 'function', label + ': real first-run create button is wired');
+          if (create && typeof create.onclick === 'function') create.onclick();
+          ok(fixture.storage.get('skipi_crewing_entry') === 'use'
+            && !document.getElementById('entry-choice-overlay'),
+            label + ': real create handler persists choice and removes entry overlay');
+          if (mode === 'mobile') {
+            ok(app.mobileState.view === 'connection', label + ': actual mobile create continuation reaches Connection');
+            noManual(document.getElementById('mobile-root').innerHTML + document.getElementById('mobile-main').innerHTML,
+              label + ' mobile create destination and header');
+          } else {
+            ok(continuationCalls === 1 && /renderEntryChoice\(bootDesktopMain\)/.test(HTML),
+              label + ': desktop continuation dispatch only; source binds actual bootDesktopMain');
+          }
+        }
+
+        if (mode === 'mobile') {
+          app.mobileShow('connection');
+          noManual(document.getElementById('mobile-root').innerHTML + document.getElementById('mobile-main').innerHTML,
+            label + ' actual mobile Connection caller and header');
+        }
+        sandbox.SkipiSettings = undefined;
+        for (const flag of ['0', '1']) {
+          storage.set('skipi_crewing_settings5', flag);
+          const pages = flag === '0' ? ['access', 'devices'] : ['identity', 'storage', 'paid'];
+          for (const page of pages) {
+            if (mode === 'mobile') app.mobileOpenSettings(page); else await app.openSettings(page);
+            noManual(document.getElementById(mode === 'mobile' ? 'mobile-main' : 'modal-host').innerHTML,
+              label + ' real fallback flag=' + flag + '/' + page);
+          }
+        }
+        if (phase === 'blocked' || phase === 'fresh') {
+          app.trialShowBlockedOverlay('fixture: access denied');
+          noManual(document.getElementById('trial-block-overlay')?.innerHTML || '', label + ' blocked-access overlay');
+          app.trialHideOverlay();
+        }
+        await fixture.drainReads();
+        ok(JSON.stringify(app.state.settings) === settingsBefore,
+          label + ': renderer visits preserve internal credential, tenant and profile');
+        ok(fixture.nativeCalls.every((cmd) => ['get_settings', 'get_build_info', 'get_my_identity', 'get_mailbox_status'].includes(cmd))
+          && fixture.fetchCalls.length === 0,
+          label + ': no mutation, activation, trial issuance or real network attempt');
+      } catch (error) {
+        ok(false, label + ': fixture/setup error — ' + (error && error.stack || error));
+      } finally {
+        try { control?.unmount(); } finally { fixture?.cleanup(); }
+      }
+    }
+  }
+}
+
 
 console.log('\ncrewing_presence_contract_harness: ' + (fail === 0 ? 'GREEN' : 'RED') + ' (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

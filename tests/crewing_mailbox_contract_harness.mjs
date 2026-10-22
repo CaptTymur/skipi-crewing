@@ -185,7 +185,7 @@ const M = new Function(
 
 M.state.settings = {
   server_url: 'https://api.skipi.app',
-  bearer_token: 'TOKEN-DO-NOT-LEAK',
+  has_bearer_token: true, connection_context: 'ctx_mailbox',
   crewing_id: 'mailbox-harness',
   token_scopes: ['applications:read'],
   interface: { theme: 'light', language: 'ru' },
@@ -250,6 +250,7 @@ const appSections = (mounted && mounted.host && mounted.host.appSpecificSections
 ok(Array.isArray(appSections) && appSections.length >= 1, 'the module is handed the app-specific sections');
 function moduleCtxFor(m) {
   return {
+    settings: M.state.settings,
     t: (key) => m.host.t(key),
     escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
     escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
@@ -257,6 +258,7 @@ function moduleCtxFor(m) {
   };
 }
 const moduleCtx = {
+  settings: M.state.settings,
   t: (key) => mounted.host.t(key),
   escapeHtml: (v) => String(v == null ? '' : v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])),
   escapeAttr: (v) => String(v == null ? '' : v).replace(/[&'"<>]/g, (c) => '&#' + c.charCodeAt(0) + ';'),
