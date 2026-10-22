@@ -125,7 +125,7 @@ function loadTrialContext({ serverMode, startedDaysAgo }) {
     document,
     window: {},
     __demoMode: false,
-    state: { settings: { server_url: 'https://api.skipi.app', bearer_token: 'crew-token', crewing_id: 'crew-1', token_expires_at: null } },
+    state: { settings: { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_trial_fixture', crewing_id: 'crew-1', token_expires_at: null } },
     bootCalls: 0,
     escapeHtml(v) { return String(v == null ? '' : v); },
     showToast() {},

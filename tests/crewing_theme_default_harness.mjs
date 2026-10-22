@@ -1,3 +1,4 @@
+import { crewingPublicSettingsFixture } from './fixtures/crewing_public_settings.mjs';
 // Crewing light-theme-default contract harness (skipi-ops BACKLOG №62).
 //
 // Canon = @skipi/settings commit 1a6748e (harness/theme-contract.mjs + CONTRACT.md):
@@ -170,8 +171,14 @@ function bootApp() {
 
   async function invoke(cmd, args = {}) {
     invokeCalls.push([cmd, args]);
-    if (cmd === 'get_settings') return JSON.parse(JSON.stringify(persisted));
-    if (cmd === 'save_settings') { persisted = JSON.parse(JSON.stringify(args.newSettings || {})); return null; }
+    if (cmd === 'get_settings') return crewingPublicSettingsFixture(persisted);
+    if (cmd === 'save_settings') {
+      if (!args.expectedContext || args.expectedContext !== args.newSettings.connection_context) throw new Error('settings_changed');
+      const previousPrivateCredential = persisted.bearer_token;
+      persisted = JSON.parse(JSON.stringify(args.newSettings));
+      if (!persisted.bearer_token) persisted.bearer_token = previousPrivateCredential;
+      return crewingPublicSettingsFixture(persisted);
+    }
     return null;
   }
   globalThis.__TAURI__ = { core: { invoke, convertFileSrc: (p) => `file://${p}` } };

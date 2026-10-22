@@ -1265,8 +1265,51 @@ var __demoMode = (function(){ try { return localStorage.getItem('skipi_crewing_d
 var invoke = function(cmd, args){
   if (cmd === 'get_build_info') return __realInvoke(cmd, args);
   if (__demoMode) return demoInvoke(cmd, args);
-  return __realInvoke(cmd, args);
+  if (cmd !== 'save_settings') return __realInvoke(cmd, args);
+  // Capture this caller's context before dispatch. Never replace it with newer global state.
+  var submitted = args && args.newSettings;
+  if (!submitted || typeof submitted !== 'object' || !submitted.connection_context) {
+    return Promise.reject(new Error('settings_changed'));
+  }
+  var previous = (typeof state !== 'undefined' && state && state.settings) ? Object.assign({}, state.settings) : null;
+  var capturedContext = submitted.connection_context;
+  if (previous && previous.connection_context && previous.connection_context !== capturedContext) {
+    return Promise.reject(new Error('settings_changed'));
+  }
+  var frozen;
+  try { frozen = JSON.parse(JSON.stringify(submitted)); }
+  catch (_) { return Promise.reject(new Error('invalid_settings')); }
+  var callArgs = Object.assign({}, args, {newSettings:frozen, expectedContext:capturedContext});
+  return Promise.resolve(__realInvoke(cmd, callArgs)).then(function(publicSettings){
+    if (!crewingIsPublicSettings(publicSettings)) throw new Error('invalid_public_settings');
+    if (previous && previous.connection_context && typeof state !== 'undefined' && state
+        && state.settings && state.settings.connection_context !== previous.connection_context) {
+      throw new Error('settings_changed');
+    }
+    // Existing callers retain `next`; replace all its fields only after native commit succeeds.
+    Object.keys(submitted).forEach(function(key){ delete submitted[key]; });
+    Object.keys(publicSettings).forEach(function(key){ submitted[key] = publicSettings[key]; });
+    if (typeof state !== 'undefined' && state) state.settings = publicSettings;
+    if (typeof pilotSettingsChanged === 'function') pilotSettingsChanged(previous, publicSettings);
+    return publicSettings;
+  });
 };
+function crewingIsPublicSettings(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)
+      || Object.prototype.hasOwnProperty.call(s, 'bearer_token')
+      || typeof s.has_bearer_token !== 'boolean'
+      || typeof s.connection_context !== 'string' || !s.connection_context
+      || !Array.isArray(s.token_scopes) || !Array.isArray(s.recent_vaults)
+      || !s.profile || typeof s.profile !== 'object' || Array.isArray(s.profile)
+      || !s.interface || typeof s.interface !== 'object' || Array.isArray(s.interface)) return false;
+  return ['server_url','crewing_id','organization_id','company_name','user_display_name',
+    'team_role','reply_to','vault_path'].every(function(key){ return typeof s[key] === 'string'; })
+    && typeof s.team_onboarding_seen === 'boolean'
+    && (s.token_expires_at === null || typeof s.token_expires_at === 'string')
+    && ['legal_name','jurisdiction','registration_number','mlc_cert_number','mlc_cert_valid_to',
+      'contact_email','contact_phone','slug','public_description'].every(function(key){ return typeof s.profile[key] === 'string'; })
+    && typeof s.interface.theme === 'string' && typeof s.interface.language === 'string';
+}
 var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFileSrc)
     || function(p){ return 'file://'+p; };
 
@@ -1277,7 +1320,7 @@ var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFile
 // notice. Toggled from the connection screen; persisted in localStorage.
 var DEMO = {
   settings: {
-    server_url: 'https://api.skipi.app', bearer_token: 'demo', crewing_id: 'demo-crewing',
+    server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_demo', crewing_id: 'demo-crewing',
     organization_id: 'demo-org', company_name: 'Demo Crewing Agency', user_display_name: 'Demo User',
     token_scopes: ['vacancies:read','applications:read'], token_expires_at: null,
     team_role: 'member', team_onboarding_seen: true, reply_to: 'crew@demo-agency.example',
@@ -1609,7 +1652,7 @@ function entryChoiceMade(){ try { return localStorage.getItem('skipi_crewing_ent
 function shouldShowEntryChoice(){
   if (__demoMode) return false;
   var s = state.settings || {};
-  if (s.bearer_token || s.crewing_id) return false; // already connected
+  if (s.has_bearer_token || s.crewing_id) return false; // already connected
   return !entryChoiceMade();
 }
 function chooseUseApp(next){
@@ -2157,6 +2200,29 @@ var UI_STRINGS = {
     "settings.crewing.open_profile": "Open profile",
     "settings.crewing.not_set": "Not set",
     "settings.crewing.connection": "Connection",
+    "settings.crewing.login.bad_email": "That does not look like an email address. Check it and try again.",
+    "settings.crewing.login.invalid_credentials": "Email or password is incorrect.",
+    "settings.crewing.login.too_many_attempts": "Too many attempts. Wait a minute before trying again.",
+    "settings.crewing.login.upstream_unavailable": "The server is unavailable. This is on our side — try later.",
+    "settings.crewing.login.transport_unreachable": "No connection to the server. Check your network and try again.",
+    "settings.crewing.login.exchange_failed": "The exchange with the server failed. This is our defect; tell us and we will fix it.",
+    "settings.crewing.login.entitlement_missing": "This account has no workspace yet.",
+    "settings.crewing.login.entitlement_expired": "The workspace has expired. Renew it to sign in.",
+    "settings.crewing.login.entitlement_revoked": "The workspace was withdrawn. Contact us to find out why.",
+    "settings.crewing.login.scope_denied": "This account is not allowed to use the app.",
+    "settings.crewing.login.refused_unspecified": "Sign-in was refused and the app was given no reason. Try signing in again; if it repeats, tell us.",
+    "settings.crewing.login.restart_needed": "Local data could not be read. Restart the app.",
+    "settings.crewing.login.storage_error": "Nothing could be written: check free space and permissions.",
+    "settings.crewing.login.local_damaged": "The local data of this installation is damaged. We will need to help.",
+    "settings.crewing.login.settings_changed": "The settings changed while you were signing in. Reload and repeat.",
+    "settings.crewing.login.unsupported_platform": "Sign-in is not supported on this system.",
+    "settings.crewing.login.fresh_unavailable": "Signing in on a new installation is not available yet.",
+    "settings.crewing.login.binding_missing": "This installation has no account binding. Your data is not at fault.",
+    "settings.crewing.login.title": "Skipi account",
+    "settings.crewing.login.description": "Sign in with your Skipi account.",
+    "settings.crewing.login.email": "Email",
+    "settings.crewing.login.password": "Password",
+    "settings.crewing.login.action": "Sign in",
     "settings.crewing.connection.description": "Server, company token and Crewing ID of this device.",
     "settings.crewing.connection.state": "State",
     "settings.crewing.connection.connected": "Connected",
@@ -2373,6 +2439,29 @@ var UI_STRINGS = {
     "settings.crewing.open_profile": "Открыть профиль",
     "settings.crewing.not_set": "Не задано",
     "settings.crewing.connection": "Подключение",
+    "settings.crewing.login.bad_email": "Это не похоже на адрес почты. Проверьте и попробуйте снова.",
+    "settings.crewing.login.invalid_credentials": "Неверная почта или пароль.",
+    "settings.crewing.login.too_many_attempts": "Слишком много попыток. Подождите минуту и попробуйте снова.",
+    "settings.crewing.login.upstream_unavailable": "Сервер недоступен. Это на нашей стороне — попробуйте позже.",
+    "settings.crewing.login.transport_unreachable": "Нет связи с сервером. Проверьте сеть и попробуйте снова.",
+    "settings.crewing.login.exchange_failed": "Обмен с сервером не удался. Это наш дефект: сообщите нам, и мы исправим.",
+    "settings.crewing.login.entitlement_missing": "У этого аккаунта пока нет рабочего места.",
+    "settings.crewing.login.entitlement_expired": "Рабочее место истекло. Продлите, чтобы войти.",
+    "settings.crewing.login.entitlement_revoked": "Рабочее место отозвано. Свяжитесь с нами, чтобы узнать причину.",
+    "settings.crewing.login.scope_denied": "Этому аккаунту не разрешено пользоваться приложением.",
+    "settings.crewing.login.refused_unspecified": "Во входе отказано, и приложение не получило причину. Попробуйте войти ещё раз; если повторится — скажите нам.",
+    "settings.crewing.login.restart_needed": "Не удалось прочитать локальные данные. Перезапустите приложение.",
+    "settings.crewing.login.storage_error": "Не удалось записать: проверьте свободное место и права.",
+    "settings.crewing.login.local_damaged": "Локальные данные этой установки повреждены. Без нас это не починить.",
+    "settings.crewing.login.settings_changed": "Настройки изменились, пока вы входили. Обновите и повторите.",
+    "settings.crewing.login.unsupported_platform": "Вход не поддерживается на этой системе.",
+    "settings.crewing.login.fresh_unavailable": "Вход на новой установке пока недоступен.",
+    "settings.crewing.login.binding_missing": "У этой установки нет привязки аккаунта. Дело не в ваших данных.",
+    "settings.crewing.login.title": "Аккаунт Skipi",
+    "settings.crewing.login.description": "Вход по аккаунту Skipi.",
+    "settings.crewing.login.email": "Почта",
+    "settings.crewing.login.password": "Пароль",
+    "settings.crewing.login.action": "Войти",
     "settings.crewing.connection.description": "Сервер, токен компании и Crewing ID этого устройства.",
     "settings.crewing.connection.state": "Состояние",
     "settings.crewing.connection.connected": "Подключено",
@@ -3422,7 +3511,7 @@ function teamMemberTokenChip(m, issued) {
 
 function teamConnectionStatusHtml() {
   var s = state.settings || {};
-  var hasConnection = !!(s.bearer_token && s.crewing_id);
+  var hasConnection = !!(s.has_bearer_token && s.crewing_id);
   var role = s.team_role || '';
   var members = state.teamMembers || [];
   var presence = teamPresenceCount(members);
@@ -3439,7 +3528,7 @@ function teamConnectionStatusHtml() {
 function renderTeamAccessManagementHtml() {
   var s = state.settings || {};
   var me = state.myIdentity || null;
-  var hasConnection = !!(s.bearer_token && s.crewing_id);
+  var hasConnection = !!(s.has_bearer_token && s.crewing_id);
   var role = s.team_role || '';
   var canManageTeam = role === 'owner' || role === 'admin';
   var members = state.teamMembers || [];
@@ -7210,13 +7299,13 @@ function pilotReason(code) {
 }
 function pilotContextSnapshot() {
   var s = state.settings || {};
-  return { server_url:String(s.server_url || '').trim(), bearer_token:String(s.bearer_token || '').trim(), crewing_id:String(s.crewing_id || '').trim() };
+  return { server_url:String(s.server_url || '').trim(), connection_context:String(s.connection_context || '').trim(), crewing_id:String(s.crewing_id || '').trim(), has_bearer_token:!!s.has_bearer_token };
 }
 function pilotContextKey(context) {
-  return [context.server_url, context.bearer_token, context.crewing_id].join('\u001f');
+  return [context.server_url, context.connection_context, context.crewing_id].join('\u001f');
 }
 function pilotContextReady(context) {
-  return !!(context.server_url && context.bearer_token && context.crewing_id);
+  return !!(context.server_url && context.connection_context && context.crewing_id && context.has_bearer_token);
 }
 // K2 (OWNER (654)/(658)): the C3b-1/C3b-2 renderers are hosted by TWO views —
 // the technical `intake_pilot` surface and the `crew_flow` module, which is the
@@ -7248,7 +7337,7 @@ function pilotFreshStateForContext(context) {
   try { crewFlowForgetRanks(); } catch(_){}
 }
 function pilotLeave() {
-  pilotFreshStateForContext({server_url:'',bearer_token:'',crewing_id:''});
+  pilotFreshStateForContext({server_url:'',connection_context:'',crewing_id:''});
 }
 function pilotEnter() {
   var context = pilotContextSnapshot();
@@ -7262,8 +7351,8 @@ function pilotExpected(context) {
   return { expectedContext: context };
 }
 function pilotSettingsChanged(previous, next) {
-  var oldKey = pilotContextKey({server_url:String(previous&&previous.server_url||'').trim(),bearer_token:String(previous&&previous.bearer_token||'').trim(),crewing_id:String(previous&&previous.crewing_id||'').trim()});
-  var newContext = {server_url:String(next&&next.server_url||'').trim(),bearer_token:String(next&&next.bearer_token||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim()};
+  var oldKey = pilotContextKey({server_url:String(previous&&previous.server_url||'').trim(),connection_context:String(previous&&previous.connection_context||'').trim(),crewing_id:String(previous&&previous.crewing_id||'').trim()});
+  var newContext = {server_url:String(next&&next.server_url||'').trim(),connection_context:String(next&&next.connection_context||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim(),has_bearer_token:!!(next&&next.has_bearer_token)};
   if (oldKey === pilotContextKey(newContext)) return;
   pilotFreshStateForContext(newContext);
   if (pilotViewActive()) {
@@ -14231,18 +14320,25 @@ function _crewingSettingsSections(){
       labelKey:'settings.crewing.connection', descriptionKey:'settings.crewing.connection.description',
       renderHtml: function(ctx){
         var s = state.settings || {};
-        var connected = !!(String(s.bearer_token || '').trim() && String(s.crewing_id || '').trim());
+        var connected = !!(s.has_bearer_token && String(s.crewing_id || '').trim());
         var urlCtrl = '<div class="skipi-settings__actions">'
           + _crewSetHtmlInput(ctx, 's-url', s.server_url, 'text', 'https://api-ru.skipi.app')
           + _crewSetHtmlButton(ctx, 'crewing-save-connection', 'settings.action.save')
           + '</div>';
         var tokenCtrl = '<div class="skipi-settings__actions">'
-          + _crewSetHtmlInput(ctx, 's-token', s.bearer_token, 'password', ctx.t('settings.crewing.company_token.placeholder'))
+          + _crewSetHtmlInput(ctx, 's-token', '', 'password', ctx.t('settings.crewing.company_token.placeholder'))
           + _crewSetHtmlButton(ctx, 'crewing-activate-token', 'settings.crewing.action.validate')
           + _crewSetHtmlButton(ctx, 'crewing-start-trial', 'settings.crewing.action.trial')
           + '</div>';
+        var loginCtrl = '<div class="skipi-settings__actions">'
+          + _crewSetHtmlInput(ctx, 'a-email', '', 'text', ctx.t('settings.crewing.login.email'))
+          + _crewSetHtmlInput(ctx, 'a-password', '', 'password', ctx.t('settings.crewing.login.password'))
+          + _crewSetHtmlButton(ctx, 'crewing-account-login', 'settings.crewing.login.action')
+          + '</div>';
         return _crewSetHtmlGroup(ctx, 'settings.crewing.connection',
-            _crewSetHtmlRow(ctx, 'settings.crewing.connection.state', ctx.t('settings.crewing.connection.description'),
+            _crewSetHtmlRow(ctx, 'settings.crewing.login.title',
+                ctx.t('settings.crewing.login.description'), loginCtrl)
+          +             _crewSetHtmlRow(ctx, 'settings.crewing.connection.state', ctx.t('settings.crewing.connection.description'),
                 _crewSetCode(ctx, ctx.t(connected ? 'settings.crewing.connection.connected' : 'settings.crewing.connection.disconnected')))
           + _crewSetHtmlRow(ctx, 'settings.crewing.server_url', ctx.t('settings.crewing.server_url.description'), urlCtrl)
           + _crewSetHtmlRow(ctx, 'settings.crewing.company_token', ctx.t('settings.crewing.company_token.description'), tokenCtrl)
@@ -14257,7 +14353,7 @@ function _crewingSettingsSections(){
           var urlEl = document.getElementById('s-url');
           var idEl = document.getElementById('s-crewing-id');
           var next;
-          try { next = JSON.parse(JSON.stringify(state.settings || {})); } catch(_){ next = {}; }
+          try { next = JSON.parse(JSON.stringify(ctx.settings || {})); } catch(_){ next = {}; }
           next.server_url = (urlEl && urlEl.value != null) ? String(urlEl.value).replace(/^\s+|\s+$/g,'') : (next.server_url || '');
           next.crewing_id = (idEl && idEl.value != null) ? String(idEl.value).replace(/^\s+|\s+$/g,'') : (next.crewing_id || '');
           return ctx.saveSettings(next);
@@ -14266,6 +14362,10 @@ function _crewingSettingsSections(){
         // s-url / s-token / s-crewing-id from the DOM and persist through
         // save_settings themselves. ctx.refresh() re-reads the stored settings so
         // the section redraws with what actually got written.
+        'crewing-account-login': function(ctx){
+          return Promise.resolve(nativeAccountLogin()).then(function(){ return ctx.refresh(); },
+            function(){ return ctx.refresh(); });
+        },
         'crewing-activate-token': function(ctx){
           return Promise.resolve(activateCompanyToken()).then(function(){ return ctx.refresh(); });
         },
@@ -14403,7 +14503,7 @@ function _crewingSettingsSections(){
           var el = document.getElementById('crewing-set-contact-email');
           var value = (el && el.value != null) ? String(el.value).replace(/^\s+|\s+$/g,'') : '';
           var next;
-          try { next = JSON.parse(JSON.stringify(state.settings || {})); } catch(_){ next = {}; }
+          try { next = JSON.parse(JSON.stringify(ctx.settings || {})); } catch(_){ next = {}; }
           if (!next.profile || typeof next.profile !== 'object' || Array.isArray(next.profile)) next.profile = {};
           next.profile.contact_email = value;
           return ctx.saveSettings(next);
@@ -14463,12 +14563,11 @@ function crewingSettingsHost(){
       });
     },
     saveSettings: function(next){
-      // Rust save_settings returns Ok(()) (no value); on success the passed
-      // object is authoritative. Persist and re-apply theme/i18n.
-      return Promise.resolve(invoke('save_settings', { newSettings: next })).then(function(){
+      // Native validates this shell's context and returns only public fields.
+      return Promise.resolve(invoke('save_settings', { newSettings: next })).then(function(publicSettings){
         var previous = state.settings;
-        state.settings = next;
-        pilotSettingsChanged(previous, next);
+        state.settings = publicSettings;
+        pilotSettingsChanged(previous, publicSettings);
         try { applyTheme(); } catch(_){}
         return state.settings;
       });
@@ -14599,7 +14698,7 @@ function renderSettingsModal() {
   };
   var grp = function(rows){ return '<div class="settings-group">'+rows+'</div>'; };
   var sectionTitle = function(t){ return '<div class="section-title">'+escapeHtml(t)+'</div>'; };
-  var connected = !!(s.bearer_token || s.crewing_id);
+  var connected = !!(s.has_bearer_token || s.crewing_id);
 
   var body = '';
   if (settingsTab==='org') {
@@ -14674,7 +14773,7 @@ function renderSettingsModal() {
           settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
         + settingRow('Токен компании', 'Выдаётся Skipi после аккредитации. Используется для очереди кандидатов, профилей соответствия и регистрации E2E-ключа.',
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-          + inputCtrl('s-token', s.bearer_token, 'password', 'Вставьте токен компании', '220px')
+          + inputCtrl('s-token', '', 'password', 'Вставьте токен компании', '220px')
           + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button>'
           + '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">30-дневный триал</button>'
           + '</div>')
@@ -14736,7 +14835,7 @@ function renderSettingsFiveShell() {
   var iface = s.interface || {};
   var section = settingsFiveSection(settingsTab);
   settingsTab = section;
-  var connected = !!(s.bearer_token || s.crewing_id);
+  var connected = !!(s.has_bearer_token || s.crewing_id);
   var active = function(id){ return section === id ? ' active' : ''; };
   var navItem = function(id, badge, label, sub, qa) {
     return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
@@ -14821,7 +14920,7 @@ function renderSettingsFiveShell() {
       + grp(
           settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
         + settingRow('Токен компании', 'Текущий access token Crewing. Это не финальная login-модель.', '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-          + inputCtrl('s-token', s.bearer_token, 'password', 'Вставьте токен компании', '220px')
+          + inputCtrl('s-token', '', 'password', 'Вставьте токен компании', '220px')
           + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button></div>')
         + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Token scopes</div><div class="setting-desc">Read-only current token metadata.</div></div><div class="setting-control"><code>'+escapeHtml((s.token_scopes||[]).join(', ') || '—')+'</code></div></div>'
@@ -15010,14 +15109,52 @@ async function checkForUpdatesManual() {
   }
 }
 
+// No.635 slice A: the account-login seam. One invoke, no manual company token.
+// `expected_context` is the staleness ticket (ctx_<uuid> from connection_context), NOT a
+// company identifier: it is sent back so a stale screen cannot commit over a changed
+// connection. The projection carries no crewing_id — the owner struck company mentions —
+// and no credential ever reaches UI state.
+async function nativeAccountLogin() {
+  var emailEl = document.getElementById('a-email');
+  var passEl = document.getElementById('a-password');
+  var email = (emailEl && emailEl.value != null) ? String(emailEl.value).replace(/^\s+|\s+$/g,'') : '';
+  var password = (passEl && passEl.value != null) ? String(passEl.value) : '';
+  var s = state.settings || {};
+  try {
+    var reply = await invoke('native_account_login',
+      { email: email, password: password, expected_context: String(s.connection_context || '') });
+    if (reply && typeof reply === 'object') {
+      s.server_url = reply.server_url || s.server_url;
+      s.token_scopes = reply.scopes || [];
+      s.token_expires_at = reply.expires_at || null;
+      state.settings = s;
+    }
+    return reply;
+  } catch (e) {
+    var code = String((e && e.message) || e || '').replace(/^\s+|\s+$/g,'');
+    var key = loginRefusalText(code);
+    showToast(typeof tr === 'function' ? tr(key) : key, 'error');
+    throw e;
+  }
+}
+// One text per distinct ACTION the person can take, not one per code: three code pairs
+// share a text, and `login_required` gets ONE because the interface receives the code
+// STRING and never the call site — the fifteen sites it covers are indistinguishable
+// here. Splitting it needs distinct Rust codes (BACKLOG No.797), not a UI change.
+function loginRefusalText(code) {
+  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "native_binding_missing": "binding_missing"};
+  return 'settings.crewing.login.' + (map[code] || 'refused_unspecified');
+}
+
 async function activateCompanyToken() {
+  var s = JSON.parse(JSON.stringify(state.settings || {}));
   var urlEl = document.getElementById('s-url');
   var tokenEl = document.getElementById('s-token');
   var idEl = document.getElementById('s-crewing-id');
   var companyEl = document.getElementById('s-company');
-  var serverUrl = urlEl ? urlEl.value.trim() : ((state.settings||{}).server_url || '');
-  var token = tokenEl ? tokenEl.value.trim() : ((state.settings||{}).bearer_token || '');
-  if (!serverUrl || !token) {
+  var serverUrl = urlEl ? urlEl.value.trim() : (s.server_url || '');
+  var token = tokenEl ? tokenEl.value.trim() : '';
+  if (!serverUrl || (!token && !s.has_bearer_token)) {
     showToast('Server URL and company token are required', 'error');
     return;
   }
@@ -15025,16 +15162,18 @@ async function activateCompanyToken() {
   try {
     var activation = await invoke('activate_crewing_token', {
       serverUrl: serverUrl,
-      bearerToken: token
+      bearerToken: token,
+      expectedContext: s.connection_context
     });
+    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
     if (idEl) idEl.value = activation.crewing_id || '';
     if (companyEl && !companyEl.value.trim()) companyEl.value = activation.display_name || '';
-    var companyName = companyEl ? companyEl.value.trim() : ((state.settings||{}).company_name || '');
-    var next = Object.assign({}, state.settings || {}, {
+    var companyName = companyEl ? companyEl.value.trim() : (s.company_name || '');
+    var next = Object.assign({}, s, {
       server_url: serverUrl,
       bearer_token: token,
       crewing_id: activation.crewing_id || '',
-      organization_id: activation.organization_id || ((state.settings||{}).organization_id || ''),
+      organization_id: activation.organization_id || (s.organization_id || ''),
       token_scopes: activation.scopes || [],
       token_expires_at: activation.expires_at || null,
       company_name: companyName
@@ -15050,14 +15189,15 @@ async function activateCompanyToken() {
 }
 
 async function startTrialAccess() {
+  var s = JSON.parse(JSON.stringify(state.settings || {}));
   var urlEl = document.getElementById('s-url');
   var companyEl = document.getElementById('s-company');
   var replyEl = document.getElementById('s-reply');
   var idEl = document.getElementById('s-crewing-id');
   var tokenEl = document.getElementById('s-token');
-  var serverUrl = urlEl ? urlEl.value.trim() : ((state.settings||{}).server_url || 'https://api-ru.skipi.app');
-  var companyName = companyEl ? companyEl.value.trim() : ((state.settings||{}).company_name || '');
-  var replyTo = replyEl ? replyEl.value.trim() : ((state.settings||{}).reply_to || '');
+  var serverUrl = urlEl ? urlEl.value.trim() : (s.server_url || 'https://api-ru.skipi.app');
+  var companyName = companyEl ? companyEl.value.trim() : (s.company_name || '');
+  var replyTo = replyEl ? replyEl.value.trim() : (s.reply_to || '');
   showToast('Creating access...', 'info');
   try {
     var issued = await invoke('issue_crewing_trial_token', {
@@ -15065,17 +15205,18 @@ async function startTrialAccess() {
       displayName: companyName || null,
       contactEmail: replyTo || null
     });
+    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
     if (idEl) idEl.value = issued.crewing_id || '';
     if (tokenEl) tokenEl.value = issued.token || '';
-    var next = Object.assign({}, state.settings || {}, {
+    var next = Object.assign({}, s, {
       server_url: serverUrl,
       bearer_token: issued.token || '',
       crewing_id: issued.crewing_id || '',
-      organization_id: issued.organization_id || ((state.settings||{}).organization_id || ''),
+      organization_id: issued.organization_id || (s.organization_id || ''),
       token_scopes: issued.scopes || [],
       token_expires_at: issued.expires_at || null,
-      company_name: companyName || ((state.settings||{}).company_name || ''),
-      reply_to: replyTo || ((state.settings||{}).reply_to || '')
+      company_name: companyName || (s.company_name || ''),
+      reply_to: replyTo || (s.reply_to || '')
     });
     await invoke('save_settings', { newSettings: next });
     state.settings = next;
@@ -15098,8 +15239,10 @@ async function saveSettings() {
   var pick = function(id, fallback) { var el=document.getElementById(id); return el ? el.value.trim() : fallback; };
 
   var newSettings = {
+    connection_context: s.connection_context,
+    has_bearer_token: !!s.has_bearer_token,
     server_url: pick('s-url', s.server_url||''),
-    bearer_token: pick('s-token', s.bearer_token||''),
+    bearer_token: pick('s-token', ''),
     crewing_id: pick('s-crewing-id', s.crewing_id||''),
     organization_id: s.organization_id || '',
     company_name: pick('s-company', s.company_name||''),
@@ -15793,7 +15936,7 @@ function isMobileShellActive() {
 
 function mobileHasConnection() {
   var s = state.settings || {};
-  return !!(s.server_url && s.bearer_token && s.crewing_id);
+  return !!(s.server_url && s.has_bearer_token && s.crewing_id);
 }
 
 function mobileWorkRole() {
@@ -16103,7 +16246,7 @@ function mobileConnectionHtml(mode) {
     + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('production_connection'))+'</div>'
     + '<div class="mobile-muted" style="margin-bottom:10px;">'+escapeHtml(mobileTr('production_connection_desc'))+'</div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" value="'+escapeAttr(s.server_url || 'https://api-ru.skipi.app')+'" autocomplete="off"></div></div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr(s.bearer_token || '')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr('')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" value="'+escapeAttr(s.crewing_id || '')+'" placeholder="'+escapeAttr(mobileTr('crewing_id_placeholder'))+'" autocomplete="off"></div></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="'+escapeAttr(mobileTr('company_placeholder'))+'"></div></div>'
     + (isSettings ? '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('reply_to'))+'</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to || '')+'" placeholder="hr@company.com"></div></div>' : '')
@@ -16333,7 +16476,7 @@ function mobileSettingsFiveIdentityHtml() {
       : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="'+escapeAttr(mobileTr('company_placeholder'))+'"></div></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" value="'+escapeAttr(s.server_url || 'https://api-ru.skipi.app')+'" autocomplete="off"></div></div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr(s.bearer_token || '')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
+    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr('')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" value="'+escapeAttr(s.crewing_id || '')+'" placeholder="'+escapeAttr(mobileTr('crewing_id_placeholder'))+'" autocomplete="off"></div></div>'
     + '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button><button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button></div>'
     + '</div>'
@@ -16449,7 +16592,7 @@ function mobileReadConnection() {
   var s = state.settings || {};
   return {
     server_url: pick('m-server-url', s.server_url || 'https://api-ru.skipi.app'),
-    bearer_token: pick('m-token', s.bearer_token || ''),
+    bearer_token: pick('m-token', ''),
     crewing_id: pick('m-crewing-id', s.crewing_id || ''),
     company_name: pick('m-company', s.company_name || ''),
     reply_to: pick('m-reply', s.reply_to || '')
@@ -16478,8 +16621,9 @@ async function mobileSaveConnection(showToastOnSave) {
 }
 
 async function mobileValidateConnection() {
+  var s = JSON.parse(JSON.stringify(state.settings || {}));
   var c = mobileReadConnection();
-  if (!c.server_url || !c.bearer_token) {
+  if (!c.server_url || (!c.bearer_token && !s.has_bearer_token)) {
     showToast('Server URL and company token are required', 'error');
     return;
   }
@@ -16487,9 +16631,10 @@ async function mobileValidateConnection() {
   try {
     var activation = await invoke('activate_crewing_token', {
       serverUrl: c.server_url,
-      bearerToken: c.bearer_token
+      bearerToken: c.bearer_token,
+      expectedContext: s.connection_context
     });
-    var s = state.settings || {};
+    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
     var next = Object.assign({}, s, {
       server_url: c.server_url,
       bearer_token: c.bearer_token,
@@ -16515,6 +16660,7 @@ async function mobileValidateConnection() {
 }
 
 async function mobileStartTrialAccess() {
+  var s = JSON.parse(JSON.stringify(state.settings || {}));
   var c = mobileReadConnection();
   var serverUrl = c.server_url || 'https://api-ru.skipi.app';
   showToast('Creating access...', 'info');
@@ -16524,7 +16670,7 @@ async function mobileStartTrialAccess() {
       displayName: c.company_name || null,
       contactEmail: c.reply_to || null
     });
-    var s = state.settings || {};
+    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
     var next = Object.assign({}, s, {
       server_url: serverUrl,
       bearer_token: issued.token || '',
@@ -17601,7 +17747,7 @@ var trialServerStatus = { checked_at:0, phase:null, reason:'' };
 var trialActivationConfirmedAt = 0;
 function trialTokenExpiryPhase(){
   var s = state.settings || {};
-  if (!s.bearer_token || !s.crewing_id) return null;
+  if (!s.has_bearer_token || !s.crewing_id) return null;
   if (!s.token_expires_at) return 'free';
   var t = Date.parse(s.token_expires_at);
   if (!Number.isFinite(t)) return null;
@@ -17614,10 +17760,10 @@ function trialIsAuthFailure(e){
 async function trialServerPhase(force){
   if (typeof __demoMode !== 'undefined' && __demoMode) return { phase:'free', reason:'demo' };
   var s = state.settings || {};
-  if (!s.server_url || !s.bearer_token || !s.crewing_id) return { phase:null, reason:'no_crewing_token' };
+  if (!s.server_url || !s.has_bearer_token || !s.crewing_id) return { phase:null, reason:'no_crewing_token' };
   if (!force && trialServerStatus.phase && Date.now() - trialServerStatus.checked_at < 30000) return trialServerStatus;
   try {
-    var activation = await invoke('activate_crewing_token', { serverUrl:s.server_url, bearerToken:s.bearer_token });
+    var activation = await invoke('activate_crewing_token', { serverUrl:s.server_url, expectedContext:s.connection_context });
     var next = Object.assign({}, s, {
       crewing_id: activation.crewing_id || s.crewing_id || '',
       organization_id: activation.organization_id || s.organization_id || '',
@@ -17625,7 +17771,7 @@ async function trialServerPhase(force){
       token_expires_at: activation.expires_at || null,
       company_name: s.company_name || activation.display_name || ''
     });
-    try { await invoke('save_settings', { newSettings: next }); } catch(e) {}
+    await invoke('save_settings', { newSettings: next });
     state.settings = next;
     var phase = trialTokenExpiryPhase() || 'free';
     trialServerStatus = { checked_at:Date.now(), phase:phase, reason:'server_active' };
@@ -17952,11 +18098,7 @@ async function autoRegisterMessagingPubkey() {
 
 function registerMessagingPubkey() {
   var s = state.settings || {};
-  return invoke('register_my_pubkey', {
-    crewingId: s.crewing_id || '',
-    bearerToken: s.bearer_token || '',
-    serverUrl: s.server_url || ''
-  });
+  return invoke('register_my_pubkey', {expectedContext:s.connection_context});
 }
 
 function serverUrlArg() {

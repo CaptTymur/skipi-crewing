@@ -158,7 +158,7 @@ ok(!!M, 'real desktop inline script loads without boot IIFE');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_compliance',
     crewing_id: 'presence-harness',
   };
   M.state.selectedVacancy = { id: 'v1', rank: 'Captain', vessel_type: 'Bulk Carrier' };

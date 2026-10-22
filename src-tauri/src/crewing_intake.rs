@@ -13,7 +13,7 @@ const PILOT_MAX_FILE_BYTES: usize = 16 * 1024 * 1024;
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct PilotExpectedContext {
     server_url: String,
-    bearer_token: String,
+    connection_context: String,
     crewing_id: String,
 }
 
@@ -755,7 +755,7 @@ fn snapshot_context(
         return Err(PilotBridgeError::invalid_context("pilot_not_configured"));
     }
     if server_url != expected.server_url.trim()
-        || bearer_token != expected.bearer_token.trim()
+        || !crate::connection_context_matches(settings, &expected.connection_context)
         || crewing_id != expected.crewing_id.trim()
     {
         return Err(PilotBridgeError::invalid_context("settings_changed"));
@@ -2429,18 +2429,26 @@ mod tests {
     use std::thread;
 
     fn settings(server_url: &str) -> Settings {
-        Settings {
+        let settings = Settings {
             server_url: server_url.to_string(),
             bearer_token: "synthetic-token".to_string(),
             crewing_id: "crew-test".to_string(),
             ..Default::default()
+        };
+        // Independent synthetic context shared by current/expected fixture instances.
+        // Production revisions are random; tuple-change and ABA tests use the real issuer.
+        {
+            let mut context = settings.connection_revision.lock().unwrap();
+            context.fingerprint = Some(crate::connection_fingerprint(&settings));
+            context.revision = "ctx_synthetic_intake_fixture".into();
         }
+        settings
     }
 
     fn expected(server_url: &str) -> PilotExpectedContext {
         PilotExpectedContext {
             server_url: server_url.to_string(),
-            bearer_token: "synthetic-token".to_string(),
+            connection_context: crate::connection_context(&settings(server_url)),
             crewing_id: "crew-test".to_string(),
         }
     }
@@ -2449,18 +2457,22 @@ mod tests {
     fn expected_context_must_match_all_three_settings() {
         let current = settings("http://127.0.0.1:9");
         assert!(snapshot_context(&current, &expected("http://127.0.0.1:9")).is_ok());
-        let mut changed = expected("http://127.0.0.1:9");
-        changed.bearer_token = "other".to_string();
+        let mut changed_settings = current.clone();
+        changed_settings.bearer_token = "other".to_string();
         assert_eq!(
-            snapshot_context(&current, &changed).unwrap_err().detail,
+            snapshot_context(&changed_settings, &expected("http://127.0.0.1:9")).unwrap_err().detail,
             Some("settings_changed".to_string())
         );
+        // Each negative starts with its own native revision owner, so the token case
+        // cannot make the URL/company controls pass accidentally.
+        let current = settings("http://127.0.0.1:9");
         let mut changed = expected("http://127.0.0.1:10");
         changed.server_url = "http://127.0.0.1:10".to_string();
         assert_eq!(
             snapshot_context(&current, &changed).unwrap_err().detail,
             Some("settings_changed".to_string())
         );
+        let current = settings("http://127.0.0.1:9");
         let mut changed = expected("http://127.0.0.1:9");
         changed.crewing_id = "other-crew".to_string();
         assert_eq!(

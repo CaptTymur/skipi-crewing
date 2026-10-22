@@ -20,7 +20,7 @@ use std::path::PathBuf;
 
 use crate::api;
 
-const SK_FILENAME: &str = "x25519_sk.bin";
+pub(crate) const SK_FILENAME: &str = "x25519_sk.bin";
 const MAX_ATTACHMENT_BYTES: usize = 50 * 1024 * 1024;
 
 fn safe_file_component(input: &str) -> String {
@@ -82,7 +82,7 @@ pub fn ensure_keypair() -> Result<(SecretKey, PublicKey, String), String> {
     Ok((sk, pk, user_id))
 }
 
-fn derive_user_id(pubkey: &[u8; 32]) -> String {
+pub(crate) fn derive_user_id(pubkey: &[u8; 32]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(pubkey);
     let digest = hasher.finalize();
@@ -146,8 +146,22 @@ mod tests {
     }
 }
 
+pub(crate) fn pubkey_context(settings: &crate::Settings, expected: &str) -> Result<(String,String,String),String> {
+    if !crate::connection_context_matches(settings, expected) { return Err("settings_changed".into()); }
+    if settings.server_url.trim().is_empty() || settings.crewing_id.trim().is_empty()
+        || settings.bearer_token.trim().is_empty() {
+        return Err("connection_not_configured".into());
+    }
+    Ok((settings.crewing_id.clone(), settings.bearer_token.clone(), settings.server_url.clone()))
+}
 #[tauri::command]
-pub fn register_my_pubkey(
+pub fn register_my_pubkey(expected_context: String, state: tauri::State<crate::AppState>) -> Result<MyIdentity, String> {
+    let settings=state.settings.lock().map_err(|_| "settings_unavailable")?.clone();
+    let (company,secret,base)=pubkey_context(&settings,&expected_context)?;
+    register_pubkey_native(company,Some(secret),Some(base))
+}
+
+pub(crate) fn register_pubkey_native(
     crewing_id: String,
     bearer_token: Option<String>,
     server_url: Option<String>,
