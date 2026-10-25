@@ -189,7 +189,7 @@ await run('No.635 slice A — account login reachable from the interface',async(
   const args=login[0]&&login[0][1]||{};
   ok(args.email==='owner@example.invalid'&&args.password==='synthetic-only-password',
      'login carries the typed email and password');
-  ok(Object.prototype.hasOwnProperty.call(args,'expected_context'),'login carries the current connection context');
+  ok(Object.prototype.hasOwnProperty.call(args,'expectedContext'),'login carries the current connection context under the camelCase key Tauri 2 expects');
   ok(!JSON.stringify(ctx.state.settings).includes('skn_'),'no native credential enters live UI state');
   ok(!Object.prototype.hasOwnProperty.call(args,'crewing_id')
      && !JSON.stringify(login[0][1]).includes('company-'),'login carries no company identifier');
@@ -210,6 +210,161 @@ await run('No.635 slice A — a refusal code reaches the person as its own text'
   await ctx.nativeAccountLogin().then(()=>null,()=>null);
   ok(notices.some(row=>row[0]==='settings.crewing.login.entitlement_expired'&&row[1]==='error'),
      'entitlement_expired shows its own text, not a generic one :: '+JSON.stringify(notices));
+});
+
+// ===== No.827: IPC key names — every invoke() key must be the camelCase of a #[tauri::command] parameter =====
+// Inserted into tests/crewing635_public_settings_harness.mjs before the final JSON summary line.
+// Failing-first on a88bdaa: exactly one pair reddens — native_account_login / expected_context
+// (dist/index.html:15110-15111 vs lib.rs:785-791). The class is pinned, not the one key:
+// every #[tauri::command] in src-tauri/src/*.rs against every invoke('name', {…}) in dist/index.html.
+const rsDir=new URL('../src-tauri/src/',import.meta.url);
+const rsSources=Object.fromEntries(fs.readdirSync(rsDir).filter(f=>f.endsWith('.rs')).sort().map(f=>[f,fs.readFileSync(new URL(f,rsDir),'utf8')]));
+const INJECTED=/\b(?:tauri::)?(?:State|AppHandle|Window|Webview|WebviewWindow|ipc::Channel)\b/;
+function camel(s){return s.replace(/_([a-z0-9])/g,(_,c)=>c.toUpperCase());}
+// Index of the bracket closing the one opened just before `i`; skips string literals and comments.
+// `quotes` names the string openers: "'\"`" for JS, '"' alone for Rust (there `'` is a lifetime).
+function balancedEnd(src,i,open,close,quotes){
+  let depth=1,j=i;
+  while(j<src.length&&depth>0){
+    const ch=src[j];
+    if(quotes.includes(ch)){const q=ch;j++;while(j<src.length&&src[j]!==q){if(src[j]==='\\')j++;j++;}j++;continue;}
+    if(ch==='/'&&src[j+1]==='/'){j=src.indexOf('\n',j);if(j<0)j=src.length;continue;}
+    if(ch==='/'&&src[j+1]==='*'){j=src.indexOf('*/',j);j=j<0?src.length:j+2;continue;}
+    if(ch===open)depth++;else if(ch===close)depth--;
+    j++;
+  }
+  return depth===0?j-1:-1;
+}
+function stripComments(src){return src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:\\'"])\/\/[^\n]*/g,'$1');}
+function splitTop(src,quotes){   // top-level commas across (), [], {}, <> and strings
+  const out=[];let depth=0,cur='',j=0;
+  while(j<src.length){
+    const ch=src[j];
+    if(quotes.includes(ch)){const q=ch;let k=j+1;while(k<src.length&&src[k]!==q){if(src[k]==='\\')k++;k++;}cur+=src.slice(j,k+1);j=k+1;continue;}
+    if('([{<'.includes(ch))depth++;else if(')]}>'.includes(ch))depth--;
+    if(ch===','&&depth===0){out.push(cur);cur='';j++;continue;}
+    cur+=ch;j++;
+  }
+  if(cur.trim())out.push(cur);
+  return out.map(s=>s.trim()).filter(Boolean);
+}
+// Rust: every #[tauri::command] definition with its non-injected parameter names.
+// Survives pub(crate)/async/unsafe, attributes and comments between the attribute and `fn`,
+// multi-line parameter lists, generics with commas, lifetimes (State<'_, AppState>).
+function rustCommands(sources){
+  const defs=[],renameAll=[];
+  for(const [file,src] of Object.entries(sources)){
+    const re=/#\[tauri::command(\([^)]*\))?\]/g;let m;
+    while((m=re.exec(src))){
+      if(m[1]&&/rename_all/.test(m[1]))renameAll.push(file+':'+src.slice(0,m.index).split('\n').length);
+      let j=re.lastIndex;
+      for(;;){const rest=src.slice(j);const skip=rest.match(/^(?:\s+|#\[[^\]]*\]|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)/);if(!skip)break;j+=skip[0].length;}
+      const head=src.slice(j).match(/^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]*>)?\s*\(/);
+      const line=src.slice(0,m.index).split('\n').length;
+      if(!head){defs.push({file,line,name:null,error:'fn head not parsed'});continue;}
+      const open=j+head[0].length,close=balancedEnd(src,open,'(',')','"');
+      if(close<0){defs.push({file,line,name:head[1],error:'unbalanced params'});continue;}
+      const params=splitTop(stripComments(src.slice(open,close)),'"').map(p=>{
+        const pm=p.match(/^(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([\s\S]+)$/);
+        return pm?{name:pm[1],type:pm[2].trim()}:{name:null,type:p};
+      });
+      defs.push({file,line,name:head[1],args:params.filter(p=>p.name&&p.name!=='self'&&!INJECTED.test(p.type)).map(p=>p.name)});
+    }
+  }
+  return {defs,renameAll};
+}
+// JS: every invoke(...) call site of the shipped page; the argument object is read by bracket balance,
+// Object.assign(...) and the pilotExpected(ctx) helper (→ expectedContext) are resolved; anything else
+// (an identifier, a spread) is reported as UNRESOLVED rather than silently skipped.
+function objectKeys(objText){
+  const keys=[],unresolved=[];
+  for(const entry of splitTop(stripComments(objText.slice(1,-1)),"'\"`")){
+    let km;
+    if(entry.startsWith('...'))unresolved.push(entry.slice(0,40));
+    else if((km=entry.match(/^([A-Za-z_$][A-Za-z0-9_$]*)\s*:/)))keys.push(km[1]);
+    else if((km=entry.match(/^(['"])([^'"]+)\1\s*:/)))keys.push(km[2]);
+    else if((km=entry.match(/^([A-Za-z_$][A-Za-z0-9_$]*)\s*$/)))keys.push(km[1]);
+    else unresolved.push(entry.slice(0,40));
+  }
+  return {keys,unresolved};
+}
+function resolveArg(a){
+  a=a.trim();
+  if(a[0]==='{'&&a[a.length-1]==='}')return objectKeys(a);
+  if(/^pilotExpected\(/.test(a))return {keys:['expectedContext'],unresolved:[]};
+  const oa=a.match(/^Object\.assign\(([\s\S]*)\)$/);
+  if(oa){const r={keys:[],unresolved:[]};for(const part of splitTop(oa[1],"'\"`")){const x=resolveArg(part);r.keys.push(...x.keys);r.unresolved.push(...x.unresolved);}return r;}
+  return {keys:[],unresolved:[a.slice(0,40)]};
+}
+function jsInvokes(src){
+  const sites=[];const re=/invoke\(/g;let m;
+  while((m=re.exec(src))){
+    const before=src.slice(Math.max(0,m.index-12),m.index);
+    if(/[A-Za-z0-9_$.]$/.test(before))continue;      // __realInvoke( / core.invoke — not a call site
+    if(/function\s+$/.test(before))continue;          // the wrapper definition
+    const line=src.slice(0,m.index).split('\n').length;
+    const site={line};
+    const attr=src.slice(m.index).match(/^invoke\(\\'([A-Za-z_][A-Za-z0-9_]*)\\'\s*,\s*\{([^}]*)\}\s*\)/);   // inside an HTML-attribute string
+    if(attr){site.kind='app';site.command=attr[1];site.shape='args';site.keys=[...attr[2].matchAll(/(?:^|,)\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*:/g)].map(k=>k[1]);site.unresolved=[];sites.push(site);continue;}
+    const open=m.index+m[0].length-1,close=balancedEnd(src,open+1,'(',')',"'\"`");
+    if(close<0){sites.push({line,kind:'unparsed',error:'unbalanced',keys:[],unresolved:[]});continue;}
+    const argv=splitTop(src.slice(open+1,close),"'\"`");
+    const lit=(argv[0]||'').match(/^(['"])([A-Za-z_][A-Za-z0-9_|:-]*)\1$/);
+    if(!lit){site.kind='dynamic';site.command=null;}
+    else if(lit[2].startsWith('plugin:')){site.kind='plugin';site.command=lit[2];}
+    else{site.kind='app';site.command=lit[2];}
+    if(argv.length<2){site.shape='no-args';site.keys=[];site.unresolved=[];}
+    else{const r=resolveArg(argv[1]);site.shape='args';site.keys=r.keys;site.unresolved=r.unresolved;}
+    sites.push(site);
+  }
+  return sites;
+}
+function keyMismatches(defs,sites){
+  const byName=new Map();
+  for(const d of defs)if(d.name){if(!byName.has(d.name))byName.set(d.name,new Set());for(const a of d.args||[])byName.get(d.name).add(a);}
+  const out=[];
+  for(const s of sites){
+    if(s.kind!=='app')continue;
+    const params=byName.get(s.command);
+    if(!params){out.push(s.line+':'+s.command+':<no #[tauri::command] with this name>');continue;}
+    const allowed=new Set([...params].map(camel));
+    for(const k of s.keys)if(!allowed.has(k))out.push(s.line+':'+s.command+':'+k+' (parameters: '+[...params].join(',')+')');
+  }
+  return {byName,out};
+}
+await run('No.827 — invoke() keys are the camelCase of #[tauri::command] parameters, for every command of the house',async()=>{
+  const {defs,renameAll}=rustCommands(rsSources);
+  const attrOccurrences=(Object.values(rsSources).join('\n').match(/#\[tauri::command/g)||[]).length;
+  const parseErrors=defs.filter(d=>d.error);
+  ok(attrOccurrences>0&&defs.length===attrOccurrences&&parseErrors.length===0,
+     'Rust parser: every #[tauri::command] attribute yields one parsed definition :: attrs='+attrOccurrences+' parsed='+defs.length+' errors='+JSON.stringify(parseErrors));
+  ok(renameAll.length===0,'no #[tauri::command(rename_all=…)] in the house — the predicate assumes the Tauri 2 default (camelCase) :: '+JSON.stringify(renameAll));
+  const hbStart=rsSources['lib.rs'].indexOf('generate_handler![');
+  const hbEnd=balancedEnd(rsSources['lib.rs'],hbStart+'generate_handler!['.length,'[',']','"');
+  const handlerNames=splitTop(stripComments(rsSources['lib.rs'].slice(hbStart+'generate_handler!['.length,hbEnd)),'"').filter(s=>/^[A-Za-z_][A-Za-z0-9_:]*$/.test(s));
+  const {byName,out}=keyMismatches(defs,jsInvokes(html));
+  ok(handlerNames.length>0&&handlerNames.every(n=>byName.has(n.split('::').pop())),
+     'every tauri::generate_handler![] entry is a parsed definition :: entries='+handlerNames.length+' definitions(unique)='+byName.size);
+  const sites=jsInvokes(html);
+  const app=sites.filter(s=>s.kind==='app'),dyn=sites.filter(s=>s.kind==='dynamic'),plugin=sites.filter(s=>s.kind==='plugin');
+  const simple=(html.match(/\binvoke\(/g)||[]).length;
+  ok(sites.length>0&&sites.length===simple&&!sites.some(s=>s.kind==='unparsed'),
+     'JS parser: every `invoke(` occurrence became one classified call site :: occurrences='+simple+' sites='+sites.length+' app='+app.length+' plugin='+plugin.length+' dynamic='+dyn.length);
+  // positive controls of the resolver on pairs known to be right
+  const saveSite=app.find(s=>s.command==='save_settings'&&s.keys.includes('newSettings'));
+  const assignSite=app.find(s=>s.command.startsWith('crewing_intake_')&&s.keys.includes('expectedContext'));
+  ok(!!saveSite&&!!assignSite,'resolver positive control: save_settings{newSettings} and an Object.assign(pilotExpected(…)) site resolve to their keys');
+  ok(dyn.length===3,'dynamic command names stay an explicit UNRESOLVED list of 3 (invoke(command, Object.assign(pilotExpected(…)…)) :: lines '+dyn.map(s=>s.line).join(','));
+  const unresolvedArgs=sites.filter(s=>s.unresolved&&s.unresolved.length);
+  ok(unresolvedArgs.length<=2,'argument objects that are a bare identifier stay an explicit UNRESOLVED list (≤2) :: '+unresolvedArgs.map(s=>s.line+':'+(s.command||'<dynamic>')+':'+s.unresolved.join('|')).join('; '));
+  ok([...new Set(app.map(s=>s.command))].every(n=>byName.has(n)),'every literal invoke names an existing #[tauri::command] :: unique app commands='+new Set(app.map(s=>s.command)).size);
+  ok(out.length===0,'every resolved invoke key is the camelCase of a parameter of its command :: sites_with_args='+app.filter(s=>s.shape==='args').length+' keys='+app.reduce((n,s)=>n+s.keys.length,0)+' mismatches='+JSON.stringify(out));
+  // mutation negative IN MEMORY (never by editing the product): the predicate must redden on a
+  // synthetic snake_case key and stay green on its camelCase form
+  const synth={'synthetic.rs':"#[tauri::command]\npub(crate) async fn demo_cmd(\n    foo_bar: String,\n    state: tauri::State<'_, AppState>,\n) -> Result<(), String> { Ok(()) }\n"};
+  const red=keyMismatches(rustCommands(synth).defs,jsInvokes("await invoke('demo_cmd', { foo_bar: x });")).out;
+  const green=keyMismatches(rustCommands(synth).defs,jsInvokes("await invoke('demo_cmd', { fooBar: x });")).out;
+  ok(red.length===1&&/foo_bar/.test(red[0])&&green.length===0,'mutation negative in memory: synthetic foo_bar/foo_bar reddens, fooBar/foo_bar stays green :: red='+JSON.stringify(red)+' green='+JSON.stringify(green));
 });
 
 console.log(JSON.stringify({passed,failed,setup_errors:setup,coverage:'actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately'}));

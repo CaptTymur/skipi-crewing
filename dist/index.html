@@ -15122,7 +15122,7 @@ async function nativeAccountLogin() {
   var s = state.settings || {};
   try {
     var reply = await invoke('native_account_login',
-      { email: email, password: password, expected_context: String(s.connection_context || '') });
+      { email: email, password: password, expectedContext: String(s.connection_context || '') });
     if (reply && typeof reply === 'object') {
       s.server_url = reply.server_url || s.server_url;
       s.token_scopes = reply.scopes || [];
