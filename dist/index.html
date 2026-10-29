@@ -4022,7 +4022,7 @@ function renderTeamChatStream() {
     var isMine = String(m.sender_nickname || '') === mine;
     var isAi = teamChatIsAi(m);
     var cls = 'team-msg' + (isAi ? ' ai-llm' : (isMine ? ' mine' : ''));
-    var msgIdAttr = escapeAttr(String(m.id || ''));
+    var msgIdAttr = escapeAttr(escapeJsString(String(m.id || '')));
     html += '<div class="'+cls+'" oncontextmenu="_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')">'
       + '<div class="team-msg-meta"><span class="nick">'+escapeHtml(m.sender_nickname || 'Crewing')+'</span><span>'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>'
       + '<div class="team-msg-body">'+_renderTeamChatBody(m.body || '')+'</div>'
@@ -12097,7 +12097,7 @@ function openVacancyById(id) {
 
 function escapeAttr(s){ return String(s == null ? '' : s).replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
 function escapeJsString(s){
-  return String(s||'')
+  return String(s == null ? '' : s)
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
     .replace(/\r/g, '\\r')
