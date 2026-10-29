@@ -336,6 +336,108 @@ drill('снять помощник с сайта C-3', 'C-3 значение н�
 drill('снять помощник с сайта C-9b (кусок B)', 'C-9b значение не выходит из JS-строки обработчика внутри исполняемого куска',
   (src) => src.replace("onclick=\"mobileShow(\\''+railAttrJsString(view)+'\\')\">", "onclick=\"mobileShow(\\''+view+'\\')\">"));
 
+
+/* ---- C-10: негатив на ФУНКЦИЮ, а не на DOM (F3) ----
+ * mime приходит из mime_from_path (Rust) — закрытый набор из восьми литералов без
+ * кавычек, поэтому «враждебный mime в DOM» бил бы по невозможному входу
+ * (DECISIONS (1043)(б)). Предикат стоит у места сборки URL и проверяется юнит-тестом.
+ */
+check('C-10 docPreviewImageMime пропускает только закрытый набор типов', (src) => {
+  const index = loadIndex(src);
+  const f = helperOf(index, 'docPreviewImageMime');
+  for (const good of ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp', 'IMAGE/PNG']) {
+    must(f(good) === good.toLowerCase(), 'отвергнут законный тип ' + good);
+  }
+  for (const bad of ['image/png" onerror="alert(1)', 'image/svg+xml', 'image/png;x', 'application/pdf',
+                     'image/png ', '', null, undefined, 0, 'imagex/png']) {
+    must(f(bad) === '', 'пропущен недопустимый тип ' + JSON.stringify(bad) + ' → ' + JSON.stringify(f(bad)));
+  }
+});
+
+check('C-10 docPreviewBase64 оставляет только алфавит base64', (src) => {
+  const index = loadIndex(src);
+  const f = helperOf(index, 'docPreviewBase64');
+  must(f('AAAA+/==') === 'AAAA+/==', 'законный base64 изменён');
+  must(f('AA"onload="x') === 'AAonload=x', 'кавычка не удалена: ' + JSON.stringify(f('AA"onload="x')));
+  must(!f('AA"onload="x').includes('"'), 'кавычка пережила фильтр');
+  must(f(null) === '' && f(0) === '0', 'null/0 обработаны неверно');
+});
+
+/* ---- F5: восьмой класс — данные в URL под HTML-экранировщиком ---- */
+check('F5 адрес в mailto URL-кодируется на месте, а не держится предикатом снаружи', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  const line = lineWith(index, 'data-qa="pilot-draft-mailto"', 'F5: сайт mailto');
+  const expr = line.text.trim().replace(/^\?\s*/, '').replace(/;$/, '');
+  for (const v of ['a@b.test', "a'b@c.test", 'a"onmouseover="alert(1)', 'a b@c.test', 'a&cc=evil@c.test']) {
+    const html = renderSite('html += ' + expr + ';', {
+      escapeAttr: E.escapeAttr, escapeHtml: E.escapeHtml,
+      checkedTo: v, dr: { subject: 's', body: 'b' }, cardT: () => 'open',
+    });
+    const m = /href="([^"]*)"/.exec(html);
+    must(m, 'F5: href не ограничен кавычками на ' + JSON.stringify(v));
+    const href = htmlAttrDecode(m[1]);
+    const addr = href.slice('mailto:'.length, href.indexOf('?'));
+    must(decodeURIComponent(addr) === v, 'F5: адрес не восстанавливается побайтово: ' + JSON.stringify(v) + ' → ' + JSON.stringify(decodeURIComponent(addr)));
+    // Апостроф encodeURIComponent оставляет намеренно (unreserved), и это безопасно:
+    // слой атрибута переводит его в &#39; через escapeAttr. Запрещены СТРУКТУРНЫЕ
+    // символы URL — ими адрес мог бы дописать себе параметры (cc=, bcc=).
+    for (const ch of ['"', '&', ' ', '?', '<', '>']) {
+      must(!addr.includes(ch), 'F5: структурный символ ' + JSON.stringify(ch) + ' остался в адресе URL: ' + addr);
+    }
+    const attrValue = m[1];
+    must(!attrValue.includes('"'), 'F5: значение атрибута не закрыто — выход из href');
+  }
+});
+
+drill('снять allowlist с C-10', 'C-10 docPreviewImageMime пропускает только закрытый набор типов',
+  (src) => src.replace("return /^image\\/(png|jpeg|webp|gif|bmp)$/.test(m) ? m : '';", 'return m;'));
+
+drill('снять фильтр base64 с C-10', 'C-10 docPreviewBase64 оставляет только алфавит base64',
+  (src) => src.replace("return String(b64 == null ? '' : b64).replace(/[^A-Za-z0-9+/=]/g, '');", "return String(b64 == null ? '' : b64);"));
+
+drill('снять URL-кодирование адреса в F5', 'F5 адрес в mailto URL-кодируется на месте, а не держится предикатом снаружи',
+  (src) => src.replace("'mailto:'+encodeURIComponent(checkedTo)+'?subject='", "'mailto:'+checkedTo+'?subject='"));
+
+
+/* ---- C-6, C-7, C-8: сайты вне исполняемых кусков (hardening по рангу S1) ---- */
+const PLAIN_SITES = [
+  { id: 'C-7',  anchor: 'cd-button cd-placeholder',                    call: 'cdToggle(',           vars: (v) => ({ id: v }) },
+  { id: 'C-8a', anchor: '+ \'" onclick="openSettings',                 call: 'openSettings(',       vars: (v) => ({ id: v }) },
+  { id: 'C-8b', anchor: 'data-qa="\'+qa+\'" title="\'+escapeAttr(sub', call: 'openSettings(',       vars: (v) => ({ id: v, qa: 'q', label: 'l', sub: 's', active: () => '' }) },
+  { id: 'C-6',  anchor: 'class="ios-row" onclick="mobileOpenSettings', call: 'mobileOpenSettings(', vars: (v) => ({ it: { id: v, label: 'l', icon: 'i', sub: '' } }) },
+];
+
+for (const site of PLAIN_SITES) {
+  check(site.id + ' значение не выходит из JS-строки обработчика (сайт вне исполняемых кусков)', (src) => {
+    const index = loadIndex(src);
+    const E = escapersOf(index);
+    const line = lineWith(index, site.anchor, site.id + ': сайт');
+    const expr = line.text.trim().replace(/^(return|html \+=|\+)\s*/, '').replace(/;$/, '');
+    for (const v of HOSTILE) {
+      const scope = Object.assign(site.vars(v), {
+        escapeAttr: E.escapeAttr, escapeHtml: E.escapeHtml, escapeJsString: E.escapeJsString,
+      });
+      const html = renderSite('html += ' + expr + ';', scope);
+      const at = html.indexOf(site.call);
+      must(at > 0, site.id + ': сайт не отрисовался');
+      const attrStart = html.lastIndexOf('"', at) + 1;
+      const attrEnd = html.indexOf('"', at);
+      must(attrEnd > attrStart, site.id + ': значение вышло из атрибута на ' + JSON.stringify(v));
+      const handler = htmlAttrDecode(html.slice(attrStart, attrEnd));
+      const parsed = readSingleQuoted(handler, handler.indexOf("'"));
+      must(parsed.value === String(v), site.id + ': значение не доехало целиком (' + JSON.stringify(v) + ' → ' + JSON.stringify(parsed.value) + ')');
+      must(/^\)?\s*$/.test(handler.slice(parsed.end + 1)), site.id + ': после строки появился посторонний код');
+    }
+  });
+}
+
+drill('снять экранирование с C-7', 'C-7 значение не выходит из JS-строки обработчика (сайт вне исполняемых кусков)',
+  (src) => src.replace("onclick=\"cdToggle(\\''+escapeAttr(escapeJsString(id))+'\\')\">'", "onclick=\"cdToggle(\\''+id+'\\')\">'"));
+
+drill('снять экранирование с C-6', 'C-6 значение не выходит из JS-строки обработчика (сайт вне исполняемых кусков)',
+  (src) => src.replace("onclick=\"mobileOpenSettings(\\''+escapeAttr(escapeJsString(it.id))+'\\')\">'", "onclick=\"mobileOpenSettings(\\''+it.id+'\\')\">'"));
+
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
  * ------------------------------------------------------------------ */
@@ -357,8 +459,8 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
 /* ------------------------------------------------------------------ *
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
-const MIN_CHECKS = 15;
-const MIN_DRILLS = 8;
+const MIN_CHECKS = 22;
+const MIN_DRILLS = 13;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');

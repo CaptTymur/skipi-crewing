@@ -2668,7 +2668,7 @@ function nationalitySelectHtml(id) {
       + '</div>';
   }
   return '<div class="cd-wrap" id="'+id+'-wrap">'
-    +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
+    +   '<button type="button" class="cd-button cd-placeholder" id="'+escapeAttr(id)+'-btn" onclick="cdToggle(\''+escapeAttr(escapeJsString(id))+'\')">'
     +     '<span id="'+id+'-label">Select nationalities…</span>'
     +     '<span class="cd-arrow">▾</span>'
     +   '</button>'
@@ -9509,7 +9509,7 @@ function pilotDraftHtml() {
   var leave = !checkedTo
     ? (dr.needContact ? '' : '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>')
     : web
-    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
+    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+encodeURIComponent(checkedTo)+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
       + '<span class="pilot-note" data-qa="pilot-draft-web-note">'+escapeHtml(cardT('draft_web_note'))+'</span>'
     : (mobile
       ? '<button data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_share'))+'</button>'
@@ -11811,8 +11811,9 @@ async function renderDocumentDetail() {
       var b64 = r[0], mime = r[1];
       var el = document.getElementById('fprev');
       if (!el) return;
-      if (mime.indexOf('image/') === 0) {
-        el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
+      var previewMime = docPreviewImageMime(mime);
+      if (previewMime) {
+        el.innerHTML = '<img src="data:'+previewMime+';base64,'+docPreviewBase64(b64)+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
       } else if (mime === 'application/pdf') {
         var bin = atob(b64);
         var arr = new Uint8Array(bin.length);
@@ -12096,6 +12097,19 @@ function openVacancyById(id) {
 }
 
 function escapeAttr(s){ return String(s == null ? '' : s).replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
+// No.179 (C-10): data:-URL собирается ТОЛЬКО из закрытого набора типов.
+// Сегодня mime приходит из mime_from_path (src-tauri/src/lib.rs) — восемь литералов
+// без кавычек, то есть предписанный негатив бил бы по невозможному входу. Предикат
+// обязан стоять ЗДЕСЬ, у места сборки URL, а не держаться свойством источника:
+// источник меняется отдельным коммитом и молча снимает защиту.
+// Негатив — юнит-тест самой функции (DECISIONS (1043)(б)), не выход в DOM.
+function docPreviewImageMime(mime){
+  var m = String(mime == null ? '' : mime).toLowerCase();
+  return /^image\/(png|jpeg|webp|gif|bmp)$/.test(m) ? m : '';
+}
+function docPreviewBase64(b64){
+  return String(b64 == null ? '' : b64).replace(/[^A-Za-z0-9+/=]/g, '');
+}
 function escapeJsString(s){
   return String(s == null ? '' : s)
     .replace(/\\/g, '\\\\')
@@ -14963,7 +14977,7 @@ function renderSettingsModal() {
 
   var navItem = function(id, badge, label) {
     return '<div class="settings-nav-item'+(settingsTab===id?' active':'')
-      + '" onclick="openSettings(\''+id+'\')">'
+      + '" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
       + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span></div>';
   };
 
@@ -15124,7 +15138,7 @@ function renderSettingsFiveShell() {
   var connected = !!(s.bearer_token || s.crewing_id);
   var active = function(id){ return section === id ? ' active' : ''; };
   var navItem = function(id, badge, label, sub, qa) {
-    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
       + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span>'
       + '</div>';
   };
@@ -16648,7 +16662,7 @@ function mobileRenderSettingsList() {
       var right = it.pill
         ? '<span class="ios-pill">'+escapeHtml(it.pill)+'</span>'
         : '<span class="ios-right">'+(it.value?escapeHtml(it.value):'')+'<span class="ios-chevron">›</span></span>';
-      html += '<button class="ios-row" onclick="mobileOpenSettings(\''+it.id+'\')">'
+      html += '<button class="ios-row" onclick="mobileOpenSettings(\''+escapeAttr(escapeJsString(it.id))+'\')">'
         + '<span class="ios-badge">'+it.badge+'</span>'
         + '<span style="min-width:0;"><strong>'+escapeHtml(it.title)+'</strong><span class="ios-sub">'+escapeHtml(it.sub)+'</span></span>'
         + right + '</button>';
