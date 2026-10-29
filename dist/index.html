@@ -15671,6 +15671,17 @@ function applyTheme() {
 }
 
 // ===================== Apps / Plugin host (bundled first-party, isolated) =====================
+// No.179: внутри этого блока доступен только escapeHtml — харнесс изоляции
+// (tests/crewing_plugin_isolation_harness.mjs) исполняет кусок через new Function
+// с ФИКСИРОВАННЫМ впрыском имён, поэтому escapeAttr/escapeJsString здесь не
+// существуют и ссылка на них роняет харнесс. Помощник повторяет их композицию
+// escapeAttr(escapeJsString(v)); равенство выводов пиннится негативным харнессом.
+function appsAttrJsString(v){
+  var s = String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/</g, '\\x3c');
+  return s.replace(/[&'\"<>]/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; });
+}
 // Crewing as a HOST for bundled first-party plugins. Apps shell + local
 // Install/Open/Disable stay in Crewing; plugin code runs only through the shared
 // SkipiPluginRuntime sandbox iframe. GUARDRAIL: plugins get NO crewing domain
@@ -15949,7 +15960,7 @@ function crewingRefreshLauncherIntegrity(){
 }
 function appsLaunchTileHtml(p){
   return '<div class="apps-launch-tile-wrap" data-qa="plugin-tile-'+escapeHtml(p.id)+'">'
-    + '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+escapeHtml(p.id)+'\')">'
+    + '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+appsAttrJsString(p.id)+'\')">'
     + '<span class="apps-launch-ico">'+(p.icon||'🧩')+'</span>'
     + '<span class="apps-launch-name">'+escapeHtml(p.name)+'</span>'
     + '</button></div>';
@@ -16006,7 +16017,7 @@ function appsMobileModuleTilesHtml(){
   for (var i=0;i<tiles.length;i++){
     var t = tiles[i];
     h += '<div class="apps-launch-tile-wrap">'
-      + '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+t.view+'\')">'
+      + '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+appsAttrJsString(t.view)+'\')">'
       + '<span class="apps-launch-ico">'+t.icon+'</span>'
       + '<span class="apps-launch-name">'+escapeHtml(mobileModuleLabel(t.view))+'</span>'
       + '</button></div>';
@@ -16038,7 +16049,7 @@ function appsFilter(val){
 function appsManageHtml(){
   var tiles = CREWING_PLUGINS.map(function(p){
     var st = pluginTileState(p);
-    return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+escapeHtml(p.id)+'\')">'
+    return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+appsAttrJsString(p.id)+'\')">'
       + '<span class="apps-badge '+st+'">'+escapeHtml(pluginStateLabel(st))+'</span>'
       + '<div class="at-name">'+escapeHtml(p.name)+'</div>'
       + '<div class="at-cat">'+escapeHtml(p.category||'')+'</div>'
@@ -16060,7 +16071,7 @@ function appsDetailHtml(id){
     : '<span class="apps-muted">No special permissions requested.</span>';
   var actions;
   if (st==='coming_soon') actions = '<div class="apps-muted">This plugin is coming soon.</div>';
-  else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+id+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+id+'\')">Disable</button>';
+  else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+appsAttrJsString(id)+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+appsAttrJsString(id)+'\')">Disable</button>';
   else if (st==='disabled') actions = '<button class="apps-btn" onclick="appsEnable(\''+id+'\')">Enable</button>';
   else actions = '<button class="apps-btn" onclick="appsInstall(\''+id+'\')">Install</button>';
   return '<div class="apps-detail">'
@@ -16345,9 +16356,20 @@ function mobileParentView(view) {
 // 2026-09-27): Documents and Apps left the build, so the rail is the three
 // remaining modules; Settings enters only via the header gear.
 var MOBILE_RAIL_QA = { crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' };
+// No.179: внутри этого блока доступен только escapeHtml — харнесс изоляции
+// (tests/crewing_plugin_isolation_harness.mjs) исполняет кусок через new Function
+// с ФИКСИРОВАННЫМ впрыском имён, поэтому escapeAttr/escapeJsString здесь не
+// существуют и ссылка на них роняет харнесс. Помощник повторяет их композицию
+// escapeAttr(escapeJsString(v)); равенство выводов пиннится негативным харнессом.
+function railAttrJsString(v){
+  var s = String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/</g, '\\x3c');
+  return s.replace(/[&'\"<>]/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; });
+}
 function mobileNavButton(view, active, icon, label) {
   var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
-  return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
+  return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+railAttrJsString(view)+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
 }
 
 async function bootMobile() {

@@ -112,9 +112,13 @@ function escapersOf(index) {
  * ------------------------------------------------------------------ */
 function lineWith(index, needle, msg) {
   const lines = index.split('\n');
-  const hit = lines.findIndex((l) => l.includes(needle));
-  must(hit >= 0, (msg || 'сайт не найден') + ': ' + needle);
-  return { no: hit + 1, text: lines[hit] };
+  const hits = [];
+  lines.forEach((l, i) => { if (l.includes(needle)) hits.push(i); });
+  must(hits.length > 0, (msg || 'сайт не найден') + ': ' + needle);
+  // Неуникальная игла — дефект зонда, а не мелочь: дважды она уводила проверку
+  // на чужую строку (CSS .mobile-nav-btn вместо обработчика). Падать, не угадывать.
+  must(hits.length === 1, (msg || 'сайт') + ': игла не уникальна (' + hits.length + ' строк): ' + needle);
+  return { no: hits[0] + 1, text: lines[hits[0]] };
 }
 
 // Исполняет кусок кода сайта с впрыснутыми экранировщиками и данными, возвращает html.
@@ -242,6 +246,96 @@ check('C-2 безопасные значения доезжают побайто
   }
 });
 
+
+/* ---- помощники внутри исполняемых кусков (F1) ---- *
+ * Куски Apps и MOBILE_RAIL харнесс изоляции исполняет через new Function с
+ * фиксированным впрыском имён, поэтому escapeAttr/escapeJsString внутри них
+ * недоступны. Помощники определены ВНУТРИ кусков — и обязаны давать ровно тот
+ * же вывод, что композиция глобальных экранировщиков, иначе защита разъедется.
+ */
+function helperOf(index, name) {
+  const i = index.indexOf('function ' + name + '(');
+  must(i >= 0, 'не найден помощник ' + name + ' в dist/index.html');
+  let depth = 0, started = false, end = -1;
+  for (let j = i; j < index.length; j += 1) {
+    const c = index[j];
+    if (c === '{') { depth += 1; started = true; }
+    else if (c === '}') { depth -= 1; if (started && depth === 0) { end = j + 1; break; } }
+  }
+  must(end > i, 'не удалось вырезать тело ' + name);
+  return new Function(index.slice(i, end) + '\nreturn ' + name + ';')();
+}
+
+for (const hname of ['appsAttrJsString', 'railAttrJsString']) {
+  check('помощник ' + hname + ' даёт ровно композицию escapeAttr(escapeJsString(x))', (src) => {
+    const index = loadIndex(src);
+    const E = escapersOf(index);
+    const H = helperOf(index, hname);
+    for (const v of HOSTILE.concat(SAFE)) {
+      const expected = E.escapeAttr(E.escapeJsString(v));
+      must(H(v) === expected,
+        hname + ' разошёлся с композицией на ' + JSON.stringify(v) + ': ' + JSON.stringify(H(v)) + ' против ' + JSON.stringify(expected));
+    }
+  });
+}
+
+/* ---- сайты внутри кусков: C-3, C-4, C-5, C-9a (кусок A) и C-9b (кусок B) ---- */
+const CHUNK_SITES = [
+  { id: 'C-3',  call: 'appsOpen(',       anchor: 'data-qa="plugin-open-', scope: () => ({ p: { id: null, name: 'n' } }), put: (s, v) => { s.p.id = v; } },
+  { id: 'C-4',  call: 'appsOpenDetail(', anchor: 'data-qa="plugin-settings-', scope: () => ({ p: { id: null, name: 'n' } }), put: (s, v) => { s.p.id = v; } },
+  { id: 'C-5',  call: 'appsDisable(',    anchor: 'onclick="appsDisable',     scope: () => ({ id: null, st: 'installed' }), put: (s, v) => { s.id = v; } },
+  { id: 'C-9a', call: 'mobileShow(',     anchor: 'apps-launch-tile" type="button" \'+t.qa', scope: () => ({ t: { view: null, qa: '', icon: '' } }), put: (s, v) => { s.t.view = v; } },
+  { id: 'C-9b', call: 'mobileShow(',     anchor: 'data-mview="',        scope: () => ({ view: null, active: '', icon: '', label: 'l', qa: '' }), put: (s, v) => { s.view = v; } },
+];
+
+// Сайт ищется по ВЫЗОВУ обработчика, а не по форме защиты: иначе проверка
+// утверждала бы «правка на месте», а не «значение не доезжает до кода».
+for (const site of CHUNK_SITES) {
+  check(site.id + ' значение не выходит из JS-строки обработчика внутри исполняемого куска', (src) => {
+    const index = loadIndex(src);
+    const E = escapersOf(index);
+    const line = lineWith(index, site.anchor, site.id + ': сайт');
+    const scopeExtra = { escapeHtml: E.escapeHtml, escapeAttr: E.escapeAttr, escapeJsString: E.escapeJsString,
+                         mobileModuleLabel: () => 'l', MOBILE_RAIL_QA: {} };
+    for (const hname of ['appsAttrJsString', 'railAttrJsString']) {
+      if (index.includes('function ' + hname + '(')) scopeExtra[hname] = helperOf(index, hname);
+    }
+    for (const v of HOSTILE) {
+      const scope = site.scope();
+      site.put(scope, v);
+      const raw = line.text.trim();
+      const expr = raw.replace(/^(return|else if \([^)]*\) actions =|\+)\s*/, '').replace(/;$/, '');
+      const html = renderSite('html += ' + expr + ';', Object.assign(scope, scopeExtra));
+      const at = html.indexOf(site.call);
+      must(at > 0, site.id + ': сайт не отрисовался');
+      const attrStart = html.lastIndexOf('"', at) + 1;
+      const attrEnd = html.indexOf('"', at);
+      must(attrEnd > attrStart, site.id + ': значение вышло из атрибута на ' + JSON.stringify(v));
+      const handler = htmlAttrDecode(html.slice(attrStart, attrEnd));
+      const q = handler.indexOf("'");
+      must(q >= 0, site.id + ': в обработчике нет строкового литерала');
+      const parsed = readSingleQuoted(handler, q);
+      must(parsed.value === String(v), site.id + ': значение не доехало целиком (' + JSON.stringify(v) + ' → ' + JSON.stringify(parsed.value) + ') — строка закрылась раньше');
+      const tail = handler.slice(parsed.end + 1);
+      must(/^\)?\s*$/.test(tail), site.id + ': после строки появился посторонний код: ' + JSON.stringify(tail));
+    }
+  });
+}
+
+drill('помощник куска A потерял экранирование апострофа', 'помощник appsAttrJsString даёт ровно композицию escapeAttr(escapeJsString(x))',
+  (src) => {
+    const needle = `.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'")`;
+    const at = src.indexOf(needle);
+    must(at > 0, 'мутация не нашла строку помощника');
+    return src.slice(0, at) + `.replace(/\\\\/g, '\\\\\\\\')` + src.slice(at + needle.length);
+  });
+
+drill('снять помощник с сайта C-3', 'C-3 значение не выходит из JS-строки обработчика внутри исполняемого куска',
+  (src) => src.replace("onclick=\"appsOpen(\\''+appsAttrJsString(p.id)+'\\')\">'", "onclick=\"appsOpen(\\''+escapeHtml(p.id)+'\\')\">'"));
+
+drill('снять помощник с сайта C-9b (кусок B)', 'C-9b значение не выходит из JS-строки обработчика внутри исполняемого куска',
+  (src) => src.replace("onclick=\"mobileShow(\\''+railAttrJsString(view)+'\\')\">", "onclick=\"mobileShow(\\''+view+'\\')\">"));
+
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
  * ------------------------------------------------------------------ */
@@ -263,8 +357,8 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
 /* ------------------------------------------------------------------ *
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
-const MIN_CHECKS = 8;
-const MIN_DRILLS = 5;
+const MIN_CHECKS = 15;
+const MIN_DRILLS = 8;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');
