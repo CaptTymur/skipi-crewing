@@ -1,3 +1,5 @@
+// Негативный контроль fail-closed проверки стека. Версию компонента он намеренно
+// НЕ пинит — это делает stack_build_metadata_harness; здесь проверяется поведение.
 import fs from 'node:fs';
 import vm from 'node:vm';
 
