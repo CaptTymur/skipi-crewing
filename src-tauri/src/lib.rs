@@ -215,6 +215,8 @@ fn get_build_info() -> BuildInfo {
     };
     BuildInfo {
         component: "Crewing".to_string(),
+        // Версия компонента берётся из CARGO_PKG_VERSION: бамп идёт правкой
+        // Cargo.toml через дверь stack-metadata, литерала здесь нет и быть не должно.
         component_version: env!("CARGO_PKG_VERSION").to_string(),
         stack_id: "SKIPI-2026.08-R1".to_string(),
         source_identifier: sha.clone(),
