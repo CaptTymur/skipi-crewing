@@ -26,12 +26,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 
 const ROOT =
   process.env.CREWING_HARNESS_ROOT ||
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const REL = { index: 'dist/index.html' };
+// F2: блок сгенерирован skipi-host-runtime и помечен «do not edit» — пин содержимого.
+const HOST_RUNTIME_SHA256 = '4380cd6c84944e62f183ef56b7ae2ef61ae537e25a5516b4017cdd202af45408';
 
 function loadIndex(src) {
   if (src != null) return src;
@@ -119,6 +122,13 @@ function lineWith(index, needle, msg) {
   // на чужую строку (CSS .mobile-nav-btn вместо обработчика). Падать, не угадывать.
   must(hits.length === 1, (msg || 'сайт') + ': игла не уникальна (' + hits.length + ' строк): ' + needle);
   return { no: hits[0] + 1, text: lines[hits[0]] };
+}
+
+function linesWith(index, needle, msg) {
+  const out = [];
+  index.split('\n').forEach((l, i) => { if (l.includes(needle)) out.push({ no: i + 1, text: l }); });
+  must(out.length > 0, (msg || 'сайты не найдены') + ': ' + needle);
+  return out;
 }
 
 // Исполняет кусок кода сайта с впрыснутыми экранировщиками и данными, возвращает html.
@@ -438,6 +448,162 @@ drill('снять экранирование с C-7', 'C-7 значение не
 drill('снять экранирование с C-6', 'C-6 значение не выходит из JS-строки обработчика (сайт вне исполняемых кусков)',
   (src) => src.replace("onclick=\"mobileOpenSettings(\\''+escapeAttr(escapeJsString(it.id))+'\\')\">'", "onclick=\"mobileOpenSettings(\\''+it.id+'\\')\">'"));
 
+
+/* ---- класс целиком: ПОКРЫТИЕ по исходнику ----
+ * Имя проверки называет свой слой честно: это проверка ПОКРЫТИЯ ПО ИСХОДНИКУ,
+ * а не доказательство поведения вывода (DECISIONS (1043)(б)). Поведение доказывают
+ * исполнением проверки сайтов выше; эта ловит СЕДЬМОЙ сайт, который появится завтра
+ * и мимо которой он бы проехал молча.
+ */
+// Значение обработчика целиком, затем ВСЕ позиции внутри него. Первая редакция
+// зонда брала только первую позицию и была слепа к многоаргументным обработчикам —
+// поймано собственным дриллом на :13383 (bundle.id, bCounterpart молчали).
+const HANDLER_ATTR = /on\w+\s*=\s*"([^"]*)"/g;
+const JS_SLOT = /\\''\s*\+\s*([^+]+?)\s*\+\s*'\\'/g;
+
+function handlerJsStringSites(index) {
+  const out = [];
+  index.split('\n').forEach((ln, i) => {
+    const no = i + 1;
+    if (no >= 1017 && no <= 1256) return; // F2: сгенерированный host-runtime, не наш
+    let h;
+    HANDLER_ATTR.lastIndex = 0;
+    while ((h = HANDLER_ATTR.exec(ln)) !== null) {
+      let s;
+      JS_SLOT.lastIndex = 0;
+      while ((s = JS_SLOT.exec(h[1])) !== null) out.push({ no, expr: s[1].trim(), text: ln });
+    }
+  });
+  return out;
+}
+
+check('ПОКРЫТИЕ ПО ИСХОДНИКУ: ни один обработчик не несёт значение в JS-строку без JS-экранирования', (src) => {
+  const index = loadIndex(src);
+  const sites = handlerJsStringSites(index);
+  // калибровка: зонд обязан видеть заведомо известный сайт C-2
+  must(sites.some((s) => s.text.includes('_onTeamChatMsgContextMenu')),
+    'зонд покрытия не видит известный сайт C-2 — ноль был бы ложным');
+  const bare = sites.filter((s) => !/JsString/.test(s.expr)
+    && !/^(msgIdAttr|key)$/.test(s.expr)                       // C-2 защищён переменной строкой выше; C-1 снят по F3
+    && !/Number\(|parseInt\(|String\(ordinal\)/.test(s.expr));
+  must(bare.length === 0,
+    'сайты без JS-экранирования: ' + bare.map((s) => ':' + s.no + ' ' + s.expr).join(' | '));
+});
+
+check('новый сайт :13383 — четыре значения bundle не выходят из JS-строк openDocumentsBundle', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  // Сайтов bundle-viewer два (:13323 и :13383) — проверяются ОБА, а не «первый найденный».
+  const sites = linesWith(index, 'onclick="openDocumentsBundle', 'сайты bundle-viewer');
+  must(sites.length === 2, 'ожидалось 2 сайта bundle-viewer, найдено ' + sites.length + ' — состав изменился, проверку пересмотреть');
+  for (const site of sites) for (const v of HOSTILE) {
+  // Обе строки — самостоятельные выражения после снятия ведущего «+» или «?»
+  // (вторая из них — тернарник целиком, его трогать нельзя: снимал — ломал разбор).
+  const expr = site.text.trim().replace(/^(\?|\+)\s*/, '').replace(/;$/, '');
+    const html = renderSite('html += ' + expr + ';', {
+      escapeAttr: E.escapeAttr, escapeHtml: E.escapeHtml, escapeJsString: E.escapeJsString,
+      m: { application_id: v }, bundle: { id: v, filename: v }, bCounterpart: v,
+      applicationId: v, att: { id: v, original_filename: v, mime_type: v }, counterpart: v, fname: v,
+      isZip: true, counterpartId: v,
+    });
+    const at = html.indexOf('openDocumentsBundle(');
+    must(at > 0, 'сайт bundle не отрисовался');
+    const attrStart = html.lastIndexOf('"', at) + 1;
+    const attrEnd = html.indexOf('"', at);
+    must(attrEnd > attrStart, 'bundle: значение вышло из атрибута на ' + JSON.stringify(v));
+    const handler = htmlAttrDecode(html.slice(attrStart, attrEnd));
+    let pos = handler.indexOf("'");
+    for (let k = 0; k < 4; k += 1) {
+      const parsed = readSingleQuoted(handler, pos);
+      must(parsed.value === String(v), 'bundle: позиция ' + (k + 1) + ' не доехала: ' + JSON.stringify(parsed.value));
+      const next = handler.indexOf("'", parsed.end + 1);
+      pos = next;
+      if (k < 3) must(pos > 0, 'bundle: позиция ' + (k + 2) + ' не найдена');
+    }
+  }
+});
+
+/* ---- дриллы класса: каждая снятая защита обязана покраснить покрытие ---- */
+const SWEPT = [
+  'escapeAttr(escapeJsString(m.user_id))', 'escapeAttr(escapeJsString(target))',
+  'escapeAttr(escapeJsString(t.application_id))', 'escapeAttr(escapeJsString(v.id))',
+  'escapeAttr(escapeJsString(profile.id))', 'escapeAttr(escapeJsString(a.id))',
+  'escapeAttr(escapeJsString(row.id))', 'escapeAttr(escapeJsString(r.id))',
+  'escapeAttr(escapeJsString(s.id))', 'escapeAttr(escapeJsString(d.id))',
+  'escapeAttr(escapeJsString(d.template_id))', 'escapeAttr(escapeJsString(bundle.id))',
+  'escapeAttr(escapeJsString(bCounterpart))', 'escapeAttr(escapeJsString(m.application_id))',
+  'escapeAttr(escapeJsString(id))', 'escapeAttr(escapeJsString(p.id))',
+  'escapeAttr(escapeJsString(it.id))',
+  'appsAttrJsString(id)', 'appsAttrJsString(p.id)', 'appsAttrJsString(t.view)',
+  'railAttrJsString(view)',
+];
+for (const form of SWEPT) {
+  drill('снять JS-экранирование: ' + form,
+    'ПОКРЫТИЕ ПО ИСХОДНИКУ: ни один обработчик не несёт значение в JS-строку без JS-экранирования',
+    (src) => {
+      const at = src.indexOf(form);
+      must(at > 0, 'форма не найдена в исходнике: ' + form);
+      const inner = form.startsWith('escapeAttr(escapeJsString(')
+        ? 'escapeAttr(' + form.slice('escapeAttr(escapeJsString('.length, -1)
+        : form.slice(form.indexOf('(') + 1, -1);
+      return src.slice(0, at) + inner + src.slice(at + form.length);
+    });
+}
+
+
+/* ---- самокалибровка зондов самого харнесса ---- */
+check('зонд htmlAttrDecode откалиброван на известных сущностях', () => {
+  must(htmlAttrDecode('a&#39;b') === "a'b", '&#39; не раскрыт');
+  must(htmlAttrDecode('a&#34;b') === 'a"b', '&#34; не раскрыт');
+  must(htmlAttrDecode('a&amp;#39;b') === "a&#39;b", 'двойное раскрытие — зонд врёт');
+});
+
+check('зонд readSingleQuoted откалиброван на известных литералах', () => {
+  must(readSingleQuoted("'ab'", 0).value === 'ab', 'простая строка');
+  must(readSingleQuoted(String.raw`'a\'b'`, 0).value === "a'b", 'экранированная кавычка');
+  must(readSingleQuoted(String.raw`'a\x3cb'`, 0).value === 'a<b', 'шестнадцатеричный escape');
+  let threw = false;
+  try { readSingleQuoted("'abc", 0); } catch (_) { threw = true; }
+  must(threw, 'незакрытый литерал обязан падать');
+});
+
+check('ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: фикстуры действительно ломают НЕзащищённый сайт', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  // синтетический сайт без JS-экранирования — обязан сломаться на каждом враждебном значении
+  let broken = 0;
+  for (const v of HOSTILE) {
+    const html = "<b onclick=\"f('" + E.escapeAttr(v) + "')\">";
+    const handler = htmlAttrDecode(html.slice(html.indexOf('"') + 1, html.lastIndexOf('"')));
+    try {
+      const parsed = readSingleQuoted(handler, handler.indexOf("'"));
+      if (parsed.value !== String(v)) broken += 1;
+    } catch (_) { broken += 1; }
+  }
+  // escapeAttr закрывает " и <; апостроф — нет, и ровно на нём класс H-2 и живёт.
+  // Поэтому контроль требует, чтобы ломались ИМЕННО апострофные фикстуры, а не все.
+  const quoteBearing = HOSTILE.filter((v) => String(v).includes("'")).length;
+  must(broken >= quoteBearing && quoteBearing > 0,
+    'фикстуры слабые: апострофных ' + quoteBearing + ', сломали незащищённый сайт ' + broken);
+});
+
+check('F2: сгенерированный блок host-runtime не тронут (sha256 содержимого)', (src) => {
+  const index = loadIndex(src);
+  const m = /<!-- BEGIN skipi-host-runtime[\s\S]*?<!-- END skipi-host-runtime -->/.exec(index);
+  must(m, 'блок host-runtime не найден');
+  const sum = crypto.createHash('sha256').update(m[0], 'utf8').digest('hex');
+  must(sum === HOST_RUNTIME_SHA256,
+    'блок host-runtime изменён: ' + sum + ' вместо ' + HOST_RUNTIME_SHA256 + ' — это территория роли плагинов (F2)');
+});
+
+check('экранировщики дома не потеряли null-безопасность', (src) => {
+  const E = escapersOf(loadIndex(src));
+  for (const [n, f] of Object.entries(E)) {
+    must(f(null) === '', n + '(null) должен давать пустую строку');
+    must(f(undefined) === '', n + '(undefined) должен давать пустую строку');
+  }
+});
+
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
  * ------------------------------------------------------------------ */
@@ -459,8 +625,8 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
 /* ------------------------------------------------------------------ *
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
-const MIN_CHECKS = 22;
-const MIN_DRILLS = 13;
+const MIN_CHECKS = 29;
+const MIN_DRILLS = 32;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');
