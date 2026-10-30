@@ -1577,7 +1577,7 @@ section('635 real Settings and no manual credential entry');
     const context = createContext(sandbox);
     runInContext(scriptNoBoot + '\nglobalThis.__fixture = {' +
       'state, mobileState, openSettings, mobileOpenSettingsHome, mobileOpenSettings, mobileShow,' +
-      'crewingSettingsHost, renderEntryChoice, closeConnectDialog, connectShowTab,' +
+      'crewingSettingsHost, renderEntryChoice, entryShowLogin, entryOpenRegister,' +
       'trialShowBlockedOverlay, trialHideOverlay,' +
       'getInstance: function(){return _skipiSettingsInstance;}};', context);
     const app = sandbox.__fixture;
@@ -1645,32 +1645,41 @@ section('635 real Settings and no manual credential entry');
         }
 
         if (phase === 'fresh') {
+          // No.880: развилка канона — Вход · Регистрация · Демо. Прежние утверждения
+          // («first-run profile button is wired», «create handler persists choice»,
+          // «QR fallback», «first-run connect») описывали СТАРЫЙ гейт по токену/QR и
+          // заменены здесь поимённо на утверждения новой модели, а не удалены.
           let continuationCalls = 0;
           const next = mode === 'mobile'
             ? runInContext('(function(){ mobileShow("work_role"); })', fixture.context)
             : () => { continuationCalls++; };
           app.renderEntryChoice(next);
-          noManual(document.getElementById('entry-choice-overlay')?.innerHTML || '', label + ' first-run choice');
-          const open = document.getElementById('ec-open');
-          ok(!!open && typeof open.onclick === 'function', label + ': real first-run profile button is wired');
-          if (open && typeof open.onclick === 'function') open.onclick();
-          noManual(document.getElementById('connect-dialog-overlay')?.innerHTML || '', label + ' first-run connect');
-          app.connectShowTab('qr');
-          noManual(document.getElementById('connect-dialog-overlay')?.innerHTML || '', label + ' QR fallback');
-          app.closeConnectDialog();
-          const create = document.getElementById('ec-create');
-          ok(!!create && typeof create.onclick === 'function', label + ': real first-run create button is wired');
-          if (create && typeof create.onclick === 'function') create.onclick();
-          ok(fixture.storage.get('skipi_crewing_entry') === 'use'
-            && !document.getElementById('entry-choice-overlay'),
-            label + ': real create handler persists choice and removes entry overlay');
-          if (mode === 'mobile') {
-            ok(app.mobileState.view === 'connection', label + ': actual mobile create continuation reaches Connection');
-            noManual(document.getElementById('mobile-root').innerHTML + document.getElementById('mobile-main').innerHTML,
-              label + ' mobile create destination and header');
-          } else {
-            ok(continuationCalls === 1 && /renderEntryChoice\(bootDesktopMain\)/.test(HTML),
-              label + ': desktop continuation dispatch only; source binds actual bootDesktopMain');
+          const overlay = document.getElementById('entry-choice-overlay');
+          const forkHtml = overlay?.innerHTML || '';
+          noManual(forkHtml, label + ' first-run choice');
+          ok(/id="ec-login"/.test(forkHtml) && /id="ec-register"/.test(forkHtml) && /id="ec-demo"/.test(forkHtml),
+            label + ': the entry fork offers exactly the three canon doors (login, register, demo)');
+          ok(!/id="ec-open"/.test(forkHtml) && !/id="ec-create"/.test(forkHtml),
+            label + ': the retired token/QR and new-company doors are gone from the fork');
+          ok(/onclick="entryShowLogin\(true\)"/.test(forkHtml)
+            && /onclick="entryOpenRegister\(\)"/.test(forkHtml)
+            && /onclick="enterDemoMode\(\)"/.test(forkHtml),
+            label + ': every door carries its handler as an on*= ATTRIBUTE, inside escaping coverage');
+          ok(!/\.onclick\s*=/.test(forkHtml), label + ': the fork assigns no .onclick property');
+          app.entryShowLogin(true);
+          const loginHtml = document.getElementById('entry-choice-overlay')?.innerHTML || '';
+          ok(/id="a-email"/.test(loginHtml) && /id="a-password"/.test(loginHtml),
+            label + ': the login door reveals the account form with both inputs');
+          ok(/id="ec-login-error"/.test(loginHtml),
+            label + ': the refusal has a place BESIDE the button, not only a fading toast');
+          noManual(loginHtml, label + ' first-run login form');
+          ok(fixture.storage.get('skipi_crewing_entry') === null,
+            label + ': the fork persists no "never ask again" flag — only an account session may skip it');
+          ok(continuationCalls === 0 && !!document.getElementById('entry-choice-overlay'),
+            label + ': the fork does not let anyone past without signing in');
+          if (mode !== 'mobile') {
+            ok(/renderEntryChoice\(bootDesktopMain\)/.test(HTML),
+              label + ': desktop boot still dispatches the fork with the real continuation');
           }
         }
 
@@ -1682,7 +1691,9 @@ section('635 real Settings and no manual credential entry');
         sandbox.SkipiSettings = undefined;
         for (const flag of ['0', '1']) {
           storage.set('skipi_crewing_settings5', flag);
-          const pages = flag === '0' ? ['access', 'devices'] : ['identity', 'storage', 'paid'];
+          // No.880: страницы 'access' и 'devices' удалены вместе со слоем токена;
+          // остаются те, что пережили удаление.
+          const pages = flag === '0' ? ['org', 'data', 'app'] : ['identity', 'storage', 'paid'];
           for (const page of pages) {
             if (mode === 'mobile') app.mobileOpenSettings(page); else await app.openSettings(page);
             noManual(document.getElementById(mode === 'mobile' ? 'mobile-main' : 'modal-host').innerHTML,

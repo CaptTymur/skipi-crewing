@@ -9,9 +9,12 @@ function between(start,end) {
 const wrapper=between('var __realInvoke = window.__TAURI__.core.invoke;','var convertFileSrc =');
 const pubkey=between('function registerMessagingPubkey()','function serverUrlArg()');
 const trial=between('var trialServerStatus =','async function trialPhase(opts)');
-const desktop=between('async function activateCompanyToken()','async function saveSettings()');
-const mobileRead=between('function mobileReadConnection()','async function mobileSaveConnection(');
-const mobileActions=between('async function mobileValidateConnection()','function mobileVacancyTitle(');
+// No.880/§2: швы activateCompanyToken / mobileSaveConnection / mobileValidateConnection
+// сняты вместе со слоем токена компании ((1495) «никаких токенов»). Свойства, которые
+// они проверяли — «сохранённый секрет не уходит», «уходит ИСХОДНЫЙ контекст», «поздний
+// ответ не занимает новый контекст» — не потеряны: они перенесены на единственный
+// оставшийся вызов того же класса, вход аккаунтом.
+const accountLogin=between('async function nativeAccountLogin(','async function saveSettings(');
 const secret='SYNTHETIC-PRIVATE-635-NOT-FOR-UI';
 function publicFixture() {
   // Independent full native public response, no production DTO serializer or source constant.
@@ -32,10 +35,9 @@ function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve
 function runtime(transport) {
   const calls=[],changes=[],notices=[];
   const nodes=new Map(Object.entries({
-    's-url':'https://synthetic.invalid','s-token':'','s-crewing-id':'company-635',
+    // No.880/§5: узлов s-url / s-token / s-crewing-id / m-* в фикстуре больше нет —
+    // поля, которые они изображали, удалены из интерфейса вместе со слоем токена.
     's-company':'Synthetic owner company','s-reply':'owner@example.invalid',
-    'm-server-url':'https://synthetic.invalid','m-token':'','m-crewing-id':'company-635',
-    'm-company':'Synthetic owner company','m-reply':'owner@example.invalid',
     'a-email':'','a-password':'',
   }).map(([id,value])=>[id,{value}]));
   const ctx={document:{getElementById:(id)=>nodes.get(id)||null},
@@ -44,7 +46,7 @@ function runtime(transport) {
 state:{settings:publicFixture()},localStorage:{getItem(){return null;}},
     console:{log(){},warn(){},error(){}},pilotSettingsChanged(previous,next){changes.push([clone(previous),clone(next)]);}};
   ctx.window={__TAURI__:{core:{invoke:(command,args)=>{calls.push([command,args]);return transport(command,args);}}}};
-  vm.createContext(ctx);vm.runInContext(wrapper+'\n'+pubkey+'\n'+trial+'\n'+desktop+'\n'+mobileRead+'\n'+mobileActions,ctx);
+  vm.createContext(ctx);vm.runInContext(wrapper+'\n'+pubkey+'\n'+trial+'\n'+accountLogin,ctx);
   return{ctx,calls,changes,nodes,notices};
 }
 let passed=0,failed=0,setup=0;
@@ -121,55 +123,49 @@ await run('actual stored activation caller stays public',async()=>{
     'background validation sends no saved credential');
   ok(result.phase==='free','existing connected owner activation succeeds');
 });
-await run('actual desktop/mobile stored Validate',async()=>{
-  for(const action of ['activateCompanyToken','mobileValidateConnection']){
-    const {ctx,calls,notices}=runtime(async(command)=>{
-      if(command==='activate_crewing_token')return{crewing_id:'company-635',organization_id:'org-635',display_name:'Synthetic owner company',scopes:['applications:read'],expires_at:'2099-10-19T12:00:00Z'};
-      if(command==='save_settings')return publicFixture();
-      if(command==='register_my_pubkey')return{user_id:'synthetic-device',pubkey_b64:'synthetic-public-key'};
-      throw new Error('unexpected command '+command);
-    });
-    ctx.state.settings.bearer_token=secret; // An old/injected field must never be used as saved credential.
-    await ctx[action]();const activation=calls.find(row=>row[0]==='activate_crewing_token');
-    ok(!!activation,action+' validates existing native connection with empty input');
-    ok(activation&&activation[1].expectedContext==='ctx_fixture_a'&&!JSON.stringify(activation[1]).includes(secret),
-      action+' sends original context without saved secret');
-    ok(calls.some(row=>row[0]==='save_settings')&&!notices.some(row=>row[1]==='error'),action+' completes public save without an error');
-    ok(ctx.state.settings.crewing_id==='company-635'&&!Object.hasOwn(ctx.state.settings,'bearer_token'),action+' retains public owner connection');
-  }
+await run('account login carries the original context and no saved credential',async()=>{
+  const {ctx,calls,nodes}=runtime(async(command)=>{
+    if(command==='native_account_login')return{server_url:'https://synthetic.invalid',scopes:['read'],expires_at:'2027-01-01T00:00:00Z'};
+    throw new Error('unexpected command '+command);
+  });
+  ctx.state.settings.bearer_token=secret;         // старое/подброшенное поле не должно уехать
+  nodes.get('a-email').value='owner@example.invalid';
+  nodes.get('a-password').value='synthetic-password';
+  await ctx.nativeAccountLogin();
+  const login=calls.find(row=>row[0]==='native_account_login');
+  ok(!!login,'account login invoked');
+  ok(login&&login[1].expectedContext==='ctx_fixture_a','login sends the ORIGINAL caller context');
+  ok(login&&!JSON.stringify(login[1]).includes(secret),'login sends no saved credential');
+  ok(login&&!Object.hasOwn(login[1],'bearerToken'),'login carries no bearerToken key at all');
 });
-await run('four late connection callbacks cannot borrow a newer account context',async()=>{
-  for(const action of ['activateCompanyToken','startTrialAccess','mobileValidateConnection','mobileStartTrialAccess']){
-    const pending=deferred(),b={...publicFixture(),connection_context:'ctx_fixture_b',crewing_id:'company-b',
-      profile:{...publicFixture().profile,legal_name:'B owner profile'}};
-    const {ctx,calls,nodes}=runtime(async(command)=>{
-      if(command==='activate_crewing_token'||command==='issue_crewing_trial_token')return pending.promise;
-      if(command==='save_settings')return clone(b);
-      if(command==='register_my_pubkey')return{user_id:'synthetic-device',pubkey_b64:'synthetic-public-key'};
-      throw new Error('unexpected command '+command);
-    });
-    nodes.get('s-token').value='SYNTHETIC_TYPED_A';nodes.get('m-token').value='SYNTHETIC_TYPED_A';
-    const acting=ctx[action]();
-    ok(calls.length===1,action+' dispatches its original activation before delay');
-    ctx.state.settings=clone(b);nodes.get('s-crewing-id').value='company-b';nodes.get('m-crewing-id').value='company-b';
-    pending.resolve({token:'SYNTHETIC_ISSUED_A',crewing_id:'company-635',organization_id:'org-635',
-      display_name:'Synthetic owner company',scopes:['applications:read'],expires_at:'2099-10-19T12:00:00Z'});
-    await acting;
-    ok(!calls.some(row=>row[0]==='save_settings'),action+' late response issues no settings write');
-    ok(JSON.stringify(ctx.state.settings)===JSON.stringify(b),action+' leaves newer owner profile/vault/context intact');
-    ok(nodes.get('s-crewing-id').value==='company-b'&&nodes.get('m-crewing-id').value==='company-b',action+' late response does not repaint old company');
-  }
+await run('a late account-login reply cannot borrow a newer context',async()=>{
+  const pending=deferred();
+  const {ctx,calls,nodes}=runtime(async(command)=>{
+    if(command==='native_account_login')return pending.promise;
+    throw new Error('unexpected command '+command);
+  });
+  nodes.get('a-email').value='owner@example.invalid';
+  nodes.get('a-password').value='synthetic-password';
+  const inflight=ctx.nativeAccountLogin();
+  ctx.state.settings.connection_context='ctx_fixture_b';   // контекст сменился, пока вызов в полёте
+  pending.resolve({server_url:'https://synthetic.invalid',scopes:['read'],expires_at:'2027-01-01T00:00:00Z'});
+  await inflight;
+  const login=calls.find(row=>row[0]==='native_account_login');
+  ok(login&&login[1].expectedContext==='ctx_fixture_a',
+    'the in-flight call keeps the context it was dispatched with, not the newer one');
 });
 await run('No.635 slice A — account login reachable from the interface',async()=>{
   // FAILING-FIRST for slice A. Anchored on the product seam the slice introduces, so today it
   // fails BY NAME ("real source seam absent") rather than vacuously. The behavioural assertions
   // below are deliberately unreachable until the seam exists; the reachable one is the red.
   let seam=null,seamError=null;
-  // End anchor is the NEXT top-level declaration, as all six existing seams are: `between`
+  // End anchor is the NEXT top-level declaration. Was activateCompanyToken until No.880
+  // removed the company-token layer; now saveSettings — loginRefusalText must stay INSIDE the seam, otherwise the
+  // refusal path throws on it before the text ever reaches the person.
   // EXCLUDES its end marker, so ending on '\n}' sliced the function without its closing
   // brace and vm.runInNewContext threw SyntaxError. The red was real but the green was
   // unreachable — a failing-first test must be shown in BOTH states.
-  try{ seam=between('async function nativeAccountLogin(','async function activateCompanyToken('); }
+  try{ seam=between('async function nativeAccountLogin(','async function saveSettings('); }
   catch(error){ seamError=String(error&&error.message||error); }
   ok(seam!==null,'account-login seam present in dist/index.html :: '+(seamError||'found'));
   if(seam===null)return;
@@ -201,7 +197,7 @@ await run('No.635 slice A — the form and its refusal texts exist in the shippe
 });
 await run('No.635 slice A — a refusal code reaches the person as its own text',async()=>{
   let seam=null;
-  try{ seam=between('async function nativeAccountLogin(','async function activateCompanyToken('); }catch(e){}
+  try{ seam=between('async function nativeAccountLogin(','async function saveSettings('); }catch(e){}
   if(seam===null){ ok(false,'seam absent'); return; }
   const {ctx,notices}=runtime(async()=>{ throw new Error('entitlement_expired'); });
   vm.runInNewContext(seam,ctx);
