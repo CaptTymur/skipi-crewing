@@ -2657,22 +2657,22 @@ function nationalitySelectHtml(id) {
     var sep = (i === topCount && topCount > 0 && i < list.length) ? '<div class="cd-separator"></div>' : '';
     return sep
       + '<label class="cd-item">'
-      +   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(id)+'\')">'
+      +   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(escapeJsString(id))+'\')">'
       +   '<span>'+escapeHtml(label)+'</span>'
       + '</label>';
   }).join('');
   if (mobileInline) {
-    return '<div class="cd-wrap cd-mobile-inline" id="'+id+'-wrap">'
-      +   '<div class="cd-mobile-summary cd-placeholder" id="'+id+'-label">Select nationalities…</div>'
-      +   '<div class="cd-panel" id="'+id+'-panel">'+items+'</div>'
+    return '<div class="cd-wrap cd-mobile-inline" id="'+escapeAttr(id)+'-wrap">'
+      +   '<div class="cd-mobile-summary cd-placeholder" id="'+escapeAttr(id)+'-label">Select nationalities…</div>'
+      +   '<div class="cd-panel" id="'+escapeAttr(id)+'-panel">'+items+'</div>'
       + '</div>';
   }
-  return '<div class="cd-wrap" id="'+id+'-wrap">'
-    +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
-    +     '<span id="'+id+'-label">Select nationalities…</span>'
+  return '<div class="cd-wrap" id="'+escapeAttr(id)+'-wrap">'
+    +   '<button type="button" class="cd-button cd-placeholder" id="'+escapeAttr(id)+'-btn" onclick="cdToggle(\''+escapeAttr(escapeJsString(id))+'\')">'
+    +     '<span id="'+escapeAttr(id)+'-label">Select nationalities…</span>'
     +     '<span class="cd-arrow">▾</span>'
     +   '</button>'
-    +   '<div class="cd-panel" id="'+id+'-panel" hidden>'+items+'</div>'
+    +   '<div class="cd-panel" id="'+escapeAttr(id)+'-panel" hidden>'+items+'</div>'
     + '</div>';
 }
 
@@ -3540,7 +3540,7 @@ function renderTeamAccessManagementHtml() {
     var isMe = me && m.user_id === me.user_id;
     var remove = isMe
       ? '<span style="color:var(--text2);font-size:12px;">this device</span>'
-      : '<button class="ghost" onclick="removeTeamMember(\''+escapeAttr(m.user_id)+'\')" style="padding:4px 10px;font-size:11px;">Remove</button>';
+      : '<button class="ghost" onclick="removeTeamMember(\''+escapeAttr(escapeJsString(m.user_id))+'\')" style="padding:4px 10px;font-size:11px;">Remove</button>';
     return '<tr>'
       + '<td>'+teamPresenceHtml(m)+'</td>'
       + '<td><div class="team-member-primary"><span class="team-member-name">'+escapeHtml(teamMemberDisplayName(m))+'</span>'+(isMe?' <span style="color:var(--ok);font-size:11px;">you</span>':'')+'</div><code class="team-member-id">'+escapeHtml(m.user_id)+'</code></td>'
@@ -3603,7 +3603,7 @@ function renderTeamTargetPills(activeTarget) {
   } else {
     members.forEach(function(m, idx){
       var target = 'member:' + String(m.user_id || idx);
-      html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(target)+'\')">'+teamPresenceHtml(m)+' <span class="tt-name">'+escapeHtml(teamMemberDisplayName(m))+'</span></span>';
+      html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(escapeJsString(target))+'\')">'+teamPresenceHtml(m)+' <span class="tt-name">'+escapeHtml(teamMemberDisplayName(m))+'</span></span>';
     });
   }
   if (members.length > 1) {
@@ -3939,7 +3939,7 @@ function renderTeamChatAttachments(attachments, messageId) {
     var meta = filename;
     var size = attachmentSizeLabel(att.size_bytes);
     if (size) meta += ' · ' + size;
-    parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')" title="'+escapeAttr(filename)+'">'
+    parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeAttr(escapeJsString(messageId || ''))+'\','+i+')" title="'+escapeAttr(filename)+'">'
       + '<img src="'+escapeAttr(url)+'" alt="'+escapeAttr(filename)+'">'
       + '<span class="team-msg-attachment-meta">'+escapeHtml(meta)+'</span>'
       + '</button>');
@@ -4022,7 +4022,7 @@ function renderTeamChatStream() {
     var isMine = String(m.sender_nickname || '') === mine;
     var isAi = teamChatIsAi(m);
     var cls = 'team-msg' + (isAi ? ' ai-llm' : (isMine ? ' mine' : ''));
-    var msgIdAttr = escapeAttr(String(m.id || ''));
+    var msgIdAttr = escapeAttr(escapeJsString(String(m.id || '')));
     html += '<div class="'+cls+'" oncontextmenu="_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')">'
       + '<div class="team-msg-meta"><span class="nick">'+escapeHtml(m.sender_nickname || 'Crewing')+'</span><span>'+escapeHtml(formatTeamChatTime(m.created_at))+'</span></div>'
       + '<div class="team-msg-body">'+_renderTeamChatBody(m.body || '')+'</div>'
@@ -4555,7 +4555,7 @@ async function renderInboxThreadsTree() {
     var sum = t.applicant_summary || {};
     var name = sum.redacted_initials || '(anonymous)';
     var meta = (sum.rank?sum.rank:'')+(sum.total_sea_time_months?' · '+sum.total_sea_time_months+'mo at sea':'');
-    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openThread(\''+escapeAttr(t.application_id)+'\')">';
+    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openThread(\''+escapeAttr(escapeJsString(t.application_id))+'\')">';
     html += '<span style="font-size:11px;color:var(--text2);">📨</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(name)+'</div>';
     html += '<div class="ti-meta">'+escapeHtml(t.vacancy_title)+(meta?' · '+escapeHtml(meta):'')+'</div></div>';
@@ -4761,7 +4761,7 @@ function renderVacanciesTreeBody() {
     var titleStr = v.title || (v.rank+' · '+v.vessel_type);
     var isActive = state.selectedVacancy && state.selectedVacancy.id === v.id;
     var statusGlyph = v.status==='active' ? '⚓' : (v.status==='closed' ? '✓' : '⌛');
-    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openVacancyById(\''+escapeAttr(v.id)+'\')">';
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openVacancyById(\''+escapeAttr(escapeJsString(v.id))+'\')">';
     html += '<span style="font-size:11px;color:var(--text2);">'+statusGlyph+'</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(titleStr)+'</div>';
     html += '<div class="ti-meta">'+escapeHtml(v.rank||'?')+' · '+escapeHtml(v.vessel_type||'?')
@@ -4864,7 +4864,7 @@ function renderComplianceProfilesTreeBody() {
   profiles.forEach(function(p){
     var isActive = state.selectedComplianceProfile && state.selectedComplianceProfile.id === p.id;
     var archived = p.status === 'archived';
-    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(p.id)+'\')">';
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(escapeJsString(p.id))+'\')">';
     html += '<span style="font-size:12px;color:var(--text2);">'+(archived?'□':'▣')+'</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(p.name||'Untitled')+'</div>';
     html += '<div class="ti-meta">'+(p.rank ? escapeHtml(p.rank)+' · ' : '')+profileMandatoryCount(p)+' conv reqs · '+profileExtrasCount(p)+' extras · used in '+profileUsageCount(p)+'</div>';
@@ -4938,8 +4938,8 @@ function renderComplianceProfileDetail() {
     + '<button class="ghost" onclick="showView(\'edit_profile\')">Edit</button>'
     + (archived ? '' : profilePublishButtonHtml(p))
     + (archived
-        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(p.id)+'\')">Restore</button>'
-        : '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(p.id)+'\')">Archive</button>')
+        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(escapeJsString(p.id))+'\')">Restore</button>'
+        : '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(escapeJsString(p.id))+'\')">Archive</button>')
     + '</div></div>'
     + '<div class="card">'
     + '<div class="row"><div><label>Rank</label><div style="font-size:18px;font-weight:700;">'+escapeHtml(p.rank||'Any')+'</div></div>'
@@ -4981,7 +4981,7 @@ function profilePublishButtonHtml(p) {
   var published = profileIsPublished(p);
   var label = published ? tr('profile.unpublish') : tr('profile.publish');
   return '<button data-qa="profile-publish-button"'+(published ? ' class="ghost"' : '')
-    + ' onclick="publishComplianceProfile(\''+escapeAttr(p.id)+'\','+(published ? 'false' : 'true')+')">'
+    + ' onclick="publishComplianceProfile(\''+escapeAttr(escapeJsString(p.id))+'\','+(published ? 'false' : 'true')+')">'
     + escapeHtml(label)+'</button>';
 }
 
@@ -5148,8 +5148,8 @@ function renderComplianceProfileForm(profile) {
     + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
     + '<button class="ghost" onclick="showView(\'compliance\')">Cancel</button>'
     + (readonly
-        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(profile.id)+'\')">Restore</button>'
-        : '<button onclick="saveComplianceProfile('+(editing?'\''+escapeAttr(profile.id)+'\'':'null')+')">Save</button>')
+        ? '<button onclick="restoreComplianceProfile(\''+escapeAttr(escapeJsString(profile.id))+'\')">Restore</button>'
+        : '<button onclick="saveComplianceProfile('+(editing?'\''+escapeAttr(escapeJsString(profile.id))+'\'':'null')+')">Save</button>')
     + '</div></div>';
   renderProfileExtras((profile&&profile.extra_requirements)||[], readonly);
 }
@@ -6334,8 +6334,8 @@ function crewFlowLiveTreeHtml(mode) {
     // same news, and one must never be mistaken for the other.
     return '<div class="tree-item ti-stack ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
       + ' role="button" tabindex="0" aria-selected="' + (selected === item.intake_id ? 'true' : 'false') + '"'
-      + ' onkeydown="crewFlowRowKeydown(event, \'' + escapeJsString(item.intake_id) + '\')"'
-      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      + ' onkeydown="crewFlowRowKeydown(event, \'' + escapeAttr(escapeJsString(item.intake_id)) + '\')"'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeAttr(escapeJsString(item.intake_id)) + '\')">'
       +   '<div class="cf-row-top"><strong class="cf-row-name">' + crewFlowRowTitleHtml(item) + '</strong>'
       +     '<span class="cf-row-time">' + escapeHtml(pilotFormatTime(item.created_at)) + '</span></div>'
       +   '<div class="cf-row-sub">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
@@ -6536,7 +6536,7 @@ function crewFlowLiveMobileHtml(mode) {
   if (!rows.length) return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
   return head + crewFlowProfileSelectHtml('mobile') + crewFlowQueueStatusHtml() + '<div data-qa="crew-flow-live">' + rows.map(function(item){
     return '<button class="mobile-list-item cf-row" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
-      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeAttr(escapeJsString(item.intake_id)) + '\')">'
       +   '<div class="cf-row-top"><span class="cf-row-name">' + crewFlowRowTitleHtml(item) + '</span>'
       +     '<span class="cf-row-time">' + escapeHtml(pilotFormatTime(item.created_at)) + '</span></div>'
       +   '<div class="cf-row-sub">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
@@ -6602,7 +6602,7 @@ function crewFlowActionsHtml(intakeId) {
   var native = crewFlowNativeTransport();
   var mobile = pilotHostIsMobile();
   var read = crewFlowReadInfo(intakeId) || {};
-  var id = escapeJsString(intakeId);
+  var id = escapeAttr(escapeJsString(intakeId));
   // No.664/S2: what the save would write, measured on the LOADED card. A card
   // that has not arrived says nothing here (an unknown is not an absence); a
   // loaded card without a person key WARNS beside the button; a loaded card
@@ -7191,7 +7191,7 @@ function track1ActionPlacesHtml(row) {
     + '<label>Manager actions</label>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
     + actions.map(function(a){
-      return '<button data-qa="track1-action-'+escapeAttr(a.id)+'" onclick="event.stopPropagation();track1CandidateAction(\''+escapeAttr(a.id)+'\', \'cf-demo-mail-cv-oleksandr\')"'
+      return '<button data-qa="track1-action-'+escapeAttr(a.id)+'" onclick="event.stopPropagation();track1CandidateAction(\''+escapeAttr(escapeJsString(a.id))+'\', \'cf-demo-mail-cv-oleksandr\')"'
         + ' style="padding:5px 9px;border:1px solid var(--border);border-radius:999px;cursor:pointer;font-size:11px;'
         + (a.primary ? 'background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;' : 'background:var(--panel2);color:var(--text);')
         + '">'+escapeHtml(a.label)+'</button>';
@@ -7345,7 +7345,7 @@ function renderCrewFlowTreeBody() {
   rows.forEach(function(row){
     var active = state.selectedCrewFlowSignal && state.selectedCrewFlowSignal.id === row.id;
     var top = crewFlowTopCoverage(row);
-    html += '<div class="tree-item ti-stack '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+    html += '<div class="tree-item ti-stack '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(escapeJsString(row.id))+'\')">'
          +    '<div><strong>'+escapeHtml(row.candidate && row.candidate.name || 'Candidate')+'</strong> '
          +      (crewFlowIsRead(row.id) ? '<span class="pill">read</span>' : '<span class="pill new">new</span>')+'</div>'
          +    '<div class="meta">'+escapeHtml(row.type)+' · '+escapeHtml(row.channel)+' · '+escapeHtml(row.responded_to || 'general intake')+'</div>'
@@ -7429,8 +7429,8 @@ function renderCrewFlowDetail() {
     +     '<div data-qa="crew-flow-coverage">'+crewFlowCoverageHtml(row, false)+'</div>'
     +   '</div>'
     +   '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
-    +     '<button onclick="crewFlowAddSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">Add to Seafarers DB</button>'
-    +     '<button class="ghost" onclick="crewFlowIgnoreSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;font-size:12px;">Ignore</button>'
+    +     '<button onclick="crewFlowAddSignal(\''+escapeAttr(escapeJsString(row.id))+'\')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">Add to Seafarers DB</button>'
+    +     '<button class="ghost" onclick="crewFlowIgnoreSignal(\''+escapeAttr(escapeJsString(row.id))+'\')" style="padding:6px 12px;font-size:12px;">Ignore</button>'
     +   '</div>'
     + '</div>'
     + '</div>';
@@ -7636,10 +7636,10 @@ function pilotAliasesHtml() {
   if (!p.aliases.length) return '<div class="pilot-status">'+escapeHtml(pilotT('no_aliases'))+'</div>';
   return p.aliases.map(function(a){
     var buttons = '';
-    if (a.state !== 'revoked') buttons += '<button onclick="pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('rotate'))+'</button>';
-    if (a.state === 'active') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('pause'))+'</button>';
-    if (a.state === 'paused') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('resume'))+'</button>';
-    if (a.state !== 'revoked') buttons += '<button class="ghost" style="color:var(--err);" onclick="pilotAliasAction(\'crewing_intake_alias_revoke\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('revoke'))+'</button>';
+    if (a.state !== 'revoked') buttons += '<button onclick="pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('rotate'))+'</button>';
+    if (a.state === 'active') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('pause'))+'</button>';
+    if (a.state === 'paused') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('resume'))+'</button>';
+    if (a.state !== 'revoked') buttons += '<button class="ghost" style="color:var(--err);" onclick="pilotAliasAction(\'crewing_intake_alias_revoke\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('revoke'))+'</button>';
     return '<div class="pilot-alias-row" data-qa="pilot-alias-row"><div class="pilot-alias-meta"><span class="pilot-state '+escapeAttr(a.state)+'">'+escapeHtml(pilotStateLabel(a.state))+'</span><span>'+escapeHtml(pilotT('generation'))+' '+escapeHtml(String(a.generation))+'</span></div>'
       + '<div class="pilot-alias-title">'+escapeHtml(a.label || a.id)+'</div><div class="pilot-note">ID: '+escapeHtml(a.id)+' · '+escapeHtml(pilotFormatTime(a.updated_at))+'</div>'
       + '<div class="pilot-actions">'+buttons+'</div></div>';
@@ -7669,7 +7669,7 @@ function pilotQueueHtml() {
     var reason = summary && summary.needs_review_reason ? '<div class="pilot-note">'+escapeHtml(pilotReason(summary.needs_review_reason))+' <code>'+escapeHtml(summary.needs_review_reason)+'</code></div>' : '';
     return '<div class="pilot-queue-row" data-qa="pilot-queue-row"><div class="pilot-queue-meta"><span class="pilot-state '+escapeAttr(item.state)+'">'+escapeHtml(pilotStateLabel(item.state))+'</span><span>'+escapeHtml(item.content_type)+'</span><span>'+escapeHtml(humanSize(item.content_bytes))+'</span></div>'
       + '<div class="pilot-queue-title">'+escapeHtml(item.intake_id)+'</div><div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(item.receipt_id)+' · '+escapeHtml(pilotFormatTime(item.created_at))+'</div>'+reason+pilotSummaryHtml(summary)
-      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeJsString(item.intake_id)+'\')">'+escapeHtml(pilotT('open'))+'</button></div></div>';
+      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeAttr(escapeJsString(item.intake_id))+'\')">'+escapeHtml(pilotT('open'))+'</button></div></div>';
   }).join('');
   if (!rows) rows = '<div class="pilot-status">'+escapeHtml(q.offset > 0 ? pilotT('empty_page') : pilotT('empty'))+'</div>';
   var start = q.total && q.items.length ? q.offset + 1 : 0;
@@ -8621,7 +8621,7 @@ function pilotCardFactsHtml() {
   if (!d.facts.length) return errorHtml+'<div class="pilot-status" data-qa="pilot-facts-empty">'+escapeHtml(cardT('facts_empty'))+'</div>';
   return errorHtml+d.facts.map(function(item){
     var versions = Array.isArray(item.versions) ? item.versions : [];
-    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(cardFieldLabel(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
+    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(cardFieldLabel(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeAttr(escapeJsString(String(item.field)))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
       + versions.map(function(v, index){ return pilotCardFactVersionHtml(v, index === 0); }).join('')+'</div>';
   }).join('');
 }
@@ -8762,7 +8762,7 @@ function pilotCardRankRowHtml(rank) {
         + (r.wanted != null ? ' · '+escapeHtml(cardT('wanted'))+': '+escapeHtml(String(r.wanted)) : '')+(r.found != null ? ' · '+escapeHtml(cardT('found'))+': '+escapeHtml(String(r.found)) : '')+'</div>';
     }).join('')+'</div>';
   }
-  var jsPair = '\''+escapeJsString(String(rank.profile_id))+'\','+String(Number(rank.profile_version));
+  var jsPair = '\''+escapeAttr(escapeJsString(String(rank.profile_id)))+'\','+String(Number(rank.profile_version));
   // No.622: the same verdict as the fit block, from the same adapter. The
   // origin label is the intake's, never the row's `primary` column: that column
   // is zeroed on every row by the existing "Сопоставить" button, so reading a
@@ -9509,7 +9509,7 @@ function pilotDraftHtml() {
   var leave = !checkedTo
     ? (dr.needContact ? '' : '<div class="pilot-status error" data-qa="pilot-draft-to-invalid">'+escapeHtml(cardT('draft_to_invalid'))+' '+escapeHtml(String(dr.to))+'</div>')
     : web
-    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
+    ? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+encodeURIComponent(checkedTo)+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIComponent(dr.body))+'">'+escapeHtml(cardT('draft_open_client'))+'</a>'
       + '<span class="pilot-note" data-qa="pilot-draft-web-note">'+escapeHtml(cardT('draft_web_note'))+'</span>'
     : (mobile
       ? '<button data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_share'))+'</button>'
@@ -9886,7 +9886,7 @@ function pilotCardFitCardHtml(rank) {
   //     asked for the second one.
   var d = pilotDetail();
   var onList = pilotCardActiveConfirmation({ profile_id: rank && rank.profile_id, profile_version: rank && rank.profile_version });
-  var jsPair = '\'' + escapeJsString(String(rank && rank.profile_id)) + '\',' + String(Number(rank && rank.profile_version));
+  var jsPair = '\'' + escapeAttr(escapeJsString(String(rank && rank.profile_id))) + '\',' + String(Number(rank && rank.profile_version));
   var act = onList
     ? '<span class="cf-fitcard-onlist" data-qa="pilot-fit-onlist">' + escapeHtml(cardT('fit_on_shortlist')) + '</span>'
     : '<button data-qa="pilot-fit-confirm" onclick="pilotShortlistConfirm(' + jsPair + ')"' + ((d && d.pending) ? ' disabled' : '') + '>' + escapeHtml(cardT('op_confirm')) + '</button>'
@@ -10314,7 +10314,7 @@ function profileShortlistFactsHtml(row) {
 }
 function profileShortlistContactButtonsHtml(intakeId, row) {
   var c = profileShortlistContacts(row);
-  var js = '\'' + escapeJsString(String(intakeId)) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(String(intakeId))) + '\'';
   var mailable = c.email && c.addressable && cardCheckedRecipient(c.email);
   // A missing contact is a DARK BUTTON THAT SAYS WHAT IS MISSING. Hiding it
   // would let the operator read "no button" as "not applicable" instead of
@@ -10343,7 +10343,7 @@ function profileShortlistRowHtml(item) {
   var st = state.profileShortlist;
   var intakeId = String(item && item.intake_id);
   var row = st.rows[intakeId] || null;
-  var js = '\'' + escapeJsString(intakeId) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(intakeId)) + '\'';
   var onHold = !!(item && item.on_hold);
   var tags = onHold
     ? '<span class="tag ps-t-hold" data-qa="profile-shortlist-hold">' + escapeHtml(profileShortlistT('ps_on_hold')) + '</span>'
@@ -10708,7 +10708,7 @@ function profileLetterPickRowHtml(item, composed) {
   var sea = profileLetterSeaTime(composed.rank, summary);
   var atts = (row && row.card && Array.isArray(row.card.attachments)) ? row.card.attachments : [];
   var pick = ls.picks[id] || null;
-  var js = '\'' + escapeJsString(id) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(id)) + '\'';
   var files = atts.map(function(a){
     a = a || {};
     var ordinal = Number(a.ordinal || 0);
@@ -11005,7 +11005,7 @@ function renderMailingRequestsTreeBody() {
   rows.forEach(function(r){
     var isActive = state.selectedMailingRequest && state.selectedMailingRequest.id === r.id;
     var statusGlyph = r.status==='active' ? '📨' : '✓';
-    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openMailingRequestById(\''+escapeAttr(r.id)+'\')">';
+    html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openMailingRequestById(\''+escapeAttr(escapeJsString(r.id))+'\')">';
     html += '<span style="font-size:11px;color:var(--text2);">'+statusGlyph+'</span>';
     html += '<div class="ti-title"><div>'+escapeHtml(r.title||'?')+'</div>';
     html += '<div class="ti-meta">'+escapeHtml(r.rank||'?')+' · '+escapeHtml(r.vessel_type||'?')+' · '+escapeHtml((r.published_at||'').slice(0,10))+'</div>';
@@ -11044,9 +11044,9 @@ function renderMailingRequestDetail() {
   var actBtn = 'padding:6px 12px;font-size:12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:600;';
   var dangerBtn = actBtn + 'border-color:var(--err);color:var(--err);';
   var actions = r.status === 'active'
-    ? '<button style="'+actBtn+'" onclick="closeMailingRequest(\''+escapeAttr(r.id)+'\')">Close</button>'
-    : '<button style="'+actBtn+'" onclick="reopenMailingRequest(\''+escapeAttr(r.id)+'\')">Reopen</button>';
-  actions += ' <button style="'+dangerBtn+'" onclick="deleteMailingRequest(\''+escapeAttr(r.id)+'\')">Delete</button>';
+    ? '<button style="'+actBtn+'" onclick="closeMailingRequest(\''+escapeAttr(escapeJsString(r.id))+'\')">Close</button>'
+    : '<button style="'+actBtn+'" onclick="reopenMailingRequest(\''+escapeAttr(escapeJsString(r.id))+'\')">Reopen</button>';
+  actions += ' <button style="'+dangerBtn+'" onclick="deleteMailingRequest(\''+escapeAttr(escapeJsString(r.id))+'\')">Delete</button>';
   m.innerHTML =
     '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
     + '<h1 style="margin:0;flex:1;min-width:0;">'+escapeHtml(r.title)+statusBadge+'</h1>'
@@ -11399,7 +11399,7 @@ function renderSeafarersTreeBody() {
   var html = '';
   rows.forEach(function(s){
     var active = state.selectedSeafarer && state.selectedSeafarer.id === s.id;
-    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openSeafarerById(\''+escapeAttr(s.id)+'\')">';
+    html += '<div class="tree-item'+(active?' active':'')+'" onclick="openSeafarerById(\''+escapeAttr(escapeJsString(s.id))+'\')">';
     html += '<span style="font-size:12px;color:var(--text2);">'+(s.ex_crew?'★':'👤')+'</span>';
     var vesselType = savedSeafarerPrimaryVesselType(s);
     var expText = formatExperienceMonths(savedSeafarerExperienceMonths(s));
@@ -11464,9 +11464,9 @@ async function renderSeafarerDetail() {
     + '<div style="min-width:0;flex:1;"><h1 style="margin:0;">'+escapeHtml(s.display_name||'(seafarer)')+'</h1>'
     + '<div class="sub">'+escapeHtml([s.rank||s.position,s.nationality].filter(Boolean).join(' · '))+'</div></div>'
     + '<div style="display:flex;gap:6px;flex-shrink:0;">'
-    + '<button onclick="pingSavedSeafarer(\''+escapeAttr(s.id)+'\')" title="Send availability ping through Skipi server">Ping availability</button>'
-    + '<button class="ghost" onclick="refreshSavedSeafarerReplies(\''+escapeAttr(s.id)+'\')" title="Fetch latest replies from this seafarer">Refresh replies</button>'
-    + '<button class="ghost" onclick="openSavedSeafarerFolder(\''+escapeAttr(s.id)+'\')">Open folder</button>'
+    + '<button onclick="pingSavedSeafarer(\''+escapeAttr(escapeJsString(s.id))+'\')" title="Send availability ping through Skipi server">Ping availability</button>'
+    + '<button class="ghost" onclick="refreshSavedSeafarerReplies(\''+escapeAttr(escapeJsString(s.id))+'\')" title="Fetch latest replies from this seafarer">Refresh replies</button>'
+    + '<button class="ghost" onclick="openSavedSeafarerFolder(\''+escapeAttr(escapeJsString(s.id))+'\')">Open folder</button>'
     + '</div></div>'
     + '<div class="card" style="display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-size:13px;">'+rowsHtml+'</div>'
     + '<div class="card">'
@@ -11475,7 +11475,7 @@ async function renderSeafarerDetail() {
     + '</select></div>'
     + '<div><label>Priority</label><label class="checkbox-row" style="margin-top:8px;"><input type="checkbox" id="sf-excrew" '+(s.ex_crew?'checked':'')+'> <span>Ex-crew / priority candidate</span></label></div></div>'
     + '<div class="row full"><div><label>Internal notes</label><textarea id="sf-notes" placeholder="Internal notes. Stored locally only.">'+escapeHtml(s.notes||'')+'</textarea></div></div>'
-    + '<div style="display:flex;justify-content:flex-end;"><button onclick="saveSeafarerMeta(\''+escapeAttr(s.id)+'\')">Save notes</button></div>'
+    + '<div style="display:flex;justify-content:flex-end;"><button onclick="saveSeafarerMeta(\''+escapeAttr(escapeJsString(s.id))+'\')">Save notes</button></div>'
     + '</div>'
     + (s.last_reply_text ? '<div class="card"><h2 style="font-size:16px;margin:0 0 8px;">Last availability reply</h2><div style="white-space:pre-wrap;font-size:13px;">'+escapeHtml(s.last_reply_text)+'</div></div>' : '')
     + '<div class="card">'
@@ -11688,7 +11688,7 @@ function renderDocumentsTreeOnly() {
       var col = docStatusColor(d);
       var icon = d.original_filename ? '📄' : '📃';
       var req = d.template_id ? '<span class="req-mark" title="Required template">⭐</span>' : '';
-      html += '<div class="tree-item'+(active?' active':'')+'" onclick="openDocumentById(\''+escapeAttr(d.id)+'\')">'
+      html += '<div class="tree-item'+(active?' active':'')+'" onclick="openDocumentById(\''+escapeAttr(escapeJsString(d.id))+'\')">'
         + '<span style="font-size:11px;color:var(--text2);">'+icon+'</span>'
         + '<div class="ti-title"><div>'+req+escapeHtml(d.name)+'</div></div>'
         + '<span class="st" style="background:'+col+';"></span>'
@@ -11779,28 +11779,28 @@ async function renderDocumentDetail() {
           + '<span style="font-weight:600;">📄 '+escapeHtml(d.original_filename)+'</span>'
           + '<span style="font-size:11px;color:var(--text2);">'+humanSize(d.size_bytes)+' · drop a file here to replace</span>'
           + '<span style="margin-left:auto;display:flex;gap:6px;">'
-            + '<button onclick="openDoc(\''+escapeAttr(d.id)+'\')">Open</button>'
-            + '<button class="ghost" onclick="attachFile(\''+escapeAttr(d.id)+'\')">Replace...</button>'
+            + '<button onclick="openDoc(\''+escapeAttr(escapeJsString(d.id))+'\')">Open</button>'
+            + '<button class="ghost" onclick="attachFile(\''+escapeAttr(escapeJsString(d.id))+'\')">Replace...</button>'
             + '<button class="ghost" onclick="sendDocStub()" title="Coming soon">Send ✉</button>'
           + '</span></div>'
           + '<div class="file-preview" id="fprev" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;min-height:300px;display:flex;align-items:center;justify-content:center;"><span style="color:var(--text2);">Loading preview...</span></div>'
           + '</div>'
         : '<div class="card" id="file-card">'
-          + '<div class="file-drop" id="file-drop-zone" onclick="attachFile(\''+escapeAttr(d.id)+'\')" style="border:2px dashed var(--border);border-radius:6px;padding:40px;text-align:center;cursor:pointer;color:var(--text2);">'
+          + '<div class="file-drop" id="file-drop-zone" onclick="attachFile(\''+escapeAttr(escapeJsString(d.id))+'\')" style="border:2px dashed var(--border);border-radius:6px;padding:40px;text-align:center;cursor:pointer;color:var(--text2);">'
           + '<div style="font-size:32px;">📂</div>'
           + '<div style="margin-top:8px;">Click to attach file, or drag &amp; drop here</div>'
           + '<div style="font-size:11px;margin-top:4px;">PDF, JPG, PNG, DOC, DOCX</div>'
           + '</div>'
           + (d.template_id
               ? '<div style="margin-top:12px;text-align:center;">'
-                + '<button class="ghost" onclick="useDemoSample(\''+escapeAttr(d.template_id)+'\')">Use sample PDF</button>'
+                + '<button class="ghost" onclick="useDemoSample(\''+escapeAttr(escapeJsString(d.template_id))+'\')">Use sample PDF</button>'
                 + '<div style="font-size:10px;color:var(--text2);margin-top:4px;">Generates a synthetic placeholder so you can demo the workflow.</div></div>'
               : '')
           + '</div>'
       )
 
     + (d.template_id ? '' : '<div style="margin-top:10px;text-align:right;">'
-        + '<button class="ghost" style="color:var(--err);" onclick="deleteDoc(\''+escapeAttr(d.id)+'\')">Delete document</button></div>');
+        + '<button class="ghost" style="color:var(--err);" onclick="deleteDoc(\''+escapeAttr(escapeJsString(d.id))+'\')">Delete document</button></div>');
 
   document.getElementById('main').innerHTML = html;
 
@@ -11811,8 +11811,9 @@ async function renderDocumentDetail() {
       var b64 = r[0], mime = r[1];
       var el = document.getElementById('fprev');
       if (!el) return;
-      if (mime.indexOf('image/') === 0) {
-        el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
+      var previewMime = docPreviewImageMime(mime);
+      if (previewMime) {
+        el.innerHTML = '<img src="data:'+previewMime+';base64,'+docPreviewBase64(b64)+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
       } else if (mime === 'application/pdf') {
         var bin = atob(b64);
         var arr = new Uint8Array(bin.length);
@@ -12096,8 +12097,21 @@ function openVacancyById(id) {
 }
 
 function escapeAttr(s){ return String(s == null ? '' : s).replace(/[&'"<>]/g, function(c){return '&#'+c.charCodeAt(0)+';';}); }
+// No.179 (C-10): data:-URL собирается ТОЛЬКО из закрытого набора типов.
+// Сегодня mime приходит из mime_from_path (src-tauri/src/lib.rs) — восемь литералов
+// без кавычек, то есть предписанный негатив бил бы по невозможному входу. Предикат
+// обязан стоять ЗДЕСЬ, у места сборки URL, а не держаться свойством источника:
+// источник меняется отдельным коммитом и молча снимает защиту.
+// Негатив — юнит-тест самой функции (DECISIONS (1043)(б)), не выход в DOM.
+function docPreviewImageMime(mime){
+  var m = String(mime == null ? '' : mime).toLowerCase();
+  return /^image\/(png|jpeg|webp|gif|bmp)$/.test(m) ? m : '';
+}
+function docPreviewBase64(b64){
+  return String(b64 == null ? '' : b64).replace(/[^A-Za-z0-9+/=]/g, '');
+}
 function escapeJsString(s){
-  return String(s||'')
+  return String(s == null ? '' : s)
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
     .replace(/\r/g, '\\r')
@@ -12269,11 +12283,11 @@ async function renderVacancyDetail() {
   var actBtn = 'padding:6px 12px;font-size:12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-weight:600;';
   var dangerBtn = actBtn + 'border-color:var(--err);color:var(--err);';
   var statusActions = v.status === 'active'
-    ? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(v.id)+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Close</button>'
-    : '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(v.id)+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button>';
-  statusActions += ' <button style="'+actBtn+'" onclick="editVacancy(\''+escapeAttr(v.id)+'\')" title="Edit this vacancy. Existing applications and chats stay attached.">✎ Edit</button>';
-  statusActions += ' <button style="'+actBtn+'" onclick="copyVacancyAsNew(\''+escapeAttr(v.id)+'\')" title="Create a new draft from this vacancy.">⧉ Copy as new</button>';
-  statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(v.id)+'\')" title="Hard-delete vacancy + all applications + messages. Irreversible.">🗑 Delete</button>';
+    ? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(escapeJsString(v.id))+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Close</button>'
+    : '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(escapeJsString(v.id))+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button>';
+  statusActions += ' <button style="'+actBtn+'" onclick="editVacancy(\''+escapeAttr(escapeJsString(v.id))+'\')" title="Edit this vacancy. Existing applications and chats stay attached.">✎ Edit</button>';
+  statusActions += ' <button style="'+actBtn+'" onclick="copyVacancyAsNew(\''+escapeAttr(escapeJsString(v.id))+'\')" title="Create a new draft from this vacancy.">⧉ Copy as new</button>';
+  statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(escapeJsString(v.id))+'\')" title="Hard-delete vacancy + all applications + messages. Irreversible.">🗑 Delete</button>';
   var head = '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin:0 0 8px;">'
            +   '<h1 style="margin:0;flex:1;min-width:0;">'+escapeHtml(titleStr)+statusBadge+'</h1>'
            +   '<div style="display:flex;gap:6px;flex-shrink:0;">'+statusActions+'</div>'
@@ -12555,7 +12569,7 @@ function paintApplicationsList(apps) {
         ? (a.contact_for_reply||'').split('@')[0] : null);
     var preview = lastMessagePreview(a.id, a.message);
     var initials = (sum.redacted_initials || '?').slice(0, 2);
-    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row app-card" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
+    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row app-card" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleApplicationChat(\''+escapeAttr(escapeJsString(a.id))+'\',\''+escapeAttr(escapeJsString(sUid||''))+'\')">';
     html += '<div style="display:flex;align-items:center;gap:12px;">';
     // Avatar
     html += '<div style="width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0;">'+escapeHtml(initials)+'</div>';
@@ -12629,7 +12643,7 @@ function mobilePaintApplicationsList(apps) {
       ? (preview.mine ? 'You: ' : '') + preview.text
       : ((a.message || '').slice(0, 120) || sumLineMeta(sum) || mobileTr('open_candidate'));
     var badge = renderComplianceBadge(a);
-    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="mobile-app-card" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')">';
+    html += '<div id="app-card-'+escapeAttr(a.id)+'" class="mobile-app-card" onclick="toggleApplicationChat(\''+escapeAttr(escapeJsString(a.id))+'\',\''+escapeAttr(escapeJsString(sUid||''))+'\')">';
     html += '<div class="mobile-app-card-head">';
     html += '<div class="mobile-app-avatar">'+escapeHtml(initials)+'</div>';
     html += '<div class="mobile-app-main">';
@@ -12828,8 +12842,8 @@ function renderProfileRankingCards(result, applicationId) {
   });
   var ignored = state.complianceRankIgnoredByApp && state.complianceRankIgnoredByApp[applicationId];
   html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">'
-       +    '<button onclick="event.stopPropagation();saveRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save to Seafarers DB</button>'
-       +    '<button class="ghost" onclick="event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;font-size:12px;">'+(ignored?'Ignored':'Ignore')+'</button>'
+       +    '<button onclick="event.stopPropagation();saveRankedCandidate(\''+escapeAttr(escapeJsString(applicationId))+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Save to Seafarers DB</button>'
+       +    '<button class="ghost" onclick="event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(escapeJsString(applicationId))+'\')" style="padding:5px 12px;font-size:12px;">'+(ignored?'Ignored':'Ignore')+'</button>'
        +  '</div>';
   return html;
 }
@@ -12841,12 +12855,12 @@ function renderProfileRankingPanel(a) {
   var inner = '';
   if (!row) {
     inner = '<div style="color:var(--text2);font-size:12px;margin-bottom:8px;">Rank this candidate against active profiles for the same rank.</div>'
-          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Check against profiles</button>';
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(escapeJsString(appId))+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">Check against profiles</button>';
   } else if (row.status === 'loading') {
     inner = '<div style="color:var(--text2);font-size:12px;">Checking profiles…</div>';
   } else if (row.status === 'error') {
     inner = '<div style="color:var(--err);font-size:12px;margin-bottom:8px;">'+escapeHtml(row.message || 'Check failed')+'</div>'
-          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" class="ghost" style="padding:5px 12px;font-size:12px;">Retry</button>';
+          + '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(escapeJsString(appId))+'\')" class="ghost" style="padding:5px 12px;font-size:12px;">Retry</button>';
   } else {
     inner = renderProfileRankingCards(row.result, appId);
   }
@@ -12988,7 +13002,7 @@ async function loadApplicationAttachments(applicationId, counterpartId) {
     html +=     '<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(att.original_filename||'file')+'</div>';
     html +=     '<div style="font-size:11px;color:var(--text2);">'+escapeHtml(sizeKb)+(att.mime_type?' · '+escapeHtml(att.mime_type):'')+'</div>';
     html +=   '</div>';
-    html +=   '<button onclick="event.stopPropagation();openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(att.original_filename||'file')+'\',mime_type:\''+escapeAttr(att.mime_type||'')+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(counterpartId||att.from_user_id||'')+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>';
+    html +=   '<button onclick="event.stopPropagation();openAttachmentInApp(\''+escapeAttr(escapeJsString(applicationId))+'\',{id:\''+escapeAttr(escapeJsString(att.id))+'\',original_filename:\''+escapeAttr(escapeJsString(att.original_filename||'file'))+'\',mime_type:\''+escapeAttr(escapeJsString(att.mime_type||''))+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(escapeJsString(counterpartId||att.from_user_id||''))+'\')" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>';
     html += '</div>';
   });
   host.innerHTML = html;
@@ -13129,7 +13143,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
   if (!cachedMsgs) {
     try { msgs = await invoke('fetch_messages', { applicationId: applicationId, serverUrl: serverUrlArg() }); }
     catch(e){
-      host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+e+'</div>';
+      host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+escapeHtml(String(e))+'</div>';
       return;
     }
     state.messagesByApp[applicationId] = msgs;
@@ -13148,14 +13162,14 @@ async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
               + renderApplicationAttachmentFallbacks(applicationId, atts, msgs)
               + '</div>';
   msgsHtml += '<div class="chat-composer">';
-  msgsHtml += '<textarea id="app-compose-'+applicationId+'" rows="1" placeholder="Type a message" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\');}"></textarea>';
-  msgsHtml += '<button class="btn-send" onclick="sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')" title="Send">▶</button>';
+  msgsHtml += '<textarea id="app-compose-'+applicationId+'" rows="1" placeholder="Type a message" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendApplicationReply(\''+escapeAttr(escapeJsString(applicationId))+'\',\''+escapeAttr(escapeJsString(seafarerUserId||''))+'\');}"></textarea>';
+  msgsHtml += '<button class="btn-send" onclick="sendApplicationReply(\''+escapeAttr(escapeJsString(applicationId))+'\',\''+escapeAttr(escapeJsString(seafarerUserId||''))+'\')" title="Send">▶</button>';
   msgsHtml += '</div>';
   msgsHtml += '<div class="chat-status">'
            +    '<span id="app-status-'+applicationId+'">🔒 End-to-end encrypted</span>'
            +    '<span style="display:flex;gap:6px;align-items:center;">'
-           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="closeApplicationChat(\''+escapeAttr(applicationId)+'\')">Back to candidates</button>'
-           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')">📄 Request documents</button>'
+           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="closeApplicationChat(\''+escapeAttr(escapeJsString(applicationId))+'\')">Back to candidates</button>'
+           +      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(escapeJsString(applicationId))+'\',\''+escapeAttr(escapeJsString(seafarerUserId||''))+'\')">📄 Request documents</button>'
            +    '</span>'
            +  '</div>';
   host.innerHTML = msgsHtml;
@@ -13306,8 +13320,8 @@ function renderApplicationAttachmentFallbacks(applicationId, atts, msgs) {
          +        '</div>'
          +      '</div>'
          +      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;">'
-         +        (isZip ? '<button onclick="openDocumentsBundle(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'\')" style="padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>' : '')
-         +        '<button onclick="openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_type:\''+escapeAttr(att.mime_type||'')+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(counterpart||'')+'\')" style="padding:5px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
+         +        (isZip ? '<button onclick="openDocumentsBundle(\''+escapeAttr(escapeJsString(applicationId))+'\',\''+escapeAttr(escapeJsString(att.id))+'\',\''+escapeAttr(escapeJsString(counterpart||''))+'\',\''+escapeAttr(escapeJsString(fname))+'\')" style="padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>' : '')
+         +        '<button onclick="openAttachmentInApp(\''+escapeAttr(escapeJsString(applicationId))+'\',{id:\''+escapeAttr(escapeJsString(att.id))+'\',original_filename:\''+escapeAttr(escapeJsString(fname))+'\',mime_type:\''+escapeAttr(escapeJsString(att.mime_type||''))+'\',size_bytes:'+(Number(att.size_bytes)||0)+'},\''+escapeAttr(escapeJsString(counterpart||''))+'\')" style="padding:5px 10px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
          +      '</div>'
          +    '</div>'
          +  '</div>';
@@ -13347,8 +13361,8 @@ function renderMessageBubble(m, mine, opts) {
              || 'The seafarer sent the requested files.';
     var latestAtt = latestAttachmentFromSender(m.application_id, m.from_user_id);
     var openLatestBtn = latestAtt
-      ? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open documents bundle</button>'
-      : '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;padding:5px 12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Find received files</button>';
+      ? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(escapeJsString(m.application_id))+'\',\''+escapeAttr(escapeJsString(m.from_user_id))+'\')" style="margin-top:7px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open documents bundle</button>'
+      : '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(escapeJsString(m.application_id))+'\',\''+escapeAttr(escapeJsString(m.from_user_id))+'\')" style="margin-top:7px;padding:5px 12px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Find received files</button>';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);">'
          +     '<div style="font-weight:600;font-size:12px;margin-bottom:4px;">📎 Document response</div>'
@@ -13366,7 +13380,7 @@ function renderMessageBubble(m, mine, opts) {
     var myIdB = state.myIdentity ? state.myIdentity.user_id : '';
     var bCounterpart = (myIdB === m.from_user_id) ? m.to_user_id : m.from_user_id;
     var openBtn = bundle.id
-      ? '<button onclick="openDocumentsBundle(\''+m.application_id+'\',\''+bundle.id+'\',\''+bCounterpart+'\',\''+escapeAttr(bundle.filename||'documents.zip')+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>'
+      ? '<button onclick="openDocumentsBundle(\''+escapeAttr(escapeJsString(m.application_id))+'\',\''+escapeAttr(escapeJsString(bundle.id))+'\',\''+escapeAttr(escapeJsString(bCounterpart))+'\',\''+escapeAttr(escapeJsString(bundle.filename||'documents.zip'))+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">📂 Open documents</button>'
       : '';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:300px;">'
@@ -13391,7 +13405,7 @@ function renderMessageBubble(m, mine, opts) {
     var myId = state.myIdentity ? state.myIdentity.user_id : '';
     var counterpartId = (myId === m.from_user_id) ? m.to_user_id : m.from_user_id;
     var dlBtn = info.id
-      ? '<button onclick="openAttachmentInApp(\''+escapeAttr(m.application_id)+'\',{id:\''+escapeAttr(info.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_type:\''+escapeAttr(info.mime||'')+'\',size_bytes:'+(Number(info.size)||0)+'},\''+escapeAttr(counterpartId)+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
+      ? '<button onclick="openAttachmentInApp(\''+escapeAttr(escapeJsString(m.application_id))+'\',{id:\''+escapeAttr(escapeJsString(info.id))+'\',original_filename:\''+escapeAttr(escapeJsString(fname))+'\',mime_type:\''+escapeAttr(escapeJsString(info.mime||''))+'\',size_bytes:'+(Number(info.size)||0)+'},\''+escapeAttr(escapeJsString(counterpartId))+'\')" style="margin-top:6px;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;">Open in Skipi</button>'
       : '';
     return '<div class="'+classes+'"'+idAttr+'>'
          +   '<div class="msg-bubble" style="border:1px solid var(--ok);max-width:300px;">'
@@ -13804,7 +13818,7 @@ function paintBundleTree(byCat, categoryOrder) {
   categoryOrder.forEach(function(cat){
     var open = window._bundleState.collapsed && window._bundleState.collapsed[cat] ? false : true;
     html += '<div class="bnd-cat" style="margin-bottom:2px;">';
-    html +=   '<div onclick="toggleBundleCategory(\''+escapeAttr(cat)+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">'
+    html +=   '<div onclick="toggleBundleCategory(\''+escapeAttr(escapeJsString(cat))+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);">'
             +   '<span style="font-size:9px;width:10px;display:inline-block;">'+(open?'▼':'▶')+'</span>'
             +   '<span style="flex:1;">'+escapeHtml(cat)+'</span>'
             +   '<span style="font-size:11px;color:var(--text2);">'+byCat[cat].length+'</span>'
@@ -13813,7 +13827,7 @@ function paintBundleTree(byCat, categoryOrder) {
       byCat[cat].forEach(function(d){
         var st = bundleDocStatus(d);
         var sel = window._bundleState.selected === d.id;
-        html += '<div onclick="selectBundleDoc(\''+escapeAttr(d.id)+'\')" '
+        html += '<div onclick="selectBundleDoc(\''+escapeAttr(escapeJsString(d.id))+'\')" '
               +     'style="display:flex;align-items:center;gap:6px;padding:5px 8px 5px 22px;cursor:pointer;border-radius:4px;'
               +     (sel?'background:var(--accent);color:#fff;':'')+'">'
               +   '<span style="font-size:11px;">'+(d.is_template?'⭐':'📄')+'</span>'
@@ -13895,10 +13909,10 @@ function paintBundleDetail(d) {
     +     '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'+escapeHtml(d.category||'')+(d.is_template?' · required template':' · custom')+'</div>'
     +   '</div>';
   if (hasFile) {
-    html += '<button onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(openPath)+'\'})" '
+    html += '<button onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(openPath))+'\'})" '
           +    'style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:600;flex-shrink:0;">'
           +   'Open file</button>';
-    html += '<button onclick="enableBundlePreview(\''+escapeAttr(d.id)+'\')" '
+    html += '<button onclick="enableBundlePreview(\''+escapeAttr(escapeJsString(d.id))+'\')" '
           +    'style="margin-left:8px;padding:8px 12px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;flex-shrink:0;">'
           +   (window._bundlePreviewEnabled[d.id] ? 'Preview loaded' : 'Load preview')
           + '</button>';
@@ -14963,7 +14977,7 @@ function renderSettingsModal() {
 
   var navItem = function(id, badge, label) {
     return '<div class="settings-nav-item'+(settingsTab===id?' active':'')
-      + '" onclick="openSettings(\''+id+'\')">'
+      + '" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
       + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span></div>';
   };
 
@@ -15017,8 +15031,8 @@ function renderSettingsModal() {
       recentHtml = sectionTitle('Недавние папки')
         + grp(recent.map(function(pp){
             return '<div class="setting-row"><div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(pp)+'</div></div>'
-              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Переключить</button>'
-              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Убрать из списка">Забыть</button></div></div>';
+              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(escapeJsString(pp))+'\')">Переключить</button>'
+              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(escapeJsString(pp))+'\')" title="Убрать из списка">Забыть</button></div></div>';
           }).join(''));
     }
     body = '<div class="settings-section">'
@@ -15124,7 +15138,7 @@ function renderSettingsFiveShell() {
   var connected = !!(s.bearer_token || s.crewing_id);
   var active = function(id){ return section === id ? ' active' : ''; };
   var navItem = function(id, badge, label, sub, qa) {
-    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
       + '<span class="nav-icon">'+badge+'</span><span class="nav-label">'+escapeHtml(label)+'</span>'
       + '</div>';
   };
@@ -15229,8 +15243,8 @@ function renderSettingsFiveShell() {
       recentHtml = sectionTitle('Recent vaults')
         + grp(recent.map(function(pp){
             return '<div class="setting-row"><div class="setting-info"><div class="setting-label" style="font-family:monospace;font-size:12px;word-break:break-all;">'+escapeHtml(pp)+'</div></div>'
-              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Switch</button>'
-              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Remove from list">Forget</button></div></div>';
+              + '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(escapeJsString(pp))+'\')">Switch</button>'
+              + ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(escapeJsString(pp))+'\')" title="Remove from list">Forget</button></div></div>';
           }).join(''));
     }
     body = '<div class="settings-section" data-qa="settings5-shell settings.storage.body">'
@@ -15671,6 +15685,17 @@ function applyTheme() {
 }
 
 // ===================== Apps / Plugin host (bundled first-party, isolated) =====================
+// No.179: внутри этого блока доступен только escapeHtml — харнесс изоляции
+// (tests/crewing_plugin_isolation_harness.mjs) исполняет кусок через new Function
+// с ФИКСИРОВАННЫМ впрыском имён, поэтому escapeAttr/escapeJsString здесь не
+// существуют и ссылка на них роняет харнесс. Помощник повторяет их композицию
+// escapeAttr(escapeJsString(v)); равенство выводов пиннится негативным харнессом.
+function appsAttrJsString(v){
+  var s = String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/</g, '\\x3c');
+  return s.replace(/[&'\"<>]/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; });
+}
 // Crewing as a HOST for bundled first-party plugins. Apps shell + local
 // Install/Open/Disable stay in Crewing; plugin code runs only through the shared
 // SkipiPluginRuntime sandbox iframe. GUARDRAIL: plugins get NO crewing domain
@@ -15949,7 +15974,7 @@ function crewingRefreshLauncherIntegrity(){
 }
 function appsLaunchTileHtml(p){
   return '<div class="apps-launch-tile-wrap" data-qa="plugin-tile-'+escapeHtml(p.id)+'">'
-    + '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+escapeHtml(p.id)+'\')">'
+    + '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+appsAttrJsString(p.id)+'\')">'
     + '<span class="apps-launch-ico">'+(p.icon||'🧩')+'</span>'
     + '<span class="apps-launch-name">'+escapeHtml(p.name)+'</span>'
     + '</button></div>';
@@ -16006,7 +16031,7 @@ function appsMobileModuleTilesHtml(){
   for (var i=0;i<tiles.length;i++){
     var t = tiles[i];
     h += '<div class="apps-launch-tile-wrap">'
-      + '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+t.view+'\')">'
+      + '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+appsAttrJsString(t.view)+'\')">'
       + '<span class="apps-launch-ico">'+t.icon+'</span>'
       + '<span class="apps-launch-name">'+escapeHtml(mobileModuleLabel(t.view))+'</span>'
       + '</button></div>';
@@ -16038,7 +16063,7 @@ function appsFilter(val){
 function appsManageHtml(){
   var tiles = CREWING_PLUGINS.map(function(p){
     var st = pluginTileState(p);
-    return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+escapeHtml(p.id)+'\')">'
+    return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+appsAttrJsString(p.id)+'\')">'
       + '<span class="apps-badge '+st+'">'+escapeHtml(pluginStateLabel(st))+'</span>'
       + '<div class="at-name">'+escapeHtml(p.name)+'</div>'
       + '<div class="at-cat">'+escapeHtml(p.category||'')+'</div>'
@@ -16060,9 +16085,9 @@ function appsDetailHtml(id){
     : '<span class="apps-muted">No special permissions requested.</span>';
   var actions;
   if (st==='coming_soon') actions = '<div class="apps-muted">This plugin is coming soon.</div>';
-  else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+id+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+id+'\')">Disable</button>';
-  else if (st==='disabled') actions = '<button class="apps-btn" onclick="appsEnable(\''+id+'\')">Enable</button>';
-  else actions = '<button class="apps-btn" onclick="appsInstall(\''+id+'\')">Install</button>';
+  else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+appsAttrJsString(id)+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+appsAttrJsString(id)+'\')">Disable</button>';
+  else if (st==='disabled') actions = '<button class="apps-btn" onclick="appsEnable(\''+appsAttrJsString(id)+'\')">Enable</button>';
+  else actions = '<button class="apps-btn" onclick="appsInstall(\''+appsAttrJsString(id)+'\')">Install</button>';
   return '<div class="apps-detail">'
     + '<button class="apps-back" onclick="appsBackToManage()">‹ Plugin settings</button>'
     + '<span class="apps-badge '+st+'">'+escapeHtml(pluginStateLabel(st))+'</span>'
@@ -16345,9 +16370,20 @@ function mobileParentView(view) {
 // 2026-09-27): Documents and Apps left the build, so the rail is the three
 // remaining modules; Settings enters only via the header gear.
 var MOBILE_RAIL_QA = { crew_flow: 'bottom-nav-crew_flow', compliance: 'bottom-nav-compliance', seafarers: 'bottom-nav-seafarers' };
+// No.179: внутри этого блока доступен только escapeHtml — харнесс изоляции
+// (tests/crewing_plugin_isolation_harness.mjs) исполняет кусок через new Function
+// с ФИКСИРОВАННЫМ впрыском имён, поэтому escapeAttr/escapeJsString здесь не
+// существуют и ссылка на них роняет харнесс. Помощник повторяет их композицию
+// escapeAttr(escapeJsString(v)); равенство выводов пиннится негативным харнессом.
+function railAttrJsString(v){
+  var s = String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r').replace(/\n/g, '\\n').replace(/</g, '\\x3c');
+  return s.replace(/[&'\"<>]/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; });
+}
 function mobileNavButton(view, active, icon, label) {
   var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
-  return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
+  return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+railAttrJsString(view)+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHtml(label)+'</span></button>';
 }
 
 async function bootMobile() {
@@ -16626,7 +16662,7 @@ function mobileRenderSettingsList() {
       var right = it.pill
         ? '<span class="ios-pill">'+escapeHtml(it.pill)+'</span>'
         : '<span class="ios-right">'+(it.value?escapeHtml(it.value):'')+'<span class="ios-chevron">›</span></span>';
-      html += '<button class="ios-row" onclick="mobileOpenSettings(\''+it.id+'\')">'
+      html += '<button class="ios-row" onclick="mobileOpenSettings(\''+escapeAttr(escapeJsString(it.id))+'\')">'
         + '<span class="ios-badge">'+it.badge+'</span>'
         + '<span style="min-width:0;"><strong>'+escapeHtml(it.title)+'</strong><span class="ios-sub">'+escapeHtml(it.sub)+'</span></span>'
         + right + '</button>';
@@ -17037,7 +17073,7 @@ function mobilePaintVacancyList() {
   host.innerHTML = rows.map(function(v){
     var newCount = v.new_applications_count || 0;
     var meta = [v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].filter(Boolean).join(' · ');
-    return '<button class="mobile-list-item" onclick="mobileOpenVacancy(\''+escapeAttr(v.id)+'\')">'
+    return '<button class="mobile-list-item" onclick="mobileOpenVacancy(\''+escapeAttr(escapeJsString(v.id))+'\')">'
       + '<div class="mobile-list-title"><span>'+escapeHtml(mobileVacancyTitle(v))+'</span>'+(newCount ? '<span class="mobile-badge">'+newCount+'</span>' : '')+'</div>'
       + '<div class="mobile-list-meta">'+escapeHtml(meta)+(v.reply_count ? ' · '+v.reply_count+' applied' : '')+'</div>'
       + (v.client_name ? '<div class="mobile-list-meta" style="color:var(--accent);">Client: '+escapeHtml(v.client_name)+'</div>' : '')
@@ -17320,7 +17356,7 @@ function mobilePaintMailingList() {
   }
   host.innerHTML = rows.map(function(r){
     var meta = [r.rank || '?', r.vessel_type || '?', (r.published_at || '').slice(0,10)].filter(Boolean).join(' · ');
-    return '<button class="mobile-list-item" onclick="mobileOpenMailing(\''+escapeAttr(r.id)+'\')">'
+    return '<button class="mobile-list-item" onclick="mobileOpenMailing(\''+escapeAttr(escapeJsString(r.id))+'\')">'
       + '<div class="mobile-list-title"><span>'+escapeHtml(r.title || '?')+'</span><span class="mobile-chip '+(r.status === 'active' ? 'ok' : 'warn')+'">'+escapeHtml(r.status || '')+'</span></div>'
       + '<div class="mobile-list-meta">'+escapeHtml(meta)+(r.send_click_count ? ' · '+r.send_click_count+' sends' : '')+'</div>'
       + (r.client_name ? '<div class="mobile-list-meta" style="color:var(--accent);">Client: '+escapeHtml(r.client_name)+'</div>' : '')
@@ -17488,7 +17524,7 @@ function mobilePaintComplianceList() {
   }
   host.innerHTML = rows.map(function(p){
     var meta = profileMandatoryCount(p)+' mandatory · '+profileExtrasCount(p)+' extras · used '+profileUsageCount(p.id);
-    return '<button class="mobile-list-item" onclick="mobileOpenComplianceProfile(\''+escapeAttr(p.id)+'\')">'
+    return '<button class="mobile-list-item" onclick="mobileOpenComplianceProfile(\''+escapeAttr(escapeJsString(p.id))+'\')">'
       + '<div class="mobile-list-title"><span>'+escapeHtml(p.name || 'Untitled')+'</span><span class="mobile-chip '+(p.status === 'active' ? 'ok' : 'warn')+'">'+escapeHtml(p.status || '')+'</span></div>'
       + '<div class="mobile-list-meta">'+escapeHtml(meta)+'</div>'
       + (p.description ? '<div class="mobile-list-meta">'+escapeHtml(String(p.description).slice(0, 120))+'</div>' : '')
@@ -17638,7 +17674,7 @@ function mobileRenderCrewFlow() {
   rows.forEach(function(row){
     var c = row.candidate || {};
     var top = crewFlowTopCoverage(row);
-    html += '<button class="mobile-list-item" data-qa="mobile-crew-flow-row" onclick="mobileOpenCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+    html += '<button class="mobile-list-item" data-qa="mobile-crew-flow-row" onclick="mobileOpenCrewFlowSignal(\''+escapeAttr(escapeJsString(row.id))+'\')">'
       +   '<div class="mobile-list-title"><span>'+escapeHtml(c.name || 'Candidate')+'</span>'
       +     (crewFlowIsRead(row.id) ? '<span class="mobile-chip">read</span>' : '<span class="mobile-chip ok">new</span>')
       +   '</div>'
@@ -17688,8 +17724,8 @@ function mobileRenderCrewFlowSignal() {
     + '<div style="margin-top:12px;"><div style="font-weight:700;margin-bottom:6px;">Profile fit</div>'
     + '<div data-qa="mobile-crew-flow-coverage">'+crewFlowCoverageHtml(row, false)+'</div></div>'
     + '<div class="mobile-actions" style="margin-top:12px;">'
-    +   '<button class="mobile-secondary" onclick="mobileCrewFlowIgnore(\''+escapeAttr(row.id)+'\')">Ignore</button>'
-    +   '<button class="mobile-primary" onclick="mobileCrewFlowAdd(\''+escapeAttr(row.id)+'\')">Add to Seafarers DB</button>'
+    +   '<button class="mobile-secondary" onclick="mobileCrewFlowIgnore(\''+escapeAttr(escapeJsString(row.id))+'\')">Ignore</button>'
+    +   '<button class="mobile-primary" onclick="mobileCrewFlowAdd(\''+escapeAttr(escapeJsString(row.id))+'\')">Add to Seafarers DB</button>'
     + '</div>'
     + '</div>'
   );
@@ -17754,7 +17790,7 @@ function mobilePaintSeafarerList() {
   host.innerHTML = rows.map(function(s){
     var meta = [s.rank || s.position, s.nationality, savedSeafarerPrimaryVesselType(s), formatExperienceMonths(savedSeafarerExperienceMonths(s)), (s.doc_count || 0)+' docs'].filter(Boolean).join(' · ');
     var badge = s.availability_status && s.availability_status !== 'unknown' ? s.availability_status : s.status;
-    return '<button class="mobile-list-item" onclick="mobileOpenSeafarer(\''+escapeAttr(s.id)+'\')">'
+    return '<button class="mobile-list-item" onclick="mobileOpenSeafarer(\''+escapeAttr(escapeJsString(s.id))+'\')">'
       + '<div class="mobile-list-title"><span>'+(s.ex_crew ? '★ ' : '')+escapeHtml(s.display_name || '(seafarer)')+'</span>'+(badge ? '<span class="mobile-chip">'+escapeHtml(badge)+'</span>' : '')+'</div>'
       + '<div class="mobile-list-meta">'+escapeHtml(meta)+'</div>'
       + '<div class="mobile-list-meta" style="font-family:monospace;">'+escapeHtml(s.id)+'</div>'
@@ -17923,7 +17959,7 @@ function mobilePaintDocumentList() {
       + cats[cat].map(function(d){
         var col = docStatusColor(d);
         var status = {missing:'Missing file',expired:'Expired',critical:'Expiring soon',warning:'Attention',valid:'Valid',none:'No expiry'}[classifyDoc(d)] || 'Status';
-        return '<button class="mobile-list-item" onclick="mobileOpenDocument(\''+escapeAttr(d.id)+'\')">'
+        return '<button class="mobile-list-item" onclick="mobileOpenDocument(\''+escapeAttr(escapeJsString(d.id))+'\')">'
           + '<div class="mobile-list-title"><span>'+(d.template_id ? '★ ' : '')+escapeHtml(d.name || 'document')+'</span><span class="mobile-doc-status" style="background:'+col+';">'+escapeHtml(status)+'</span></div>'
           + '<div class="mobile-list-meta">'+escapeHtml([d.original_filename || '', d.valid_to ? 'valid to '+d.valid_to : '', d.issuer || ''].filter(Boolean).join(' · ') || d.doc_type || '')+'</div>'
           + '</button>';
@@ -17961,7 +17997,7 @@ function mobileRenderDocumentDetail() {
     + '</div>'
     + '<div class="mobile-card"><div class="mobile-actions mobile-detail-actions">'
     + (d.original_filename ? '<button class="mobile-primary" onclick="mobileOpenDocFile()">'+escapeHtml(mobileTr('open'))+'</button>' : '')
-    + (d.template_id ? '<button class="mobile-secondary" onclick="mobileUseDemoSample(\''+escapeAttr(d.template_id)+'\')">Sample PDF</button>' : '')
+    + (d.template_id ? '<button class="mobile-secondary" onclick="mobileUseDemoSample(\''+escapeAttr(escapeJsString(d.template_id))+'\')">Sample PDF</button>' : '')
     + '</div></div>'
   );
 }
@@ -18552,7 +18588,7 @@ function _onTeamChatMsgContextMenu(ev, msgId) {
   var menu = document.createElement('div');
   menu.className = 'team-ctx-menu';
   menu.id = 'team-chat-ctx-menu';
-  menu.innerHTML = '<div class="item" onclick="_chooseTeamChatReplyTo(\''+escapeAttr(msgId)+'\')">↩ Ответить</div>';
+  menu.innerHTML = '<div class="item" onclick="_chooseTeamChatReplyTo(\''+escapeAttr(escapeJsString(msgId))+'\')">↩ Ответить</div>';
   document.body.appendChild(menu);
   var x = ev.clientX, y = ev.clientY;
   var rect = menu.getBoundingClientRect();
