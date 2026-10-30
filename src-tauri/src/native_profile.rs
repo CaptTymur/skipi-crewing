@@ -25,8 +25,11 @@ pub(crate) struct ProfileReadDecoded {
     pub mlc_utc_date: Option<String>,
 }
 
+// No.623 (1624): без deny_unknown_fields. Правило дома — «DTO терпят неизвестные
+// поля»; по ARCH-017 сервер является источником данных, и добавленное им поле не
+// должно ронять разбор у клиента прежней версии. Обязательность КАЖДОГО известного
+// поля сохранена (required_nullable), дубликаты и обрезанный JSON по-прежнему отказ.
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(crate) struct ProfileReadWire {
     pub schema_version: u32,
     pub account_id: String,
@@ -37,7 +40,6 @@ pub(crate) struct ProfileReadWire {
 }
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(crate) struct ProfileWire {
     pub display_name: String,
     #[serde(deserialize_with = "required_nullable")]
@@ -193,15 +195,42 @@ mod tests {
     }
 
     #[test]
-    fn native635_profile_v4_required_keys_and_unknown_keys() {
+    fn native635_profile_v4_required_keys() {
         for key in ROOT_KEYS {
             let mut v = fixture(); v.as_object_mut().unwrap().remove(key); invalid(v);
         }
         for key in PROFILE_KEYS {
             let mut v = fixture(); v["profile"].as_object_mut().unwrap().remove(key); invalid(v);
         }
-        let mut v = fixture(); v["unexpected"] = json!(0); invalid(v);
-        let mut v = fixture(); v["profile"]["unexpected"] = json!(0); invalid(v);
+        // No.623 (1624): две строки, требовавшие ОТКЛОНЯТЬ лишние поля, сняты —
+        // предмет перевёрнут решением и живёт в native635_profile_v4_unknown_keys_are_tolerated.
+        // Здесь остаётся ровно обязательность известных ключей.
+    }
+
+    // No.623 (решение менеджера (1624), правило дома «DTO терпят неизвестные поля»,
+    // ARCH-017 «сервер — источник данных»): сервер вправе добавить поле, и клиент
+    // прежней версии обязан продолжать читать ответ, а не отказывать целиком.
+    // Терпимость НЕ означает «принимаем мусор»: известные поля обязаны разобраться
+    // в те же значения, а дубликаты, обрезанный JSON и неверные типы остаются
+    // отказом — это проверяют соседние тесты.
+    #[test]
+    fn native635_profile_v4_unknown_keys_are_tolerated() {
+        let mut v = fixture();
+        v["unexpected_root"] = json!(0);
+        v["profile"]["unexpected_nested"] = json!({"any": [1, 2]});
+        let decoded = decode(&v).expect("a response with server-added fields must still decode");
+        assert_eq!(decoded.wire.schema_version, 1);
+        assert_eq!(decoded.wire.account_id, "account-A");
+        assert_eq!(decoded.wire.crewing_id, "company-A");
+        assert_eq!(decoded.wire.profile.display_name, "Synthetic A");
+        assert_eq!(decoded.wire.profile.contact_email, "synthetic-a@example.com");
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ в том же тесте: фикстура без добавленных полей
+        // разбирается в то же самое, иначе «разобралось» ничего не значит.
+        let clean = decode(&fixture()).expect("the clean fixture decodes");
+        // VerificationLevel намеренно без Debug (значения профиля не payload для
+        // логов), поэтому сравнение через PartialEq, а не assert_eq!.
+        assert!(decoded.wire.profile.verified_level == clean.wire.profile.verified_level);
+        assert_eq!(decoded.mlc_utc_date, clean.mlc_utc_date);
     }
 
     #[test]
