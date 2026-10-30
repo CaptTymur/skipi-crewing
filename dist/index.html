@@ -1649,11 +1649,23 @@ function exitDemoMode(){ try { localStorage.removeItem('skipi_crewing_demo'); } 
 // picks "use the app" (-> normal onboarding/connection) or "demonstration"
 // (-> enterDemoMode). The 'use' choice is remembered so it never blocks again.
 function entryChoiceMade(){ try { return localStorage.getItem('skipi_crewing_entry') === 'use'; } catch(e){ return false; } }
+// No.880/§1: ЕДИНСТВЕННОЕ основание пропустить развилку — действующая аккаунт-сессия.
+// UNKNOWN, измеренный в S1: публичная проекция PublicSettings (src-tauri/src/lib.rs:644,
+// 16 полей) признака сессии не несёт ВООБЩЕ — native_authorized и entitlement_source
+// живут только в Rust (0 вхождений в dist). Поэтому заглушка возвращает false, и
+// развилка показывается всем: легаси-копия один раз входит аккаунтом (путь
+// LegacyConnected, No.793). ТРЕБОВАНИЕ К S2: вывести признак в проекцию (есть/истекла/
+// нет + expires_at) и заменить ТЕЛО этой функции, не трогая имя и места вызова.
+// Ложные источники, намеренно НЕ используемые здесь: has_bearer_token (легаси-токен
+// компании), crewing_id (серверный UUID организации), localStorage skipi_crewing_entry
+// (переживает выход и смену аккаунта).
+function crewingAccountSessionActive(s){
+  void s;
+  return false; // UNKNOWN до S2
+}
 function shouldShowEntryChoice(){
   if (__demoMode) return false;
-  var s = state.settings || {};
-  if (s.has_bearer_token || s.crewing_id) return false; // already connected
-  return !entryChoiceMade();
+  return !crewingAccountSessionActive(state.settings || {});
 }
 function chooseUseApp(next){
   try { localStorage.setItem('skipi_crewing_entry','use'); } catch(e){}
