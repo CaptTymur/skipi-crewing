@@ -685,7 +685,11 @@ check('S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработч
       const name = /^[A-Za-z_$][\w$]*$/.test(s.expr) ? s.expr : null;
       if (!name) {
         // выражение-литерал/арифметика: числовое — освобождено, иначе открыто
-        if (/^\(?\s*(published|Number\(|Math\.|i|\d)/.test(s.expr) || /^\(Number\(/.test(s.expr)) continue;
+        // F1 (аудит f9c4cb35): альтернатива `i` БЕЗ границы токена освобождала любое
+        // выражение на букву «i» — item.ordinal и info.label проходили сырыми, а зонд
+        // печатал ALL GREEN. Граница обязательна: i как ЦЕЛЫЙ токен, не префикс.
+        if (/^\(?\s*(published(?![\w.$])|Number\(|Math\.|i(?![\w.$])|\d)/.test(s.expr)
+            || /^\(Number\(/.test(s.expr)) continue;
         open.push(`:${s.no} ${s.expr} (выражение)`);
         continue;
       }
@@ -714,7 +718,7 @@ check('S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработч
   must(open.length === 0, 'слоты без атрибутного слоя (' + open.length + '):\n      ' + open.join('\n      '));
 });
 
-check('S3 НЕГАТИВ ПО АТРИБУТУ: ни один сток не выпускает сырую двойную кавычку', (src) => {
+check('S3 НЕГАТИВ ПО АТРИБУТУ: payload ДОЕЗЖАЕТ до вывода и не выпускает двойную кавычку', (src) => {
   const index = loadIndex(src);
   const E = escapersOf(index);
   const helpers = {};
@@ -725,24 +729,51 @@ check('S3 НЕГАТИВ ПО АТРИБУТУ: ни один сток не вы
   const scope = Object.assign({
     escapeAttr: E.escapeAttr, escapeHtml: E.escapeHtml, escapeJsString: E.escapeJsString,
   }, helpers);
-  let checked = 0;
+
+  // F2 (аудит f9c4cb35): раньше КАЖДОЕ свободное имя становилось враждебной СТРОКОЙ,
+  // поэтому у составного выражения (item.intake_id) объект превращался в строку, поле
+  // давало undefined, вывод — пустую строку, и ассерт выполнялся ПУСТОТОЙ: из 120
+  // исполненных слотов нагрузка доезжала в 42, вакуумными были 78. Теперь подставляется
+  // структура: прокси, который на любое обращение к полю отдаёт себя же, а в строку
+  // приводится враждебным значением — поэтому payload доезжает на любой глубине пути.
+  const makePayload = () => {
+    const self = () => ATTR_HOSTILE;
+    const handler = {
+      get(_, prop) {
+        if (prop === Symbol.toPrimitive) return () => ATTR_HOSTILE;
+        if (prop === 'toString' || prop === 'valueOf') return () => ATTR_HOSTILE;
+        if (prop === Symbol.iterator) return undefined;
+        return proxy;
+      },
+    };
+    const proxy = new Proxy(self, handler);
+    return proxy;
+  };
+
+  const MARKER = 'onmouseover';
+  let executed = 0, arrived = 0;
+  const vacuum = [];
   for (const s of slots) {
     const layer = closingLayer(s.expr);
     if (layer === 'numeric' || layer === null) continue; // трассируемые покрыты проверкой слоя
-    // исполняем САМО выражение сайта с враждебным значением
     const names = Array.from(new Set((s.expr.match(/[A-Za-z_$][\w$]*/g) || [])
       .filter((n) => !(n in scope) && !['String', 'Number', 'parseInt', 'parseFloat', 'Math'].includes(n))));
     const local = Object.assign({}, scope);
-    for (const n of names) local[n] = ATTR_HOSTILE;
+    for (const n of names) local[n] = makePayload();
     let out;
     try {
       out = new Function(...Object.keys(local), 'return (' + s.expr + ');')(...Object.values(local));
-    } catch (_) { continue; } // выражение требует структуры объекта — покрыто точечными проверками
-    must(!String(out).includes('"'),
-      `сток :${s.no} ${s.expr} выпустил сырую двойную кавычку: ${JSON.stringify(String(out).slice(0, 60))}`);
-    checked += 1;
+    } catch (_) { continue; }
+    executed += 1;
+    out = String(out);
+    must(!out.includes('"'), `сток :${s.no} ${s.expr} выпустил сырую двойную кавычку: ${JSON.stringify(out.slice(0, 60))}`);
+    if (out.includes(MARKER)) arrived += 1; else vacuum.push(`:${s.no} ${s.expr}`);
   }
-  must(checked >= 20, 'проверено стоков ' + checked + ' — зонд ослаб, ожидалось не меньше 20');
+  // Вакуумный негатив — не «зелёный», а НЕ ИЗМЕРЕННЫЙ: падаем и называем поимённо.
+  must(vacuum.length === 0,
+    `негативы, где payload не доехал до вывода (${vacuum.length} из ${executed}) — ассерт выполнялся пустотой:\n      ` + vacuum.join('\n      '));
+  // Пол — по ДОЕХАВШИМ, не по исполненным: иначе пустые прогоны держат порог.
+  must(arrived >= 100, `payload доехал только в ${arrived} стоков из ${executed} — зонд ослаб, ожидалось не меньше 100`);
 });
 
 check('S3 payload помощников (btn/js/jsPair) собирается с атрибутным слоем', (src) => {
@@ -812,6 +843,99 @@ drill('снять escapeHtml со строки ошибки fetch_messages',
     return src.replace(needle, "Failed to load: '+e+'</div>'");
   });
 
+
+/* ---- F3: освобождения обязаны иметь ИСПОЛНЯЕМЫЙ пин ----
+ * Освобождение, которое держится только комментарием, молча перестаёт быть верным,
+ * когда появляется шестой вызов с переменной. Пины ниже — той же формы, что пин
+ * состава сайтов bundle-viewer (sites.length === 2).
+ */
+check('F3 пин C-1: все вызовы seafarerFilterSelect передают ключ ЛИТЕРАЛОМ', (src) => {
+  const index = loadIndex(src);
+  const calls = [];
+  // Исключаем ОПРЕДЕЛЕНИЕ: `function seafarerFilterSelect(key, …)` совпадает с наивной
+  // иглой и даёт шестой «вызов» с нелитеральным ключом — ложный красный.
+  const re = /(?<!function\s)seafarerFilterSelect\(\s*([^,]+),/g;
+  let m;
+  while ((m = re.exec(index)) !== null) calls.push(m[1].trim());
+  must(calls.length === 5,
+    'вызовов seafarerFilterSelect ' + calls.length + ', а освобождение C-1 опиралось на 5 — состав изменился, освобождение пересмотреть');
+  for (const a of calls) {
+    must(/^'[^']*'$/.test(a) || /^"[^"]*"$/.test(a),
+      'ключ передан НЕ литералом: ' + a + ' — освобождение C-1 больше не верно, сайт :11330 нужно закрывать');
+  }
+});
+
+check('F3 пин btn(): в onclick интерполируется только id с атрибутным слоем', (src) => {
+  const index = loadIndex(src);
+  const start = index.indexOf('function crewFlowActionsHtml');
+  must(start > 0, 'функция crewFlowActionsHtml не найдена');
+  const end = index.indexOf('\nfunction ', start + 10);
+  const body = index.slice(start, end > 0 ? end : undefined);
+  // Только ВЫЗОВЫ: у каждого первый аргумент — строковый литерал qa. Упоминание
+  // «btn()» в комментарии совпадало с наивной иглой и давало восьмой «вызов».
+  const calls = body.match(/btn\('/g) || [];
+  must(calls.length === 7,
+    'вызовов btn() ' + calls.length + ', а освобождение onclick опиралось на 7 — состав изменился, пересмотреть');
+  // какие имена интерполируются в кавыченные строки onclick внутри btn(
+  const interpolated = new Set();
+  const re = /"\s*\+\s*([A-Za-z_$][\w$]*)\s*\+\s*"/g;
+  let m;
+  while ((m = re.exec(body)) !== null) interpolated.add(m[1]);
+  must(interpolated.size === 1 && interpolated.has('id'),
+    'в onclick интерполируется не только id, а [' + Array.from(interpolated).join(', ') + '] — освобождение onclick больше не верно');
+  const asg = /var id = ([^;]+);/.exec(body);
+  must(asg, 'присваивание id в crewFlowActionsHtml не найдено');
+  must(/escapeAttr\s*\(/.test(asg[1]),
+    'id собирается без атрибутного слоя: ' + asg[1] + ' — освобождение onclick держалось бы на пустом месте');
+});
+
+/* ---- дриллы к F1 и F3 ---- */
+drill('F1: сырое item.ordinal в обработчике обязано краснить покрытие',
+  'S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработчика закрыт атрибутным слоем',
+  (src) => {
+    const needle = "+ ' onclick=\"profileLetterPick(' + js + ',' + String(ordinal) + ')\"'";
+    must(src.includes(needle), 'мишень дрилла F1 не найдена');
+    return src.replace(needle,
+      "+ ' onclick=\"profileLetterPick(' + js + ',' + item.ordinal + ',' + info.label + ')\"'");
+  });
+
+drill('F3: шестой вызов seafarerFilterSelect с переменной обязан краснить пин C-1',
+  'F3 пин C-1: все вызовы seafarerFilterSelect передают ключ ЛИТЕРАЛОМ',
+  (src) => {
+    const needle = "+ seafarerFilterSelect('experience'";
+    must(src.includes(needle), 'мишень дрилла F3/C-1 не найдена');
+    return src.replace(needle, "+ seafarerFilterSelect(userKey, 'Any', [], '') + seafarerFilterSelect('experience'");
+  });
+
+drill('F3: интерполяция чужого имени в onclick btn() обязана краснить пин',
+  'F3 пин btn(): в onclick интерполируется только id с атрибутным слоем',
+  (src) => {
+    const needle = "\"crewFlowMatchToProfile('\" + id + \"')\"";
+    must(src.includes(needle), 'мишень дрилла F3/btn не найдена');
+    return src.replace(needle, "\"crewFlowMatchToProfile('\" + intakeId + \"')\"");
+  });
+
+
+check('хвост S2: nationalitySelectHtml — все 8 позиций id закрыты, вызовы литеральны', (src) => {
+  const index = loadIndex(src);
+  const s = index.indexOf('function nationalitySelectHtml');
+  must(s > 0, 'функция nationalitySelectHtml не найдена');
+  const body = index.slice(s, index.indexOf('\nfunction ', s + 10));
+  const raw = (body.match(/'\s*\+\s*id\s*\+\s*'/g) || []);
+  must(raw.length === 0, 'сырой id остался в ' + raw.length + ' позициях nationalitySelectHtml');
+  const wrapped = (body.match(/escapeAttr\(\s*id\s*\)/g) || []).length
+                + (body.match(/escapeAttr\(escapeJsString\(id\)\)/g) || []).length;
+  must(wrapped >= 8, 'позиций id с атрибутным слоем ' + wrapped + ', ожидалось не меньше 8');
+  // пин происхождения: оба вызова передают литерал, поэтому ранг — hardening, не живая дыра
+  const calls = (index.match(/(?<!function\s)nationalitySelectHtml\(\s*([^)]*)\)/g) || []);
+  must(calls.length === 2, 'вызовов nationalitySelectHtml ' + calls.length + ', ожидалось 2 — ранг пересмотреть');
+  for (const c of calls) must(/\('[^']*'\)/.test(c), 'аргумент не литерал: ' + c);
+});
+
+drill('вернуть сырой id в nationalitySelectHtml',
+  'хвост S2: nationalitySelectHtml — все 8 позиций id закрыты, вызовы литеральны',
+  (src) => src.replace(/id="'\+escapeAttr\(id\)\+'-wrap"/, "id=\"'+id+'-wrap\""));
+
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
  * ------------------------------------------------------------------ */
@@ -833,8 +957,8 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
 /* ------------------------------------------------------------------ *
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
-const MIN_CHECKS = 33;
-const MIN_DRILLS = 35;
+const MIN_CHECKS = 36;
+const MIN_DRILLS = 39;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');

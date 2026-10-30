@@ -2662,17 +2662,17 @@ function nationalitySelectHtml(id) {
       + '</label>';
   }).join('');
   if (mobileInline) {
-    return '<div class="cd-wrap cd-mobile-inline" id="'+id+'-wrap">'
-      +   '<div class="cd-mobile-summary cd-placeholder" id="'+id+'-label">Select nationalities…</div>'
-      +   '<div class="cd-panel" id="'+id+'-panel">'+items+'</div>'
+    return '<div class="cd-wrap cd-mobile-inline" id="'+escapeAttr(id)+'-wrap">'
+      +   '<div class="cd-mobile-summary cd-placeholder" id="'+escapeAttr(id)+'-label">Select nationalities…</div>'
+      +   '<div class="cd-panel" id="'+escapeAttr(id)+'-panel">'+items+'</div>'
       + '</div>';
   }
-  return '<div class="cd-wrap" id="'+id+'-wrap">'
+  return '<div class="cd-wrap" id="'+escapeAttr(id)+'-wrap">'
     +   '<button type="button" class="cd-button cd-placeholder" id="'+escapeAttr(id)+'-btn" onclick="cdToggle(\''+escapeAttr(escapeJsString(id))+'\')">'
-    +     '<span id="'+id+'-label">Select nationalities…</span>'
+    +     '<span id="'+escapeAttr(id)+'-label">Select nationalities…</span>'
     +     '<span class="cd-arrow">▾</span>'
     +   '</button>'
-    +   '<div class="cd-panel" id="'+id+'-panel" hidden>'+items+'</div>'
+    +   '<div class="cd-panel" id="'+escapeAttr(id)+'-panel" hidden>'+items+'</div>'
     + '</div>';
 }
 
