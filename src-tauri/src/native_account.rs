@@ -350,6 +350,17 @@ mod tests {
 
 }
 
+// Одно правило «локальная петля» для обоих отладочных путей (loopback_qa и
+// переопределения origin на сборке): два похожих предиката разошлись бы молча.
+#[cfg(debug_assertions)]
+fn loopback_origin(value: &str) -> bool {
+    let Ok(url) = Url::parse(value) else { return false; };
+    url.scheme() == "http"
+        && matches!(url.host_str(), Some("127.0.0.1") | Some("[::1]") | Some("::1"))
+        && url.username().is_empty() && url.password().is_none()
+        && url.path() == "/" && url.query().is_none() && url.fragment().is_none()
+}
+
 // Fixed native transport. No origin/tenant/credential selector is accepted from JS.
 #[derive(Clone)]
 pub(crate) struct TransportConfig {
@@ -360,6 +371,16 @@ pub(crate) struct TransportConfig {
 }
 impl TransportConfig {
     pub(crate) fn production() -> Self {
+        // No.880 п.7 ((1608)). В ОТЛАДОЧНОЙ сборке источник аккаунта можно
+        // переопределить переменной СБОРКИ — без этого стенд упирается в закрытый
+        // порт захардкоженного origin (измерено на стенде 635 25.10). Три границы
+        // держат это узким: (1) `option_env!` читает КОМПИЛЯТОР, поэтому окружение
+        // запущенного приложения ничего не меняет; (2) ветки не существует в
+        // релизной сборке; (3) принимается только локальная петля, то есть боевой
+        // источник подменить нельзя даже в debug. В UI — ничего.
+        #[cfg(debug_assertions)]
+        if let Some(config) = option_env!("SKIPI_CREWING_DEV_ACCOUNT_ORIGIN")
+            .and_then(Self::dev_origin_config) { return config; }
         Self {
             #[cfg(debug_assertions)]
             direct_loopback_qa: false,
@@ -367,17 +388,23 @@ impl TransportConfig {
             company_origins: vec![crate::api::PRIMARY_API.to_owned(), crate::api::RU_API.to_owned()],
         }
     }
+    // Предикат вынесен, чтобы проверяться без пересборки с переменной: иначе
+    // граница безопасности осталась бы непроверяемой.
+    #[cfg(debug_assertions)]
+    pub(crate) fn dev_origin_config(origin: &str) -> Option<Self> {
+        if !loopback_origin(origin) { return None; }
+        Some(Self {
+            direct_loopback_qa: true,
+            account_origin: origin.trim_end_matches('/').to_owned(),
+            // Origin КОМПАНИИ не подменяются: предмет переопределения — только
+            // источник аккаунта.
+            company_origins: vec![crate::api::PRIMARY_API.to_owned(), crate::api::RU_API.to_owned()],
+        })
+    }
     // Explicit disposable QA config only. This constructor does not exist in release builds.
     #[cfg(debug_assertions)]
     pub(crate) fn loopback_qa(account: &str, company: &str) -> Result<Self, &'static str> {
-        fn loopback(value: &str) -> bool {
-            let Ok(url) = Url::parse(value) else { return false; };
-            url.scheme() == "http"
-                && matches!(url.host_str(), Some("127.0.0.1") | Some("[::1]") | Some("::1"))
-                && url.username().is_empty() && url.password().is_none()
-                && url.path() == "/" && url.query().is_none() && url.fragment().is_none()
-        }
-        if !loopback(account) || !loopback(company) { return Err("invalid_qa_config"); }
+        if !loopback_origin(account) || !loopback_origin(company) { return Err("invalid_qa_config"); }
         Ok(Self {direct_loopback_qa: true, account_origin: account.trim_end_matches('/').to_owned(),
             company_origins: vec![company.trim_end_matches('/').to_owned()]})
     }
@@ -488,9 +515,48 @@ mod transport_tests {
     #[test]
     fn native635_transport_production_has_one_fixed_account_origin() {
         let config=TransportConfig::production();
-        assert_eq!(config.account_origin,"https://assistant.skipi.app");
+        // No.880 п.7: в отладочной сборке с SKIPI_CREWING_DEV_ACCOUNT_ORIGIN источник
+        // аккаунта намеренно иной. Пин говорит правду про ОБЕ сборки, а не
+        // притворяется, что переопределения нет: иначе прогон на стенде краснел бы
+        // «сам по себе» и это читали бы как поломку.
+        let expected = option_env!("SKIPI_CREWING_DEV_ACCOUNT_ORIGIN")
+            .filter(|origin| TransportConfig::dev_origin_config(origin).is_some())
+            .map(|origin| origin.trim_end_matches('/'))
+            .unwrap_or("https://assistant.skipi.app");
+        assert_eq!(config.account_origin, expected);
+        // Origin КОМПАНИИ переопределению не подлежат ни в одной сборке.
         assert_eq!(config.company_origins,vec!["https://api.skipi.app","https://api-ru.skipi.app"]);
     }
+    // No.880 п.7 ((1608)): отладочная сборка может указать ИНОЙ источник аккаунта
+    // — иначе стенд упирается в закрытый порт захардкоженного origin (измерено на
+    // стенде 635 25.10). Значение читается ТОЛЬКО на этапе сборки и ТОЛЬКО в
+    // debug; предикат вынесен отдельно, чтобы проверяться без сборки с env.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn native635_880_dev_account_origin_is_loopback_only() {
+        // Контроль: ровно та форма, которую поднимает стенд, принимается.
+        let config = TransportConfig::dev_origin_config("http://127.0.0.1:9").expect("loopback origin accepted");
+        assert_eq!(config.account_origin, "http://127.0.0.1:9");
+        // Фирменные origin компании не подменяются: предмет переопределения —
+        // только источник АККАУНТА.
+        assert_eq!(config.company_origins, vec![crate::api::PRIMARY_API, crate::api::RU_API]);
+        assert!(config.direct_loopback_qa, "a loopback stand must not go through a proxy");
+        for refused in [
+            "https://assistant.skipi.app",      // не петля: подмена боевого источника
+            "http://evil.example.com",           // чужой хост
+            "http://127.0.0.1:9/path",           // путь
+            "http://127.0.0.1:9?q=1",            // запрос
+            "http://user:pass@127.0.0.1:9",      // креденшал
+            "ftp://127.0.0.1:9",                 // чужая схема
+            "127.0.0.1:9",                       // без схемы
+            "",
+        ] {
+            assert!(TransportConfig::dev_origin_config(refused).is_none(), "must be refused: {refused}");
+        }
+        // И обратная сторона: БЕЗ переменной сборки production() остаётся боевым —
+        // это пинит соседний тест native635_transport_production_has_one_fixed_account_origin.
+    }
+
     #[test]
     fn native635_transport_error_status_and_code_must_match() {
         for (status,code) in [(400,"invalid_request"),(401,"login_required"),
