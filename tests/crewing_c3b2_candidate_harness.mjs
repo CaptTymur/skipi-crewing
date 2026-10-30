@@ -1372,10 +1372,12 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
     }
     return hits;
   };
+  // No.880: ключи connect.* и дверей «Открыть профиль»/«Создать профиль» сняты вместе
+  // с диалогом токена и старым гейтом; на их месте ключи трёх дверей канона.
   const NEW_KEYS = [
     'vacancies.empty_select','vacancies.sort.open_first','vacancies.sort.with_replies','vacancies.sort.stale','vacancies.sort.newest','vacancies.sort.oldest',
-    'entry.tagline','entry.open_profile','entry.open_profile_desc','entry.create_profile','entry.create_profile_desc','entry.show_demo','entry.show_demo_desc','entry.demo_note',
-    'connect.title','connect.lead_device','connect.lead_profile','connect.close','connect.tab_token','connect.tab_qr','connect.token_label','connect.token_placeholder','connect.help','connect.clear','connect.submit','connect.qr_text','connect.qr_note','connect.enter_manually','connect.err_already','connect.err_token','connect.err_server','connect.err_generic',
+    'entry.tagline','entry.login','entry.login_desc','entry.register','entry.register_desc','entry.register_open','entry.back','entry.show_demo','entry.show_demo_desc','entry.demo_note',
+    
     'common.cancel','common.ok',
     'confirm.team_remove','confirm.profile_archive','confirm.profile_archive_note','confirm.mailbox_disconnect','confirm.mailing_close','confirm.mailing_close_note','confirm.mailing_delete','confirm.document_delete','confirm.document_delete_note','confirm.vacancy_close','confirm.vacancy_close_note','confirm.vacancy_delete','confirm.vacancy_delete_note','confirm.vacancy_delete_hint','confirm.vault_folder','confirm.vault_folder_note',
     'confirm.remove','confirm.archive','confirm.disconnect','confirm.delete','confirm.delete_forever','confirm.close','confirm.close_request','confirm.close_vacancy','confirm.use_folder',
@@ -1440,6 +1442,38 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
     const en = valueOf(enBlock, key);
     const ru = valueOf(ruBlock, key);
     ok(en !== null && en !== '' && ru !== null && ru !== '', `7: key ${key} has a value in both en and ru`);
+  }
+
+  // 7b (No.880). Словарь и вызовы сверяются В ОБЕ СТОРОНЫ.
+  // Зачем: §2 снял поверхность подключения, и класс ошибок оказался двойным —
+  // (1) ключи, чьи вызовы удалены вместе с экраном, остались в словаре мёртвым
+  // грузом со старым словарём «токен/подключение»; (2) я сам сначала считал их
+  // достижимость формой tr('mobile.x'), тогда как мобильный зовёт mobileTr('x'),
+  // и по неверному предикату живой ключ попал в список на удаление.
+  // Поэтому проверка смотрит ИМЕННО ту форму вызова, которой пользуется код.
+  {
+    const called = new Set([...html.matchAll(/mobileTr\('([a-z0-9_]+)'\)/g)].map((m) => m[1]));
+    const defined = new Map();
+    for (const m of html.matchAll(/'mobile\.([a-z0-9_]+)'\s*:/g)) {
+      defined.set(m[1], (defined.get(m[1]) || 0) + 1);
+    }
+    // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: оба множества непусты, иначе всё ниже пройдёт впустую.
+    ok(called.size >= 70 && defined.size >= 70,
+      `7b: both sides are measured — ${called.size} call sites, ${defined.size} keys`);
+    // Единственный динамический вызов — тело самого mobileTr(key); статическая
+    // сверка о нём ничего сказать не может и не притворяется.
+    ok(/function mobileTr\(key\) \{\s*return tr\('mobile\.' \+ key\);/.test(html),
+      '7b: mobileTr is the single indirection, so a static sweep sees every other call');
+    for (const k of [...called].sort()) {
+      ok(defined.get(k) === 2, `7b: mobileTr('${k}') resolves to a key defined in both en and ru — got ${defined.get(k) || 0} definitions`);
+    }
+    // Сироты пришпилены ПОИМЁННО: эти три были мёртвыми ещё до No.880 (измерено
+    // на базе 64b016a — ноль вызовов там же), поэтому слайс их не чинит и не
+    // прячет. Любая НОВАЯ сирота обязана уронить этот ассерт.
+    const ORPHANS_BEFORE_880 = ['access', 'current_device', 'details'];
+    const orphans = [...defined.keys()].filter((k) => !called.has(k)).sort();
+    ok(JSON.stringify(orphans) === JSON.stringify(ORPHANS_BEFORE_880),
+      `7b: the mobile dictionary carries no key the UI stopped calling — got ${JSON.stringify(orphans)}`);
   }
 
   // 8. Stack verification status is localized; the provenance identifier is not.
@@ -1629,8 +1663,10 @@ console.log('# K2 modules/crew-flow');
     'K2-3: desktop boot opens crew_flow');
   // No.880: таких развилок теперь ОДНА — вторая была в trialGoConnect, который стал
   // trialGoSignIn и ведёт на экран входа напрямую. Число названо, а не подогнано.
-  softOk(count(/mobileShow\(mobileHasAccountSession\(\) \? 'crew_flow' : 'connection'\)/g) === 1,
-    'K2-3: the mobile boot path opens crew_flow on an account session, sign-in otherwise');
+  // Демо в условии названо ВСЛУХ: до No.880 демо проходило гейт поддельным
+  // has_bearer_token, а предикат аккаунта такой лазейки не даёт.
+  softOk(count(/mobileShow\(\(mobileHasAccountSession\(\) \|\| __demoMode\) \? 'crew_flow' : 'connection'\)/g) === 1,
+    'K2-3: the mobile boot path opens crew_flow on an account session or demo, sign-in otherwise');
   const k2mobileShow = k2slice('function mobileShow(view) {', '\nfunction mobileBack()');
   softOk(k2mobileShow !== '' && !/return mobileRenderVacancies\(\);/.test(k2mobileShow),
     'K2-3: mobileShow no longer defaults to the vacancies renderer');
@@ -2807,8 +2843,16 @@ console.log('# K2 modules/crew-flow');
     // C5: the connection screen must not promise a vacancies list any more.
     softOk(!/first screen is your vacancies|первым экраном станет список ваших вакансий/.test(html),
       'C5: the connection screen no longer promises a vacancies list');
-    softOk((html.match(/'mobile\.connect_desc':'[^']*Crew Flow/g) || []).length === 2,
-      'C5: the connection screen names Crew Flow as the first screen (RU and EN)');
+    // No.880 (1495): ключа mobile.connect_desc больше нет — экран подключения
+    // стал экраном ВХОДА, и обещание «после проверки первым экраном будет
+    // Crew Flow» ушло вместе с проверкой токена. Предмет C5 сохранён на том
+    // экране, который выжил: он называет аккаунт и НЕ обещает снятых вакансий.
+    // Внимание на кавычки: этот словарь ДВОЙНЫЕ, и запрос одинарными вернёт
+    // лгущий ноль — так я уже один раз «не нашёл» существующие ключи.
+    softOk((html.match(/"settings\.crewing\.login\.description"\s*:\s*"[^"]+"/g) || []).length === 2,
+      'C5 (No.880): the mobile sign-in screen has its own description in both dictionaries');
+    softOk(!/mobile\.connect_desc/.test(html),
+      'C5 (No.880): the retired connection description is gone, not left as dead dictionary weight');
     // C6: the chrome i18n table must not carry retired tab ids.
     {
       const chromeTable = fxSlice('function applyI18nChrome() {', '\n}');

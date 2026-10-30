@@ -696,14 +696,32 @@ if (M && typeof M.initLeftPanelResizer === 'function') {
 // overlay instead of going anywhere. Net effect: no path to a server at all,
 // while the empty Crew Flow told the operator to go to a screen that no longer
 // exists.
+//
+// No.880 (1495), ЧТО ИЗ ЭТОГО ОСТАЛОСЬ: владелец снял саму вкладку подключения
+// («вся эта вкладка "подключение" по моему разумению не имеет смысла», «ее нужно
+// убрать»; «никаких токенов и командных элементов. точка»). Задача R2 — «дойти до
+// экрана, которого требует продукт» — не отменена, у неё сменился предмет: экран
+// теперь ВХОД аккаунтом на развилке, а не секция подключения. Поэтому ассерты
+// ниже требуют не присутствия снятой секции, а того, чтобы ни один псевдоним
+// настроек не вёл в несуществующую секцию.
 // ============================================================================
-section('R2 task 1: the connection path is reachable in the unified settings shell');
+section('R2 task 1 (No.880): every settings alias lands on a section that exists');
 if (M) {
   ok(typeof M.crewingSettingsSectionFor === 'function' && typeof M.crewingSettingsSections === 'function',
     'R2/1: the Crewing settings adapter is reachable from the inline module');
-  ok(M.crewingSettingsSectionFor && M.crewingSettingsSectionFor('connection') === 'home-crewing-connection',
-    "R2/1: openSettings('connection') resolves to the connection section, not to 'profile' — got "
-    + (M.crewingSettingsSectionFor ? M.crewingSettingsSectionFor('connection') : 'n/a'));
+  {
+    const MODULE_OWNED = ['profile', 'devices', 'application'];
+    const hostIds = (M.crewingSettingsSections ? M.crewingSettingsSections() : []).map((s) => s && s.id);
+    const resolvable = new Set([...MODULE_OWNED, ...hostIds]);
+    // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: на пустом реестре любой id прошёл бы молча.
+    ok(hostIds.length >= 1 && resolvable.size >= 4,
+      'R2/1: the settings section registry is measured — ' + resolvable.size + ' ids');
+    for (const alias of ['connection', 'token', 'team', 'access', 'work_data', 'crew_flow']) {
+      const id = M.crewingSettingsSectionFor(alias);
+      ok(resolvable.has(id),
+        "R2/1: openSettings('" + alias + "') lands on a section that exists — got " + id);
+    }
+  }
 
   const r2Sections = M.crewingSettingsSections ? M.crewingSettingsSections() : [];
   const r2Conn = r2Sections.filter((s) => s && s.id === 'home-crewing-connection')[0] || null;

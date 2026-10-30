@@ -258,6 +258,7 @@ const exportsNeeded = [
   'mobileOpenSettingsHome',
   'mobileSetTheme',
   'mobileSetLanguage',
+  'mobileSaveOrg',
   'mobileBack',
   'mobileState',
   '_crewingSettingsSections',
@@ -457,17 +458,22 @@ if (M) {
   ok(!fiveMobileList.includes('Вакансии / Рассылки'), 'flag-on mobile shell does not carry legacy work-content row');
 
   const mobileSections = {
-    modules: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'],
-    identity: ['id="m-company"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
-    storage: ['settings.storage.sync'],
-    appearance: ['mobileSetTheme', 'mobileSetLanguage'],
-    paid: ['Paid Service'],
+    modules: { present: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'] },
+    identity: {
+      present: ['id="m-company"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy', 'mobileSaveOrg'],
+      // No.880 (1495): командных элементов снятого слоя здесь быть не должно.
+      absent: ['id="m-server-url"', 'id="m-token"', 'id="m-crewing-id"', 'mobileSaveConnection', 'token controls'],
+    },
+    storage: { present: ['settings.storage.sync'] },
+    appearance: { present: ['mobileSetTheme', 'mobileSetLanguage'] },
+    paid: { present: ['Paid Service'] },
   };
-  for (const [sectionId, tokens] of Object.entries(mobileSections)) {
+  for (const [sectionId, spec] of Object.entries(mobileSections)) {
     M.mobileOpenSettings(sectionId);
     const html = elFor('mobile-main').innerHTML;
     if (sectionId === 'modules') ok(!/mobileShow\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 mobile modules has no Open Apps entry (K2.2 L1)');
-    for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
+    for (const token of spec.present) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
+    for (const token of (spec.absent || [])) ok(!html.includes(token), 'settings5 mobile ' + sectionId + ' no longer offers ' + token);
   }
 
   // No.880: поля m-token / m-crewing-id / m-server-url удалены вместе со слоем
@@ -483,6 +489,53 @@ if (M) {
     mobileSaveErr = e;
   }
   ok(!mobileSaveErr, 'settings5 mobile theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
+
+  // No.880, РЕГРЕССИЯ ЭТОГО СЛАЙСА: mobileSaveConnection был единственным, кто
+  // переносил company_name из мобильного интерфейса, и §2 удалил его вместе с
+  // кнопкой. Поле «Название организации» осталось правимым, а сохранить его
+  // стало нечем — правка молча терялась. Путь восстановлен как ПРОФИЛЬНЫЙ.
+  M.mobileOpenSettings('identity');
+  elFor('m-company').value = 'Presence Harness Org Save';
+  const savedOrg = await M.mobileSaveOrg(false);
+  ok(M.state.settings.company_name === 'Presence Harness Org Save',
+    'No.880: the mobile organization name has a save path again — got ' + JSON.stringify(M.state.settings.company_name));
+  ok(savedOrg && !savedOrg.bearer_token,
+    'No.880: the profile save carries no token value — got ' + JSON.stringify(savedOrg && savedOrg.bearer_token));
+
+  // No.880, РЕГРЕССИЯ КЛАССА «висячий вызов». Дважды за этот слайс удаление
+  // функции оставляло живой вызов: mobileSaveConnection (роутер настроек тихо
+  // потерял ~230 ассертов, потому что страница падала) и пара
+  // mobileSettingsAccessHtml / mobileSettingsDevicesHtml (роутер отправлял на
+  // удалённые рендереры — ReferenceError при открытии страницы). Проверка
+  // пришпилена ПОИМЁННО: каждое имя, снятое слайсом, обязано иметь ноль
+  // упоминаний в dist, иначе ссылка осталась.
+  {
+    const DELETED_BY_880 = [
+      'activateCompanyToken', 'startTrialAccess', 'teamConnectionStatusHtml',
+      'teamOnboardingOpenAccess', 'openConnectDialog', 'connectShowTab',
+      'connectClearToken', 'connectSubmitToken', 'closeConnectDialog',
+      'connectFriendlyError', 'mobileSettingsAccessHtml', 'mobileSettingsDevicesHtml',
+      'mobileConnectionIntroHtml', 'mobileConnectionHtml', 'mobileValidateConnection',
+      'mobileSaveConnection', 'mobileStartTrialAccess', 'mobileReadConnection',
+      'trialActivateLicense', 'chooseUseApp', 'entryChoiceMade', 'trialGoConnect',
+      'mobileHasConnection', 'home-crewing-connection',
+    ];
+    // Предмет — ВЫЗОВ, а не упоминание: комментарий, называющий снятую функцию,
+    // это провенанс и он разрешён (mobileSaveOrg прямо ссылается на ту, что
+    // заменил). Поэтому сверяется форма вызова `имя(`, а для id секции — само имя.
+    const callForm = (name) => (name.startsWith('home-') ? name : name + '(');
+    // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ в том же окне и ТЕМ ЖЕ предикатом: иначе весь
+    // список ниже пройдёт на поиске, который ничего не умеет находить.
+    for (const alive of ['mobileSaveOrg', 'goAccountSignIn', 'crewingAccountSessionActive']) {
+      ok(HTML.includes(callForm(alive)),
+        'No.880 control: the call-site sweep can find a live symbol — ' + alive);
+    }
+    for (const gone of DELETED_BY_880) {
+      const needle = callForm(gone);
+      const hits = HTML.split(needle).length - 1;
+      ok(hits === 0, 'No.880: nothing calls the retired symbol ' + gone + ' — found ' + hits);
+    }
+  }
 
   // K2 (owner654/658, 2026-09-24): the legacy work modules (vacancies, mailings) are retired from the product;
   // the presence floor for them is intentionally dropped together with the manifest entries (PR-P).
@@ -1276,6 +1329,7 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
     'renderEntryChoice', '_crewingTeamRemoveMember',
     'seedRetiredTeamCache: function(){ _crewingTeamMemberCache = [{ user_id: "synthetic-other-user", role: "member" }]; }',
     'state', 'mobileState', 'hasTeamAccess', 'crewingSettingsHost', '_crewingSettingsSectionFor',
+    '_crewingSettingsSections',
     'showView', 'mobileShow', 'shouldShowTeamOnboarding', 'maybeShowTeamOnboarding',
     'openTeamOnboarding', 'closeTeamOnboarding', 'renderTeamOnboarding',
     'renderTeamView', 'renderTeamTree', 'renderTeamMain', 'mobileRenderTeam',
@@ -1358,8 +1412,25 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
         ok(C._crewingSettingsSectionFor('team') === 'profile'
           && C._crewingSettingsSectionFor('access') === 'profile',
           label + ': old Settings aliases land on Profile');
-        ok(C._crewingSettingsSectionFor('connection') === 'home-crewing-connection',
-          label + ': existing connection stays reachable');
+        // No.880 (1495): секции home-crewing-connection больше нет, поэтому прежний
+        // ассерт «existing connection stays reachable» закреплял УДАЛЁННЫЙ id.
+        // Проверка стала сильнее своего предшественника: каждый псевдоним обязан
+        // вести в секцию, которая РЕАЛЬНО существует. Именно этого инструмента не
+        // хватило, когда 'connection' четырьмя правками позже вёл в никуда.
+        {
+          const MODULE_OWNED = ['profile', 'devices', 'application'];
+          const hostIds = C._crewingSettingsSections().map((s) => s.id);
+          const resolvable = new Set([...MODULE_OWNED, ...hostIds]);
+          // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: пустой набор принял бы любой id.
+          ok(hostIds.length >= 1 && resolvable.size >= 4,
+            label + ': the settings section registry is measured (' + resolvable.size + ' ids)');
+          for (const alias of ['connection', 'token', 'team', 'access', 'profile', 'devices',
+                               'work_data', 'crew_flow', 'appearance', 'interface', 'app', 'language']) {
+            const id = C._crewingSettingsSectionFor(alias);
+            ok(resolvable.has(id),
+              label + ": settings alias '" + alias + "' lands on a section that exists — got " + id);
+          }
+        }
         ok(!C.shouldShowTeamOnboarding() && !C.shouldShowMobileWorkRoleChoice(),
           label + ': neither first-run role gate can reopen');
         C.showView('team');
