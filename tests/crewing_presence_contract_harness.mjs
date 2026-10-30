@@ -1262,7 +1262,7 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
     'openTeamOnboarding', 'closeTeamOnboarding', 'renderTeamOnboarding',
     'renderTeamView', 'renderTeamTree', 'renderTeamMain', 'mobileRenderTeam',
     'shouldShowMobileWorkRoleChoice', 'mobileChooseWorkRole', 'mobileChangeWorkRole',
-    'mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin', 'mobileConnectionIntroHtml',
+    'mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin',
     'mobileSettingsOrgHtml', 'mobileSettingsFiveIdentityHtml',
     'claimOwnerAccess', 'addTeamMember', 'removeTeamMember', 'refreshTeamMembers',
     'startTeamChatPoll', 'teamChatPollOnce', 'copyIssuedTeamToken'
@@ -1357,7 +1357,7 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
           await C[render]();
           ok(!teamMarkup.test(elFor('mobile-main').innerHTML), label + ': direct ' + render + ' cannot restore Team');
         }
-        const roleHtml = C.mobileConnectionIntroHtml() + C.mobileSettingsOrgHtml()
+        const roleHtml = C.mobileSettingsOrgHtml()
           + C.mobileSettingsFiveIdentityHtml();
         ok(!/mobileChangeWorkRole|member_join|mobileChooseWorkRole/.test(roleHtml),
           label + ': connection and both fallback settings have no membership controls');
@@ -1577,7 +1577,7 @@ section('635 real Settings and no manual credential entry');
     const context = createContext(sandbox);
     runInContext(scriptNoBoot + '\nglobalThis.__fixture = {' +
       'state, mobileState, openSettings, mobileOpenSettingsHome, mobileOpenSettings, mobileShow,' +
-      'crewingSettingsHost, renderEntryChoice, openConnectDialog, closeConnectDialog, connectShowTab,' +
+      'crewingSettingsHost, renderEntryChoice, closeConnectDialog, connectShowTab,' +
       'trialShowBlockedOverlay, trialHideOverlay,' +
       'getInstance: function(){return _skipiSettingsInstance;}};', context);
     const app = sandbox.__fixture;

@@ -1859,73 +1859,9 @@ function platformLabel(){
   return 'Это устройство';
 }
 
-function openConnectDialog(opts){
-  opts = opts || {};
-  closeConnectDialog();
-  var title = opts.title || tr('connect.title');
-  var lead = (opts.context === 'device')
-    ? tr('connect.lead_device')
-    : tr('connect.lead_profile');
-  var ov = document.createElement('div');
-  ov.id = 'connect-dialog-overlay';
-  ov.className = 'connect-overlay';
-  ov.onclick = function(e){ if (e.target === ov) closeConnectDialog(); };
-  ov.innerHTML =
-    '<div class="connect-card" role="dialog" aria-modal="true">'
-    + '<button class="connect-close" onclick="closeConnectDialog()" aria-label="'+escapeAttr(tr('connect.close'))+'">×</button>'
-    + '<h2>'+escapeHtml(title)+'</h2>'
-    + '<p class="connect-sub">'+escapeHtml(lead)+'</p>'
-    + '<div class="connect-tabs">'
-    + '<button class="connect-tab" id="connect-tab-token" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.tab_token'))+'</button>'
-    + '<button class="connect-tab" id="connect-tab-qr" onclick="connectShowTab(\'qr\')">'+escapeHtml(tr('connect.tab_qr'))+'</button>'
-    + '</div>'
-    + '<div id="connect-pane-token">'
-    + '<div class="connect-field"><label for="connect-token-input">'+escapeHtml(tr('connect.token_label'))+'</label>'
-    + '<input id="connect-token-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+escapeAttr(tr('connect.token_placeholder'))+'"></div>'
-    + '<p class="connect-help">'+escapeHtml(tr('connect.help'))+'</p>'
-    + '<div class="connect-error" id="connect-error"></div>'
-    + '<div class="connect-actions">'
-    + '<button class="connect-ghost" onclick="connectClearToken()">'+escapeHtml(tr('connect.clear'))+'</button>'
-    + '<button class="connect-primary" id="connect-submit" onclick="connectSubmitToken()">'+escapeHtml(tr('connect.submit'))+'</button>'
-    + '</div>'
-    + '</div>'
-    + '<div id="connect-pane-qr" style="display:none;">'
-    + '<div class="connect-qr-stage">'
-    + '<div class="qr-ico">&#9930;</div>'
-    + '<p class="qr-text">'+escapeHtml(tr('connect.qr_text'))+'</p>'
-    + '<p class="qr-note">'+escapeHtml(tr('connect.qr_note'))+'</p>'
-    + '</div>'
-    + '<div class="connect-actions">'
-    + '<button class="connect-primary" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.enter_manually'))+'</button>'
-    + '</div>'
-    + '</div>'
-    + '</div>';
-  document.body.appendChild(ov);
-  connectShowTab('token');
-  setTimeout(function(){ var i = document.getElementById('connect-token-input'); if (i) i.focus(); }, 30);
-}
-
 function closeConnectDialog(){
   var o = document.getElementById('connect-dialog-overlay');
   if (o) o.remove();
-}
-
-function connectShowTab(tab){
-  var isQr = tab === 'qr';
-  var pt = document.getElementById('connect-pane-token');
-  var pq = document.getElementById('connect-pane-qr');
-  var tt = document.getElementById('connect-tab-token');
-  var tq = document.getElementById('connect-tab-qr');
-  if (pt) pt.style.display = isQr ? 'none' : '';
-  if (pq) pq.style.display = isQr ? '' : 'none';
-  if (tt) tt.classList.toggle('active', !isQr);
-  if (tq) tq.classList.toggle('active', isQr);
-}
-
-function connectClearToken(){
-  var i = document.getElementById('connect-token-input');
-  if (i) { i.value = ''; i.focus(); }
-  connectShowError('');
 }
 
 function connectShowError(msg){
@@ -1946,48 +1882,6 @@ function connectFriendlyError(e){
   return tr('connect.err_generic');
 }
 
-async function connectSubmitToken(){
-  var input = document.getElementById('connect-token-input');
-  var token = input ? (input.value || '').trim() : '';
-  if (!token) { connectShowError('Введите токен подключения.'); if (input) input.focus(); return; }
-  var btn = document.getElementById('connect-submit');
-  connectShowError('');
-  if (btn) { btn.disabled = true; btn.textContent = 'Подключаю…'; }
-  var s = state.settings || {};
-  var url = s.server_url || 'https://api-ru.skipi.app';
-  try {
-    var activation = await invoke('activate_crewing_token', { serverUrl: url, bearerToken: token });
-    var next = Object.assign({}, s, {
-      server_url: url,
-      bearer_token: token,
-      crewing_id: activation.crewing_id || s.crewing_id || '',
-      organization_id: activation.organization_id || s.organization_id || '',
-      company_name: s.company_name || activation.display_name || '',
-      reply_to: s.reply_to || '',
-      token_scopes: activation.scopes || [],
-      token_expires_at: activation.expires_at || null,
-      profile: s.profile || {},
-      interface: s.interface || { theme: 'light', language: getUiLang() },
-      recent_vaults: s.recent_vaults || []
-    });
-    await invoke('save_settings', { newSettings: next });
-    state.settings = next;
-    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
-    try { localStorage.setItem('skipi_crewing_entry', 'use'); } catch(e) {}
-    if (input) input.value = '';                 // do not leave the raw token in the DOM
-    closeConnectDialog();
-    var eo = document.getElementById('entry-choice-overlay'); if (eo) eo.remove();
-    showToast('Подключено к ' + (activation.display_name || 'Skipi Crewing'), 'success');
-    // No.695: a base listed under the previous profile is not this one's.
-    state.seafarersLoaded = false;
-    state.vacancies = [];
-    if (isMobileShellActive()) mobileShow('crew_flow');
-    else location.reload();
-  } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Подключить'; }
-    connectShowError(connectFriendlyError(e));
-  }
-}
 // =================== END CONNECT DIALOG ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
@@ -14914,7 +14808,6 @@ function renderSettingsFiveShell() {
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Это устройство</div><div class="setting-desc">'+escapeHtml(platformLabel())+' · Skipi Crewing '+escapeHtml(appVersionLabel() || '')+(connected?' · подключено':' · не подключено')+'</div></div><div class="setting-control"><span class="apps-badge installed">current</span></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Другие устройства</div><div class="setting-desc">Других сопряжённых устройств пока нет.</div></div><div class="setting-control"></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте принятый token/QR shell.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openConnectDialog({context:\'device\'})">Подключить…</button></div></div>'
         )
       + nestedTitle('Privacy / sharing', 'settings.storage.privacy')
       + grp('<div class="setting-row"><div class="setting-info"><div class="setting-label">Opt-in sharing</div><div class="setting-desc">Data stays local unless a server workflow explicitly syncs or shares it. No new sharing behavior in this slice.</div></div><div class="setting-control"><span data-qa="settings.storage.privacy.detail">'+staticSwitch(true)+' local-first</span></div></div>')
@@ -15798,9 +15691,12 @@ function isMobileShellActive() {
   return document.body && document.body.classList.contains('mobile-shell');
 }
 
-function mobileHasConnection() {
-  var s = state.settings || {};
-  return !!(s.server_url && s.has_bearer_token && s.crewing_id);
+// No.880/§2: мобильная оболочка пускает по АККАУНТ-СЕССИИ, а не по подключению
+// компании. Тот же предикат, что у развилки (§1), поэтому обе оболочки говорят об
+// одном и том же состоянии. Пока заглушка возвращает false, мобильная оболочка
+// показывает экран входа — это ожидаемое состояние до S2.
+function mobileHasAccountSession() {
+  return crewingAccountSessionActive(state.settings || {});
 }
 
 function mobileWorkRole() {
@@ -15898,16 +15794,16 @@ function mobileViewChromeTitle(view) {
     var doc = state.selectedDocument || {};
     return [doc.name || mobileModuleLabel('documents'), doc.category || ''];
   }
-  if (view === 'settings') return [mobileTr('settings_title'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
+  if (view === 'settings') return [mobileTr('settings_title'), mobileHasAccountSession() ? mobileTr('production_connected') : mobileTr('company_token_required')];
   if (view === 'work_role') return [mobileTr('work_setup'), mobileTr('work_setup_desc')];
   if (view === 'member_join') return [mobileTr('join_team'), mobileTr('join_team_desc')];
-  if (view === 'connection') return [mobileTr('connection'), mobileHasConnection() ? mobileTr('production_connected') : mobileTr('company_token_required')];
+  if (view === 'connection') return [mobileTr('connection'), mobileHasAccountSession() ? mobileTr('production_connected') : mobileTr('company_token_required')];
   if (view === 'draft') return [state.editingVacancyId ? 'Edit vacancy' : 'Vacancy draft', 'Create from simple text'];
   if (view === 'vacancy') {
     var v = state.selectedVacancy || {};
     return [mobileVacancyTitle(v) || 'Vacancy', (v.rank || '') + (v.vessel_type ? ' · ' + v.vessel_type : '')];
   }
-  return [mobileModuleLabel('vacancies'), mobileHasConnection() ? mobileApiHostLabel() : mobileTr('connect_token')];
+  return [mobileModuleLabel('vacancies'), mobileHasAccountSession() ? mobileApiHostLabel() : mobileTr('connect_token')];
 }
 
 function mobileApiHostLabel() {
@@ -15921,7 +15817,7 @@ function mobileRenderChrome(view) {
   var navView = mobileParentView(view);
   var showBack = view !== navView || view === 'draft';
   var canRefresh = ['vacancies','mailings','compliance','seafarers','documents','crew_flow'].indexOf(view) !== -1;
-  var showBottomNav = mobileHasConnection() || __demoMode;
+  var showBottomNav = mobileHasAccountSession() || __demoMode;
   root.innerHTML =
     '<div class="mobile-app">'
     + (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">'+escapeHtml(tr('demo.banner'))+'</span><button class="mdb-exit" onclick="exitDemoMode()">'+escapeHtml(tr('demo.exit'))+'</button></div>' : '')
@@ -16004,7 +15900,7 @@ async function bootMobile() {
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('work_role'); }); return; }
   if (shouldShowMobileWorkRoleChoice()) { mobileShow('work_role'); return; }
-  mobileShow(mobileHasConnection() ? 'crew_flow' : 'connection');
+  mobileShow(mobileHasAccountSession() ? 'crew_flow' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
   }).catch(function(e){
@@ -16015,7 +15911,7 @@ async function bootMobile() {
 function mobileShow(view) {
   if (view === 'team') view = 'crew_flow';
   if (view === 'work_role' || view === 'member_join') view = 'connection';
-  if (!mobileHasConnection() && ['crew_flow','compliance','draft'].indexOf(view) !== -1) {
+  if (!mobileHasAccountSession() && ['crew_flow','compliance','draft'].indexOf(view) !== -1) {
     view = 'connection';
   }
   if (state.view === 'team') stopTeamChatPoll();
@@ -16099,42 +15995,34 @@ function mobileRenderMemberJoin() {
   return mobileShow('connection');
 }
 
-function mobileConnectionIntroHtml() {
-  return '';
-}
-
-function mobileConnectionHtml(mode) {
-  var s = state.settings || {};
-  var isSettings = mode === 'settings';
-  return '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">'+escapeHtml(mobileTr('production_connection'))+'</div>'
-    + '<div class="mobile-muted" style="margin-bottom:10px;">'+escapeHtml(mobileTr('production_connection_desc'))+'</div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" value="'+escapeAttr(s.server_url || 'https://api-ru.skipi.app')+'" autocomplete="off"></div></div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" value="'+escapeAttr('')+'" placeholder="'+escapeAttr(mobileTr('company_token_placeholder'))+'" autocomplete="off"></div></div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" value="'+escapeAttr(s.crewing_id || '')+'" placeholder="'+escapeAttr(mobileTr('crewing_id_placeholder'))+'" autocomplete="off"></div></div>'
-    + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="'+escapeAttr(mobileTr('company_placeholder'))+'"></div></div>'
-    + (isSettings ? '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('reply_to'))+'</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply_to || '')+'" placeholder="hr@company.com"></div></div>' : '')
-    + '<div class="mobile-actions">'
-    + '<button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button>'
-    + '<button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button>'
-    + '<button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button>'
-    + '</div>'
-    + '</div>'
-    + '<div class="mobile-card" style="text-align:center;">'
-    + '<div class="mobile-muted" style="margin-bottom:8px;">Просто посмотреть, как устроено приложение?</div>'
-    + '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Загрузить демонстрацию</button>'
-    + '</div>';
+// Отказ стоит рядом с кнопкой (канон UI): тост гаснет, поле — нет.
+async function mobileAccountLogin() {
+  var box = document.getElementById('m-login-error');
+  if (box) { box.textContent = ''; box.hidden = true; }
+  try {
+    await nativeAccountLogin();
+    mobileShow('crew_flow');
+  } catch (e) {
+    var code = String((e && e.message) || e || '').replace(/^\s+|\s+$/g, '');
+    if (box) { box.textContent = tr(loginRefusalText(code)); box.hidden = false; }
+  }
 }
 
 function mobileRenderConnection() {
   mobileMain(
     '<div class="mobile-card">'
-    + '<span class="mobile-status warn">'+escapeHtml(mobileTr('token_required'))+'</span>'
-    + '<h1 style="font-size:20px;margin:12px 0 6px;">'+escapeHtml(mobileTr('connect_title'))+'</h1>'
-    + '<div class="mobile-muted">'+escapeHtml(mobileTr('connect_desc'))+'</div>'
+    + '<h1 style="font-size:20px;margin:0 0 6px;">'+escapeHtml(tr('settings.crewing.login.title'))+'</h1>'
+    + '<div class="mobile-muted">'+escapeHtml(tr('settings.crewing.login.description'))+'</div>'
     + '</div>'
-    + mobileConnectionIntroHtml()
-    + mobileConnectionHtml('connection')
+    + '<div class="mobile-card">'
+    + '<div class="mobile-field"><label for="a-email">'+escapeHtml(tr('settings.crewing.login.email'))+'</label>'
+    +   '<input id="a-email" type="text" autocomplete="username" placeholder="'+escapeAttr(tr('settings.crewing.login.email'))+'"></div>'
+    + '<div class="mobile-field"><label for="a-password">'+escapeHtml(tr('settings.crewing.login.password'))+'</label>'
+    +   '<input id="a-password" type="password" autocomplete="current-password" placeholder="'+escapeAttr(tr('settings.crewing.login.password'))+'"></div>'
+    + '<div class="mobile-actions"><button class="mobile-primary" onclick="mobileAccountLogin()">'+escapeHtml(tr('settings.crewing.login.action'))+'</button></div>'
+    + '<div id="m-login-error" hidden role="alert" class="mobile-status warn" style="display:block;margin-top:10px;"></div>'
+    + '<div class="mobile-actions"><button class="mobile-secondary" onclick="entryOpenRegister()">'+escapeHtml(tr('entry.register'))+'</button></div>'
+    + '</div>'
   );
 }
 
@@ -16147,15 +16035,13 @@ function mobileRenderConnection() {
 function mobileSettingsSections() {
   if (settingsFiveShellEnabled()) return mobileSettingsSectionsFive();
   var s = state.settings || {};
-  var connected = mobileHasConnection();
+  var connected = mobileHasAccountSession();
   return [
     { group: 'ОСНОВНОЕ', items: [
       { id:'org',  badge:'O', title:'Организация',         sub:'Профиль компании и контакты.', value:'Org' },
       { id:'data', badge:'D', title:'Данные организации',  sub:'Хранилище, подключение и диагностика.',       value:'Данные' },
     ]},
     { group: 'РАБОЧИЕ НАСТРОЙКИ', items: [
-      { id:'devices', badge:'U', title:'Сопряжённые устройства', sub:'Принятый shell; controls не переименовываются.', pill:'accepted' },
-      { id:'access',  badge:'K', title:'Доступ / токены',        sub:'Токен компании и подключение к серверу.',        value: connected?'Подключено':'Не подключено' },
       { id:'app',     badge:'A', title:'Приложение',             sub:'Тема, язык, версия и диагностика.',              value: (((s.interface&&s.interface.theme)||'light')==='dark'?'Dark':'Light') },
     ]},
   ];
@@ -16163,7 +16049,7 @@ function mobileSettingsSections() {
 
 function mobileSettingsSectionsFive() {
   var s = state.settings || {};
-  var connected = mobileHasConnection();
+  var connected = mobileHasAccountSession();
   return [
     { group: 'SETTINGS', items: [
       { id:'modules',    badge:'M', title:'Modules / Apps',          sub:'Installed modules, sources and Mail.',       value:'Apps' },
@@ -16180,7 +16066,7 @@ function mobileSettingsValidPage(p){
     if (!p || p === 'list') return null;
     return settingsFiveSection(p);
   }
-  return ['org','data','devices','access','app'].indexOf(p) !== -1 ? p : null;
+  return ['org','data','app'].indexOf(p) !== -1 ? p : null;
 }
 function mobileOpenSettingsHome(){
   // Menu 4: the mobile settings entry opens the shared @skipi/settings module
@@ -16250,41 +16136,6 @@ function mobileSettingsDataHtml() {
     + '</div>';
 }
 
-function mobileSettingsDevicesHtml() {
-  var ver = appVersionLabel() || '';
-  var plat = platformLabel();
-  var connected = mobileHasConnection();
-  return mobileSettingsHead('Сопряжённые устройства', 'Устройства, подключённые к этому профилю Skipi Crewing.')
-    + '<div class="mobile-card">'
-    + '<div class="paired-device-row"><div class="pd-main"><div class="pd-name">Это устройство</div>'
-    + '<div class="pd-meta">'+escapeHtml(plat)+(ver?' · Skipi Crewing '+escapeHtml(ver):'')+(connected?' · подключено':' · не подключено')+'</div></div>'
-    + '<span class="pd-badge">текущее</span></div>'
-    + '<div class="paired-empty">Других сопряжённых устройств пока нет.</div>'
-    + '</div>'
-    + '<div class="mobile-card">'
-    + '<div class="mobile-section-title" style="margin-top:0;">Подключить устройство</div>'
-    + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;">'
-    + '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
-    + '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
-    + '</div>'
-    + '<div class="paired-soon">Показ одноразового QR/токена на этом устройстве и отзыв доступа появятся после серверной поддержки сопряжения (pairing API) и нативной камеры. Сейчас подключайте устройства токеном компании.</div>'
-    + '</div>';
-}
-
-function mobileSettingsAccessHtml() {
-  var s = state.settings || {};
-  return mobileSettingsHead('Доступ / токены', 'Подключение к серверу и токен организации.')
-    + '<div class="mobile-card">'
-    + (mobileHasConnection()
-      ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
-      : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr('api'))+'</strong>'+escapeHtml(mobileApiHostLabel())+'</div></div>'
-    + '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Crewing</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'
-    + '</div>'
-    + mobileConnectionIntroHtml()
-    + mobileConnectionHtml('settings');
-}
-
 function mobileSettingsAppHtml() {
   var s = state.settings || {};
   var theme = ((s.interface && s.interface.theme) || 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
@@ -16335,7 +16186,7 @@ function mobileSettingsFiveIdentityHtml() {
   var s = state.settings || {};
   return mobileSettingsHead('Identity / Access', 'Current organization and token controls. Future login/RBAC/Trust are placeholders only.')
     + '<div class="mobile-card" data-qa="settings.identity.root">'
-    + (mobileHasConnection()
+    + (mobileHasAccountSession()
       ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>'
       : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>')
     + '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="text" value="'+escapeAttr(s.company_name || '')+'" placeholder="'+escapeAttr(mobileTr('company_placeholder'))+'"></div></div>'
@@ -16357,7 +16208,7 @@ function mobileSettingsFiveStorageHtml() {
   var s = state.settings || {};
   var ver = appVersionLabel() || '';
   var plat = platformLabel();
-  var connected = mobileHasConnection();
+  var connected = mobileHasAccountSession();
   return mobileSettingsHead('Storage / Vault', 'Local-first vault and device synchronization.')
     + '<div class="mobile-card" data-qa="settings.storage.root">'
     + '<div class="mobile-section-title" style="margin-top:0;">Local vault</div>'
@@ -16372,8 +16223,6 @@ function mobileSettingsFiveStorageHtml() {
     + '<span class="pd-badge">текущее</span></div>'
     + '<div class="paired-empty">Других сопряжённых устройств пока нет.</div>'
     + '<div class="mobile-actions" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:12px;">'
-    + '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
-    + '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
     + '</div>'
     + '<div class="paired-soon">QR/token display and access revocation wait for backend pairing API + native camera.</div>'
     + '</div>';
@@ -16463,66 +16312,6 @@ function mobileReadConnection() {
   };
 }
 
-async function mobileSaveConnection(showToastOnSave) {
-  var s = state.settings || {};
-  var c = mobileReadConnection();
-  var next = Object.assign({}, s, {
-    server_url: c.server_url,
-    bearer_token: c.bearer_token,
-    crewing_id: c.crewing_id,
-    company_name: c.company_name,
-    reply_to: c.reply_to || s.reply_to || '',
-    token_scopes: s.token_scopes || [],
-    token_expires_at: s.token_expires_at || null,
-    profile: s.profile || {},
-    interface: s.interface || { theme: 'light', language: getUiLang() },
-    recent_vaults: s.recent_vaults || []
-  });
-  await invoke('save_settings', { newSettings: next });
-  state.settings = next;
-  if (showToastOnSave !== false) showToast('Connection saved', 'success');
-  return next;
-}
-
-async function mobileValidateConnection() {
-  var s = JSON.parse(JSON.stringify(state.settings || {}));
-  var c = mobileReadConnection();
-  if (!c.server_url || (!c.bearer_token && !s.has_bearer_token)) {
-    showToast('Server URL and company token are required', 'error');
-    return;
-  }
-  showToast('Validating company token...', 'info');
-  try {
-    var activation = await invoke('activate_crewing_token', {
-      serverUrl: c.server_url,
-      bearerToken: c.bearer_token,
-      expectedContext: s.connection_context
-    });
-    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
-    var next = Object.assign({}, s, {
-      server_url: c.server_url,
-      bearer_token: c.bearer_token,
-      crewing_id: activation.crewing_id || c.crewing_id || '',
-      organization_id: activation.organization_id || s.organization_id || '',
-      company_name: c.company_name || activation.display_name || s.company_name || '',
-      reply_to: c.reply_to || s.reply_to || '',
-      token_scopes: activation.scopes || [],
-      token_expires_at: activation.expires_at || null,
-      profile: s.profile || {},
-      interface: s.interface || { theme: 'light', language: getUiLang() },
-      recent_vaults: s.recent_vaults || []
-    });
-    await invoke('save_settings', { newSettings: next });
-    state.settings = next;
-    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
-    showToast('Connected to '+(activation.display_name || 'Skipi Crewing'), 'success');
-    state.vacancies = [];
-    mobileShow('crew_flow'); // K2.2 B1: land on the home module, not the retired vacancies list
-  } catch (e) {
-    showToast('Token validation failed: '+e, 'error');
-  }
-}
-
 async function mobileStartTrialAccess() {
   var s = JSON.parse(JSON.stringify(state.settings || {}));
   var c = mobileReadConnection();
@@ -16575,7 +16364,7 @@ function mobileRenderVacancies() {
   mobileMain(
     '<div class="mobile-card">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-    + '<div>'+ (mobileHasConnection() ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>' : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>') + '</div>'
+    + '<div>'+ (mobileHasAccountSession() ? '<span class="mobile-status ok">'+escapeHtml(mobileTr('connected'))+'</span>' : '<span class="mobile-status warn">'+escapeHtml(mobileTr('not_connected'))+'</span>') + '</div>'
     + '<button class="mobile-primary" onclick="mobileNewDraft()">'+escapeHtml(mobileTr('new'))+'</button>'
     + '</div>'
     + '<div class="mobile-muted" style="margin-top:10px;">'+escapeHtml(mobileTr('vacancies_desc'))+'</div>'
@@ -17768,7 +17557,7 @@ async function trialActivateLicense(){
     trialHideOverlay();
     trialRemoveBanner();
     showToast('Доступ активирован.', 'success');
-    if (shouldUseMobileShell()) mobileShow(mobileHasConnection() ? 'crew_flow' : 'connection');
+    if (shouldUseMobileShell()) mobileShow(mobileHasAccountSession() ? 'crew_flow' : 'connection');
     else await bootDesktopMain();
   } catch (e) {
     if (err) err.textContent = 'неверный токен';
