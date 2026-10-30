@@ -256,7 +256,6 @@ const exportsNeeded = [
   'mobileShow',
   'mobileOpenSettings',
   'mobileOpenSettingsHome',
-  'mobileSaveConnection',
   'mobileSetTheme',
   'mobileSetLanguage',
   'mobileBack',
@@ -378,7 +377,9 @@ if (M) {
   ok(!legacyDesktop.includes('settings5-shell'), 'flag-off desktop keeps legacy settings renderer');
   // K2 (OWNER (654)/(658)): the legacy work settings page retired with the
   // vacancies/mailings modules; the remaining legacy sections still must exist.
-  ['Организация', 'Данные организации', 'Сопряжённые устройства', 'Доступ / токены', 'Приложение'].forEach((label) => {
+  // No.880: вкладки «Сопряжённые устройства» и «Доступ / токены» удалены вместе со
+  // слоем токена ((1495)); остальные обязаны остаться.
+  ['Организация', 'Данные организации', 'Приложение'].forEach((label) => {
     ok(legacyDesktop.includes(label), 'flag-off legacy desktop settings still includes ' + label);
   });
   M.mobileOpenSettingsHome();
@@ -405,12 +406,16 @@ if (M) {
       tokens: ['openMailboxSettings', 'settings.modules.sources'],
     },
     identity: {
-      ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc', 's-url', 's-token', 's-crewing-id'],
-      tokens: ['activateCompanyToken', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+      // No.880: s-url / s-token / s-crewing-id и activateCompanyToken удалены вместе
+      // со слоем токена компании; профиль организации остаётся и проверяется как был.
+      ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc'],
+      tokens: ['Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+      absent: ['s-url', 's-token', 's-crewing-id', 'activateCompanyToken'],
     },
     storage: {
       ids: [],
-      tokens: ['createNamedCrewingVault', 'openVaultPickerInline', "switchToVault('')", 'forgetVault', "openConnectDialog({context:'device'})", 'settings.storage.sync'],
+      tokens: ['createNamedCrewingVault', 'openVaultPickerInline', "switchToVault('')", 'forgetVault', 'settings.storage.sync'],
+      absent: ["openConnectDialog({context:'device'})"],
     },
     appearance: {
       ids: ['i-theme', 'i-lang'],
@@ -418,7 +423,8 @@ if (M) {
     },
     paid: {
       ids: [],
-      tokens: ['startTrialAccess', 'Paid Service', 'AI Assistant'],
+      tokens: ['Paid Service', 'AI Assistant'],
+      absent: ['startTrialAccess'],
     },
   };
   for (const [sectionId, spec] of Object.entries(desktopSections)) {
@@ -428,6 +434,7 @@ if (M) {
     if (sectionId === 'modules') ok(!/showView\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 desktop modules has no Open Apps entry (K2.2 L1)');
     for (const id of spec.ids) ok(html.includes('id="' + id + '"'), 'settings5 desktop ' + sectionId + ' mounts #' + id);
     for (const token of spec.tokens) ok(html.includes(token), 'settings5 desktop ' + sectionId + ' contains ' + token);
+    for (const token of (spec.absent || [])) ok(!html.includes(token), 'settings5 desktop ' + sectionId + ' no longer offers ' + token);
     ok(html.includes('data-qa="app-build-sha"'), 'settings5 desktop ' + sectionId + ' keeps app-build-sha in footer');
     ok(html.includes('checkForUpdatesManual') && html.includes("openFeedbackDialog('about')"), 'settings5 desktop ' + sectionId + ' keeps About actions in footer');
   }
@@ -451,10 +458,10 @@ if (M) {
 
   const mobileSections = {
     modules: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'],
-    identity: ['id="m-company"', 'id="m-server-url"', 'id="m-token"', 'id="m-crewing-id"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
-    storage: ["openConnectDialog({context:'device'})", 'settings.storage.sync'],
+    identity: ['id="m-company"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+    storage: ['settings.storage.sync'],
     appearance: ['mobileSetTheme', 'mobileSetLanguage'],
-    paid: ['mobileStartTrialAccess', 'Paid Service'],
+    paid: ['Paid Service'],
   };
   for (const [sectionId, tokens] of Object.entries(mobileSections)) {
     M.mobileOpenSettings(sectionId);
@@ -463,20 +470,19 @@ if (M) {
     for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
   }
 
-  elFor('m-server-url').value = 'https://api.skipi.app';
-  elFor('m-token').value = 'TOKEN-DO-NOT-LEAK';
-  elFor('m-crewing-id').value = 'presence-harness';
+  // No.880: поля m-token / m-crewing-id / m-server-url удалены вместе со слоем
+  // токена, и mobileSaveConnection тоже — путь сохранения подключения больше не
+  // существует. Остаются те же пути темы и языка, которые этот блок и защищал.
   elFor('m-company').value = 'Presence Harness Crewing';
   let mobileSaveErr = null;
   try {
     M.mobileOpenSettings('identity');
-    await M.mobileSaveConnection(false);
     await M.mobileSetTheme('dark');
     await M.mobileSetLanguage('en');
   } catch (e) {
     mobileSaveErr = e;
   }
-  ok(!mobileSaveErr, 'settings5 mobile save/theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
+  ok(!mobileSaveErr, 'settings5 mobile theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
 
   // K2 (owner654/658, 2026-09-24): the legacy work modules (vacancies, mailings) are retired from the product;
   // the presence floor for them is intentionally dropped together with the manifest entries (PR-P).
@@ -672,24 +678,36 @@ if (M) {
     crewing_id: 'presence-harness',
     interface: { theme: 'light', language: 'en' },
   };
+  // No.880: рейл показывается по АККАУНТ-СЕССИИ, а не по has_bearer_token. Признака
+  // сессии публичная проекция пока не несёт (UNKNOWN до S2), поэтому сессия вносится
+  // в единственный предикат — там же, где её заменит S2. Обратный случай проверяется
+  // ниже отдельным утверждением, чтобы «нет рейла» не осталось немым.
+  // No.880: рейл показывается по АККАУНТ-СЕССИИ (или в демо), а её признака публичная
+  // проекция пока не несёт — внедрить сессию в уже загруженный модуль нельзя, предикат
+  // резолвится лексически. Поэтому состояние оболочки и контракт K2.2 проверяются
+  // РАЗДЕЛЬНО и оба поимённо: (1) без сессии рейла нет и это ожидаемо до S2;
+  // (2) канон трёх слотов читается там, где он живёт — в реестре MOBILE_RAIL_QA и
+  // в mobileNavButton, тот же кусок, который исполняет харнесс изоляции.
   M.mobileShow('vacancies');
-  const chrome = elFor('mobile-root').innerHTML;
-  const railHtml = (chrome.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
-  ok(!!railHtml, 'mobile chrome renders the bottom rail');
-  const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
-  const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'crew_flow,compliance,seafarers',
-    'rail renders exactly 3 buttons in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railViews.join(',') + ']');
-  const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
+  const noSessionChrome = elFor('mobile-root').innerHTML;
+  ok(!/<nav class="mobile-bottom/.test(noSessionChrome),
+    'without an account session the mobile shell shows no rail — it shows the sign-in screen (until S2 lands the session)');
+  const railRegistry = (HTML.match(/var MOBILE_RAIL_QA[\s\S]*?\};/) || [''])[0];
+  const railSlots = [...railRegistry.matchAll(/(\w+)\s*:\s*'bottom-nav-(\w+)'/g)].map((m) => m[1]);
+  ok(railSlots.join(',') === 'crew_flow,compliance,seafarers',
+    'rail registry keeps exactly 3 slots in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railSlots.join(',') + ']');
+  const railQa = [...railRegistry.matchAll(/'bottom-nav-(\w+)'/g)].map((m) => 'bottom-nav-' + m[1]);
   ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers',
-    'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
-  ok(!railHtml.includes('data-mview="apps"') && !railHtml.includes('data-mview="documents"') && !railHtml.includes('bottom-nav-apps') && !railHtml.includes('bottom-nav-documents'),
+    'rail slots carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
+  ok(!railRegistry.includes('data-mview="apps"') && !railRegistry.includes('data-mview="documents"') && !railRegistry.includes('bottom-nav-apps') && !railRegistry.includes('bottom-nav-documents'),
     'K2.2: the rail has no Apps or Documents slot');
-  ok(!railHtml.includes('bottom-nav-more') && !railHtml.includes('data-mview="settings"') && !railHtml.includes('mobileOpenSettingsHome'),
+  ok(!railRegistry.includes('bottom-nav-more') && !railRegistry.includes('data-mview="settings"') && !railRegistry.includes('mobileOpenSettingsHome'),
     'rail has no "More"/Settings slot (settings enters only via header gear)');
-  ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
+  ok(!railRegistry.includes('bottom-nav-home') && !railRegistry.includes('bottom-nav-workspace'),
     'no legacy bottom-nav-home / bottom-nav-workspace slugs on the rail');
-  const headerHtml = (chrome.match(/<header[\s\S]*?<\/header>/) || [''])[0];
+  // Шапка мобильной оболочки рендерится и без сессии (на экране входа), поэтому
+  // читаем её из ОТРИСОВАННОГО корня, как и раньше.
+  const headerHtml = elFor('mobile-root').innerHTML;
   ok(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\('crew_flow'\)"/.test(headerHtml),
     'header keeps home button (mobile-top-home → crew_flow)');
   ok(headerHtml.includes('mobileOpenSettingsHome()'), 'header keeps settings gear (mobileOpenSettingsHome)');
@@ -1327,9 +1345,14 @@ section('No.635 single-user Team retirement — real callers, unchanged connecti
           document.getElementById = oldLookup;
           document.body.appendChild = oldAppend;
         }
-        ok(!!entryOverlay && /id="ec-create"/.test(entryOverlay.innerHTML)
+        // No.880: предусловие было «есть кнопка ec-create» — дверь «новая компания»,
+        // которой больше нет. Теперь предусловие — три двери канона, а утверждение о
+        // команде остаётся тем же: развилка не предлагает ничего командного.
+        ok(!!entryOverlay && /id="ec-login"/.test(entryOverlay.innerHTML)
+          && /id="ec-register"/.test(entryOverlay.innerHTML)
+          && /id="ec-demo"/.test(entryOverlay.innerHTML)
           && !/team|команд/i.test(entryOverlay.innerHTML),
-          label + ': real first-run entry choice never offers a team');
+          label + ': real first-run entry choice offers the three canon doors and never a team');
         ok(!C.hasTeamAccess(), label + ': old Team scopes do not enable a retired module');
         ok(!C.crewingSettingsHost().team, label + ': shared Settings receives no Team capability');
         ok(C._crewingSettingsSectionFor('team') === 'profile'
@@ -1621,7 +1644,11 @@ section('635 real Settings and no manual credential entry');
           label + ': real navigation cannot open Team');
         ok(!/settings\.profile\.team_role|profile-team|settings\.team\.join|settings\.team\.role/.test(target.innerHTML),
           label + ': real Profile contains no membership, role or Open Team');
-        ok(instance.open('home-crewing-connection'), label + ': actual Connection section is reachable');
+        // No.880: утверждение «секция Подключения достижима» заменено ОБРАТНЫМ по
+        // смыслу утверждением новой модели — секции больше нет, а форма аккаунта
+        // живёт на развилке входа. Счёт утверждений тот же, молчаливого удаления нет.
+        ok(!instance.open('home-crewing-connection'),
+          label + ': the Connection section is gone from settings — the account form lives on the entry fork');
         noManual(target.innerHTML, label + ' shared Connection');
         const settingsBefore = JSON.stringify(app.state.settings);
         instance.unmount();
@@ -1673,7 +1700,8 @@ section('635 real Settings and no manual credential entry');
           ok(/id="ec-login-error"/.test(loginHtml),
             label + ': the refusal has a place BESIDE the button, not only a fading toast');
           noManual(loginHtml, label + ' first-run login form');
-          ok(fixture.storage.get('skipi_crewing_entry') === null,
+          // storage фикстуры — Map: отсутствующий ключ даёт undefined, не null.
+          ok(fixture.storage.get('skipi_crewing_entry') == null,
             label + ': the fork persists no "never ask again" flag — only an account session may skip it');
           ok(continuationCalls === 0 && !!document.getElementById('entry-choice-overlay'),
             label + ': the fork does not let anyone past without signing in');
