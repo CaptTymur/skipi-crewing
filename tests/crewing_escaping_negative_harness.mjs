@@ -641,6 +641,26 @@ function closingLayer(expr) {
 // Имя атрибута обязано НАЧИНАТЬСЯ с «on»: без якоря границы регулярка ловит
 // «data-unconfirmed="…"» (внутри слова есть «onfirmed=») и считает его обработчиком.
 // Измерено на :5965 — ложное срабатывание завышало и счёт класса.
+// Белый список БЕЗОПАСНЫХ ЦЕЛЫХ форм: освобождается только выражение, которое
+// целиком является числовой формой или тернарником с литералами в ОБЕИХ ветвях.
+// Всё остальное — данные, и для них нужен слой. Возвращает имя формы или null.
+function safeConstantForm(expr) {
+  let e = String(expr).trim();
+  const outer = /^\(([\s\S]*)\)$/.exec(e);
+  if (outer) e = outer[1].trim();
+  // (а) тернарник, обе ветви — литералы: данные в вывод не попадают
+  if (/^[A-Za-z_$][\w$.]*\s*\?\s*('[^']*'|"[^"]*"|\d+(?:\.\d+)?)\s*:\s*('[^']*'|"[^"]*"|\d+(?:\.\d+)?)$/.test(e)) {
+    return 'ternary-literals';
+  }
+  // (б) числовое приведение/арифметика, с необязательным числовым дефолтом
+  const num = /^(?:Number|parseInt|parseFloat)\(([^()]*)\)(?:\s*\|\|\s*\d+(?:\.\d+)?)?$/.exec(e)
+           || /^Math\.[a-z]+\(([^()]*)\)(?:\s*\|\|\s*\d+(?:\.\d+)?)?$/.exec(e);
+  if (num && !/['"`?:]/.test(num[1])) return 'numeric';
+  // (в) голый числовой литерал
+  if (/^\d+(?:\.\d+)?$/.test(e)) return 'numeric-literal';
+  return null;
+}
+
 const HANDLER_ATTR_RE = /(?:^|[\s"';(])(on[a-z]+)\s*=\s*"([^"]*)"/g;
 const SLOT_RE = /'\s*\+\s*([^+]+?)\s*\+\s*'/g;
 
@@ -685,11 +705,13 @@ check('S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработч
       const name = /^[A-Za-z_$][\w$]*$/.test(s.expr) ? s.expr : null;
       if (!name) {
         // выражение-литерал/арифметика: числовое — освобождено, иначе открыто
-        // F1 (аудит f9c4cb35): альтернатива `i` БЕЗ границы токена освобождала любое
-        // выражение на букву «i» — item.ordinal и info.label проходили сырыми, а зонд
-        // печатал ALL GREEN. Граница обязательна: i как ЦЕЛЫЙ токен, не префикс.
-        if (/^\(?\s*(published(?![\w.$])|Number\(|Math\.|i(?![\w.$])|\d)/.test(s.expr)
-            || /^\(Number\(/.test(s.expr)) continue;
+        // F1 (аудиты f9c4cb35 и a5a19c8b): освобождение по ПРЕФИКСУ дырявое по
+        // построению — граница токена у одной альтернативы не спасает остальные.
+        // Измерено: (0||item.label), (Number(ordinal)||item.label),
+        // (Math.max(0,1)||item.label), (i?item.label:1), (published?item.label:1)
+        // проходили ЗЕЛЁНЫМИ с сырыми данными, хотя контроль (item.label) краснел.
+        // Теперь освобождение даётся ЦЕЛОМУ выражению по белому списку форм.
+        if (safeConstantForm(s.expr)) continue;
         open.push(`:${s.no} ${s.expr} (выражение)`);
         continue;
       }
@@ -876,11 +898,26 @@ check('F3 пин btn(): в onclick интерполируется только i
   const calls = body.match(/btn\('/g) || [];
   must(calls.length === 7,
     'вызовов btn() ' + calls.length + ', а освобождение onclick опиралось на 7 — состав изменился, пересмотреть');
-  // какие имена интерполируются в кавыченные строки onclick внутри btn(
+  // Сканируем ТОЛЬКО аргументы вызовов btn(, а не всё тело функции: определение
+  // помощника (`var btn = function(qa, label, disabled, onclick, …)`) интерполирует
+  // свои собственные qa и onclick в разметку — это не данные вызывающего, и после
+  // перехода на обе формы кавычек они начали попадать в набор.
+  const defStart = body.indexOf('var btn = function');
+  must(defStart > 0, 'определение btn не найдено');
+  let depth = 0, defEnd = -1;
+  for (let j = body.indexOf('{', defStart); j < body.length; j += 1) {
+    if (body[j] === '{') depth += 1;
+    else if (body[j] === '}') { depth -= 1; if (depth === 0) { defEnd = j + 1; break; } }
+  }
+  must(defEnd > defStart, 'конец определения btn не найден');
+  const callsArea = body.slice(0, defStart) + body.slice(defEnd);
   const interpolated = new Set();
-  const re = /"\s*\+\s*([A-Za-z_$][\w$]*)\s*\+\s*"/g;
+  // F3 (аудит a5a19c8b): зонд видел только ДВОЙНЫЕ кавычки, а господствующий стиль
+  // файла — одинарные: та же форма в одинарных с сырым intakeId давала ALL GREEN и
+  // рендерила выход из атрибута. Обе формы, и кавычки не обязаны совпадать по бокам.
+  const re = /["']\s*\+\s*([A-Za-z_$][\w$]*)\s*\+\s*["']/g;
   let m;
-  while ((m = re.exec(body)) !== null) interpolated.add(m[1]);
+  while ((m = re.exec(callsArea)) !== null) interpolated.add(m[1]);
   must(interpolated.size === 1 && interpolated.has('id'),
     'в onclick интерполируется не только id, а [' + Array.from(interpolated).join(', ') + '] — освобождение onclick больше не верно');
   const asg = /var id = ([^;]+);/.exec(body);
@@ -916,7 +953,7 @@ drill('F3: интерполяция чужого имени в onclick btn() о�
   });
 
 
-check('хвост S2: nationalitySelectHtml — все 8 позиций id закрыты, вызовы литеральны', (src) => {
+check('хвост S2: nationalitySelectHtml — все 10 позиций id закрыты, вызовы литеральны', (src) => {
   const index = loadIndex(src);
   const s = index.indexOf('function nationalitySelectHtml');
   must(s > 0, 'функция nationalitySelectHtml не найдена');
@@ -925,7 +962,10 @@ check('хвост S2: nationalitySelectHtml — все 8 позиций id за�
   must(raw.length === 0, 'сырой id остался в ' + raw.length + ' позициях nationalitySelectHtml');
   const wrapped = (body.match(/escapeAttr\(\s*id\s*\)/g) || []).length
                 + (body.match(/escapeAttr\(escapeJsString\(id\)\)/g) || []).length;
-  must(wrapped >= 8, 'позиций id с атрибутным слоем ' + wrapped + ', ожидалось не меньше 8');
+  // Поправка счёта (аудит a5a19c8b): позиций интерполяции `id` ДЕСЯТЬ, а не восемь —
+  // число 8 было счётом одной формы (escapeAttr(id)) и не включало две позиции
+  // обработчиков escapeAttr(escapeJsString(id)). Единица счёта: СЛОТЫ с `id`.
+  must(wrapped === 10, 'позиций id с атрибутным слоем ' + wrapped + ', ожидалось ровно 10 (8 атрибутных + 2 в обработчиках)');
   // пин происхождения: оба вызова передают литерал, поэтому ранг — hardening, не живая дыра
   const calls = (index.match(/(?<!function\s)nationalitySelectHtml\(\s*([^)]*)\)/g) || []);
   must(calls.length === 2, 'вызовов nationalitySelectHtml ' + calls.length + ', ожидалось 2 — ранг пересмотреть');
@@ -933,8 +973,35 @@ check('хвост S2: nationalitySelectHtml — все 8 позиций id за�
 });
 
 drill('вернуть сырой id в nationalitySelectHtml',
-  'хвост S2: nationalitySelectHtml — все 8 позиций id закрыты, вызовы литеральны',
+  'хвост S2: nationalitySelectHtml — все 10 позиций id закрыты, вызовы литеральны',
   (src) => src.replace(/id="'\+escapeAttr\(id\)\+'-wrap"/, "id=\"'+id+'-wrap\""));
+
+
+/* ---- S5: дриллы на пять форм F1-класса и на одинарные кавычки F3 ---- */
+const F1_FORMS = [
+  "(0||item.label)",
+  "(Number(ordinal)||item.label)",
+  "(Math.max(0,1)||item.label)",
+  "(i?item.label:1)",
+  "(published?item.label:1)",
+];
+for (const form of F1_FORMS) {
+  drill('F1-класс: ' + form + ' с сырыми данными обязано краснить покрытие',
+    'S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработчика закрыт атрибутным слоем',
+    (src) => {
+      const needle = `onclick="profileShortlistEmail(' + js + ')"`;
+      must(src.includes(needle), 'мишень дрилла F1-класса не найдена');
+      return src.replace(needle, `onclick="profileShortlistEmail(' + js + ',' + ${form} + ')"`);
+    });
+}
+
+drill('F3: чужое имя в ОДИНАРНЫХ кавычках в onclick btn() обязано краснить пин',
+  'F3 пин btn(): в onclick интерполируется только id с атрибутным слоем',
+  (src) => {
+    const needle = `"crewFlowIgnoreSignal('" + id + "')"`;
+    must(src.includes(needle), 'мишень дрилла F3-кавычек не найдена');
+    return src.replace(needle, `'crewFlowIgnoreSignal(\\'' + intakeId + '\\')'`);
+  });
 
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
@@ -958,7 +1025,7 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
 const MIN_CHECKS = 36;
-const MIN_DRILLS = 39;
+const MIN_DRILLS = 45;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');
