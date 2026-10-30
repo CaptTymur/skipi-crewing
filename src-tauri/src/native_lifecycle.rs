@@ -34,9 +34,15 @@ fn stored_shape(s: &Settings, origins: &[&str]) -> bool {
             &record.account_id, Some(&s.crewing_id), origins,
         ).is_ok())
 }
+// No.828 ((1493)): `company_name` ИСКЛЮЧЕНО из признаков. Это свободный текст
+// профиля без валидации, он никогда не уходит как идентификатор и участвует только
+// в отображении — поэтому вписанное название организации не делает установку
+// связанной и не должно закрывать вход аккаунтом (Mode::Unavailable).
+// Признаков 11; каждый остальной — настоящий локальный артефакт или след прежней
+// привязки, и ни один не снят.
 fn local_identity_present(s: &Settings) -> bool {
     !s.bearer_token.is_empty() || !s.crewing_id.is_empty() || !s.organization_id.is_empty()
-        || !s.vault_path.is_empty() || !s.recent_vaults.is_empty() || !s.company_name.is_empty()
+        || !s.vault_path.is_empty() || !s.recent_vaults.is_empty()
         || !s.user_display_name.is_empty() || !s.reply_to.is_empty() || !s.token_scopes.is_empty()
         || s.token_expires_at.is_some() || !s.team_role.is_empty()
         || serde_json::to_value(&s.profile).ok() != serde_json::to_value(crate::CrewingProfile::default()).ok()
@@ -1050,6 +1056,37 @@ mod runtime_tests {
         assert!(f.row().is_none());
         assert!(old_ticket.lease().is_err());
         assert!(!rt.closing.load(Ordering::SeqCst));
+    }
+
+    // No.828: название организации — СВОБОДНЫЙ ТЕКСТ профиля ((1493)), а не признак
+    // локальной идентичности. Пока оно входило в local_identity_present, девственная
+    // установка, где человек успел вписать название, уходила в Mode::Unavailable —
+    // то есть вход аккаунтом становился невозможен из-за отображаемой строки.
+    #[test]
+    fn native635_828_company_name_alone_is_not_local_identity() {
+        let origins = [crate::api::PRIMARY_API, crate::api::RU_API];
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: пустые настройки действительно Unbound, иначе
+        // проверка ниже ничего не различает.
+        let empty = Settings::default();
+        assert_eq!(mode(&empty, &origins), Mode::Unbound,
+            "control: default settings must be Unbound, else this test cannot tell the cases apart");
+
+        let mut named = Settings::default();
+        named.company_name = "Marlow Crewing Ltd".into();
+        assert_eq!(mode(&named, &origins), Mode::Unbound,
+            "No.828: a display-only company name must not make the install look bound");
+
+        // И ОБРАТНЫЙ ОБЪЕКТ: признаки, которые действительно означают локальную
+        // идентичность, продолжают работать — снятие company_name не снимает
+        // детектор целиком.
+        let mut vault = Settings::default();
+        vault.vault_path = "/tmp/synthetic-vault".into();
+        assert_eq!(mode(&vault, &origins), Mode::Unavailable,
+            "a real local artefact still marks the install as bound");
+        let mut display = Settings::default();
+        display.user_display_name = "Synthetic Operator".into();
+        assert_eq!(mode(&display, &origins), Mode::Unavailable,
+            "the operator display name is still a local identity trace");
     }
 
     #[test]
