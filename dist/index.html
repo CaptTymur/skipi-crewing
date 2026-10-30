@@ -3499,11 +3499,6 @@ async function teamOnboardingOpenConnection() {
   openSettings('connection');
 }
 
-async function teamOnboardingOpenAccess() {
-  await closeTeamOnboarding(true);
-  openSettings('access');
-}
-
 async function syncTeamRoleFromMembers() {
   return false; // No.635: no Team RPC, credential copy, or role mutation in single-user mode.
 }
@@ -3581,22 +3576,6 @@ function teamMemberTokenChip(m, issued) {
     + '<span>токен выдан</span>'
     + (prefix ? '<code>'+escapeHtml(prefix)+'</code>' : '')
     + '</span>';
-}
-
-function teamConnectionStatusHtml() {
-  var s = state.settings || {};
-  var hasConnection = !!(s.has_bearer_token && s.crewing_id);
-  var role = s.team_role || '';
-  var members = state.teamMembers || [];
-  var presence = teamPresenceCount(members);
-  return '<div class="team-status">'
-    + (hasConnection
-      ? '<span class="status-pill ok">● Connected</span><span class="status-pill">Crewing '+escapeHtml(String(s.crewing_id || '').slice(0,8))+'</span>'
-      : '<span class="status-pill warn">● Token not validated</span>')
-    + '<span class="status-pill">'+(role ? ('Role: '+escapeHtml(role)) : 'No team role')+'</span>'
-    + '<span class="status-pill">'+members.length+' member'+(members.length===1?'':'s')+'</span>'
-    + '<span class="status-pill ok">На связи: '+presence.online+'</span>'
-    + '</div>';
 }
 
 function renderTeamAccessManagementHtml() {
@@ -14388,66 +14367,7 @@ function _crewingSettingsSections(){
     // This is deliberately the SAME mechanism as «Рабочие данные» below — a host
     // appSpecificSection handed to window.SkipiSettings.mount — and it reuses the
     // SAME element ids (s-url / s-token / s-crewing-id) and the SAME functions
-    // (activateCompanyToken / startTrialAccess / save_settings) as the legacy tab.
     // No second settings system and no second connect implementation.
-    { id:'home-crewing-connection', order:150, icon:'C',
-      labelKey:'settings.crewing.connection', descriptionKey:'settings.crewing.connection.description',
-      renderHtml: function(ctx){
-        var s = state.settings || {};
-        var connected = !!(s.has_bearer_token && String(s.crewing_id || '').trim());
-        var urlCtrl = '<div class="skipi-settings__actions">'
-          + _crewSetHtmlInput(ctx, 's-url', s.server_url, 'text', 'https://api-ru.skipi.app')
-          + _crewSetHtmlButton(ctx, 'crewing-save-connection', 'settings.action.save')
-          + '</div>';
-        var tokenCtrl = '<div class="skipi-settings__actions">'
-          + _crewSetHtmlInput(ctx, 's-token', '', 'password', ctx.t('settings.crewing.company_token.placeholder'))
-          + _crewSetHtmlButton(ctx, 'crewing-activate-token', 'settings.crewing.action.validate')
-          + _crewSetHtmlButton(ctx, 'crewing-start-trial', 'settings.crewing.action.trial')
-          + '</div>';
-        var loginCtrl = '<div class="skipi-settings__actions">'
-          + _crewSetHtmlInput(ctx, 'a-email', '', 'text', ctx.t('settings.crewing.login.email'))
-          + _crewSetHtmlInput(ctx, 'a-password', '', 'password', ctx.t('settings.crewing.login.password'))
-          + _crewSetHtmlButton(ctx, 'crewing-account-login', 'settings.crewing.login.action')
-          + '</div>';
-        return _crewSetHtmlGroup(ctx, 'settings.crewing.connection',
-            _crewSetHtmlRow(ctx, 'settings.crewing.login.title',
-                ctx.t('settings.crewing.login.description'), loginCtrl)
-          +             _crewSetHtmlRow(ctx, 'settings.crewing.connection.state', ctx.t('settings.crewing.connection.description'),
-                _crewSetCode(ctx, ctx.t(connected ? 'settings.crewing.connection.connected' : 'settings.crewing.connection.disconnected')))
-          + _crewSetHtmlRow(ctx, 'settings.crewing.server_url', ctx.t('settings.crewing.server_url.description'), urlCtrl)
-          + _crewSetHtmlRow(ctx, 'settings.crewing.company_token', ctx.t('settings.crewing.company_token.description'), tokenCtrl)
-          + _crewSetHtmlRow(ctx, 'settings.crewing.crewing_id', ctx.t('settings.crewing.crewing_id.description'),
-                _crewSetHtmlInput(ctx, 's-crewing-id', s.crewing_id, 'text', '')));
-      },
-      handlers: {
-        // Server URL without a token is a real case (pointing the app at a stand
-        // before any token exists), so it gets its own save through the module
-        // round-trip — the same ctx.saveSettings path «Контактный email» uses.
-        'crewing-save-connection': function(ctx){
-          var urlEl = document.getElementById('s-url');
-          var idEl = document.getElementById('s-crewing-id');
-          var next;
-          try { next = JSON.parse(JSON.stringify(ctx.settings || {})); } catch(_){ next = {}; }
-          next.server_url = (urlEl && urlEl.value != null) ? String(urlEl.value).replace(/^\s+|\s+$/g,'') : (next.server_url || '');
-          next.crewing_id = (idEl && idEl.value != null) ? String(idEl.value).replace(/^\s+|\s+$/g,'') : (next.crewing_id || '');
-          return ctx.saveSettings(next);
-        },
-        // Both of these are the EXISTING desktop functions, unchanged: they read
-        // s-url / s-token / s-crewing-id from the DOM and persist through
-        // save_settings themselves. ctx.refresh() re-reads the stored settings so
-        // the section redraws with what actually got written.
-        'crewing-account-login': function(ctx){
-          return Promise.resolve(nativeAccountLogin()).then(function(){ return ctx.refresh(); },
-            function(){ return ctx.refresh(); });
-        },
-        'crewing-activate-token': function(ctx){
-          return Promise.resolve(activateCompanyToken()).then(function(){ return ctx.refresh(); });
-        },
-        'crewing-start-trial': function(ctx){
-          return Promise.resolve(startTrialAccess()).then(function(){ return ctx.refresh(); });
-        }
-      }
-    },
     { id:'home-crewing-crew-flow', order:450, icon:'C',
       labelKey:'settings.crewing.crew_flow', descriptionKey:'settings.crewing.crew_flow.description',
       renderHtml: function(ctx){
@@ -14761,8 +14681,6 @@ function renderSettingsModal() {
     + '<p>Организационное рабочее пространство: кандидаты, соответствие, документы.</p></div>'
     + navItem('org',     'O', 'Организация')
     + navItem('data',    'D', 'Данные организации')
-    + navItem('devices', 'U', 'Сопряжённые устройства')
-    + navItem('access',  'K', 'Доступ / токены')
     + navItem('app',     'A', 'Приложение');
 
   var mainHeader = function(title, desc, pill){
@@ -14795,6 +14713,10 @@ function renderSettingsModal() {
         + settingRow('Публичный slug', 'URL-безопасный идентификатор публичного профиля организации.', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
         + settingRow('Публичное описание', 'Показывается морякам в публичном профиле организации после company_verified.', textareaCtrl('p-public-desc', p.public_description, 'Короткий профиль: лицензия, типы судов, география, процесс найма', '320px', 5))
         )
+      + sectionTitle('Ответы кандидатам')
+      + grp(
+          settingRow('Email для ответов', 'Куда приходят ответы кандидатов. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
+        )
       + '</div>';
   } else if (settingsTab==='data') {
     var current = s.vault_path || '(по умолчанию — ~/.local/share/skipi-crewing)';
@@ -14825,49 +14747,6 @@ function renderSettingsModal() {
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Версия приложения</div></div><div class="setting-control"><code data-qa="app-build-sha">'+escapeHtml(appVersionLabel())+'</code></div></div>'
         )
       + '</div>';
-  } else if (settingsTab==='devices') {
-    var dver = escapeHtml(appVersionLabel() || '');
-    var dplat = escapeHtml(platformLabel());
-    var dconn = connected;
-    body = '<div class="settings-section">'
-      + mainHeader('Сопряжённые устройства', 'Устройства, подключённые к этому профилю Skipi Crewing.', 'accepted')
-      + sectionTitle('Устройства')
-      + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Это устройство</div><div class="setting-desc">'+dplat+(dver?' · Skipi Crewing '+dver:'')+(dconn?' · подключено':' · не подключено')+'</div></div><div class="setting-control"><span class="apps-badge installed">текущее</span></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Другие устройства</div><div class="setting-desc">Других сопряжённых устройств пока нет.</div></div><div class="setting-control"></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте диалог подключения по токену или QR-коду.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openConnectDialog({context:\'device\'})">Подключить…</button></div></div>'
-        )
-      + '<div class="settings-boundary"><strong>Граница pairing-flow</strong><p>Показ одноразового QR/токена на этом устройстве и серверный отзыв доступа появятся после backend pairing API + нативной камеры. Сейчас подключайте устройства токеном компании. Этот рестайл не меняет pairing-controls.</p></div>'
-      + '</div>';
-  } else if (settingsTab==='access') {
-    body = '<div class="settings-section">'
-      + mainHeader('Доступ / токены', 'Подключение к серверу и токен организации.', connected ? 'Подключено' : 'Не подключено')
-      + sectionTitle('Подключение')
-      + grp(
-          settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
-        + settingRow('Токен компании', 'Выдаётся Skipi после аккредитации. Используется для очереди кандидатов, профилей соответствия и регистрации E2E-ключа.',
-            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-          + inputCtrl('s-token', '', 'password', 'Вставьте токен компании', '220px')
-          + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button>'
-          + '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">30-дневный триал</button>'
-          + '</div>')
-        + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
-        )
-      + sectionTitle('Ответы кандидатам')
-      + grp(
-          settingRow('Email для ответов', 'Куда приходят ответы кандидатов. Если пусто — используется контактный email организации.', inputCtrl('s-reply', s.reply_to, 'text', 'hr@company.com', '240px'))
-        )
-      + (hasTeamAccess()
-          ? sectionTitle(tr('team.access_section'))
-            + grp(
-                '<div class="setting-row" data-qa="settings-team-access-open"><div class="setting-info"><div class="setting-label">'+escapeHtml(tr('team.access_title'))+'</div><div class="setting-desc">'+escapeHtml(tr('team.access_desc'))+'</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="closeSettings();showView(\'team\');">'+escapeHtml(tr('team.access_open'))+'</button></div></div>'
-              )
-          : '')
-      + sectionTitle('Демонстрация')
-      + grp(
-          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовыми данными — кандидаты, документы, профили — без токена.</div></div><div class="setting-control"><button type="button" class="ghost" style="padding:6px 14px;font-size:12px;" onclick="enterDemoMode()">Загрузить демо</button></div></div>'
-        )
-      + '</div>';
   } else if (settingsTab==='app') {
     body = '<div class="settings-section">'
       + mainHeader('Приложение', 'Тема, язык, версия и обновления.', (iface.theme==='dark'?'Dark':'Light'))
@@ -14883,6 +14762,10 @@ function renderSettingsModal() {
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Обратная связь</div><div class="setting-desc">Оценка и комментарий для Skipi.</div></div><div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="openFeedbackDialog(\'about\')">'+escapeHtml(tr('feedback.manual_button'))+'</button></div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сопровождение</div></div><div class="setting-control">Tymur Rudov</div></div>'
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Лицензия</div></div><div class="setting-control">Proprietary</div></div>'
+        )
+      + sectionTitle('Демонстрация')
+      + grp(
+          '<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовыми данными — кандидаты, документы, профили — без токена.</div></div><div class="setting-control"><button type="button" class="ghost" style="padding:6px 14px;font-size:12px;" onclick="enterDemoMode()">Загрузить демо</button></div></div>'
         )
       + '</div>';
   }
@@ -14990,15 +14873,6 @@ function renderSettingsFiveShell() {
         + settingRow('Публичный slug', 'URL-безопасный идентификатор публичного профиля организации.', inputCtrl('p-slug', p.slug, 'text', 'marlow-navigation', '240px'))
         + settingRow('Публичное описание', 'Показывается морякам в публичном профиле организации после company_verified.', textareaCtrl('p-public-desc', p.public_description, 'Короткий профиль: лицензия, типы судов, география, процесс найма', '320px', 5))
         )
-      + sectionTitle('Connection')
-      + grp(
-          settingRow('Server URL', 'По умолчанию — production через <code>https://api-ru.skipi.app</code> с резервом <code>https://api.skipi.app</code>. <code>http://127.0.0.1:8000</code> — только для разработки.', inputCtrl('s-url', s.server_url, 'text', '', '240px'))
-        + settingRow('Токен компании', 'Текущий access token Crewing. Это не финальная login-модель.', '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-          + inputCtrl('s-token', '', 'password', 'Вставьте токен компании', '220px')
-          + '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button></div>')
-        + settingRow('Crewing ID', 'Серверный UUID аккредитованной записи организации.', inputCtrl('s-crewing-id', s.crewing_id, 'text', '', '240px'))
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Token scopes</div><div class="setting-desc">Read-only current token metadata.</div></div><div class="setting-control"><code>'+escapeHtml((s.token_scopes||[]).join(', ') || '—')+'</code></div></div>'
-        )
       + nestedTitle('Privacy / Security', 'settings.identity.privacy')
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">Login model</div><div class="setting-desc">Open decision: email/password/token/passkey. Not implemented in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
@@ -15064,8 +14938,6 @@ function renderSettingsFiveShell() {
       + sectionTitle('AI Assistant')
       + grp(
           '<div class="setting-row"><div class="setting-info"><div class="setting-label">AI Assistant module</div><div class="setting-desc">Decision support module status. Team chat content stays outside Settings.</div></div><div class="setting-control"><span class="apps-badge installed">available</span></div></div>'
-        + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trial / token</div><div class="setting-desc">Uses the existing trial-token command. Product semantics are open until Tymur separates access trial vs AI entitlement.</div></div><div class="setting-control"><button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 12px;font-size:12px;">Start trial</button></div></div>'
-        + settingRow('Preview token', 'Token or trial status will be connected after Tymur accepts the paid-service product model.', inputCtrl('settings-paid-token-preview', '', 'text', 'preview token', '220px'))
         + '<div class="setting-row"><div class="setting-info"><div class="setting-label">Entitlement</div><div class="setting-desc">Billing and paid module status are placeholders in this slice.</div></div><div class="setting-control"><span class="apps-badge disabled">placeholder</span></div></div>'
         )
       + previewNote('Paid Service remains top-level. Do not demote it into Modules without a separate Tymur decision.')
@@ -15218,88 +15090,6 @@ async function nativeAccountLogin() {
 function loginRefusalText(code) {
   var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "native_binding_missing": "binding_missing"};
   return 'settings.crewing.login.' + (map[code] || 'refused_unspecified');
-}
-
-async function activateCompanyToken() {
-  var s = JSON.parse(JSON.stringify(state.settings || {}));
-  var urlEl = document.getElementById('s-url');
-  var tokenEl = document.getElementById('s-token');
-  var idEl = document.getElementById('s-crewing-id');
-  var companyEl = document.getElementById('s-company');
-  var serverUrl = urlEl ? urlEl.value.trim() : (s.server_url || '');
-  var token = tokenEl ? tokenEl.value.trim() : '';
-  if (!serverUrl || (!token && !s.has_bearer_token)) {
-    showToast('Server URL and company token are required', 'error');
-    return;
-  }
-  showToast('Validating company token…', 'info');
-  try {
-    var activation = await invoke('activate_crewing_token', {
-      serverUrl: serverUrl,
-      bearerToken: token,
-      expectedContext: s.connection_context
-    });
-    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
-    if (idEl) idEl.value = activation.crewing_id || '';
-    if (companyEl && !companyEl.value.trim()) companyEl.value = activation.display_name || '';
-    var companyName = companyEl ? companyEl.value.trim() : (s.company_name || '');
-    var next = Object.assign({}, s, {
-      server_url: serverUrl,
-      bearer_token: token,
-      crewing_id: activation.crewing_id || '',
-      organization_id: activation.organization_id || (s.organization_id || ''),
-      token_scopes: activation.scopes || [],
-      token_expires_at: activation.expires_at || null,
-      company_name: companyName
-    });
-    await invoke('save_settings', { newSettings: next });
-    state.settings = next;
-    showToast('Token valid for '+(activation.display_name || 'crewing'), 'success');
-    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
-    if (state.view === 'team') await refreshTeamMembers(false);
-  } catch (e) {
-    showToast('Token validation failed: '+e, 'error');
-  }
-}
-
-async function startTrialAccess() {
-  var s = JSON.parse(JSON.stringify(state.settings || {}));
-  var urlEl = document.getElementById('s-url');
-  var companyEl = document.getElementById('s-company');
-  var replyEl = document.getElementById('s-reply');
-  var idEl = document.getElementById('s-crewing-id');
-  var tokenEl = document.getElementById('s-token');
-  var serverUrl = urlEl ? urlEl.value.trim() : (s.server_url || 'https://api-ru.skipi.app');
-  var companyName = companyEl ? companyEl.value.trim() : (s.company_name || '');
-  var replyTo = replyEl ? replyEl.value.trim() : (s.reply_to || '');
-  showToast('Creating access...', 'info');
-  try {
-    var issued = await invoke('issue_crewing_trial_token', {
-      serverUrl: serverUrl,
-      displayName: companyName || null,
-      contactEmail: replyTo || null
-    });
-    if ((state.settings || {}).connection_context !== s.connection_context) throw new Error('settings_changed');
-    if (idEl) idEl.value = issued.crewing_id || '';
-    if (tokenEl) tokenEl.value = issued.token || '';
-    var next = Object.assign({}, s, {
-      server_url: serverUrl,
-      bearer_token: issued.token || '',
-      crewing_id: issued.crewing_id || '',
-      organization_id: issued.organization_id || (s.organization_id || ''),
-      token_scopes: issued.scopes || [],
-      token_expires_at: issued.expires_at || null,
-      company_name: companyName || (s.company_name || ''),
-      reply_to: replyTo || (s.reply_to || '')
-    });
-    await invoke('save_settings', { newSettings: next });
-    state.settings = next;
-    updateTeamNavVisibility();
-    showToast('Access is active for 14 days', 'success');
-    try { state.myIdentity = await registerMessagingPubkey(); } catch(e) {}
-  } catch (e) {
-    showToast('Access failed: '+e, 'error');
-  }
 }
 
 async function saveSettings() {
