@@ -428,12 +428,6 @@ pub struct CrewingTeamMember {
     pub token_prefix: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct CrewingTeamMemberWire {
-    user_id: String,
-    display_name: Option<String>,
-    role: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TeamChatMessage {
@@ -456,46 +450,6 @@ pub struct TeamChatAttachment {
     pub data_b64: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct TeamChatMessageWire {
-    sender_nickname: String,
-    body: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    event_type: Option<String>,
-    trigger_llm: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    attachments: Vec<TeamChatAttachment>,
-}
-
-fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
-    let token = s.bearer_token.trim();
-    if token.is_empty() {
-        return Err("Company token is required.".into());
-    }
-    let crewing_id = s.crewing_id.trim();
-    if crewing_id.is_empty() {
-        return Err("Crewing ID is required. Validate the company token first.".into());
-    }
-    Ok((
-        s.server_url.trim().to_string(),
-        token.to_string(),
-        crewing_id.to_string(),
-    ))
-}
-
-fn team_chat_nickname(s: &Settings) -> String {
-    let candidates = [
-        s.user_display_name.trim(),
-        s.company_name.trim(),
-        s.profile.legal_name.trim(),
-    ];
-    for candidate in candidates {
-        if !candidate.is_empty() {
-            return candidate.chars().take(40).collect();
-        }
-    }
-    "Crewing".to_string()
-}
 
 // Context revisions are random, native-issued values. The private fingerprint is never
 // returned. Only the live owner/install publishes; snapshot reads never change authority.
@@ -795,6 +749,12 @@ fn forget_recent_vault(path: String, state: tauri::State<AppState>) -> Result<()
     Ok(())
 }
 
+// No.880 S2: продуктового вызывающего больше нет — `activate_crewing_token`
+// снята по слову владельца (1495). Функция оставлена ТЕСТ-ОНЛИ, потому что
+// девять её ассертов проверяют сторож устаревания `expected_context`, снимать
+// который PRESERVE запрещает. Это зафиксировано cfg, а не комментарием: иначе
+// первый проход по «мёртвому коду» снёс бы вместе с ней и это покрытие.
+#[cfg(test)]
 fn activation_token(settings: &Settings, base: &str, supplied: Option<&str>, expected: Option<&str>) -> Result<String, String> {
     if let Some(token) = supplied.map(str::trim).filter(|token| !token.is_empty()) {
         return Ok(token.to_string()); // Existing explicit manual input; retired in the full account stage.
@@ -867,211 +827,6 @@ fn native_account_login(
         let _ = (email, password, expected_context, state);
         Err("native_unsupported".into())
     }
-}
-
-#[tauri::command]
-fn activate_crewing_token(
-    server_url: String,
-    bearer_token: Option<String>,
-    expected_context: Option<String>,
-    state: tauri::State<AppState>,
-) -> Result<CrewingTokenActivation, String> {
-    let base = server_url.trim().trim_end_matches('/');
-    if base.is_empty() {
-        return Err("No server URL configured.".into());
-    }
-    let settings = state.settings.lock().unwrap().clone();
-    let token = activation_token(&settings, base, bearer_token.as_deref(), expected_context.as_deref())?;
-    api::post_empty_json::<CrewingTokenActivation>(
-        Some(base),
-        Some(&token),
-        "/api/crewings/token/activate",
-        15,
-    )
-}
-
-#[tauri::command]
-fn issue_crewing_trial_token(
-    server_url: String,
-    display_name: Option<String>,
-    contact_email: Option<String>,
-) -> Result<CrewingTrialTokenIssued, String> {
-    let base = server_url.trim().trim_end_matches('/');
-    if base.is_empty() {
-        return Err("No server URL configured.".into());
-    }
-    let body = CrewingTrialTokenRequest {
-        display_name: display_name.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        contact_email: contact_email.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-    };
-    api::post_json(Some(base), None, "/api/crewings/trial-token", &body, 20)
-}
-
-#[tauri::command]
-fn claim_team_owner(
-    display_name: Option<String>,
-    state: tauri::State<AppState>,
-) -> Result<CrewingTeamMember, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let expected_context = connection_context(&settings);
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let me = messaging::get_my_identity()?;
-    let display = display_name
-        .and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        })
-        .or_else(|| {
-            let trimmed = settings.user_display_name.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_string())
-            }
-        })
-        .or_else(|| {
-            let trimmed = settings.company_name.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_string())
-            }
-        });
-    let body = CrewingTeamMemberWire {
-        user_id: me.user_id,
-        display_name: display,
-        role: "owner".into(),
-    };
-    let path = format!("/api/crewings/{}/team/owner", crewing_id);
-    if !connection_context_matches(&settings, &expected_context) { return Err("settings_changed".into()); }
-    let member: CrewingTeamMember =
-        api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)?;
-
-    let mut current = state.settings.lock().unwrap();
-    if !connection_context_matches(&current, &expected_context) { return Err("settings_changed".into()); }
-    let mut next = current.clone();
-    next.organization_id = member.organization_id.clone();
-    next.team_role = member.role.clone();
-    if let Some(name) = member.display_name.clone() {
-        next.user_display_name = name;
-    }
-    prepare_connection_context(&mut next, &current);
-    persist_and_install_settings(&mut current, next, Settings::save)?;
-    Ok(member)
-}
-
-#[tauri::command]
-fn list_team_members(state: tauri::State<AppState>) -> Result<Vec<CrewingTeamMember>, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let path = format!("/api/crewings/{}/team", crewing_id);
-    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn add_team_member(
-    user_id: String,
-    display_name: Option<String>,
-    role: String,
-    state: tauri::State<AppState>,
-) -> Result<CrewingTeamMember, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let role = match role.trim() {
-        "owner" => "owner",
-        "admin" => "admin",
-        _ => "member",
-    }
-    .to_string();
-    let body = CrewingTeamMemberWire {
-        user_id: user_id.trim().to_string(),
-        display_name: display_name.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        role,
-    };
-    let path = format!("/api/crewings/{}/team", crewing_id);
-    api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)
-}
-
-#[tauri::command]
-fn remove_team_member(user_id: String, state: tauri::State<AppState>) -> Result<(), String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let path = format!("/api/crewings/{}/team/{}", crewing_id, user_id.trim());
-    api::delete_empty(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn fetch_team_chat_messages(
-    since: Option<String>,
-    state: tauri::State<AppState>,
-) -> Result<Vec<TeamChatMessage>, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let mut path = format!("/api/crewings/{}/team-chat/messages?limit=200", crewing_id);
-    if let Some(ts) = since.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
-        path.push_str("&since=");
-        path.push_str(&urlenc(ts));
-    }
-    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn send_team_chat_message(
-    body: String,
-    trigger_llm: Option<bool>,
-    event_type: Option<String>,
-    attachments: Option<Vec<TeamChatAttachment>>,
-    state: tauri::State<AppState>,
-) -> Result<TeamChatMessage, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let trimmed = body.trim();
-    let attachments = attachments.unwrap_or_default();
-    if trimmed.is_empty() && attachments.is_empty() {
-        return Err("Empty message.".into());
-    }
-    let event_type = event_type.and_then(|v| {
-        let t = v.trim().to_string();
-        if t.is_empty() {
-            None
-        } else {
-            Some(t)
-        }
-    });
-    let payload = TeamChatMessageWire {
-        sender_nickname: team_chat_nickname(&settings),
-        body: trimmed.to_string(),
-        event_type,
-        trigger_llm: trigger_llm.unwrap_or(false),
-        attachments,
-    };
-    let path = format!("/api/crewings/{}/team-chat/messages", crewing_id);
-    api::post_json(Some(&server_url), Some(&bearer_token), &path, &payload, 20)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -2728,15 +2483,7 @@ pub fn run() {
             get_build_info,
             get_settings,
             save_settings,
-            activate_crewing_token,
-            issue_crewing_trial_token,
             native_account_login,
-            claim_team_owner,
-            list_team_members,
-            add_team_member,
-            remove_team_member,
-            fetch_team_chat_messages,
-            send_team_chat_message,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,

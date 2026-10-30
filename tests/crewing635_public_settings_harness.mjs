@@ -362,6 +362,25 @@ await run('No.827 — invoke() keys are the camelCase of #[tauri::command] param
      'every tauri::generate_handler![] entry is a parsed definition :: entries='+handlerNames.length+' definitions(unique)='+byName.size);
   const sites=jsInvokes(html);
   const app=sites.filter(s=>s.kind==='app'),dyn=sites.filter(s=>s.kind==='dynamic'),plugin=sites.filter(s=>s.kind==='plugin');
+  // No.880 S2 п.1: команды Team и токена/триала СНЯТЫ по слову владельца (1495).
+  // Проверяется и объявление (#[tauri::command]), и регистрация
+  // (generate_handler!), и вызов из UI — иначе снятая из списка команда могла бы
+  // остаться живой в теле, а снятое тело — остаться в списке.
+  const RETIRED_BY_880=['claim_team_owner','list_team_members','add_team_member','remove_team_member',
+    'fetch_team_chat_messages','send_team_chat_message','activate_crewing_token','issue_crewing_trial_token'];
+  // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ тем же предикатом: живая команда обязана находиться
+  // во всех трёх местах, иначе отрицания ниже прошли бы на пустом поиске.
+  for (const alive of ['get_settings','save_settings','native_account_login']) {
+    ok(byName.has(alive)&&handlerNames.some(n=>n.split('::').pop()===alive),
+       'control: a live command is found by the same predicate :: '+alive);
+  }
+  for (const gone of RETIRED_BY_880) {
+    ok(!byName.has(gone),'No.880: retired command has no #[tauri::command] definition :: '+gone);
+    ok(!handlerNames.some(n=>n.split('::').pop()===gone),
+       'No.880: retired command is not registered in generate_handler! :: '+gone);
+    ok(!sites.some(s=>s.command===gone),'No.880: nothing in the UI invokes the retired command :: '+gone);
+  }
+
   const simple=(html.match(/\binvoke\(/g)||[]).length;
   ok(sites.length>0&&sites.length===simple&&!sites.some(s=>s.kind==='unparsed'),
      'JS parser: every `invoke(` occurrence became one classified call site :: occurrences='+simple+' sites='+sites.length+' app='+app.length+' plugin='+plugin.length+' dynamic='+dyn.length);

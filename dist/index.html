@@ -1634,8 +1634,6 @@ var DEMO_READS = {
     else DEMO.seafarers.unshift(saved);
     return saved;
   },
-  fetch_team_chat_messages: function(){ return []; },
-  list_team_members: function(){ return []; },
   refresh_saved_seafarer_replies: function(){ return DEMO.seafarers; },
   get_my_identity: function(){ return { messaging_user_id: 'demo-crewing-user', public_key: '' }; },
   get_feedback_prompt_state: function(){ return { should_prompt: false }; }
@@ -1861,14 +1859,10 @@ function localizePublishDetail(detail){
 // duplicate (renderEntryGate/gateChooseUse) was removed during cleanup.
 // =================== END DEMO MODE ===================
 
-// =================== CONNECT DIALOG (Open existing profile / pair device) ====
-// Shared two-method (Token / QR) connect surface, shell-agnostic (renders into a
-// fixed overlay so it works in both desktop and mobile). Used by:
-//   - the launch screen      → "Открыть существующий профиль"
-//   - Settings → Devices     → "Подключить новое устройство"
-// The Token method is the REAL working connection path (activate_crewing_token).
-// The QR method is structured UI + camera fallback only — there is no native
-// camera bridge yet, and we never fake a successful scan.
+// No.880 (1495): диалог подключения (токен / QR, «Открыть существующий профиль»,
+// «Подключить новое устройство») снят целиком в S1, а команда активации токена —
+// в S2. Вход один: аккаунт Skipi на развилке. Этот заголовок остался от снятой
+// поверхности и переписан, чтобы не описывать то, чего нет.
 function platformLabel(){
   var ua = (navigator.userAgent || '');
   if (/android/i.test(ua)) return 'Android';
