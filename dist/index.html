@@ -1855,11 +1855,6 @@ function platformLabel(){
   return 'Это устройство';
 }
 
-function closeConnectDialog(){
-  var o = document.getElementById('connect-dialog-overlay');
-  if (o) o.remove();
-}
-
 function connectShowError(msg){
   var el = document.getElementById('connect-error');
   if (!el) return;
@@ -1869,15 +1864,6 @@ function connectShowError(msg){
 
 // Map a raw activation error to a short localized message. The raw token is
 // never logged.
-function connectFriendlyError(e){
-  var raw = (e && e.message) ? e.message : ('' + e);
-  try { console.warn('[crewing] connect failed'); } catch(_){}
-  if (/already.*connect|conflict|\b409\b/i.test(raw)) return tr('connect.err_already');
-  if (/invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw)) return tr('connect.err_token');
-  if (/failed to fetch|networkerror|name resolution|timeout|gateway|\b50[234]\b/i.test(raw)) return tr('connect.err_server');
-  return tr('connect.err_generic');
-}
-
 // =================== END CONNECT DIALOG ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
@@ -15896,7 +15882,9 @@ async function bootMobile() {
   // ENTRY CHOICE FIRST — gate everything until the user picks use vs demo.
   if (shouldShowEntryChoice()) { renderEntryChoice(function(){ mobileShow('work_role'); }); return; }
   if (shouldShowMobileWorkRoleChoice()) { mobileShow('work_role'); return; }
-  mobileShow(mobileHasAccountSession() ? 'crew_flow' : 'connection');
+  // Демо — законный вход без аккаунта ((1607) «Демо остаётся»): раньше оно проходило
+  // этот гейт через фальшивый has_bearer_token демо-фикстуры, теперь названо прямо.
+  mobileShow((mobileHasAccountSession() || __demoMode) ? 'crew_flow' : 'connection');
   loadTaxonomy().then(function(){
     if (mobileState.view === 'draft') mobileShow('draft');
   }).catch(function(e){
@@ -15907,7 +15895,7 @@ async function bootMobile() {
 function mobileShow(view) {
   if (view === 'team') view = 'crew_flow';
   if (view === 'work_role' || view === 'member_join') view = 'connection';
-  if (!mobileHasAccountSession() && ['crew_flow','compliance','draft'].indexOf(view) !== -1) {
+  if (!mobileHasAccountSession() && !__demoMode && ['crew_flow','compliance','draft'].indexOf(view) !== -1) {
     view = 'connection';
   }
   if (state.view === 'team') stopTeamChatPoll();
@@ -15997,6 +15985,11 @@ async function mobileAccountLogin() {
   if (box) { box.textContent = ''; box.hidden = true; }
   try {
     await nativeAccountLogin();
+    // No.695 C-D3: вход аккаунтом — смена профиля БЕЗ перезагрузки страницы, поэтому
+    // устаревшие списки обязаны погаснуть здесь, иначе база, загруженная под другим
+    // аккаунтом, покажется как своя.
+    state.seafarersLoaded = false;
+    state.vacancies = [];
     mobileShow('crew_flow');
   } catch (e) {
     var code = String((e && e.message) || e || '').replace(/^\s+|\s+$/g, '');

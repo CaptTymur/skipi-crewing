@@ -1464,15 +1464,19 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
 
   // S1. The entry screen and the connect dialog hold no Cyrillic literals.
   const entryBody = cut('function renderEntryChoice(next){', '\nfunction demoToast(msg){');
-  const connectBody = cut('function openConnectDialog(opts){', '\nfunction closeConnectDialog(){');
   const CYR_LITERAL = /'[^']*[А-Яа-яЁё][^']*'/g;
   ok((entryBody.match(CYR_LITERAL) || []).length === 0, 'S1 (A4): renderEntryChoice carries no Cyrillic string literal');
-  ok((connectBody.match(CYR_LITERAL) || []).length === 0, 'S1 (A4b): openConnectDialog carries no Cyrillic string literal');
   ok((entryBody.match(/tr\('entry\./g) || []).length >= 8, 'S1 (A4): the entry screen renders eight entry.* dictionary strings');
-  ok((connectBody.match(/tr\('connect\./g) || []).length >= 13, 'S1 (A4b): the connect dialog renders the connect.* dictionary strings');
-  ok((connectBody.match(/escapeAttr\(tr\('connect\./g) || []).length >= 2, 'S1 (A4b): dictionary values interpolated into attributes go through escapeAttr()');
-  const friendly = cut('function connectFriendlyError(e){', '\nasync function connectSubmitToken(){');
-  ok((friendly.match(CYR_LITERAL) || []).length === 0 && (friendly.match(/tr\('connect\.err_/g) || []).length === 4, 'S1 (A4b): all four connect errors come from connect.err_* keys');
+  // No.880: диалог токена/QR удалён ((1495)). Его утверждения A4b не выброшены, а
+  // переведены на форму входа, которая встала на его место внутри той же развилки:
+  // те же три свойства — нет кириллических литералов, значения идут из словаря,
+  // и то, что попадает В АТРИБУТ, проходит через escapeAttr.
+  ok(!/function openConnectDialog\(/.test(html) && !/function connectSubmitToken\(/.test(html),
+    'S1 (A4b): the token/QR connect dialog is gone from the source');
+  ok((entryBody.match(/tr\('settings\.crewing\.login\./g) || []).length >= 5,
+    'S1 (A4b): the login form on the fork renders its five dictionary captions');
+  ok((entryBody.match(/escapeAttr\(tr\('settings\.crewing\.login\./g) || []).length >= 2,
+    'S1 (A4b): dictionary values interpolated into attributes go through escapeAttr');
 
   // R3. Runtime: the mobile Apps header differs between RU and EN.
   const langBlock = cut("var UI_LANG_KEY = 'skipi-crewing-ui-language';", '// ── @skipi/settings v0.3.0 dictionary');
@@ -1610,9 +1614,11 @@ console.log('# K2 modules/crew-flow');
   softOk(html.includes('data-qa="crew-flow-view"') && html.includes('id="mt-crew_flow"') && html.includes("crew_flow: 'bottom-nav-crew_flow'"),
     'K2-2: PR-P must-keep crew_flow presence tokens survive the K2 dist');
   // S11: Team stays reachable from Settings → Доступ / токены (only token issuer)
-  const k2access = k2slice("} else if (settingsTab==='access') {", "} else if (settingsTab==='app') {");
-  softOk(k2access.includes('data-qa="settings-team-access-open"') && /showView\(\\?'team\\?'\)/.test(k2access) && k2access.includes('hasTeamAccess()'),
-    'K2-2/S11: Settings → Доступ / токены keeps a gated entry into the team view');
+  // No.880: вкладки «Доступ / токены» больше нет, и входа в командный вид через
+  // неё тоже — Team снят 25a3b0a8, слой токена снят (1495). Утверждение заменено
+  // на обратное по смыслу, чтобы вход не вернулся незамеченным.
+  softOk(!/settingsTab==='access'/.test(html) && !html.includes('data-qa="settings-team-access-open"'),
+    'K2-2/S11: the access tab and its gated entry into the team view are both gone');
 
   // --- 3. start view and fallbacks --------------------------------------------
   softOk(/var state = \{\s*\n\s*view: 'crew_flow',/.test(html), 'K2-3: the desktop start view is crew_flow');
@@ -1621,8 +1627,10 @@ console.log('# K2 modules/crew-flow');
   softOk(/v = 'crew_flow';/.test(k2showView), 'K2-3: the team gate in showView falls back to crew_flow');
   softOk(k2slice('async function bootDesktopMain(){', '\n(async function(){').includes("showView('crew_flow');"),
     'K2-3: desktop boot opens crew_flow');
-  softOk(count(/mobileShow\(mobileHasConnection\(\) \? 'crew_flow' : 'connection'\)/g) === 2,
-    'K2-3: both mobile boot paths open crew_flow when connected');
+  // No.880: таких развилок теперь ОДНА — вторая была в trialGoConnect, который стал
+  // trialGoSignIn и ведёт на экран входа напрямую. Число названо, а не подогнано.
+  softOk(count(/mobileShow\(mobileHasAccountSession\(\) \? 'crew_flow' : 'connection'\)/g) === 1,
+    'K2-3: the mobile boot path opens crew_flow on an account session, sign-in otherwise');
   const k2mobileShow = k2slice('function mobileShow(view) {', '\nfunction mobileBack()');
   softOk(k2mobileShow !== '' && !/return mobileRenderVacancies\(\);/.test(k2mobileShow),
     'K2-3: mobileShow no longer defaults to the vacancies renderer');
@@ -1631,9 +1639,10 @@ console.log('# K2 modules/crew-flow');
   // S-входы: the three live entries named by the supervisor
   softOk(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\(\\?'crew_flow\\?'\)/.test(html),
     'K2-3/S: the mobile header home button opens crew_flow');
-  softOk(k2slice('function connectSubmit', '\nfunction connectShowError').includes("mobileShow('crew_flow')")
-      || /state\.vacancies = \[\];\s*\n\s*if \(isMobileShellActive\(\)\) mobileShow\('crew_flow'\);/.test(html),
-    'K2-3/S: navigation after a successful company token lands on crew_flow');
+  // No.880: успешного «подключения токеном» больше не существует; на его месте
+  // успешный вход аккаунтом, и он обязан приводить туда же — в crew_flow.
+  softOk(k2slice('async function mobileAccountLogin()', '\nfunction mobileRenderConnection()').includes("mobileShow('crew_flow')"),
+    'K2-3/S: navigation after a successful ACCOUNT LOGIN lands on crew_flow');
   softOk(!/renderTeamOnboarding[\s\S]{0,4000}?showView\('team'\)/.test(html)
       || k2slice('async function teamOnboardingShowTeam() {', '\nasync function syncTeamRoleFromMembers') === ''
       || !html.includes('onclick="teamOnboardingShowTeam()"'),
@@ -2205,8 +2214,10 @@ console.log('# K2 modules/crew-flow');
       // C-D3 (static): the only profile switch that does not reload the page
       // (mobile shell, connect dialog) drops the flag, so a base loaded under
       // another profile is not shown as this one's.
-      softOk(/state\.seafarersLoaded = false;\n\s*state\.vacancies = \[\];\n\s*if \(isMobileShellActive\(\)\) mobileShow\('crew_flow'\);\n\s*else location\.reload\(\);/.test(html),
-        'No.695 C-D3: the connect-dialog switch resets state.seafarersLoaded before the mobile branch that does not reload');
+      // No.880: единственная смена профиля без перезагрузки — теперь вход аккаунтом
+      // (диалог подключения удалён). Свойство то же, адрес другой.
+      softOk(/state\.seafarersLoaded = false;\n\s*state\.vacancies = \[\];\n\s*mobileShow\('crew_flow'\);/.test(html),
+        'No.695 C-D3: the account-login switch resets state.seafarersLoaded before the mobile branch that does not reload');
       // C-D6 (static): the flag is set on the success path only, never in the catch.
       const catchDesktop = (readerDesktop.match(/catch\s*\(e\)\s*\{[\s\S]*?\n  \}/) || [''])[0];
       const catchMobile = (readerMobile.match(/catch\s*\(e\)\s*\{[\s\S]*?\n  \}/) || [''])[0];
@@ -2666,7 +2677,7 @@ console.log('# K2 modules/crew-flow');
     // URL and no token field. The hint now names the Crewing-owned connection
     // section (home-crewing-connection) that openSettings('connection') opens,
     // and the retired wording is asserted absent so it cannot come back.
-    for (const [lang, needle, retired] of [['ru', 'Подключение', 'Доступ / токены'], ['en', 'Connection', 'Access / tokens']]) {
+    for (const [lang, needle, retired] of [['ru', 'аккаунт Skipi', 'Доступ / токены'], ['en', 'Skipi account', 'Access / tokens']]) {
       const emptyCtx = makeCrewContext({ language: lang, settings: {} });
       emptyCtx.__crew.renderCrewFlowView();
       await flush();
@@ -2817,7 +2828,8 @@ console.log('# K2 modules/crew-flow');
         ['compliance detail', fxSlice('function renderComplianceProfileDetail', '\nfunction renderComplianceProfileForm')],
         ['compliance form', fxSlice('function renderComplianceProfileForm', '\nasync function saveComplianceProfile')],
         ['settings org', fxSlice("  if (settingsTab==='org') {", "  } else if (settingsTab==='data') {")],
-        ['settings access', fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {")],
+        // No.880: экрана «settings access» больше нет — вкладка снята вместе со слоем токена.
+        ['settings data', fxSlice("  } else if (settingsTab==='data') {", "  } else if (settingsTab==='app') {")],
       ];
       const nav = /вакансии|вакансию|вакансий|вакансиях|вакансия|Vacanc|vacanc/;
       for (const [name, slice] of screens) {
@@ -2850,9 +2862,9 @@ console.log('# K2 modules/crew-flow');
       softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
         'S5: neither the harness nor the workflow still accepts a superseded guard pin');
       softOk(!html.includes('Vacancies -> Applications'), 'S5: the three unreachable "Vacancies -> Applications" strings are gone');
-      const access = fxSlice("  } else if (settingsTab==='access') {", "  } else if (settingsTab==='app') {");
-      softOk(/tr\('settings\.team_access[^']*'\)/.test(access) || /crewFlowTr|tr\('team\./.test(access),
-        'S5: the team-access settings row is served through tr(), not a Russian literal');
+      // No.880: ряда team-access нет вместе со вкладкой; проверяем отсутствие.
+      softOk(!html.includes('data-qa="settings-team-access-open"'),
+        'S5: the team-access settings row is gone with the access tab');
     }
 
     // ---- S7: the mobile Crew Flow subtitle is localized -----------------------
@@ -3049,8 +3061,9 @@ console.log('# K2 modules/crew-flow');
       softOk(/data-qa="pilot-bytes-web-note"/.test(webHtml), 'K2.1-9: the web shell explains why the byte controls are off');
       await tryRun(webCtx2, "crewFlowWriteEmail('intake-1','reply');"); await flush();
       const webDraft = webCtx2.nodes.get('main').innerHTML;
-      softOk(/data-qa="pilot-draft-mailto"[^>]*href="mailto:oleh@example\.test\?subject=/.test(webDraft),
-        'K2.1-9: on the web shell the draft is a mailto: link the browser can open');
+      // No.179/F5: адрес URL-кодируется на месте сборки — «@» приезжает как %40.
+      softOk(/data-qa="pilot-draft-mailto"[^>]*href="mailto:oleh%40example\.test\?subject=/.test(webDraft),
+        'K2.1-9: on the web shell the draft is a URL-encoded mailto: link the browser can open');
       softOk(!webCtx2.calls.some((c) => c.command === 'open_mailto'),
         'K2.1-9: the web shell never calls the native open_mailto');
     }
@@ -3284,12 +3297,15 @@ console.log('# K2 modules/crew-flow');
       // The attribute is escaped by escapeAttr, so `&` arrives as `&#38;`. What the
       // browser will follow is the DECODED url; both halves are measured.
       const href = rawHref.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
-      softOk(href.startsWith('mailto:oleh@example.test?subject=') && href.includes('&body='),
-        'K2.1-21: a valid address still gets its mailto link — got ' + href.slice(0, 64));
+      // No.179/F5 (приехало с main через PR #77): адрес в mailto теперь проходит
+      // encodeURIComponent на месте сборки, поэтому «@» приезжает как %40. Ожидание
+      // обновлено на ЗАКОДИРОВАННУЮ форму — это и есть исправленное поведение.
+      softOk(href.startsWith('mailto:' + encodeURIComponent('oleh@example.test') + '?subject=') && href.includes('&body='),
+        'K2.1-21: a valid address still gets its mailto link, URL-encoded — got ' + href.slice(0, 64));
       // The BODY legitimately carries %0A (a multi-line message); what must never
       // carry one is the ADDRESS part, where it would be a header injection.
       const addressPart = href.slice('mailto:'.length).split('?')[0];
-      softOk(addressPart === 'oleh@example.test' && !/%0d|%0a|%2c|%3f|%26/i.test(addressPart),
+      softOk(decodeURIComponent(addressPart) === 'oleh@example.test' && !/%0d|%0a|%2c|%3f|%26/i.test(addressPart),
         'K2.1-21: the address part of the link is exactly the checked address — got ' + addressPart);
       softOk(!/[ <>"']/.test(rawHref) && !/[ <>"']/.test(href) && href.indexOf(String.fromCharCode(10)) === -1 && href.indexOf(String.fromCharCode(13)) === -1,
         'K2.1-21: the link carries no raw space, quote, angle bracket, CR or LF, escaped or not');

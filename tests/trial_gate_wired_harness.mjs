@@ -53,7 +53,9 @@ const checks = [
   ['contact phone +357 97 617 412', /\+?357\s*97\s*617\s*412|35797617412/],
   ['TRIAL_DAYS constant', /TRIAL_DAYS\s*=/],
   ['TRIAL_WARNING_FROM_DAY constant', /TRIAL_WARNING_FROM_DAY\s*=/],
-  ['license token activation endpoint', /\/api\/trial\/activate/],
+  // No.880/(1495): активации по лицензионному токену больше нет — ни поля, ни
+  // эндпоинта. Вместо неё требуется путь входа аккаунтом из оверлея блокировки.
+  ['sign-in path out of the blocked overlay', /function trialGoSignIn\(/],
 ];
 
 let fail = 0;
@@ -149,8 +151,12 @@ function loadTrialContext({ serverMode, startedDaysAgo }) {
       throw new Error(`unexpected invoke ${cmd}`);
     },
   };
+  // No.880: оверлей блокировки теперь берёт тексты из словаря (tr) и экранирует их,
+  // поэтому в контекст добавлены те же два помощника, что есть в продукте.
+  ctx.tr = (key) => String(key);
+  ctx.escapeHtml = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   vm.createContext(ctx);
-  vm.runInContext(`${extractTrialScript()}\nthis.__trial = { trialGateApply, trialPhase, trialActivateLicense, trialShowBlockedOverlay };`, ctx);
+  vm.runInContext(`${extractTrialScript()}\nthis.__trial = { trialGateApply, trialPhase, trialGoSignIn, trialShowBlockedOverlay };`, ctx);
   return ctx;
 }
 
@@ -163,16 +169,18 @@ async function runtimeChecks() {
   assert.equal(await ctx.__trial.trialGateApply(), 'blocked', 'server expired blocks despite fresh local clock');
   assert.ok(ctx.document.getElementById('trial-block-overlay'), 'server expired shows blocked overlay');
 
-  ctx = loadTrialContext({ serverMode: 'active', startedDaysAgo: 20 });
-  ctx.__trial.trialShowBlockedOverlay('');
-  ctx.document.setNode('trial-license', { value: 'valid-license-token' });
-  ctx.document.setNode('trial-license-error');
-  ctx.document.setNode('trial-license-btn');
-  await ctx.__trial.trialActivateLicense();
-  assert.equal(ctx.document.getElementById('trial-block-overlay'), null, 'activate success removes overlay');
-  assert.equal(ctx.localStorage.dump().skipi_license_token, 'valid-license-token', 'activate stores license token');
-  assert.ok(ctx.bootCalls > 0, 'activate continues boot without re-blocking');
-  console.log('OK: runtime trial gate — server active/expired/activate cases');
+  // No.880: «истёкшее право блокирует приложение» — покрытие сохранено целиком;
+  // ушёл только способ разблокировки: не активация лицензионного токена, а вход
+  // аккаунтом. Оверлей обязан увести на экран входа и не оставить токенных полей.
+  ctx = loadTrialContext({ serverMode: 'expired', startedDaysAgo: 20 });
+  await ctx.__trial.trialGateApply();
+  const blocked = ctx.document.getElementById('trial-block-overlay');
+  assert.ok(blocked, 'expired right still blocks the app');
+  const blockedHtml = String(blocked.innerHTML || '');
+  assert.ok(!/trial-license/.test(blockedHtml), 'the blocked overlay offers no license-token field');
+  assert.ok(!/токен|token/i.test(blockedHtml), 'the blocked overlay asks for no token at all');
+  assert.ok(/trialGoSignIn\(\)/.test(blockedHtml), 'the blocked overlay offers the sign-in path instead');
+  console.log('OK: runtime trial gate — active overrides, expired blocks, unblocking is sign-in');
 }
 
 await runtimeChecks();

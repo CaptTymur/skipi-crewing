@@ -708,51 +708,32 @@ if (M) {
   const r2Sections = M.crewingSettingsSections ? M.crewingSettingsSections() : [];
   const r2Conn = r2Sections.filter((s) => s && s.id === 'home-crewing-connection')[0] || null;
   const r2Work = r2Sections.filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || null;
-  ok(!!r2Conn, 'R2/1: the unified shell carries a Crewing-owned connection section');
 
   const r2Opened = [];
-  const r2Saved = [];
   const r2Ctx = {
     settings: M.state.settings,
     t: M.tr,
     escapeHtml: M.escapeHtml,
     escapeAttr: M.escapeAttr,
-    saveSettings: (next) => { r2Saved.push(next); return Promise.resolve(next); },
+    saveSettings: (next) => Promise.resolve(next),
     refresh: () => Promise.resolve(),
     open: (id) => { r2Opened.push(String(id)); return true; },
   };
 
-  const r2ConnHtml = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(/id="s-url"/.test(r2ConnHtml),
-    'R2/1: the connection section renders the Server URL field under the SAME id the connect code reads (s-url)');
-  ok(/id="s-token"/.test(r2ConnHtml),
-    'R2/1: the connection section renders the company-token field (s-token)');
-  ok(/type="password"/.test(r2ConnHtml), 'R2/1: the company token field is masked');
-  ok(/data-settings-action="crewing-activate-token"/.test(r2ConnHtml)
-    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-activate-token']) === 'function',
-    'R2/1: the section offers the validate action and wires a handler for it');
-  ok(/data-settings-action="crewing-start-trial"/.test(r2ConnHtml)
-    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-start-trial']) === 'function',
-    'R2/1: the section offers the trial action and wires a handler for it');
-  ok(typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-save-connection']) === 'function',
-    'R2/1: the Server URL can be stored without a token (the stand case) — a save handler exists');
-
-  // the fail-closed legacy renderer is NOT the only place the fields live
-  const legacyOnly = (HTML.match(/function renderSettingsModal\(\)[\s\S]*?\n\}/) || [''])[0];
+  // No.880: секции подключения больше нет — вместе с ней ушли Server URL, поле
+  // токена, Validate и триал ((1607)/(1495)). Утверждения R2/1 не выброшены: каждое
+  // заменено обратным по смыслу, плюс сказано, ГДЕ теперь живёт вход.
+  ok(!r2Conn, 'R2/1: the unified shell no longer carries a Crewing-owned connection section');
   const modulePart = (HTML.match(/function _crewingSettingsSections\(\)\{([\s\S]*?)\n\}\n/) || ['', ''])[1];
-  ok(/id="s-url"/.test(modulePart) || /'s-url'/.test(modulePart),
-    'R2/1: the Server URL field exists in the module-owned sections, not only in the fail-closed renderer');
-  ok(/id=.s-url/.test(legacyOnly) || /'s-url'/.test(legacyOnly),
-    'R2/1 (control): the legacy fail-closed renderer still has its own field — this test would be vacuous otherwise');
-
-  // RU and EN both render
-  store.set('skipi-crewing-ui-language', 'ru');
-  const r2ConnRu = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(/[Ѐ-ӿ]/.test(r2ConnRu), 'R2/1: the connection section renders in Russian');
-  store.set('skipi-crewing-ui-language', 'en');
-  const r2ConnEn = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(!/[Ѐ-ӿ]/.test(r2ConnEn) && /Server URL/.test(r2ConnEn),
-    'R2/1: the connection section renders in English with no Cyrillic left behind');
+  for (const [needle, what] of [["'s-url'", 'Server URL'], ["'s-token'", 'the company-token field'],
+                                ["'s-crewing-id'", 'Crewing ID'], ['crewing-activate-token', 'the validate action'],
+                                ['crewing-start-trial', 'the trial action']]) {
+    ok(!modulePart.includes(needle), 'R2/1: the module-owned sections no longer offer ' + what);
+  }
+  const entryBody = (HTML.match(/function renderEntryChoice\(next\)\{[\s\S]*?\n\}/) || [''])[0]
+    || (HTML.match(/function renderEntryChoice\(next\) \{[\s\S]*?\n\}/) || [''])[0];
+  ok(/id="a-email"/.test(entryBody) && /id="a-password"/.test(entryBody),
+    'R2/1: the account form moved to the entry fork, where sign-in now happens');
 
   // the «Open profile» button used to close the overlay and land nowhere
   if (r2Work && r2Work.handlers && typeof r2Work.handlers['crewing-open-profile'] === 'function') {
@@ -769,10 +750,10 @@ if (M) {
   const emptyUnconnected = [...HTML.matchAll(/'crew_flow\.empty_unconnected':'([^']*)'/g)].map((m) => m[1]);
   ok(emptyUnconnected.length === 2, 'R2/1: crew_flow.empty_unconnected is defined in both dictionaries — got '
     + emptyUnconnected.length);
-  ok(!emptyUnconnected.some((v) => /Доступ \/ токены|Access \/ tokens/i.test(v)),
-    'R2/1: the empty-queue hint no longer sends the operator to the retired «Access / tokens» tab');
-  ok(/Connection/i.test(emptyUnconnected[0] || '') && /Подключени/i.test(emptyUnconnected[1] || ''),
-    'R2/1: the hint names the connection screen that actually exists, EN and RU');
+  ok(!emptyUnconnected.some((v) => /Доступ \/ токены|Access \/ tokens|Подключени|Connection/i.test(v)),
+    'R2/1: the empty-queue hint no longer sends the operator to a retired connection screen');
+  ok(/Skipi account/i.test(emptyUnconnected[0] || '') && /аккаунт Skipi/i.test(emptyUnconnected[1] || ''),
+    'R2/1: the hint names signing in with a Skipi account, EN and RU');
 }
 
 // ============================================================================
