@@ -44,7 +44,9 @@ pub(crate) struct LocalPlan<'a> {
     #[cfg(test)] controls: Option<TestControls<'a>>,
     #[cfg(test)] legacy_key_source_override: Option<PathBuf>,
 }
-#[cfg(test)]
+// No.880 п.2: тип нужен ОБЕИМ сборкам — он описывает намерение «создать чистый
+// контекст», а не тестовую оснастку. Поле `fresh` ниже остаётся тестовым: это
+// ВНЕДРЕНИЕ намерения, а приложение намерение ВЫДЕЛЯЕТ.
 struct FreshIntent { database: database::Namespace, key: database::Namespace, stable_uuid: String }
 pub(crate) struct NativeSettingsTarget {
     path: PathBuf,
@@ -90,6 +92,28 @@ impl<'a> LocalPlan<'a> {
             // its mkdir/fallback path or any key generation/active crypto helper.
             let root=dirs::config_dir().ok_or("key_unavailable")?.join("skipi-crewing").join("keys");
             database::Namespace::inspect(&root).map_err(|_|"key_unavailable")
+        }
+    }
+    // Единственное место, где сборки расходятся: откуда приходит намерение.
+    // В тесте — внедрённое (чтобы ни один прогон не писал в рабочий каталог
+    // пользователя), в приложении — выделенное нативным аллокатором.
+    fn fresh_intent(&self) -> Result<FreshIntent, &'static str> {
+        #[cfg(test)]
+        {
+            let fresh=self.fresh.as_ref().ok_or("fresh_context_unavailable")?;
+            return Ok(FreshIntent { database: fresh.database.clone(), key: fresh.key.clone(),
+                stable_uuid: fresh.stable_uuid.clone() });
+        }
+        #[cfg(not(test))]
+        {
+            // Код отказа аллокатора — `fresh_namespace_unavailable`; у него есть
+            // свой текст в интерфейсе, то есть причина называется, а не прячется.
+            // Пофазовые эффекты аллокатора (что успело создаться) сюда пока не
+            // переносятся — это названный пробел, а не умолчание.
+            let allocated=database::native_fresh::FreshNamespaces::allocate_application()
+                .map_err(|error| error.code)?;
+            let (stable_uuid, db, key)=allocated.into_parts();
+            Ok(FreshIntent { database: db, key, stable_uuid })
         }
     }
     fn key_created(&self, namespace:&database::Namespace, owner:database::Owner, effects:&RefCell<Effects>)
@@ -143,22 +167,23 @@ impl<'a> LocalPlan<'a> {
             if !allow_fresh || mode(current,&[crate::api::PRIMARY_API,crate::api::RU_API]) != Mode::Unbound {
                 return Err("migration_required");
             }
-            #[cfg(not(test))]
-            { return Err("fresh_context_unavailable"); }
-            #[cfg(test)]
-            {
-                let fresh=self.fresh.as_ref().ok_or("fresh_context_unavailable")?;
-                let owner=database::Owner::from_validated_binding(record.account_id.clone(),
-                    proposed.crewing_id.clone(),fresh.stable_uuid.clone()).map_err(|_|"ownership_conflict")?;
-                effects.borrow_mut().database_preparation_started=true;
-                effects.borrow_mut().database_fresh_may_have_created=true;
-                self.count_prepare();
-                let database=self.store.prepare_fresh(fresh.database.clone(),owner.clone()).map_err(|_|"database_unavailable")?;
-                let key=self.key_created(&fresh.key,owner,effects)?;
-                let binding=Binding::from_references(fresh.stable_uuid.clone(),database.reference(),key.reference())?;
-                let vault_path=database.reference().vault_path().ok_or("ownership_conflict")?.to_owned();
-                (LocalPrepared {database,key,binding},WorkspaceReference::Fresh {vault_path})
-            }
+            // No.880 п.2 (№793). Прежде здесь стоял отказ `fresh_context_unavailable`
+            // для всех НЕ-тестовых сборок: первый вход аккаунтом на чистой установке
+            // упирался в заглушку. Теперь ветка ОБЩАЯ, и различается ровно один шаг —
+            // ОТКУДА берутся пространства имён: в тесте их внедряют, в приложении их
+            // выделяет `native_fresh::FreshNamespaces` (модуль был написан и помечен
+            // «никто его не зовёт» — теперь зовёт).
+            let fresh=self.fresh_intent()?;
+            let owner=database::Owner::from_validated_binding(record.account_id.clone(),
+                proposed.crewing_id.clone(),fresh.stable_uuid.clone()).map_err(|_|"ownership_conflict")?;
+            effects.borrow_mut().database_preparation_started=true;
+            effects.borrow_mut().database_fresh_may_have_created=true;
+            self.count_prepare();
+            let database=self.store.prepare_fresh(fresh.database.clone(),owner.clone()).map_err(|_|"database_unavailable")?;
+            let key=self.key_created(&fresh.key,owner,effects)?;
+            let binding=Binding::from_references(fresh.stable_uuid.clone(),database.reference(),key.reference())?;
+            let vault_path=database.reference().vault_path().ok_or("ownership_conflict")?.to_owned();
+            (LocalPrepared {database,key,binding},WorkspaceReference::Fresh {vault_path})
         };
         #[cfg(test)]
         if let Some(control)=&self.controls {

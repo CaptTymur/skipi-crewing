@@ -366,6 +366,24 @@ await run('No.827 — invoke() keys are the camelCase of #[tauri::command] param
   // Проверяется и объявление (#[tauri::command]), и регистрация
   // (generate_handler!), и вызов из UI — иначе снятая из списка команда могла бы
   // остаться живой в теле, а снятое тело — остаться в списке.
+  // No.880 S2 п.2 (№793): производственная ветка Fresh перестала быть
+  // отказ-заглушкой. Юнит-тест до неё не достаёт — она под `cfg(not(test))`, —
+  // поэтому факт закрепляется по ИСХОДНИКУ, и это сказано прямо, а не выдано за
+  // проверку поведения. Поведение общей ветки покрыто тестами Rust через
+  // внедряемый источник пространств имён.
+  {
+    const commit=rsSources['native_local_commit.rs'];
+    ok(!!commit&&commit.length>1000,'control: the commit module is among the parsed Rust sources');
+    ok(/FreshNamespaces::allocate_application\(\)/.test(commit),
+       'No.880/№793: the production fresh branch allocates a real native-owned context');
+    ok(!/#\[cfg\(not\(test\)\)\][\s\S]{0,80}return Err\("fresh_context_unavailable"\)/.test(commit),
+       'No.880/№793: the production fresh branch is no longer a refusal stub');
+    // Отказ аллокатора обязан иметь ТЕКСТ: иначе человек увидит «отказ по
+    // неизвестной причине» вместо называемой причины (канон UI).
+    ok(/"fresh_namespace_unavailable":\s*"fresh_unavailable"/.test(html),
+       'No.880/№793: the allocator refusal code maps to a named text, not to refused_unspecified');
+  }
+
   // No.880 S2 п.5: цепочка «дверь → помощник → команда» закрывается здесь на
   // последнем звене. Дверь→помощник пинит presence (`onclick="entryOpenRegister()"`),
   // а это звено проверяет, что помощник действительно ЗОВЁТ команду, а не
