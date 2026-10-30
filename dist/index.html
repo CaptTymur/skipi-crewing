@@ -1306,6 +1306,12 @@ function crewingIsPublicSettings(s) {
     'team_role','reply_to','vault_path'].every(function(key){ return typeof s[key] === 'string'; })
     && typeof s.team_onboarding_seen === 'boolean'
     && (s.token_expires_at === null || typeof s.token_expires_at === 'string')
+    // No.880: три поля аккаунт-сессии объявлены ЗДЕСЬ намеренно. Без этого
+    // Rust, забывший поле, оставил бы UI с undefined, и «нет сессии» читалось
+    // бы как факт при полностью зелёных проверках.
+    && typeof s.account_session === 'string' && !!s.account_session
+    && typeof s.entitlement_source === 'string'
+    && (s.entitlement_expires_at === null || typeof s.entitlement_expires_at === 'string')
     && ['legal_name','jurisdiction','registration_number','mlc_cert_number','mlc_cert_valid_to',
       'contact_email','contact_phone','slug','public_description'].every(function(key){ return typeof s.profile[key] === 'string'; })
     && typeof s.interface.theme === 'string' && typeof s.interface.language === 'string';
@@ -1321,6 +1327,11 @@ var convertFileSrc = (window.__TAURI__.core && window.__TAURI__.core.convertFile
 var DEMO = {
   settings: {
     server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_demo', crewing_id: 'demo-crewing',
+    // No.880: поле держит форму DTO полной (валидатор его требует). На решения
+    // демонстрации оно не влияет: КАЖДЫЙ гейт демо проверяет `__demoMode` РАНЬШЕ
+    // — развилка, мобильные гейты и отказ пилота. Демо входит через развилку,
+    // поэтому состояния «демо без __demoMode» не существует.
+    account_session: 'active', entitlement_source: 'demo', entitlement_expires_at: null,
     organization_id: 'demo-org', company_name: 'Demo Crewing Agency', user_display_name: 'Demo User',
     token_scopes: ['vacancies:read','applications:read'], token_expires_at: null,
     team_role: 'member', team_onboarding_seen: true, reply_to: 'crew@demo-agency.example',
@@ -1659,8 +1670,22 @@ function exitDemoMode(){ try { localStorage.removeItem('skipi_crewing_demo'); } 
 // компании), crewing_id (серверный UUID организации), localStorage skipi_crewing_entry
 // (переживает выход и смену аккаунта).
 function crewingAccountSessionActive(s){
-  void s;
-  return false; // UNKNOWN до S2
+  // No.880 S2, пункт 4: UNKNOWN закрыт. Единственный признак — поле проекции,
+  // которое собирает Rust в одном месте (`account_session_state`). Все исходы
+  // названы полем: none · locked · signed_out · expired · active · legacy ·
+  // unavailable. Пропуск развилки даёт РОВНО 'active'.
+  // 'legacy' сессией аккаунта не является: по ARCH-019 легаси-пользователь
+  // входит аккаунтом один раз, и развилку ему показать обязаны.
+  // 'expired' и 'unavailable' тоже не 'active' — устаревание и неизвестность
+  // не схлопываются в «нет сессии» (канон UI, принцип 1).
+  return !!s && s.account_session === 'active';
+}
+// Отображение «рабочее место живо» верно для ДВУХ исходов: действующей
+// аккаунт-сессии и легаси-подключения, у которого база открыта. Это не второй
+// сборщик значения — состав собирает Rust, здесь только чтение двух названных
+// исходов одним местом вместо повторённой дизъюнкции.
+function crewingWorkspaceLive(s){
+  return !!s && (s.account_session === 'active' || s.account_session === 'legacy');
 }
 function shouldShowEntryChoice(){
   if (__demoMode) return false;
@@ -7227,13 +7252,18 @@ function pilotReason(code) {
 }
 function pilotContextSnapshot() {
   var s = state.settings || {};
-  return { server_url:String(s.server_url || '').trim(), connection_context:String(s.connection_context || '').trim(), crewing_id:String(s.crewing_id || '').trim(), has_bearer_token:!!s.has_bearer_token };
+  // No.880: признак готовности — аккаунт-сессия, а не легаси-токен компании.
+  return { server_url:String(s.server_url || '').trim(), connection_context:String(s.connection_context || '').trim(), crewing_id:String(s.crewing_id || '').trim(), account_session:String(s.account_session || '') };
 }
 function pilotContextKey(context) {
   return [context.server_url, context.connection_context, context.crewing_id].join('\u001f');
 }
 function pilotContextReady(context) {
-  return !!(context.server_url && context.connection_context && context.crewing_id && context.has_bearer_token);
+  // No.880: пилот работает на ЖИВОЙ сессии аккаунта. Прежний признак
+  // `has_bearer_token` — легаси-токен компании, и по слову владельца (1495)
+  // такого пути из интерфейса больше нет.
+  return !!(context.server_url && context.connection_context && context.crewing_id
+    && context.account_session === 'active');
 }
 // K2 (OWNER (654)/(658)): the C3b-1/C3b-2 renderers are hosted by TWO views —
 // the technical `intake_pilot` surface and the `crew_flow` module, which is the
@@ -7280,7 +7310,9 @@ function pilotExpected(context) {
 }
 function pilotSettingsChanged(previous, next) {
   var oldKey = pilotContextKey({server_url:String(previous&&previous.server_url||'').trim(),connection_context:String(previous&&previous.connection_context||'').trim(),crewing_id:String(previous&&previous.crewing_id||'').trim()});
-  var newContext = {server_url:String(next&&next.server_url||'').trim(),connection_context:String(next&&next.connection_context||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim(),has_bearer_token:!!(next&&next.has_bearer_token)};
+  // Форма ОБЯЗАНА совпадать с pilotContextSnapshot: иначе сравнение контекстов
+  // смотрело бы на поле, которого в снимке нет, и смена сессии проходила бы молча.
+  var newContext = {server_url:String(next&&next.server_url||'').trim(),connection_context:String(next&&next.connection_context||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim(),account_session:String((next&&next.account_session)||'')};
   if (oldKey === pilotContextKey(newContext)) return;
   pilotFreshStateForContext(newContext);
   if (pilotViewActive()) {
@@ -14557,7 +14589,7 @@ function renderSettingsModal() {
   };
   var grp = function(rows){ return '<div class="settings-group">'+rows+'</div>'; };
   var sectionTitle = function(t){ return '<div class="section-title">'+escapeHtml(t)+'</div>'; };
-  var connected = !!(s.has_bearer_token || s.crewing_id);
+  var connected = crewingWorkspaceLive(s);
 
   var body = '';
   if (settingsTab==='org') {
@@ -14659,7 +14691,7 @@ function renderSettingsFiveShell() {
   var iface = s.interface || {};
   var section = settingsFiveSection(settingsTab);
   settingsTab = section;
-  var connected = !!(s.has_bearer_token || s.crewing_id);
+  var connected = crewingWorkspaceLive(s);
   var active = function(id){ return section === id ? ' active' : ''; };
   var navItem = function(id, badge, label, sub, qa) {
     return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+escapeAttr(escapeJsString(id))+'\')">'
@@ -17351,48 +17383,48 @@ function trialLocalPhase(){
 }
 var trialServerStatus = { checked_at:0, phase:null, reason:'' };
 var trialActivationConfirmedAt = 0;
-function trialTokenExpiryPhase(){
+// No.880 пункт 4. Платный слой живёт на ПРАВЕ аккаунта (`Entitlement { source,
+// expires_at }`), а не на сроке легаси-токена компании: по (1495) токена в
+// интерфейсе нет вовсе. Имя сменилось вслед за предметом — «срок токена» и
+// «срок права» это разные величины, и старое имя стало бы ложью.
+// Исходы: нет действующей сессии → null (решает местный отсчёт); право без
+// срока → 'free'; срок в будущем → 'free'; срок прошёл → 'blocked'.
+function trialEntitlementPhase(){
   var s = state.settings || {};
-  if (!s.has_bearer_token || !s.crewing_id) return null;
-  if (!s.token_expires_at) return 'free';
-  var t = Date.parse(s.token_expires_at);
+  // 'expired' — право или соединение просрочены по оценке Rust: приложение
+  // блокируется, и выход ровно один — войти заново (No.105 сохранено).
+  // Схлопнуть этот исход в null было бы тихой регрессией: истёкшее право
+  // провалилось бы в местный отсчёт и могло прочитаться как 'free'.
+  if (s.account_session === 'expired') return 'blocked';
+  if (!crewingAccountSessionActive(s)) return null;
+  if (!s.entitlement_expires_at) return 'free';
+  var t = Date.parse(s.entitlement_expires_at);
   if (!Number.isFinite(t)) return null;
   return t > Date.now() ? 'free' : 'blocked';
 }
-function trialIsAuthFailure(e){
-  var raw = String((e && e.message) || e || '');
-  return /invalid token|expired|forbidden|unauthor|not found|\b40[134]\b/i.test(raw);
-}
-async function trialServerPhase(force){
+// Перечитывание проекции вместо отдельного запроса к серверу: оно и есть
+// «спросить свежее состояние права». Отказ не прячется — причина записывается
+// в trialServerStatus и читается отказным экраном.
+async function trialRefreshEntitlement(force){
   if (typeof __demoMode !== 'undefined' && __demoMode) return { phase:'free', reason:'demo' };
-  var s = state.settings || {};
-  if (!s.server_url || !s.has_bearer_token || !s.crewing_id) return { phase:null, reason:'no_crewing_token' };
   if (!force && trialServerStatus.phase && Date.now() - trialServerStatus.checked_at < 30000) return trialServerStatus;
   try {
-    var activation = await invoke('activate_crewing_token', { serverUrl:s.server_url, expectedContext:s.connection_context });
-    var next = Object.assign({}, s, {
-      crewing_id: activation.crewing_id || s.crewing_id || '',
-      organization_id: activation.organization_id || s.organization_id || '',
-      token_scopes: activation.scopes || s.token_scopes || [],
-      token_expires_at: activation.expires_at || null,
-      company_name: s.company_name || activation.display_name || ''
-    });
-    await invoke('save_settings', { newSettings: next });
-    state.settings = next;
-    var phase = trialTokenExpiryPhase() || 'free';
-    trialServerStatus = { checked_at:Date.now(), phase:phase, reason:'server_active' };
+    var fresh = await invoke('get_settings');
+    if (!crewingIsPublicSettings(fresh)) throw new Error('invalid_public_settings');
+    state.settings = fresh;
+    var phase = trialEntitlementPhase();
+    trialServerStatus = { checked_at:Date.now(), phase:phase, reason:phase ? 'entitlement_read' : 'no_account_session' };
     return trialServerStatus;
   } catch(e) {
-    var phase = trialIsAuthFailure(e) ? 'blocked' : null;
-    trialServerStatus = { checked_at:Date.now(), phase:phase, reason:phase ? 'server_rejected' : 'server_unreachable' };
+    trialServerStatus = { checked_at:Date.now(), phase:null, reason:'settings_unreadable' };
     return trialServerStatus;
   }
 }
 async function trialPhase(opts){
   opts = opts || {};
-  var server = await trialServerPhase(!!opts.forceServer);
-  if (server.phase) return server.phase;
-  var known = trialTokenExpiryPhase();
+  var fresh = await trialRefreshEntitlement(!!opts.forceServer);
+  if (fresh.phase) return fresh.phase;
+  var known = trialEntitlementPhase();
   if (known) return known;
   if (trialActivationConfirmedAt && Date.now() - trialActivationConfirmedAt < 60000) return 'free';
   var local = trialLocalPhase();

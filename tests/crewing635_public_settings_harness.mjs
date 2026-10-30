@@ -9,6 +9,11 @@ function between(start,end) {
 const wrapper=between('var __realInvoke = window.__TAURI__.core.invoke;','var convertFileSrc =');
 const pubkey=between('function registerMessagingPubkey()','function serverUrlArg()');
 const trial=between('var trialServerStatus =','async function trialPhase(opts)');
+// No.880: фаза права читает предикат аккаунт-сессии, и слайс, в котором он живёт,
+// обязан грузиться здесь же. В продукте это одна область видимости; стенд, который
+// её не воспроизводит, ловил бы ReferenceError внутри try и читал его как
+// «настройки нечитаемы» — зелёный стенд при неработающем пути.
+const sessionPredicate=between('function crewingAccountSessionActive(s){','var __entryNext = null;');
 // No.880/§2: швы activateCompanyToken / mobileSaveConnection / mobileValidateConnection
 // сняты вместе со слоем токена компании ((1495) «никаких токенов»). Свойства, которые
 // они проверяли — «сохранённый секрет не уходит», «уходит ИСХОДНЫЙ контекст», «поздний
@@ -28,6 +33,11 @@ function publicFixture() {
       mlc_cert_number:'MLC-635',mlc_cert_valid_to:'2099-10-19',contact_email:'owner@example.invalid',
       contact_phone:'+10000000635',slug:'synthetic-owner',public_description:'Synthetic profile'},
     interface:{theme:'light',language:'ru'},
+    // No.880 пункт 4: фикстура изображает ВОШЕДШЕГО владельца, поэтому
+    // account_session:'active'. Валидатор продукта теперь требует все три поля,
+    // и синтетический DTO обязан их объявлять — иначе он проверяет не то, что
+    // приезжает из Rust.
+    account_session:'active',entitlement_source:'approved_free',entitlement_expires_at:null,
   };
 }
 const clone=v=>JSON.parse(JSON.stringify(v));
@@ -46,7 +56,7 @@ function runtime(transport) {
 state:{settings:publicFixture()},localStorage:{getItem(){return null;}},
     console:{log(){},warn(){},error(){}},pilotSettingsChanged(previous,next){changes.push([clone(previous),clone(next)]);}};
   ctx.window={__TAURI__:{core:{invoke:(command,args)=>{calls.push([command,args]);return transport(command,args);}}}};
-  vm.createContext(ctx);vm.runInContext(wrapper+'\n'+pubkey+'\n'+trial+'\n'+accountLogin,ctx);
+  vm.createContext(ctx);vm.runInContext(wrapper+'\n'+sessionPredicate+'\n'+pubkey+'\n'+trial+'\n'+accountLogin,ctx);
   return{ctx,calls,changes,nodes,notices};
 }
 let passed=0,failed=0,setup=0;
@@ -110,18 +120,27 @@ await run('actual pubkey caller stays public',async()=>{
     'pubkey request carries context and leaves credential/tenant/base selection native');
   ok(result.user_id===identity.user_id&&result.pubkey_b64===identity.pubkey_b64,'public identity preserved');
 });
-await run('actual stored activation caller stays public',async()=>{
+// No.880 пункт 4: ПРЕДМЕТ СМЕНИЛСЯ, а не снят. Прежний блок доказывал, что
+// фоновая проверка токена не уносит сохранённый креденшал. Фоновой проверки
+// токена больше нет — команда activate_crewing_token снимается, а свежесть
+// права даёт перечитывание публичной проекции. Поэтому доказывается сильнее:
+// обновление не может унести креденшал ПО КОНСТРУКЦИИ — у него нет аргументов.
+await run('actual entitlement refresh stays public and argument-free',async()=>{
   const {ctx,calls}=runtime(async(command)=>{
-    if(command==='activate_crewing_token')return{crewing_id:'company-635',organization_id:'org-635',display_name:'Synthetic owner company',scopes:['applications:read'],expires_at:'2099-10-19T12:00:00Z'};
-    if(command==='save_settings')return publicFixture();
+    if(command==='get_settings')return publicFixture();
     throw new Error('unexpected actual command '+command);
   });
   ctx.state.settings.bearer_token=secret;
-  const result=await ctx.trialServerPhase(true);const activation=calls.find(row=>row[0]==='activate_crewing_token');
-  ok(!!activation,'actual stored activation invoked');
-  ok(activation&&activation[1].expectedContext==='ctx_fixture_a'&&!Object.hasOwn(activation[1],'bearerToken'),
-    'background validation sends no saved credential');
-  ok(result.phase==='free','existing connected owner activation succeeds');
+  const result=await ctx.trialRefreshEntitlement(true);
+  const refresh=calls.find(row=>row[0]==='get_settings');
+  ok(!!refresh,'the refresh reads the public projection');
+  ok(!calls.some(row=>row[0]==='activate_crewing_token'),
+    'No.880: no manual company-token activation is dispatched any more');
+  ok(refresh&&(refresh[1]===undefined||Object.keys(refresh[1]||{}).length===0),
+    'the refresh carries no arguments at all, so no saved credential can ride in one');
+  ok(!JSON.stringify(ctx.state.settings).includes(secret),
+    'the refreshed public state carries no private credential');
+  ok(result.phase==='free','an active session without an entitlement expiry reads free');
 });
 await run('account login carries the original context and no saved credential',async()=>{
   const {ctx,calls,nodes}=runtime(async(command)=>{

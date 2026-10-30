@@ -224,7 +224,7 @@ function makeContext({ source = c3b2Source, c3b1 = c3b1Source, server = makeServ
   const context = {
     console, Promise, Date, Math, JSON, Number, String, Array, Object, Uint8Array,
     __demoMode: false,
-    state: { view: 'intake_pilot', settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', has_bearer_token: true, crewing_id: 'crew-synthetic' }, intakePilot: freshPilotState() },
+    state: { view: 'intake_pilot', settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', account_session: 'active', crewing_id: 'crew-synthetic' }, intakePilot: freshPilotState() },
     window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
     navigator: { clipboard: { writeText: async () => {} } },
     document: {
@@ -405,7 +405,7 @@ function makeProfileContext({ server = makeProfileServer(), invokeImpl, language
     __demoMode: false,
     state: {
       view: 'compliance',
-      settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', has_bearer_token: true, crewing_id: 'crew-synthetic' },
+      settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', account_session: 'active', crewing_id: 'crew-synthetic' },
       intakePilot: freshPilotState(),
       selectedComplianceProfile: { id: profileId, name: 'Master — Crude Oil Tanker', version: 2, status: 'active' },
     },
@@ -1777,7 +1777,7 @@ console.log('# K2 modules/crew-flow');
       __demoMode: demo,
       state: {
         view: 'crew_flow',
-        settings: settings === undefined ? { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', has_bearer_token: true, crewing_id: 'crew-synthetic' } : settings,
+        settings: settings === undefined ? { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', account_session: 'active', crewing_id: 'crew-synthetic' } : settings,
         intakePilot: freshPilotState(),
         crewFlowSignals: [], crewFlowReadState: {}, applicationsByVacancy: {}, attachmentsByApp: {}, messagesByApp: {},
       },

@@ -657,6 +657,38 @@ struct PublicSettings {
     recent_vaults: Vec<String>,
     profile: CrewingProfile,
     interface: InterfacePrefs,
+    // No.880 (1495), пункт 4. ЕДИНСТВЕННЫЙ признак аккаунт-сессии, пересекающий
+    // границу; имя то же и на стороне UI (`crewingAccountSessionActive` читает
+    // ровно это поле). Тип `&'static str` выбран намеренно: набор значений закрыт
+    // компилятором, опечатка в исходе не доедет до UI молча.
+    account_session: &'static str,
+    // Право живёт отдельно от соединения. Имена взяты из уже утверждённой проекции
+    // «4+1» входа (`NativeAccountLogin`), чтобы на обоих концах было одно имя;
+    // `entitlement_expires_at` — срок ПРАВА и не путается с `token_expires_at`,
+    // который остаётся сроком СОЕДИНЕНИЯ.
+    entitlement_source: String,
+    entitlement_expires_at: Option<String>,
+}
+
+// Все исходы режима названы ПОЛЕМ. `NativeSession` различается дальше по
+// `private_access`, потому что запись сессии может быть на месте, а право или
+// соединение — просрочены: это разные ответы для человека, и схлопывать их
+// в «нет сессии» нельзя (канон UI: неизвестность и устаревание не прячутся).
+fn account_session_state(settings: &Settings, origins: &[&str], now: chrono::DateTime<chrono::Utc>) -> &'static str {
+    match native_lifecycle::mode(settings, origins) {
+        native_lifecycle::Mode::Unavailable => "unavailable",
+        native_lifecycle::Mode::SignedOut => "signed_out",
+        native_lifecycle::Mode::NativeLocked => "locked",
+        native_lifecycle::Mode::LegacyConnected => "legacy",
+        native_lifecycle::Mode::Unbound => "none",
+        native_lifecycle::Mode::NativeSession => match native_lifecycle::private_access(settings, origins, now) {
+            Ok(()) => "active",
+            Err("entitlement_expired") | Err("connection_expired") => "expired",
+            // Запись есть, но предъявить её нельзя: для человека это тот же
+            // ответ, что и перезапуск без авторизации — нужно войти снова.
+            Err(_) => "locked",
+        },
+    }
 }
 fn settings_for_ui(settings: &Settings) -> PublicSettings {
     let empty = Settings::default();
@@ -678,6 +710,14 @@ fn settings_for_ui(settings: &Settings) -> PublicSettings {
         recent_vaults: visible.recent_vaults.clone(),
         profile: visible.profile.clone(),
         interface: settings.interface.clone(),
+        // Признак сессии читается из НАСТОЯЩИХ настроек, а не из `visible`:
+        // скрытая проекция обнуляет рабочее место, но состояние входа человек
+        // обязан видеть именно тогда, когда рабочего места ещё нет.
+        account_session: account_session_state(settings, &[api::PRIMARY_API, api::RU_API], chrono::Utc::now()),
+        entitlement_source: settings.native_account.as_ref()
+            .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
+        entitlement_expires_at: settings.native_account.as_ref()
+            .and_then(|record| record.entitlement.expires_at.clone()),
     }
 }
 #[tauri::command]
@@ -3154,6 +3194,80 @@ mod native635_lifecycle_red_tests {
         let s=load(&f.path);assert!(startup_should_open_db(&s));assert!(!s.native_authorized);
         assert_eq!(s.bearer_token,"legacy-synthetic-only");assert_eq!(s.profile.legal_name,"Synthetic retained profile");
         assert_eq!(s.vault_path,"/synthetic/never-opened/vault");assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+    }
+
+    // No.880 (1495), пункт 4: признак АККАУНТ-СЕССИИ в публичной проекции.
+    // Имя одно на обоих концах — `account_session` здесь и в dist. Все исходы
+    // различаются ПОЛЕМ, а не классом ошибки, включая «никогда не было» (`none`).
+    // Ложные источники, которые проверка обязана НЕ принимать за сессию:
+    // `has_bearer_token` (легаси-токен компании) и `crewing_id` (UUID организации).
+    fn session_shape(signed_out: bool, expires_in: chrono::Duration) -> Settings {
+        let mut s = native(signed_out);
+        s.server_url = api::PRIMARY_API.into();
+        s.token_scopes = native_account::COMPANY_SCOPES.iter().map(|scope| scope.to_string()).collect();
+        s.token_expires_at = Some((chrono::Utc::now() + expires_in).to_rfc3339());
+        s
+    }
+    fn session_field(s: &Settings) -> String {
+        serde_json::to_value(settings_for_ui(s)).unwrap()["account_session"].as_str().unwrap().to_string()
+    }
+    #[test]
+    fn native635_880_account_session_names_every_outcome() {
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: поле вообще присутствует в проекции, иначе все
+        // сравнения ниже сравнивали бы null с null.
+        let dto = serde_json::to_value(settings_for_ui(&Settings::default())).unwrap();
+        assert!(dto.get("account_session").is_some(), "control: the projection must carry the field at all");
+
+        assert_eq!(session_field(&Settings::default()), "none",
+            "a virgin install has never had a session");
+        assert_eq!(session_field(&legacy()), "legacy",
+            "the old company-token install is its own outcome, not a session");
+        assert_eq!(session_field(&session_shape(false, chrono::Duration::minutes(10))), "locked",
+            "a stored record without this process being authorized is locked, not active");
+        assert_eq!(session_field(&session_shape(true, chrono::Duration::minutes(10))), "signed_out",
+            "signing out is distinguishable from never having signed in");
+        let mut uncertain = Settings::default(); uncertain.load_uncertain = true;
+        assert_eq!(session_field(&uncertain), "unavailable",
+            "an unreadable store is never reported as «no session»");
+
+        let mut active = session_shape(false, chrono::Duration::minutes(10));
+        active.native_authorized = true;
+        assert_eq!(session_field(&active), "active", "an authorized live session reads active");
+        let mut expired = session_shape(false, chrono::Duration::minutes(-10));
+        expired.native_authorized = true;
+        assert_eq!(session_field(&expired), "expired",
+            "an expired session is its own outcome and never collapses into «none»");
+    }
+    #[test]
+    fn native635_880_account_session_rejects_the_false_sources() {
+        // Ровно три ложных источника из карточки. Ни один не должен дать «active».
+        let mut token_only = Settings::default();
+        token_only.bearer_token = "legacy-synthetic-only".into();
+        assert_ne!(session_field(&token_only), "active", "a company bearer token is not an account session");
+        let mut company_only = Settings::default();
+        company_only.crewing_id = "company-synthetic".into();
+        assert_ne!(session_field(&company_only), "active", "an organization UUID is not an account session");
+    }
+    #[test]
+    fn native635_880_account_entitlement_is_projected_flat() {
+        let mut active = session_shape(false, chrono::Duration::minutes(10));
+        active.native_authorized = true;
+        let expiry = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
+        if let Some(record) = active.native_account.as_mut() {
+            record.entitlement.source = "paddle".into();
+            record.entitlement.expires_at = Some(expiry.clone());
+        }
+        let dto = serde_json::to_value(settings_for_ui(&active)).unwrap();
+        // Имена те же, что в проекции «4+1» входа (NativeAccountLogin).
+        assert_eq!(dto["entitlement_source"], "paddle");
+        assert_eq!(dto["entitlement_expires_at"], serde_json::json!(expiry));
+        // И отдельное имя для отдельного срока: `token_expires_at` — это срок
+        // СОЕДИНЕНИЯ, а не права. Склейка этих двух и была бы молчащим дефектом.
+        assert_ne!(dto["entitlement_expires_at"], dto["token_expires_at"]);
+        // Без записи аккаунта поля пусты, а не отсутствуют.
+        let empty = serde_json::to_value(settings_for_ui(&Settings::default())).unwrap();
+        assert_eq!(empty["entitlement_source"], "");
+        assert_eq!(empty["entitlement_expires_at"], serde_json::Value::Null);
     }
 
     #[cfg(target_os = "linux")]

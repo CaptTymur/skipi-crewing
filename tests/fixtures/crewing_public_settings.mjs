@@ -7,6 +7,10 @@ export function crewingPublicSettingsFixture(source = {}) {
     profile:{legal_name:'',jurisdiction:'',registration_number:'',mlc_cert_number:'',mlc_cert_valid_to:'',
       contact_email:'',contact_phone:'',slug:'',public_description:''},
     interface:{theme:'light',language:'en'},
+    // No.880 пункт 4: три поля аккаунт-сессии. По умолчанию — «никогда не было»,
+    // то есть фикстура не выдаёт себя за вошедшего; тест, которому нужна живая
+    // сессия, передаёт account_session:'active' явно.
+    account_session:'none',entitlement_source:'',entitlement_expires_at:null,
   };
   for (const key of Object.keys(base)) {
     if (Object.hasOwn(source,key) && source[key] !== undefined) base[key]=source[key];

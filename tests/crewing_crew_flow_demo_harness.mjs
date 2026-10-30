@@ -367,9 +367,12 @@ try {
 ok(!!M, 'real desktop inline script loads without boot IIFE');
 
 if (M) {
+  // No.880 пункт 4: эти фикстуры изображают РАБОТАЮЩЕГО оператора, поэтому несут
+  // account_session:'active'. Легаси-флаг оставлен рядом намеренно: он проверяет,
+  // что продукт читает именно поле сессии, а не старый булев признак.
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    has_bearer_token: true, connection_context: 'ctx_crewflow',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness',
     token_scopes: ['applications:read'],
     interface: { theme: 'light', language: 'en' },
@@ -922,7 +925,7 @@ ok(r2RuntimeReady, 'R2/2: the screen keeps the already-loaded evaluations and th
 if (r2RuntimeReady) {
   MR2.state.settings = {
     server_url: 'https://api.skipi.app',
-    has_bearer_token: true, connection_context: 'ctx_crewflow',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness',
     interface: { theme: 'light', language: 'en' },
   };
@@ -1618,7 +1621,7 @@ if (r3Ready) {
   ] };
 
   MR3.state.settings = {
-    server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_crewflow',
+    server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' },
   };
   store.set('skipi-crewing-ui-language', 'en');
@@ -2073,7 +2076,7 @@ section('No.623: the queue row says who responded, and only where it can');
       row('N-noname', 'skipi_response', headline({ first_name: null, surname: null }), null),
     ], limit: 50, offset: 0, total: 5 };
     R2_FIXTURES.profiles = { items: [{ id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' }] };
-    M623.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_crewflow',
+    M623.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
       crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' } };
     store.set('skipi-crewing-ui-language', 'en');
 
@@ -2424,7 +2427,7 @@ const na683 = (profileId) => ({
 if (m683Ready) {
   M683.state.settings = {
     server_url: 'https://api.skipi.app',
-    has_bearer_token: true, connection_context: 'ctx_crewflow',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-683',
     interface: { theme: 'light', language: 'en' },
   };
@@ -2670,7 +2673,7 @@ ok(!!M683B, 'No.683B: the non-demo inline script loads a second time, with no pr
 if (M683B && typeof M683B.crewFlowCacheRanks === 'function') {
   M683B.state.settings = {
     server_url: 'https://api.skipi.app',
-    has_bearer_token: true, connection_context: 'ctx_crewflow',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-683b',
     interface: { theme: 'light', language: 'en' },
   };
@@ -2740,7 +2743,7 @@ const s3bSaved = () => ({ i3b: { action: 'saved_to_db', saved_to_db: true, at: '
 const s3bFresh = () => ({});
 const s3bSaveBtn = (html) => (String(html).match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>[\s\S]*?<\/button>/) || [''])[0];
 const s3bPrime = (M) => {
-  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_crewflow',
+  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-s3b', interface: { theme: 'light', language: 'en' } };
   M.state.intakePilot.detail = { intakeId: 'i3b', generation: 1, facts: [], responseContact: null,
     card: { summary: { candidate_name: 'Oleksandr K.' } } };
@@ -2981,7 +2984,7 @@ function cfBuild(aliases, reveal, rows) {
   store.delete('skipi_crewing_demo');
   elements.clear();
   const M = loadInlineModuleForCurrentStore();
-  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_crewflow',
+  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness' };
   return M;
 }

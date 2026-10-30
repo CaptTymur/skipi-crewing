@@ -519,6 +519,11 @@ if (M) {
       'mobileSaveConnection', 'mobileStartTrialAccess', 'mobileReadConnection',
       'trialActivateLicense', 'chooseUseApp', 'entryChoiceMade', 'trialGoConnect',
       'mobileHasConnection', 'home-crewing-connection',
+      // No.880 S2: сняты вместе со слоем токена. `trialServerPhase` спрашивал у
+      // сервера годность токена компании, `trialTokenExpiryPhase` читал его срок,
+      // `trialIsAuthFailure` распознавал отказ того же запроса. Платный слой
+      // теперь читает ПРАВО аккаунта из проекции.
+      'trialServerPhase', 'trialTokenExpiryPhase', 'trialIsAuthFailure',
     ];
     // Предмет — ВЫЗОВ, а не упоминание: комментарий, называющий снятую функцию,
     // это провенанс и он разрешён (mobileSaveOrg прямо ссылается на ту, что

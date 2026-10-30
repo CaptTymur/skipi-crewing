@@ -106,7 +106,9 @@ function makeContext({ demo = false, invokeImpl, clipboardImpl, fileReaderImpl }
     __demoMode: demo,
     state: {
       view: 'intake_pilot',
-      settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', has_bearer_token: true, crewing_id: 'crew-synthetic' },
+      // No.880 пункт 4: готовность пилота определяет АККАУНТ-СЕССИЯ, а не
+      // легаси-токен компании; поле то же, что отдаёт Rust в проекции.
+      settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', account_session: 'active', crewing_id: 'crew-synthetic' },
       intakePilot: freshPilotState(),
     },
     window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
@@ -373,11 +375,21 @@ console.log('# alias ABA lifetime, drafts and settings purge');
 console.log('# no-config and duplicate-click controls');
 {
   const ctx = makeContext();
-  ctx.state.settings.has_bearer_token = false;
-  ok(!!ctx.state.settings.server_url && !!ctx.state.settings.crewing_id && !!ctx.state.settings.connection_context,
-    'no-credential control keeps public URL, company and opaque context nonempty');
+  // No.880: «нет сессии» выражается ПОЛЕМ, и каждый не-'active' исход обязан
+  // держать пилота закрытым. Прежний вариант снимал один булев легаси-флаг;
+  // теперь перебираются все исходы, которые Rust может прислать.
+  for (const outcome of ['none', 'locked', 'signed_out', 'expired', 'legacy', 'unavailable']) {
+    const probe = makeContext();
+    probe.state.settings.account_session = outcome;
+    ok(!!probe.state.settings.server_url && !!probe.state.settings.crewing_id && !!probe.state.settings.connection_context,
+      `no-credential control (${outcome}) keeps public URL, company and opaque context nonempty`);
+    probe.__pilot.pilotEnter(); await flush();
+    ok(probe.calls.length === 0, `account_session=${outcome} performs zero invokes`);
+  }
+  // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ рядом: с 'active' тот же путь ДОХОДИТ до вызовов,
+  // иначе «ноль вызовов» доказывал бы лишь то, что пилот сломан совсем.
   ctx.__pilot.pilotEnter(); await flush();
-  ok(ctx.calls.length === 0, 'opaque context without native credential performs zero invokes');
+  ok(ctx.calls.length > 0, 'control: an active account session does reach the commands');
 }
 {
   const ctx = makeContext();

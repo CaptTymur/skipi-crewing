@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import vm from 'node:vm';
+import { crewingPublicSettingsFixture } from './fixtures/crewing_public_settings.mjs';
 import assert from 'node:assert/strict';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,32 @@ function extractTrialScript() {
   return raw.slice(start, end);
 }
 
+// No.880 пункт 4: фаза права читает ПРЕДИКАТ аккаунт-сессии, а обновление —
+// ВАЛИДАТОР публичной проекции. В продукте это одна область видимости; стенд,
+// который её не воспроизводит, ловил бы ReferenceError внутри try и читал его
+// как «настройки нечитаемы» — то есть был бы зелёным при неработающем пути.
+function slice(startMarker, endMarker) {
+  const start = raw.indexOf(startMarker);
+  const end = raw.indexOf(endMarker, start);
+  assert.ok(start > 0 && end > start, `slice markers present: ${startMarker}`);
+  return raw.slice(start, end);
+}
+function extractSessionDeps() {
+  return slice('function crewingAccountSessionActive(s){', 'var __entryNext = null;')
+    + '\n' + slice('function crewingIsPublicSettings(s) {', 'var convertFileSrc =');
+}
+
+// Проекция, какой её отдаёт Rust. Форма берётся из ОБЩЕЙ фикстуры дома, чтобы
+// состав DTO жил в одном месте, а не расходился по стендам.
+function projection(accountSession, entitlementExpiresAt) {
+  return crewingPublicSettingsFixture({
+    server_url: 'https://api.skipi.app', connection_context: 'ctx_trial_fixture',
+    crewing_id: 'crew-1', has_bearer_token: true,
+    account_session: accountSession, entitlement_source: 'approved_free',
+    entitlement_expires_at: entitlementExpiresAt,
+  });
+}
+
 function loadTrialContext({ serverMode, startedDaysAgo }) {
   const document = makeDocument();
   const localStorage = makeLocalStorage(startedDaysAgo);
@@ -127,22 +154,37 @@ function loadTrialContext({ serverMode, startedDaysAgo }) {
     document,
     window: {},
     __demoMode: false,
-    state: { settings: { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_trial_fixture', crewing_id: 'crew-1', token_expires_at: null } },
+    // Начальное состояние соответствует режиму. Для 'unreachable' сессии нет
+    // вовсе — именно это и есть случай «настройки не прочитались и о праве
+    // ничего не известно». Устаревшая, но ДЕЙСТВИТЕЛЬНАЯ проекция сохраняет
+    // свой ответ намеренно: право не отзывается тем, что обновление не удалось.
+    state: { settings: serverMode === 'unreachable' ? projection('none', null)
+      : projection(serverMode === 'expired' ? 'expired' : 'active',
+        serverMode === 'expired' ? new Date(Date.now() - 86400000).toISOString()
+                                 : new Date(Date.now() + 30 * 86400000).toISOString()) },
     bootCalls: 0,
     escapeHtml(v) { return String(v == null ? '' : v); },
     showToast() {},
     shouldUseMobileShell() { return false; },
-    mobileHasConnection() { return true; },
+    // No.880: имена приведены к продукту — гейт переименован в S1, а выход на
+    // вход идёт через общее действие.
+    isMobileShellActive() { return false; },
+    mobileHasAccountSession() { return true; },
+    renderEntryChoice() {},
+    entryShowLogin() {},
+    trialHideOverlay() {},
     mobileShow() {},
     async bootDesktopMain() { ctx.bootCalls += 1; },
     async fetch() { return { ok: true, async json() { return { active: true }; } }; },
     async invoke(cmd, args) {
-      if (cmd === 'activate_crewing_token') {
-        if (serverMode === 'active') {
-          return { crewing_id: 'crew-1', organization_id: 'org-1', display_name: 'Crew Inc', scopes: ['vacancies:read'], expires_at: new Date(Date.now() + 30 * 86400000).toISOString() };
-        }
-        if (serverMode === 'expired') throw new Error('HTTP 403 expired');
-        throw new Error('timeout');
+      // No.880: отдельной команды проверки права больше нет — свежесть даёт
+      // перечитывание публичной проекции, и Rust сравнивает срок с живым
+      // временем сам. Режим стенда задаёт ровно то, что отдаёт проекция.
+      if (cmd === 'get_settings') {
+        if (serverMode === 'unreachable') throw new Error('settings_unavailable');
+        return projection(serverMode === 'expired' ? 'expired' : 'active',
+          serverMode === 'expired' ? new Date(Date.now() - 86400000).toISOString()
+                                   : new Date(Date.now() + 30 * 86400000).toISOString());
       }
       if (cmd === 'save_settings') {
         ctx.state.settings = args.newSettings;
@@ -156,18 +198,34 @@ function loadTrialContext({ serverMode, startedDaysAgo }) {
   ctx.tr = (key) => String(key);
   ctx.escapeHtml = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   vm.createContext(ctx);
-  vm.runInContext(`${extractTrialScript()}\nthis.__trial = { trialGateApply, trialPhase, trialGoSignIn, trialShowBlockedOverlay };`, ctx);
+  vm.runInContext(`${extractSessionDeps()}\n${extractTrialScript()}\nthis.__trial = { trialGateApply, trialPhase, trialGoSignIn, trialShowBlockedOverlay, trialEntitlementPhase };`, ctx);
   return ctx;
 }
 
 async function runtimeChecks() {
+  // No.880: предмет тот же — право перевешивает местный отсчёт в ОБЕ стороны;
+  // сменился источник: поле аккаунт-сессии в проекции вместо активации токена.
   let ctx = loadTrialContext({ serverMode: 'active', startedDaysAgo: 20 });
-  assert.equal(await ctx.__trial.trialGateApply(), 'free', 'server active overrides expired local trial');
-  assert.equal(ctx.document.getElementById('trial-block-overlay'), null, 'server active removes blocked overlay');
+  assert.equal(await ctx.__trial.trialGateApply(), 'free', 'a live entitlement overrides an expired local trial');
+  assert.equal(ctx.document.getElementById('trial-block-overlay'), null, 'a live entitlement removes the blocked overlay');
 
   ctx = loadTrialContext({ serverMode: 'expired', startedDaysAgo: 0 });
-  assert.equal(await ctx.__trial.trialGateApply(), 'blocked', 'server expired blocks despite fresh local clock');
-  assert.ok(ctx.document.getElementById('trial-block-overlay'), 'server expired shows blocked overlay');
+  assert.equal(await ctx.__trial.trialGateApply(), 'blocked', 'an expired entitlement blocks despite a fresh local clock');
+  assert.ok(ctx.document.getElementById('trial-block-overlay'), 'an expired entitlement shows the blocked overlay');
+
+  // ТРЕТИЙ исход назван отдельно: нечитаемые настройки — это НЕ «право есть» и
+  // не «право истекло»; решение отдаётся местному отсчёту, и это видно полем
+  // reason, а не классом ошибки.
+  ctx = loadTrialContext({ serverMode: 'unreachable', startedDaysAgo: 0 });
+  assert.equal(await ctx.__trial.trialGateApply(), 'free', 'unreadable settings with no known session fall through to the local clock, not to blocked');
+  ctx = loadTrialContext({ serverMode: 'unreachable', startedDaysAgo: 20 });
+  assert.equal(await ctx.__trial.trialGateApply(), 'blocked', 'unreadable settings let an expired local trial block');
+  // И ОБРАТНЫЙ ОБЪЕКТ, измеренный, а не предположенный: если обновление не
+  // удалось, но в состоянии лежит ДЕЙСТВУЮЩЕЕ право, ответ остаётся 'free' —
+  // неудача чтения права не отзывает.
+  ctx = loadTrialContext({ serverMode: 'active', startedDaysAgo: 20 });
+  ctx.invoke = async (cmd) => { if (cmd === 'get_settings') throw new Error('settings_unavailable'); throw new Error(cmd); };
+  assert.equal(await ctx.__trial.trialGateApply(), 'free', 'a failed refresh does not revoke a live entitlement already in state');
 
   // No.880: «истёкшее право блокирует приложение» — покрытие сохранено целиком;
   // ушёл только способ разблокировки: не активация лицензионного токена, а вход
