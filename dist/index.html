@@ -1672,27 +1672,89 @@ function chooseUseApp(next){
   var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
   if (typeof next === 'function') next();
 }
+var __entryNext = null;
+
+// No.880/§2: у Крюинга нет ни команды open_external_url в Rust (0 вхождений в
+// src-tauri против 14 у Моряка), ни writeClipboardText, а open_path_with_default
+// отказывает на всём, что не существующий файл. Поэтому форма Моряка перенесена,
+// а МЕХАНИЗМ открытия назван требованием к S2: пока команды нет, адрес показывается
+// человеку дословно — это честнее, чем кнопка, которая молча ничего не делает.
+// ТРЕБОВАНИЕ К S2: команда open_external_url в Rust, затем тело этой функции
+// меняется на invoke, имя и места вызова остаются.
+var CREWING_REGISTER_URL = 'https://assistant.skipi.app/register';
+async function crewingOpenExternalUrlSafe(url){
+  try {
+    await invoke('open_external_url', { url: url });
+    return true;
+  } catch (e) {
+    showToast(tr('entry.register_open') + String(url).replace(/^https?:\/\//, ''), 'warn');
+    return false;
+  }
+}
+function entryOpenRegister(){ return crewingOpenExternalUrlSafe(CREWING_REGISTER_URL); }
+
+function entryShowLogin(show){
+  var doors = document.getElementById('ec-doors');
+  var form = document.getElementById('ec-login-form');
+  if (!doors || !form) return;
+  doors.hidden = !!show;
+  form.hidden = !show;
+  if (show) { var f = document.getElementById('a-email'); if (f) f.focus(); }
+}
+
+// Отказ стоит РЯДОМ с кнопкой и не прячется (канон UI, принцип 1): toast гаснет,
+// поэтому текст пишется ещё и в поле под кнопкой.
+async function entryAccountLogin(){
+  var box = document.getElementById('ec-login-error');
+  if (box) { box.textContent = ''; box.hidden = true; }
+  try {
+    await nativeAccountLogin();
+    var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
+    var next = __entryNext; __entryNext = null;
+    if (typeof next === 'function') next();
+  } catch (e) {
+    var code = String((e && e.message) || e || '').replace(/^\s+|\s+$/g, '');
+    if (box) { box.textContent = tr(loginRefusalText(code)); box.hidden = false; }
+  }
+}
+
 function renderEntryChoice(next){
   if (document.getElementById('entry-choice-overlay')) return;
+  __entryNext = (typeof next === 'function') ? next : null;
   var ov = document.createElement('div');
   ov.id = 'entry-choice-overlay';
   ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0f1115);padding:24px 18px;overflow-x:hidden;box-sizing:border-box;';
+  var doorStyle = 'box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;cursor:pointer;text-align:left;white-space:normal;font-size:15px;font-weight:700;';
+  var inputStyle = 'box-sizing:border-box;width:100%;padding:12px 14px;border-radius:9px;border:1px solid var(--border,#2a3340);background:var(--panel2,#141922);color:var(--text,#e5e7eb);font-size:14px;margin-bottom:10px;';
   ov.innerHTML =
     '<div style="max-width:520px;width:100%;text-align:center;box-sizing:border-box;">'
     + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">'+escapeHtml(tr('entry.tagline'))+'</p>'
-    + '<div style="display:flex;flex-direction:column;gap:12px;">'
-    + '<button id="ec-open" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:none;background:var(--accent,#004564);color:#fff;font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">'+escapeHtml(tr('entry.open_profile'))+'<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">'+escapeHtml(tr('entry.open_profile_desc'))+'</div></button>'
-    + '<button id="ec-create" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:700;cursor:pointer;text-align:left;white-space:normal;">'+escapeHtml(tr('entry.create_profile'))+'<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.create_profile_desc'))+'</div></button>'
-    + '<button id="ec-demo" style="box-sizing:border-box;width:100%;max-width:100%;padding:14px 16px;border-radius:10px;border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-size:15px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;">🎬 '+escapeHtml(tr('entry.show_demo'))+'<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
+    + '<div id="ec-doors" style="display:flex;flex-direction:column;gap:12px;">'
+    +   '<button id="ec-login" onclick="entryShowLogin(true)" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;">'
+    +     escapeHtml(tr('entry.login'))
+    +     '<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">'+escapeHtml(tr('entry.login_desc'))+'</div></button>'
+    +   '<button id="ec-register" onclick="entryOpenRegister()" style="'+doorStyle+'border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);">'
+    +     escapeHtml(tr('entry.register'))
+    +     '<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.register_desc'))+'</div></button>'
+    +   '<button id="ec-demo" onclick="enterDemoMode()" style="'+doorStyle+'border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-weight:600;">'
+    +     '&#127909; '+escapeHtml(tr('entry.show_demo'))
+    +     '<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
+    + '</div>'
+    + '<div id="ec-login-form" hidden style="text-align:left;">'
+    +   '<div style="font-size:15px;font-weight:700;color:var(--text,#e5e7eb);margin-bottom:4px;">'+escapeHtml(tr('settings.crewing.login.title'))+'</div>'
+    +   '<div style="font-size:12px;color:var(--text2,#9aa4b2);margin-bottom:12px;">'+escapeHtml(tr('settings.crewing.login.description'))+'</div>'
+    +   '<input id="a-email" type="text" autocomplete="username" placeholder="'+escapeAttr(tr('settings.crewing.login.email'))+'" style="'+inputStyle+'">'
+    +   '<input id="a-password" type="password" autocomplete="current-password" placeholder="'+escapeAttr(tr('settings.crewing.login.password'))+'" style="'+inputStyle+'">'
+    +   '<button id="ec-login-submit" onclick="entryAccountLogin()" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;text-align:center;">'
+    +     escapeHtml(tr('settings.crewing.login.action'))+'</button>'
+    +   '<div id="ec-login-error" hidden role="alert" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.45);color:#fca5a5;font-size:13px;line-height:1.45;"></div>'
+    +   '<button onclick="entryShowLogin(false)" style="margin-top:12px;background:none;border:none;color:var(--text2,#9aa4b2);font-size:13px;cursor:pointer;padding:0;">'+escapeHtml(tr('entry.back'))+'</button>'
     + '</div>'
     + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'
     + '</div>';
   document.body.appendChild(ov);
-  document.getElementById('ec-open').onclick = function(){ openConnectDialog({ context: 'profile' }); };
-  document.getElementById('ec-create').onclick = function(){ chooseUseApp(next); };
-  document.getElementById('ec-demo').onclick = function(){ enterDemoMode(); };
 }
 
 function demoToast(msg){
@@ -1949,7 +2011,7 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Settings','mobile.settings_desc':'Connection, appearance, device and app information.','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.work_mode':'Work mode','mobile.work_question':'How will you use Skipi Crewing?','mobile.work_desc':'Pick the role for this device. It only guides setup; real permissions still come from the company token and team access.','mobile.role_owner':'Team lead / manager','mobile.role_owner_desc':'I run the crewing company account, validate the company token, post vacancies, and invite teammates.','mobile.role_member':'Team member','mobile.role_member_desc':'I join an existing company team. I need my public user ID and then a personal team token from the manager.','mobile.exploring':'Just want to look around?','mobile.open_demo':'Open demo','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.member_title':'Join an existing team','mobile.member_desc':'Send this public user ID to your team lead. Your private key stays on this device.','mobile.member_after':'After the lead adds you, paste the personal team token in Connection and press Validate.','mobile.i_have_token':'I have a token','mobile.manager_setup':'Manager setup','mobile.manager_desc':'Validate the company token, then post vacancies and invite teammates from the Team tools on desktop.','mobile.member_setup':'Member setup','mobile.member_setup_desc':'Paste the personal team token issued by your team lead. If you still need your public ID, open the member join screen.','mobile.show_my_id':'Show my ID','mobile.change_role':'Change role','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.work_role':'Work role','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
 	    'vacancies.empty_select':'Select a vacancy on the left to view details and applications.','vacancies.sort.open_first':'Open first','vacancies.sort.with_replies':'With replies first','vacancies.sort.stale':'Stale (no replies)','vacancies.sort.newest':'Newest first','vacancies.sort.oldest':'Oldest first',
-	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.open_profile':'Open an existing profile','entry.open_profile_desc':'Connect with a token or a QR code shown on another device.','entry.create_profile':'Create a profile','entry.create_profile_desc':'A new company: set up the connection and the Skipi token.','entry.show_demo':'Show the demonstration','entry.show_demo_desc':'No sign-up and no token — an example on prepared data.','entry.demo_note':'The demonstration is an example with prepared data and no sign-up. Changes are not available.',
+	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.login':'Sign in','entry.login_desc':'Sign in with your Skipi account.','entry.register':'Create an account','entry.register_desc':'Registration happens on the Skipi website.','entry.register_open':'Registration is on the Skipi website: ','entry.back':'Back','entry.open_profile':'Open an existing profile','entry.open_profile_desc':'Connect with a token or a QR code shown on another device.','entry.create_profile':'Create a profile','entry.create_profile_desc':'A new company: set up the connection and the Skipi token.','entry.show_demo':'Show the demonstration','entry.show_demo_desc':'No sign-up and no token — an example on prepared data.','entry.demo_note':'The demonstration is an example with prepared data and no sign-up. Changes are not available.',
     'connect.title':'Open an existing profile','connect.lead_device':'Connect this device to an existing Skipi Crewing profile.','connect.lead_profile':'Connect to a company or team profile that already exists.','connect.close':'Close','connect.tab_token':'Token','connect.tab_qr':'QR code','connect.token_label':'Connection token','connect.token_placeholder':'Paste the token from the other device','connect.help':'The token is shown on the other device in Skipi: «Settings → Paired devices». It is not a password.','connect.clear':'Clear','connect.submit':'Connect','connect.qr_text':'Scanning a QR code needs access to the device camera.','connect.qr_note':'The camera is not wired in this build — use token entry.','connect.enter_manually':'Enter the token manually','connect.err_already':'This device is already connected to a profile.','connect.err_token':'The token is invalid or has expired. Check the code on the other device and try again.','connect.err_server':'The server is unavailable. Check your internet connection and try again.','connect.err_generic':'Could not connect. Check the token and try again.',
 	    'common.cancel':'Cancel','common.ok':'OK',
     'confirm.team_remove':'Remove this team member?','confirm.profile_archive':'Archive this profile?','confirm.profile_archive_note':'It will not be available for new vacancies. Existing vacancy snapshots stay valid.','confirm.mailbox_disconnect':'Disconnect this mailbox and purge cached messages?','settings.mailbox_legacy':'Personal mailbox (legacy)','settings.mailbox_legacy_desc':'The Mail module is retired. One operation is left here: disconnect the mailbox so the server stops keeping its password.','settings.mailbox_legacy_none':'There is no connected mailbox to disconnect.','settings.mailbox_legacy_done':'Mailbox disconnected.','settings.mailbox_legacy_failed':'Disconnect failed','confirm.mailing_close':'Close this mailing request?','confirm.mailing_close_note':'It will stop appearing in seafarer mailing lists.','confirm.mailing_delete':'Delete this mailing request permanently?','confirm.document_delete':'Delete this document?','confirm.document_delete_note':'The file will be removed from the vault.','confirm.vacancy_close':'Close this vacancy?','confirm.vacancy_close_note':'It will stop appearing on the public board. Existing applications and chats stay accessible.','confirm.vacancy_delete':'Hard-delete this vacancy?','confirm.vacancy_delete_note':'This removes the posting AND all applications + chat messages tied to it. Cannot be undone.','confirm.vacancy_delete_hint':'Use Close instead if you just want to stop accepting candidates.','confirm.vault_folder':'Skipi Crewing will use this vault folder after restart:','confirm.vault_folder_note':'The clear folder name makes it easier to find in your file manager.',
@@ -1969,7 +2031,7 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Настройки','mobile.settings_desc':'Подключение, внешний вид, устройство и сведения о приложении.','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.work_mode':'Рабочий режим','mobile.work_question':'Как вы будете использовать Skipi Crewing?','mobile.work_desc':'Выбор роли только помогает настроить приложение. Реальные права всё равно задаются токеном компании и доступом команды.','mobile.role_owner':'Глава команды / менеджер','mobile.role_owner_desc':'Я управляю аккаунтом крюинговой компании, проверяю токен, публикую вакансии и приглашаю коллег.','mobile.role_member':'Член команды','mobile.role_member_desc':'Я присоединяюсь к существующей команде. Мне нужен мой публичный ID, затем персональный токен от менеджера.','mobile.exploring':'Хотите просто посмотреть?','mobile.open_demo':'Открыть демонстрацию','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.member_title':'Присоединиться к команде','mobile.member_desc':'Отправьте этот публичный ID главе команды. Приватный ключ остаётся на устройстве.','mobile.member_after':'Когда менеджер добавит вас, вставьте персональный токен команды в подключении и нажмите Проверить.','mobile.i_have_token':'У меня есть токен','mobile.manager_setup':'Настройка менеджера','mobile.manager_desc':'Проверьте токен компании, затем публикуйте вакансии и приглашайте коллег из командных инструментов на desktop.','mobile.member_setup':'Настройка члена команды','mobile.member_setup_desc':'Вставьте персональный токен, выданный главой команды. Если вам нужен публичный ID, откройте экран входа в команду.','mobile.show_my_id':'Показать мой ID','mobile.change_role':'Сменить роль','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.work_role':'Рабочая роль','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
 	    'vacancies.empty_select':'Выберите вакансию слева, чтобы посмотреть детали и заявки.','vacancies.sort.open_first':'Открытые сначала','vacancies.sort.with_replies':'С откликами сначала','vacancies.sort.stale':'Зависшие (без откликов)','vacancies.sort.newest':'От новых к старым','vacancies.sort.oldest':'От старых к новым',
-	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.open_profile':'Открыть существующий профиль','entry.open_profile_desc':'Подключитесь по токену или QR-коду, показанному на другом устройстве.','entry.create_profile':'Создать профиль','entry.create_profile_desc':'Новая компания: настройте подключение и токен Skipi.','entry.show_demo':'Показать демонстрацию','entry.show_demo_desc':'Без регистрации и без токена — пример на готовых данных.','entry.demo_note':'Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.',
+	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.login':'Войти','entry.login_desc':'Вход по аккаунту Skipi.','entry.register':'Создать аккаунт','entry.register_desc':'Регистрация — на сайте Skipi.','entry.register_open':'Регистрация — на сайте Skipi: ','entry.back':'Назад','entry.open_profile':'Открыть существующий профиль','entry.open_profile_desc':'Подключитесь по токену или QR-коду, показанному на другом устройстве.','entry.create_profile':'Создать профиль','entry.create_profile_desc':'Новая компания: настройте подключение и токен Skipi.','entry.show_demo':'Показать демонстрацию','entry.show_demo_desc':'Без регистрации и без токена — пример на готовых данных.','entry.demo_note':'Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.',
     'connect.title':'Открыть существующий профиль','connect.lead_device':'Подключите это устройство к существующему профилю Skipi Crewing.','connect.lead_profile':'Подключитесь к уже созданному профилю компании или команды.','connect.close':'Закрыть','connect.tab_token':'Токен','connect.tab_qr':'QR-код','connect.token_label':'Токен подключения','connect.token_placeholder':'Вставьте токен с другого устройства','connect.help':'Токен показан на другом устройстве в Skipi: «Настройки → Сопряжённые устройства». Это не пароль.','connect.clear':'Очистить','connect.submit':'Подключить','connect.qr_text':'Сканирование QR-кода требует доступа к камере устройства.','connect.qr_note':'Камера ещё не подключена в этой сборке — используйте ввод токена.','connect.enter_manually':'Ввести токен вручную','connect.err_already':'Это устройство уже подключено к профилю.','connect.err_token':'Токен недействителен или истёк. Проверьте код на другом устройстве и попробуйте снова.','connect.err_server':'Сервер недоступен. Проверьте интернет и повторите попытку.','connect.err_generic':'Не удалось подключиться. Проверьте токен и повторите попытку.',
 	    'common.cancel':'Отмена','common.ok':'Подтвердить',
     'confirm.team_remove':'Удалить этого участника команды?','confirm.profile_archive':'Архивировать этот профиль?','confirm.profile_archive_note':'Он перестанет быть доступен для новых вакансий. Уже сделанные снимки по вакансиям останутся в силе.','confirm.mailbox_disconnect':'Отключить этот почтовый ящик и удалить кэшированные письма?','settings.mailbox_legacy':'Личный ящик (устаревший)','settings.mailbox_legacy_desc':'Модуль «Почта» снят. Здесь осталась одна операция — отключить ящик, чтобы сервер перестал хранить его пароль.','settings.mailbox_legacy_none':'Подключённого ящика нет — отключать нечего.','settings.mailbox_legacy_done':'Ящик отключён.','settings.mailbox_legacy_failed':'Не удалось отключить','confirm.mailing_close':'Закрыть этот запрос на рассылку?','confirm.mailing_close_note':'Он перестанет появляться в рассылках морякам.','confirm.mailing_delete':'Удалить этот запрос на рассылку навсегда?','confirm.document_delete':'Удалить этот документ?','confirm.document_delete_note':'Файл будет удалён из хранилища.','confirm.vacancy_close':'Закрыть эту вакансию?','confirm.vacancy_close_note':'Она перестанет показываться на публичной доске. Уже поданные заявки и чаты останутся доступны.','confirm.vacancy_delete':'Удалить эту вакансию безвозвратно?','confirm.vacancy_delete_note':'Будут удалены и сама вакансия, и все связанные с ней заявки и сообщения чата. Отменить это нельзя.','confirm.vacancy_delete_hint':'Если нужно просто перестать принимать кандидатов, используйте «Закрыть».','confirm.vault_folder':'После перезапуска Skipi Crewing будет использовать эту папку хранилища:','confirm.vault_folder_note':'Понятное имя папки облегчает её поиск в файловом менеджере.',
