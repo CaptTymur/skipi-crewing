@@ -327,9 +327,47 @@ fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'stat
     // command a person must be able to run BEFORE being connected, and refusing it would
     // make sign-in unreachable for exactly the user this task exists for. Its size is
     // pinned by native635_boot_public_commands_and_legacy_dispatch_control below.
-    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login")
+    // No.880 п.5: `open_external_url` в том же списке — дверь «Регистрация»
+    // живёт на развилке, то есть в не-легаси процессе.
+    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "open_external_url")
         || startup_should_open_db(settings) { Ok(()) } else { Err("login_required") }
 }
+// No.880 п.5 (1495). Дверь «Регистрация» ведёт на страницу Skipi, и открыть её
+// должно приложение, а не инструкция человеку. Открывает ТОЛЬКО эта команда.
+// Аллоулист — граница безопасности: схема одна (`https`) и хост названный, то
+// есть ни `file:`, ни `javascript:`, ни произвольный хост из ответа сервера.
+// Образец взят у Моряка (`skipi-public`, `commands/vault.rs`, прочитан через
+// `git show` объекта), но СТРОЖЕ: у него четыре схемы и хост любой.
+const EXTERNAL_URL_ALLOWED_HOSTS: [&str; 1] = ["assistant.skipi.app"];
+
+fn external_url_allowed(url: &str) -> bool {
+    // Разбор берётся через реэкспорт reqwest — новой зависимости не вводим
+    // (`Cargo.toml` release-sensitive для этой задачи).
+    let Ok(parsed) = reqwest::Url::parse(url) else { return false; };
+    if parsed.scheme() != "https" { return false; }
+    // Креденшал в URL и нестандартный порт — признаки не той ссылки, которую
+    // показывает дверь; принимать их значило бы расширять границу молча.
+    if !parsed.username().is_empty() || parsed.password().is_some() || parsed.port().is_some() { return false; }
+    let Some(host) = parsed.host_str() else { return false; };
+    EXTERNAL_URL_ALLOWED_HOSTS.iter().any(|allowed| host.eq_ignore_ascii_case(allowed))
+}
+
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    if !external_url_allowed(&url) { return Err("external_url_refused".into()); }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(&url).spawn()
+            .map(|_| ()).map_err(|_| "external_url_unavailable".to_string())
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Ни одной платформы, кроме Linux, этот дом сегодня не собирает; молчать
+        // здесь нельзя — отказ обязан быть называемым.
+        Err("external_url_unsupported".into())
+    }
+}
+
 fn locked_asset_response(_request: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Vec<u8>> {
     tauri::http::Response::builder().status(403).header("Cache-Control", "no-store")
         .body(Vec::new()).expect("constant locked asset response")
@@ -2484,6 +2522,7 @@ pub fn run() {
             get_settings,
             save_settings,
             native_account_login,
+            open_external_url,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,
@@ -3448,13 +3487,50 @@ mod native635_boot_tests {
     #[test]
     fn native635_boot_public_commands_and_legacy_dispatch_control() {
         for settings in blocked_modes() {
-            for command in ["get_build_info","get_settings","save_settings","native_account_login"] {
+            // No.880 п.5: `open_external_url` допущена до входа намеренно — дверь
+            // «Регистрация» живёт на развилке, то есть ИМЕННО в не-легаси процессе,
+            // и отказ сделал бы регистрацию недостижимой для того, для кого эта
+            // задача и существует.
+            for command in ["get_build_info","get_settings","save_settings","native_account_login","open_external_url"] {
                 assert_eq!(boot_command_allowed(&settings,command),Ok(()));
+            }
+            // ОТРИЦАТЕЛЬНАЯ сторона того же пина: список закрыт, и команда вне
+            // него в заблокированном процессе отказывает. Без этой половины пин
+            // прошёл бы и на гейте, который пускает всё.
+            for command in ["get_my_identity","list_documents","crewing_intake_open_saved","save_compliance_profile"] {
+                assert_eq!(boot_command_allowed(&settings,command),Err("login_required"));
             }
         }
         for command in ["get_my_identity","list_documents","crewing_intake_open_saved","get_settings"] {
             assert_eq!(boot_command_allowed(&legacy(),command),Ok(()));
         }
+    }
+
+    // No.880 п.5 (1495): внешнюю ссылку открывает ТОЛЬКО эта проверка, и только
+    // https на названный хост. Образец — Моряк (`skipi-public`, blob прочитан
+    // через `git show`), но аллоулист СТРОЖЕ: у Моряка four схемы
+    // (https/http/mailto/tel) и хост любой, здесь — одна схема и один хост,
+    // потому что предмет один: страница регистрации Skipi.
+    #[test]
+    fn native635_880_external_url_allowlist_is_scheme_and_host() {
+        assert!(external_url_allowed("https://assistant.skipi.app/register"),
+            "control: the registration page itself must be allowed, else every refusal below is vacuous");
+        for refused in [
+            "http://assistant.skipi.app/register",      // не https
+            "file:///etc/passwd",                        // локальный файл
+            "javascript:alert(1)",                       // исполнение в вебвью
+            "https://evil.example.com/register",         // чужой хост
+            "https://assistant.skipi.app.evil.com/x",    // хост-приставка
+            "https://user:pass@assistant.skipi.app/x",   // креденшал в URL
+            "https://assistant.skipi.app:8443/register",  // нестандартный порт
+            "data:text/html,<script>1</script>",
+            "",
+            "assistant.skipi.app/register",              // без схемы вовсе
+        ] {
+            assert!(!external_url_allowed(refused), "must be refused: {refused}");
+        }
+        // Регистр хоста не делает ссылку чужой.
+        assert!(external_url_allowed("https://ASSISTANT.skipi.app/register"));
     }
     #[test]
     fn native635_boot_app_state_constructor_never_reuses_native_authorization() {

@@ -1699,15 +1699,19 @@ var __entryNext = null;
 // ТРЕБОВАНИЕ К S2: команда open_external_url в Rust, затем тело этой функции
 // меняется на invoke, имя и места вызова остаются.
 var CREWING_REGISTER_URL = 'https://assistant.skipi.app/register';
-function crewingOpenExternalUrlSafe(url){
-  // Команды open_external_url в Rust Крюинга СЕГОДНЯ НЕТ (0 вхождений против 14 у
-  // Моряка), поэтому здесь НЕ вызывается invoke: харнесс crewing635_public_settings
-  // пинит, что каждая вызванная команда существует среди #[tauri::command], и вызов
-  // несуществующей — это нарушение контракта, а не безобидная заглушка. Пока команды
-  // нет, адрес показывается человеку дословно.
-  // ТРЕБОВАНИЕ К S2: команда open_external_url в Rust, затем здесь появляется invoke.
-  showToast(tr('entry.register_open') + String(url).replace(/^https?:\/\//, ''), 'warn');
-  return false;
+async function crewingOpenExternalUrlSafe(url){
+  // No.880 S2 п.5: команда в Rust появилась, и ссылку открывает приложение.
+  // Аллоулист живёт в Rust (схема https + названный хост) — клиент его не
+  // дублирует, иначе было бы два места сборки одного решения.
+  try {
+    await invoke('open_external_url', { url: String(url) });
+    return true;
+  } catch (e) {
+    // Канон UI: отказ не прячется. Открыть не удалось — человек обязан увидеть
+    // адрес дословно, чтобы дойти до регистрации вручную.
+    showToast(tr('entry.register_open') + String(url).replace(/^https?:\/\//, ''), 'warn');
+    return false;
+  }
 }
 function entryOpenRegister(){ return crewingOpenExternalUrlSafe(CREWING_REGISTER_URL); }
 

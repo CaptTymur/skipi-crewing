@@ -366,6 +366,26 @@ await run('No.827 — invoke() keys are the camelCase of #[tauri::command] param
   // Проверяется и объявление (#[tauri::command]), и регистрация
   // (generate_handler!), и вызов из UI — иначе снятая из списка команда могла бы
   // остаться живой в теле, а снятое тело — остаться в списке.
+  // No.880 S2 п.5: цепочка «дверь → помощник → команда» закрывается здесь на
+  // последнем звене. Дверь→помощник пинит presence (`onclick="entryOpenRegister()"`),
+  // а это звено проверяет, что помощник действительно ЗОВЁТ команду, а не
+  // показывает адрес человеку, как было до S2. Без этого возврат к заглушке
+  // прошёл бы зелёным: харнесс проверял лишь то, что всякий вызов существует.
+  {
+    const opener=(html.match(/async function crewingOpenExternalUrlSafe\(url\)\{[\s\S]*?\n\}/)||[''])[0];
+    ok(opener.length>0,'No.880/п.5: the external-url helper is found in dist (control for the assertions below)');
+    ok(/invoke\('open_external_url',\s*\{\s*url:/.test(opener),
+       'No.880/п.5: the helper dispatches open_external_url with the url argument');
+    ok(sites.some(s=>s.command==='open_external_url'),
+       'No.880/п.5: the invoke-site parser sees that call too (so the command-exists pin covers it)');
+    // Аллоулист ОДИН и живёт в Rust: клиент его не дублирует, иначе было бы два
+    // места сборки одного решения и они разошлись бы молча.
+    ok(!/assistant\.skipi\.app/.test(opener.replace(/CREWING_REGISTER_URL/g,'')),
+       'No.880/п.5: the client does not re-implement the host allowlist');
+    ok(/catch\s*\(/.test(opener)&&/showToast\(/.test(opener),
+       'No.880/п.5: a refusal is said out loud, not swallowed (canon UI)');
+  }
+
   const RETIRED_BY_880=['claim_team_owner','list_team_members','add_team_member','remove_team_member',
     'fetch_team_chat_messages','send_team_chat_message','activate_crewing_token','issue_crewing_trial_token'];
   // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ тем же предикатом: живая команда обязана находиться
