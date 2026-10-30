@@ -259,6 +259,12 @@ const exportsNeeded = [
   'mobileSetTheme',
   'mobileSetLanguage',
   'mobileSaveOrg',
+  // Условие Супервайзора S1-2: предикат и ТОТ, КТО ПО НЕМУ РЕШАЕТ, проверяются
+  // вместе. До этого shouldShowEntryChoice не упоминался в tests/ ни разу —
+  // решение о показе развилки было непокрыто.
+  'crewingAccountSessionActive',
+  'shouldShowEntryChoice',
+  'crewingWorkspaceLive',
   'mobileBack',
   'mobileState',
   '_crewingSettingsSections',
@@ -502,6 +508,39 @@ if (M) {
   ok(savedOrg && !savedOrg.bearer_token,
     'No.880: the profile save carries no token value — got ' + JSON.stringify(savedOrg && savedOrg.bearer_token));
 
+  // Условие Супервайзора S1-2: ДВУСТОРОННИЙ ассерт — поле проекции и решение о
+  // развилке проверяются ВМЕСТЕ и по всем исходам, которые Rust может прислать.
+  // Односторонняя проверка («с 'active' развилки нет») прошла бы и на предикате,
+  // который всегда false, и на том, который всегда true для непустой строки.
+  {
+    const SESSION_OUTCOMES = ['none', 'locked', 'signed_out', 'expired', 'legacy', 'unavailable', 'active'];
+    const saved = JSON.parse(JSON.stringify(M.state.settings));
+    const savedDemo = globalThis.__demoMode;
+    try {
+      for (const outcome of SESSION_OUTCOMES) {
+        M.state.settings = Object.assign({}, saved, { account_session: outcome });
+        const active = M.crewingAccountSessionActive(M.state.settings);
+        const shows = M.shouldShowEntryChoice();
+        ok(active === (outcome === 'active'),
+          `No.880/${outcome}: the predicate reads the field and ONLY 'active' is a session — got ${active}`);
+        // Обе стороны: предикат истинен ⇔ развилки нет.
+        ok(shows === !active,
+          `No.880/${outcome}: the fork shows exactly when there is no session — predicate=${active} shows=${shows}`);
+        ok(M.crewingWorkspaceLive(M.state.settings) === (outcome === 'active' || outcome === 'legacy'),
+          `No.880/${outcome}: «workspace live» is the two named outcomes, not a third reading of the field`);
+      }
+      // Поле, которого НЕТ вовсе (старый Rust, забывший его отдать), обязано
+      // читаться как «нет сессии», а не как «есть».
+      const без = Object.assign({}, saved); delete без.account_session;
+      M.state.settings = без;
+      ok(M.crewingAccountSessionActive(без) === false && M.shouldShowEntryChoice() === true,
+        'No.880: a projection with no account_session at all reads as «no session», never as a session');
+    } finally {
+      M.state.settings = saved;
+      globalThis.__demoMode = savedDemo;
+    }
+  }
+
   // No.880, РЕГРЕССИЯ КЛАССА «висячий вызов». Дважды за этот слайс удаление
   // функции оставляло живой вызов: mobileSaveConnection (роутер настроек тихо
   // потерял ~230 ассертов, потому что страница падала) и пара
@@ -736,20 +775,40 @@ if (M) {
     crewing_id: 'presence-harness',
     interface: { theme: 'light', language: 'en' },
   };
-  // No.880: рейл показывается по АККАУНТ-СЕССИИ, а не по has_bearer_token. Признака
-  // сессии публичная проекция пока не несёт (UNKNOWN до S2), поэтому сессия вносится
-  // в единственный предикат — там же, где её заменит S2. Обратный случай проверяется
-  // ниже отдельным утверждением, чтобы «нет рейла» не осталось немым.
-  // No.880: рейл показывается по АККАУНТ-СЕССИИ (или в демо), а её признака публичная
-  // проекция пока не несёт — внедрить сессию в уже загруженный модуль нельзя, предикат
-  // резолвится лексически. Поэтому состояние оболочки и контракт K2.2 проверяются
-  // РАЗДЕЛЬНО и оба поимённо: (1) без сессии рейла нет и это ожидаемо до S2;
-  // (2) канон трёх слотов читается там, где он живёт — в реестре MOBILE_RAIL_QA и
-  // в mobileNavButton, тот же кусок, который исполняет харнесс изоляции.
+  // Условие Супервайзора S1-3: пин K2.2 ВЕРНУЛСЯ НА ОТРЕНДЕРЕННЫЙ РЕЛЬС.
+  // В S1 сессию внести было нечем (предикат-заглушка всегда возвращал false и
+  // резолвился лексически), поэтому канон трёх слотов читался из текста реестра —
+  // а текст реестра может совпадать при другом отрисованном рельсе. Теперь
+  // предикат читает ПОЛЕ проекции, значит сессия вносится состоянием, и рельс
+  // проверяется там, где его видит человек. Реестр оставлен рядом: он ловит
+  // расхождение исходника с отрисованным, но сам по себе доказательством не был.
   M.mobileShow('vacancies');
   const noSessionChrome = elFor('mobile-root').innerHTML;
   ok(!/<nav class="mobile-bottom/.test(noSessionChrome),
-    'without an account session the mobile shell shows no rail — it shows the sign-in screen (until S2 lands the session)');
+    'without an account session the mobile shell shows no rail — it shows the sign-in screen');
+  {
+    const savedSettings = JSON.parse(JSON.stringify(M.state.settings));
+    try {
+      M.state.settings = Object.assign({}, savedSettings, { account_session: 'active' });
+      M.mobileShow('crew_flow');
+      const railChrome = elFor('mobile-root').innerHTML;
+      // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: рельс действительно отрисован, иначе все
+      // утверждения о его составе прошли бы на пустой строке.
+      ok(/<nav class="mobile-bottom/.test(railChrome),
+        'K2.2/rendered: an account session renders the bottom rail (control for the slot assertions below)');
+      const renderedSlugs = [...railChrome.matchAll(/data-qa="bottom-nav-(\w+)"/g)].map((m) => m[1]);
+      ok(renderedSlugs.join(',') === 'crew_flow,compliance,seafarers',
+        'K2.2/rendered: the RENDERED rail carries exactly 3 slots in canonical order crew_flow,compliance,seafarers — got [' + renderedSlugs.join(',') + ']');
+      for (const retired of ['apps', 'documents', 'vacancies', 'mailings', 'more', 'home', 'workspace', 'settings']) {
+        ok(!renderedSlugs.includes(retired),
+          'K2.2/rendered: the rendered rail has no ' + retired + ' slot');
+      }
+      ok(!/data-qa="bottom-nav-\w+"[^>]*onclick="mobileOpenSettingsHome\(\)"/.test(railChrome),
+        'K2.2/rendered: settings never enters from the rail (only the header gear)');
+    } finally {
+      M.state.settings = savedSettings;
+    }
+  }
   const railRegistry = (HTML.match(/var MOBILE_RAIL_QA[\s\S]*?\};/) || [''])[0];
   const railSlots = [...railRegistry.matchAll(/(\w+)\s*:\s*'bottom-nav-(\w+)'/g)].map((m) => m[1]);
   ok(railSlots.join(',') === 'crew_flow,compliance,seafarers',
@@ -1688,14 +1747,19 @@ section('635 real Settings and no manual credential entry');
       cleanup() { app.getInstance()?.unmount(); storage.clear(); nodes.clear(); },
     };
   }
-  const forbiddenControl = /<input\b[^>]*\bid=["'](?:s-token|m-token|connect-token-input|trial-license|s-crewing-id|m-crewing-id)["']|(?:crewing-activate-token|crewing-start-trial|connectSubmitToken|activateCompanyToken|startTrialAccess|mobileValidateConnection|mobileStartTrialAccess|trialActivateLicense|trialGoConnect)\s*(?:["'(])/i;
-  const manualHelp = /(?:company|license)[ -]?token|токен(?:а|у|ом|ы)?(?: компании)?|enter (?:the |a )?token|ввести токен/i;
+  // Условие Супервайзора S1-1 (аудит 802b7349): дрель «рабочее поле Server URL на
+  // легаси-странице org» прошла ЗЕЛЁНОЙ — продукт был чист, но гард её не видел,
+  // потому что в списке не было ни id полей Server URL, ни самой подписи.
+  // Server URL — командный элемент снятого слоя ровно как токен и Crewing ID:
+  // по (1495) его в интерфейсе нет, и отсутствие обязано доказываться.
+  const forbiddenControl = /<input\b[^>]*\bid=["'](?:s-token|m-token|connect-token-input|trial-license|s-crewing-id|m-crewing-id|s-url|m-server-url)["']|(?:crewing-activate-token|crewing-start-trial|connectSubmitToken|activateCompanyToken|startTrialAccess|mobileValidateConnection|mobileStartTrialAccess|trialActivateLicense|trialGoConnect|mobileSaveConnection)\s*(?:["'(])/i;
+  const manualHelp = /(?:company|license)[ -]?token|токен(?:а|у|ом|ы)?(?: компании)?|enter (?:the |a )?token|ввести токен|server\s*url|адрес\s*сервера/i;
   function noManual(markup, label) {
     ok(typeof markup === 'string' && markup.replace(/<[^>]*>/g, ' ').trim().length > 15,
       label + ': actual caller produced a nonempty screen');
     ok(!forbiddenControl.test(markup) && !manualHelp.test(markup.replace(/<[^>]*>/g, ' '))
       && !markup.includes('INTERNAL-COMPANY-CREDENTIAL'),
-      label + ': no manual Company/license credential, Validate, trial-token control or internal secret in DOM');
+      label + ': no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM');
   }
   for (const language of ['ru', 'en']) for (const mode of ['desktop', 'mobile']) {
     for (const phase of ['fresh', 'member', 'owner', 'blocked', 'demo']) {
