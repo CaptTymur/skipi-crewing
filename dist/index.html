@@ -959,6 +959,13 @@ button.cf-save-done:hover:not(:disabled) { background:#1f7a45; filter:brightness
 }
 @media (max-width: 760px) { .cf-fitcard { flex:1 1 100%; } .cf-ident-name { font-size:18px; } }
 
+/* No.880 S3-fix. Раскладка дверей живёт ЗДЕСЬ, а не в инлайновом style: атрибут
+   `hidden` реализован правилом `[hidden]{display:none}` с наименьшей
+   специфичностью, и любой инлайновый `display` его перекрывает — из-за этого
+   после «Войти» на экране оставались и двери, и форма. Второе правило объявлено
+   с большей специфичностью (ID + атрибут), поэтому скрытие сильнее раскладки. */
+#ec-doors { display: flex; }
+#ec-doors[hidden] { display: none; }
 </style>
 <!-- @skipi/settings v0.3.0 — vendored CSS (byte-exact from skipi-settings 9caeff6;
      sha pinned in dist/skipi-settings.SETTINGS_VERSION). Scoped under .skipi-settings. -->
@@ -1753,7 +1760,7 @@ function renderEntryChoice(next){
     + '<div style="font-size:34px;margin-bottom:6px;">&#9875;</div>'
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">'+escapeHtml(tr('entry.tagline'))+'</p>'
-    + '<div id="ec-doors" style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div id="ec-doors" style="flex-direction:column;gap:12px;">'
     +   '<button id="ec-login" onclick="entryShowLogin(true)" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;">'
     +     escapeHtml(tr('entry.login'))
     +     '<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">'+escapeHtml(tr('entry.login_desc'))+'</div></button>'

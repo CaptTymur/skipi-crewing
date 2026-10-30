@@ -1833,7 +1833,38 @@ section('635 real Settings and no manual credential entry');
             && /onclick="enterDemoMode\(\)"/.test(forkHtml),
             label + ': every door carries its handler as an on*= ATTRIBUTE, inside escaping coverage');
           ok(!/\.onclick\s*=/.test(forkHtml), label + ': the fork assigns no .onclick property');
+          // No.880 S3-fix (решение менеджера после находки стенда): у `#ec-doors`
+          // инлайновый `display` ПЕРЕКРЫВАЛ атрибут `hidden` (правило
+          // `[hidden]{display:none}` имеет наименьшую специфичность), и после
+          // «Войти» на экране оставались и двери, и форма — нарушение принципа 1
+          // канона UI, который слайс и закрывал. Стенд видит ТРИ разных слоя, и
+          // каждый назван в имени ассерта: разметка вывода · таблица стилей ·
+          // свойство элемента. Ни один из них по отдельности дефект не ловит.
+          {
+            const doorsTag = (forkHtml.match(/<div[^>]*id="ec-doors"[^>]*>/) || [''])[0];
+            ok(doorsTag.length > 0, label + ': СЛОЙ РАЗМЕТКИ — контейнер дверей найден в выводе (контроль)');
+            const inlineDisplay = (doorsTag.match(/style\s*=\s*"([^"]*)"/) || ['',''])[1].match(/display\s*:/);
+            ok(!inlineDisplay,
+              label + ': СЛОЙ РАЗМЕТКИ — у контейнера дверей нет инлайнового display, иначе он перекроет hidden — got ' + doorsTag.slice(0, 120));
+            const doorsHiddenRule = RULES.some((r) => /#ec-doors\[hidden\]/.test(r.selector) && /display\s*:\s*none/i.test(r.body));
+            ok(doorsHiddenRule,
+              label + ': СЛОЙ СТИЛЕЙ — есть правило #ec-doors[hidden]{display:none}, то есть скрытие пережинает любое ID-правило display');
+          }
           app.entryShowLogin(true);
+          {
+            const doorsEl = document.getElementById('ec-doors');
+            const formEl = document.getElementById('ec-login-form');
+            ok(doorsEl && doorsEl.hidden === true,
+              label + ': СЛОЙ СВОЙСТВА — после «Войти» двери помечены hidden — got ' + (doorsEl ? String(doorsEl.hidden) : 'нет элемента'));
+            ok(formEl && formEl.hidden === false,
+              label + ': СЛОЙ СВОЙСТВА — после «Войти» форма не скрыта — got ' + (formEl ? String(formEl.hidden) : 'нет элемента'));
+            // ОБРАТНАЯ сторона: «Назад» возвращает двери и убирает форму. Без неё
+            // ассерты выше прошли бы и на обработчике, который только прячет.
+            app.entryShowLogin(false);
+            ok(doorsEl.hidden === false && formEl.hidden === true,
+              label + ': СЛОЙ СВОЙСТВА — «Назад» возвращает двери и убирает форму');
+            app.entryShowLogin(true);
+          }
           const loginHtml = document.getElementById('entry-choice-overlay')?.innerHTML || '';
           ok(/id="a-email"/.test(loginHtml) && /id="a-password"/.test(loginHtml),
             label + ': the login door reveals the account form with both inputs');
