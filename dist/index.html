@@ -3939,7 +3939,7 @@ function renderTeamChatAttachments(attachments, messageId) {
     var meta = filename;
     var size = attachmentSizeLabel(att.size_bytes);
     if (size) meta += ' · ' + size;
-    parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')" title="'+escapeAttr(filename)+'">'
+    parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeAttr(escapeJsString(messageId || ''))+'\','+i+')" title="'+escapeAttr(filename)+'">'
       + '<img src="'+escapeAttr(url)+'" alt="'+escapeAttr(filename)+'">'
       + '<span class="team-msg-attachment-meta">'+escapeHtml(meta)+'</span>'
       + '</button>');
@@ -6334,8 +6334,8 @@ function crewFlowLiveTreeHtml(mode) {
     // same news, and one must never be mistaken for the other.
     return '<div class="tree-item ti-stack ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
       + ' role="button" tabindex="0" aria-selected="' + (selected === item.intake_id ? 'true' : 'false') + '"'
-      + ' onkeydown="crewFlowRowKeydown(event, \'' + escapeJsString(item.intake_id) + '\')"'
-      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      + ' onkeydown="crewFlowRowKeydown(event, \'' + escapeAttr(escapeJsString(item.intake_id)) + '\')"'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeAttr(escapeJsString(item.intake_id)) + '\')">'
       +   '<div class="cf-row-top"><strong class="cf-row-name">' + crewFlowRowTitleHtml(item) + '</strong>'
       +     '<span class="cf-row-time">' + escapeHtml(pilotFormatTime(item.created_at)) + '</span></div>'
       +   '<div class="cf-row-sub">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
@@ -6536,7 +6536,7 @@ function crewFlowLiveMobileHtml(mode) {
   if (!rows.length) return head + '<div class="mobile-empty" data-qa="crew-flow-empty">' + escapeHtml(crewFlowTr('empty_live')) + '</div>';
   return head + crewFlowProfileSelectHtml('mobile') + crewFlowQueueStatusHtml() + '<div data-qa="crew-flow-live">' + rows.map(function(item){
     return '<button class="mobile-list-item cf-row" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
-      + ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+      + ' onclick="crewFlowOpenCandidate(\'' + escapeAttr(escapeJsString(item.intake_id)) + '\')">'
       +   '<div class="cf-row-top"><span class="cf-row-name">' + crewFlowRowTitleHtml(item) + '</span>'
       +     '<span class="cf-row-time">' + escapeHtml(pilotFormatTime(item.created_at)) + '</span></div>'
       +   '<div class="cf-row-sub">' + escapeHtml(crewFlowRowSubtitle(item)) + '</div>'
@@ -6602,7 +6602,7 @@ function crewFlowActionsHtml(intakeId) {
   var native = crewFlowNativeTransport();
   var mobile = pilotHostIsMobile();
   var read = crewFlowReadInfo(intakeId) || {};
-  var id = escapeJsString(intakeId);
+  var id = escapeAttr(escapeJsString(intakeId));
   // No.664/S2: what the save would write, measured on the LOADED card. A card
   // that has not arrived says nothing here (an unknown is not an absence); a
   // loaded card without a person key WARNS beside the button; a loaded card
@@ -7636,10 +7636,10 @@ function pilotAliasesHtml() {
   if (!p.aliases.length) return '<div class="pilot-status">'+escapeHtml(pilotT('no_aliases'))+'</div>';
   return p.aliases.map(function(a){
     var buttons = '';
-    if (a.state !== 'revoked') buttons += '<button onclick="pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('rotate'))+'</button>';
-    if (a.state === 'active') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('pause'))+'</button>';
-    if (a.state === 'paused') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('resume'))+'</button>';
-    if (a.state !== 'revoked') buttons += '<button class="ghost" style="color:var(--err);" onclick="pilotAliasAction(\'crewing_intake_alias_revoke\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(pilotT('revoke'))+'</button>';
+    if (a.state !== 'revoked') buttons += '<button onclick="pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('rotate'))+'</button>';
+    if (a.state === 'active') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('pause'))+'</button>';
+    if (a.state === 'paused') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('resume'))+'</button>';
+    if (a.state !== 'revoked') buttons += '<button class="ghost" style="color:var(--err);" onclick="pilotAliasAction(\'crewing_intake_alias_revoke\',\''+escapeAttr(escapeJsString(a.id))+'\')">'+escapeHtml(pilotT('revoke'))+'</button>';
     return '<div class="pilot-alias-row" data-qa="pilot-alias-row"><div class="pilot-alias-meta"><span class="pilot-state '+escapeAttr(a.state)+'">'+escapeHtml(pilotStateLabel(a.state))+'</span><span>'+escapeHtml(pilotT('generation'))+' '+escapeHtml(String(a.generation))+'</span></div>'
       + '<div class="pilot-alias-title">'+escapeHtml(a.label || a.id)+'</div><div class="pilot-note">ID: '+escapeHtml(a.id)+' · '+escapeHtml(pilotFormatTime(a.updated_at))+'</div>'
       + '<div class="pilot-actions">'+buttons+'</div></div>';
@@ -7669,7 +7669,7 @@ function pilotQueueHtml() {
     var reason = summary && summary.needs_review_reason ? '<div class="pilot-note">'+escapeHtml(pilotReason(summary.needs_review_reason))+' <code>'+escapeHtml(summary.needs_review_reason)+'</code></div>' : '';
     return '<div class="pilot-queue-row" data-qa="pilot-queue-row"><div class="pilot-queue-meta"><span class="pilot-state '+escapeAttr(item.state)+'">'+escapeHtml(pilotStateLabel(item.state))+'</span><span>'+escapeHtml(item.content_type)+'</span><span>'+escapeHtml(humanSize(item.content_bytes))+'</span></div>'
       + '<div class="pilot-queue-title">'+escapeHtml(item.intake_id)+'</div><div class="pilot-note">'+escapeHtml(pilotT('receipt'))+': '+escapeHtml(item.receipt_id)+' · '+escapeHtml(pilotFormatTime(item.created_at))+'</div>'+reason+pilotSummaryHtml(summary)
-      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeJsString(item.intake_id)+'\')">'+escapeHtml(pilotT('open'))+'</button></div></div>';
+      + '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeAttr(escapeJsString(item.intake_id))+'\')">'+escapeHtml(pilotT('open'))+'</button></div></div>';
   }).join('');
   if (!rows) rows = '<div class="pilot-status">'+escapeHtml(q.offset > 0 ? pilotT('empty_page') : pilotT('empty'))+'</div>';
   var start = q.total && q.items.length ? q.offset + 1 : 0;
@@ -8621,7 +8621,7 @@ function pilotCardFactsHtml() {
   if (!d.facts.length) return errorHtml+'<div class="pilot-status" data-qa="pilot-facts-empty">'+escapeHtml(cardT('facts_empty'))+'</div>';
   return errorHtml+d.facts.map(function(item){
     var versions = Array.isArray(item.versions) ? item.versions : [];
-    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(cardFieldLabel(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
+    return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>'+escapeHtml(cardFieldLabel(item.field))+'</strong><button class="ghost" data-qa="pilot-fact-correct" onclick="pilotFactStartCorrection(\''+escapeAttr(escapeJsString(String(item.field)))+'\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('correct_fact'))+'</button></div>'
       + versions.map(function(v, index){ return pilotCardFactVersionHtml(v, index === 0); }).join('')+'</div>';
   }).join('');
 }
@@ -8762,7 +8762,7 @@ function pilotCardRankRowHtml(rank) {
         + (r.wanted != null ? ' · '+escapeHtml(cardT('wanted'))+': '+escapeHtml(String(r.wanted)) : '')+(r.found != null ? ' · '+escapeHtml(cardT('found'))+': '+escapeHtml(String(r.found)) : '')+'</div>';
     }).join('')+'</div>';
   }
-  var jsPair = '\''+escapeJsString(String(rank.profile_id))+'\','+String(Number(rank.profile_version));
+  var jsPair = '\''+escapeAttr(escapeJsString(String(rank.profile_id)))+'\','+String(Number(rank.profile_version));
   // No.622: the same verdict as the fit block, from the same adapter. The
   // origin label is the intake's, never the row's `primary` column: that column
   // is zeroed on every row by the existing "Сопоставить" button, so reading a
@@ -9886,7 +9886,7 @@ function pilotCardFitCardHtml(rank) {
   //     asked for the second one.
   var d = pilotDetail();
   var onList = pilotCardActiveConfirmation({ profile_id: rank && rank.profile_id, profile_version: rank && rank.profile_version });
-  var jsPair = '\'' + escapeJsString(String(rank && rank.profile_id)) + '\',' + String(Number(rank && rank.profile_version));
+  var jsPair = '\'' + escapeAttr(escapeJsString(String(rank && rank.profile_id))) + '\',' + String(Number(rank && rank.profile_version));
   var act = onList
     ? '<span class="cf-fitcard-onlist" data-qa="pilot-fit-onlist">' + escapeHtml(cardT('fit_on_shortlist')) + '</span>'
     : '<button data-qa="pilot-fit-confirm" onclick="pilotShortlistConfirm(' + jsPair + ')"' + ((d && d.pending) ? ' disabled' : '') + '>' + escapeHtml(cardT('op_confirm')) + '</button>'
@@ -10314,7 +10314,7 @@ function profileShortlistFactsHtml(row) {
 }
 function profileShortlistContactButtonsHtml(intakeId, row) {
   var c = profileShortlistContacts(row);
-  var js = '\'' + escapeJsString(String(intakeId)) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(String(intakeId))) + '\'';
   var mailable = c.email && c.addressable && cardCheckedRecipient(c.email);
   // A missing contact is a DARK BUTTON THAT SAYS WHAT IS MISSING. Hiding it
   // would let the operator read "no button" as "not applicable" instead of
@@ -10343,7 +10343,7 @@ function profileShortlistRowHtml(item) {
   var st = state.profileShortlist;
   var intakeId = String(item && item.intake_id);
   var row = st.rows[intakeId] || null;
-  var js = '\'' + escapeJsString(intakeId) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(intakeId)) + '\'';
   var onHold = !!(item && item.on_hold);
   var tags = onHold
     ? '<span class="tag ps-t-hold" data-qa="profile-shortlist-hold">' + escapeHtml(profileShortlistT('ps_on_hold')) + '</span>'
@@ -10708,7 +10708,7 @@ function profileLetterPickRowHtml(item, composed) {
   var sea = profileLetterSeaTime(composed.rank, summary);
   var atts = (row && row.card && Array.isArray(row.card.attachments)) ? row.card.attachments : [];
   var pick = ls.picks[id] || null;
-  var js = '\'' + escapeJsString(id) + '\'';
+  var js = '\'' + escapeAttr(escapeJsString(id)) + '\'';
   var files = atts.map(function(a){
     a = a || {};
     var ordinal = Number(a.ordinal || 0);
@@ -13143,7 +13143,7 @@ async function toggleApplicationChat(applicationId, seafarerUserId, forceOpen) {
   if (!cachedMsgs) {
     try { msgs = await invoke('fetch_messages', { applicationId: applicationId, serverUrl: serverUrlArg() }); }
     catch(e){
-      host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+e+'</div>';
+      host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+escapeHtml(String(e))+'</div>';
       return;
     }
     state.messagesByApp[applicationId] = msgs;

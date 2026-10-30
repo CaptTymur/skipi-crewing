@@ -541,12 +541,15 @@ for (const form of SWEPT) {
   drill('снять JS-экранирование: ' + form,
     'ПОКРЫТИЕ ПО ИСХОДНИКУ: ни один обработчик не несёт значение в JS-строку без JS-экранирования',
     (src) => {
-      const at = src.indexOf(form);
-      must(at > 0, 'форма не найдена в исходнике: ' + form);
+      // ВСЕ вхождения, не первое: формы встречаются 2–8 раз, и мутация одного
+      // вхождения оставляла остальные сайты защищёнными — проверка не краснела
+      // по той причине, по которой должна была. Дефект S2, найден Супервайзором.
+      const count = src.split(form).length - 1;
+      must(count > 0, 'форма не найдена в исходнике: ' + form);
       const inner = form.startsWith('escapeAttr(escapeJsString(')
         ? 'escapeAttr(' + form.slice('escapeAttr(escapeJsString('.length, -1)
         : form.slice(form.indexOf('(') + 1, -1);
-      return src.slice(0, at) + inner + src.slice(at + form.length);
+      return src.split(form).join(inner);
     });
 }
 
@@ -604,6 +607,211 @@ check('экранировщики дома не потеряли null-безоп
   }
 });
 
+
+/* ================================================================== *
+ * S3: СЛОЙ АТРИБУТА. Разбор приёмки S2 (REJECT, аудит 160bfe9e).
+ *
+ * escapeJsString НЕ переводит `"` — измерено: escapeJsString('a"b') = a\"b,
+ * escapeAttr('a"b') = a&#34;b. Все сайты класса сидят в атрибутах в ДВОЙНЫХ
+ * кавычках, поэтому JS-слоя в одиночку мало: кавычка закрывает АТРИБУТ раньше,
+ * чем начинается JS, и хвост становится новым обработчиком.
+ *
+ * Почему S2 этого не поймал — дефект был в проверке покрытия: она принимала
+ * слот по ТЕКСТУ (!/JsString/) и потому считала escapeJsString(x) закрытым,
+ * а payload, собранный в помощнике (btn/js/jsPair) или переменной, не видела
+ * вовсе. Ниже покрытие проверяется ПО СЛОЮ и с трассировкой до места сборки.
+ * ================================================================== */
+
+const ATTR_HOSTILE = 'x" onmouseover="alert(1)';
+
+// Слой, которым закрыт слот: наружная функция выражения решает всё.
+function closingLayer(expr) {
+  const e = String(expr).trim();
+  const m = /^([A-Za-z_$][\w$]*)\s*\(/.exec(e);
+  const fn = m ? m[1] : null;
+  if (fn === 'escapeAttr') return 'attr';
+  if (fn === 'appsAttrJsString' || fn === 'railAttrJsString') return 'chunk-helper';
+  if (fn === 'escapeJsString') return 'js-only';
+  if (fn === 'escapeHtml') return 'html-only';
+  if (fn === 'Number' || fn === 'parseInt' || fn === 'parseFloat') return 'numeric';
+  if (/^String\(\s*(ordinal|Number\()/.test(e)) return 'numeric';
+  return null; // переменная или выражение — трассировать до сборки
+}
+
+// Имя атрибута обязано НАЧИНАТЬСЯ с «on»: без якоря границы регулярка ловит
+// «data-unconfirmed="…"» (внутри слова есть «onfirmed=») и считает его обработчиком.
+// Измерено на :5965 — ложное срабатывание завышало и счёт класса.
+const HANDLER_ATTR_RE = /(?:^|[\s"';(])(on[a-z]+)\s*=\s*"([^"]*)"/g;
+const SLOT_RE = /'\s*\+\s*([^+]+?)\s*\+\s*'/g;
+
+function handlerSlots(index) {
+  const out = [];
+  index.split('\n').forEach((ln, i) => {
+    const no = i + 1;
+    if (no >= 1017 && no <= 1256) return; // F2
+    let h;
+    HANDLER_ATTR_RE.lastIndex = 0;
+    while ((h = HANDLER_ATTR_RE.exec(ln)) !== null) {
+      let s;
+      SLOT_RE.lastIndex = 0;
+      while ((s = SLOT_RE.exec(h[2])) !== null) out.push({ no, expr: s[1].trim(), attr: h[1], text: ln });
+    }
+  });
+  return out;
+}
+
+// Трассировка переменной до строки сборки: payload, собранный помощником,
+// обязан нести атрибутный слой там, где он СОБИРАЕТСЯ.
+function traceAssignment(index, varName, beforeLine) {
+  const lines = index.split('\n');
+  const re = new RegExp('\\b(?:var|let|const)\\s+' + varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*=\\s*(.+)');
+  for (let i = beforeLine - 1; i >= 0 && i > beforeLine - 400; i -= 1) {
+    const m = re.exec(lines[i]);
+    if (m) return { no: i + 1, expr: m[1].replace(/;\s*$/, '') };
+  }
+  return null;
+}
+
+check('S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработчика закрыт атрибутным слоем', (src) => {
+  const index = loadIndex(src);
+  const slots = handlerSlots(index);
+  must(slots.some((s) => s.text.includes('_onTeamChatMsgContextMenu')),
+    'зонд покрытия не видит известный сайт C-2 — ноль был бы ложным');
+  const open = [];
+  for (const s of slots) {
+    let layer = closingLayer(s.expr);
+    if (layer === null) {
+      // переменная/выражение: трассируем до сборки и смотрим слой ТАМ
+      const name = /^[A-Za-z_$][\w$]*$/.test(s.expr) ? s.expr : null;
+      if (!name) {
+        // выражение-литерал/арифметика: числовое — освобождено, иначе открыто
+        if (/^\(?\s*(published|Number\(|Math\.|i|\d)/.test(s.expr) || /^\(Number\(/.test(s.expr)) continue;
+        open.push(`:${s.no} ${s.expr} (выражение)`);
+        continue;
+      }
+      // Освобождения — поимённо и с причиной, ДО трассировки; «зонд не нашёл сборку»
+      // освобождением не является и остаётся UNKNOWN.
+      if (/^i$|^ordinal$/.test(name)) continue;            // индекс цикла/map — числовой
+      if (name === 'onclick') continue;                    // параметр btn(): payload собирается
+                                                           // у вызывающего, и его слой проверяет
+                                                           // отдельная проверка «payload помощников»
+      if (name === 'key') continue;                        // C-1 снят по F3: 5 вызовов
+                                                           // seafarerFilterSelect (:11368–11372),
+                                                           // все с литералами — внешних данных нет
+      const asg = traceAssignment(index, name, s.no);
+      if (!asg) { open.push(`:${s.no} ${s.expr} (сборка не найдена — UNKNOWN, не ноль)`); continue; }
+      const inner = /escapeAttr\s*\(/.test(asg.expr) ? 'attr'
+        : (/AttrJsString\s*\(/.test(asg.expr) ? 'chunk-helper'
+        : (/escapeJsString\s*\(/.test(asg.expr) ? 'js-only'
+        : (/^String\(Number|^\(?Number\(/.test(asg.expr) ? 'numeric' : null)));
+      if (inner === 'attr' || inner === 'chunk-helper' || inner === 'numeric') continue;
+      open.push(`:${s.no} ${s.expr} → собран на :${asg.no} как ${asg.expr.slice(0, 50)} [${inner || 'слой не опознан'}]`);
+      continue;
+    }
+    if (layer === 'attr' || layer === 'chunk-helper' || layer === 'numeric') continue;
+    open.push(`:${s.no} ${s.expr} [${layer}]`);
+  }
+  must(open.length === 0, 'слоты без атрибутного слоя (' + open.length + '):\n      ' + open.join('\n      '));
+});
+
+check('S3 НЕГАТИВ ПО АТРИБУТУ: ни один сток не выпускает сырую двойную кавычку', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  const helpers = {};
+  for (const h of ['appsAttrJsString', 'railAttrJsString']) {
+    if (index.includes('function ' + h + '(')) helpers[h] = helperOf(index, h);
+  }
+  const slots = handlerSlots(index);
+  const scope = Object.assign({
+    escapeAttr: E.escapeAttr, escapeHtml: E.escapeHtml, escapeJsString: E.escapeJsString,
+  }, helpers);
+  let checked = 0;
+  for (const s of slots) {
+    const layer = closingLayer(s.expr);
+    if (layer === 'numeric' || layer === null) continue; // трассируемые покрыты проверкой слоя
+    // исполняем САМО выражение сайта с враждебным значением
+    const names = Array.from(new Set((s.expr.match(/[A-Za-z_$][\w$]*/g) || [])
+      .filter((n) => !(n in scope) && !['String', 'Number', 'parseInt', 'parseFloat', 'Math'].includes(n))));
+    const local = Object.assign({}, scope);
+    for (const n of names) local[n] = ATTR_HOSTILE;
+    let out;
+    try {
+      out = new Function(...Object.keys(local), 'return (' + s.expr + ');')(...Object.values(local));
+    } catch (_) { continue; } // выражение требует структуры объекта — покрыто точечными проверками
+    must(!String(out).includes('"'),
+      `сток :${s.no} ${s.expr} выпустил сырую двойную кавычку: ${JSON.stringify(String(out).slice(0, 60))}`);
+    checked += 1;
+  }
+  must(checked >= 20, 'проверено стоков ' + checked + ' — зонд ослаб, ожидалось не меньше 20');
+});
+
+check('S3 payload помощников (btn/js/jsPair) собирается с атрибутным слоем', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  const spots = [
+    { id: 'js :10317',   needle: "var js = '\\\\'' + " },
+    { id: 'jsPair',      needle: 'var jsPair = ' },
+    { id: 'btn id',      needle: 'var id = escapeJsString(intakeId)' },
+  ];
+  const lines = index.split('\n');
+  let seen = 0;
+  lines.forEach((ln, i) => {
+    const m = /\b(?:var|let|const)\s+(js|jsPair|id)\s*=\s*(.+)/.exec(ln);
+    if (!m) return;
+    const body = m[2];
+    if (!/escapeJsString\s*\(/.test(body)) return;  // не наш класс сборки
+    seen += 1;
+    must(/escapeAttr\s*\(/.test(body) || /AttrJsString\s*\(/.test(body),
+      `payload «${m[1]}» на :${i + 1} собран только JS-слоем: ${body.trim().slice(0, 80)}`);
+  });
+  must(seen >= 6, 'мест сборки payload найдено ' + seen + ' — ожидалось не меньше 6 (js ×3, jsPair ×2, btn id ×1)');
+});
+
+/* ---- дрилл ПОНИЖЕНИЯ: М3 Супервайзора как тест ---- */
+drill('М3: понизить :4984 escapeAttr(escapeJsString(…)) до escapeJsString(…)',
+  'S3 ПОКРЫТИЕ ПО СЛОЮ: каждый слот обработчика закрыт атрибутным слоем',
+  (src) => {
+    const needle = "escapeAttr(escapeJsString(published ? 'unpublish' : 'publish'))";
+    const alt = 'escapeAttr(escapeJsString(p.id))';
+    const pick = src.includes(needle) ? needle : alt;
+    const at = src.indexOf(pick);
+    must(at > 0, 'форма для понижения не найдена');
+    const inner = 'escapeJsString(' + pick.slice('escapeAttr(escapeJsString('.length, -1);
+    return src.slice(0, at) + inner + src.slice(at + pick.length);
+  });
+
+drill('понизить payload помощника js до одного JS-слоя',
+  'S3 payload помощников (btn/js/jsPair) собирается с атрибутным слоем',
+  (src) => src.replace(/escapeAttr\(escapeJsString\(String\(intakeId\)\)\)/, 'escapeJsString(String(intakeId))'));
+
+
+check('S3 UNKNOWN закрыт: строка ошибки fetch_messages не доезжает в innerHTML сырьём', (src) => {
+  const index = loadIndex(src);
+  const E = escapersOf(index);
+  // Таких сайтов два (:4621 уже был закрыт, :13146 закрыт в S3) — проверяются ОБА.
+  const sites = linesWith(index, 'Failed to load: ', 'сайты строки ошибки (класс (c))');
+  must(sites.length === 2, 'ожидалось 2 сайта «Failed to load», найдено ' + sites.length);
+  for (const site of sites) {
+  const expr = site.text.trim().replace(/^(if \(host\) )?host\.innerHTML\s*=\s*/, '').replace(/;$/, '');
+  for (const v of ['<img src=x onerror=alert(1)>', '</div><script>alert(1)</script>', "O'Brien & Co"]) {
+    const html = new Function('escapeHtml', 'escapeAttr', 'e', 'return (' + expr + ');')(E.escapeHtml, E.escapeAttr, v);
+    must(!html.includes('<img'), 'сырой тег доехал в innerHTML: ' + html.slice(0, 80));
+    must(!html.includes('<script'), 'сырой script доехал в innerHTML');
+    const inner = html.slice(html.indexOf('Failed to load: ') + 'Failed to load: '.length, html.lastIndexOf('</div>'));
+    must(htmlAttrDecode(inner) === String(v), 'round-trip текста ошибки сломан: ' + JSON.stringify(htmlAttrDecode(inner)));
+  }
+  }
+});
+
+drill('снять escapeHtml со строки ошибки fetch_messages',
+  'S3 UNKNOWN закрыт: строка ошибки fetch_messages не доезжает в innerHTML сырьём',
+  (src) => {
+    // Игла без ведущей кавычки: литерал в исходнике начинается с '<div …>, а не с 'Failed.
+    const needle = "Failed to load: '+escapeHtml(String(e))+'</div>'";
+    must(src.includes(needle), 'игла дрилла не найдена');
+    return src.replace(needle, "Failed to load: '+e+'</div>'");
+  });
+
 /* ------------------------------------------------------------------ *
  * Дриллы: каждая мутация обязана уронить ИМЕННО свою проверку
  * ------------------------------------------------------------------ */
@@ -625,8 +833,8 @@ drill('escapeJsString снова теряет 0 на String(s||"")', 'escapeJsSt
 /* ------------------------------------------------------------------ *
  * Мета: харнесс нельзя выхолостить незаметно
  * ------------------------------------------------------------------ */
-const MIN_CHECKS = 29;
-const MIN_DRILLS = 32;
+const MIN_CHECKS = 33;
+const MIN_DRILLS = 35;
 const EXPECTED_CHECK_NAMES = CHECKS.map((c) => c.name);
 
 section('проверки на кандидате');
