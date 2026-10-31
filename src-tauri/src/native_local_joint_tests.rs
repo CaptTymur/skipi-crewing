@@ -337,6 +337,38 @@ mod local_joint {
         }
     }
 
+    // No.880 S2-fix, блокер F11 (аудит Супервайзора 3458f16b). Ветка Fresh была
+    // подключена к аллокатору, но ПРОДУКТ в неё не попадал: `create` требует
+    // трёх конъюнктов, и третий — политика вызывающего, а единственный
+    // продуктовый вызов передавал `ExistingOrUncertain`. Соседний тест выше
+    // проверяет Fresh с ЯВНЫМ `fresh = true` и потому дефект не видит: он
+    // проверяет ветку, а не достижимость ветки продуктом.
+    // Здесь политика берётся ТЕМ ЖЕ местом, которым её берёт продукт
+    // (`CreationPolicy::for_interactive_login()`), поэтому расхождение между
+    // продуктовым вызовом и тестом становится невозможным по конструкции.
+    #[test]
+    fn native635_880_f11_production_policy_on_clean_install_reaches_fresh() {
+        let fixture = JointFixture::new();
+        let runtime = fixture.runtime(fixture.base_settings());
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: установка действительно чистая, иначе тест
+        // доказывал бы совсем другой исход.
+        assert_eq!(mode(&runtime.settings_arc().lock().unwrap(), &runtime_origins()), Mode::Unbound,
+            "control: the fixture must be an unbound install");
+        let context = runtime.context().unwrap();
+        let pending = runtime.start_login(&context, CreationPolicy::for_interactive_login()).unwrap();
+        let mut fake = Fake::default();
+        fake.reply.connection.bearer_token = "skn_joint-next-company-credential".into();
+        fake.reply.connection.expires_at = (now() + chrono::Duration::minutes(9)).to_rfc3339();
+        let proof = runtime.authenticate(&fake, "joint@example.invalid", "synthetic-password", pending).unwrap();
+        assert!(proof.attempt.create,
+            "the policy the product passes must permit creating a context on a clean install");
+        let outcome = fixture.apply(&runtime, proof, KeyFault::None, None);
+        assert_eq!(outcome, Ok(JointOutcome::Inactive),
+            "a clean install signing in with the PRODUCTION policy must reach the fresh local context, not migration_required");
+        // И рабочее место действительно выделено, а не объявлено.
+        assert!(fixture.references.borrow().is_some(), "fresh local references were actually prepared");
+    }
+
     #[test]
     fn native635_joint_fresh_actual_resources_are_atomically_bound_and_inactive() {
         let fixture = JointFixture::new();

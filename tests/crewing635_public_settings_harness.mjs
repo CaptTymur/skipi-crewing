@@ -347,6 +347,58 @@ function keyMismatches(defs,sites){
   }
   return {byName,out};
 }
+// No.880 S2-fix (F11): КАЖДЫЙ код отказа пути входа обязан иметь СВОЙ текст.
+// Без этого человек получает «Во входе отказано» без причины — именно так
+// `migration_required` прожил весь S2, будучи единственным вхождением на репозиторий.
+// Модули названы ПОИМЁННО: грубая сверка всех `Err(...)` в доме втягивает коды
+// тестового HTTP-сервера (`header_shape`, `write_timeout`, `request_line`…),
+// и такой ассерт лгал бы о покрытии.
+await run('No.880/F11 — every login-path refusal code has its own text',async()=>{
+  const LOGIN_PATH=['native_local_commit.rs','native_lifecycle.rs','native_account.rs'];
+  const codes=new Set();
+  for (const f of LOGIN_PATH) {
+    const whole=rsSources[f];
+    ok(!!whole,'control: '+f+' is among the parsed Rust sources');
+    // Отрезаем ТЕСТОВЫЙ МОДУЛЬ файла, а не первый попавшийся `#[cfg(test)]`:
+    // внутри него живёт синтетический HTTP-сервер со своими кодами
+    // (`header_shape`, `write_timeout`, `request_line`…), и без этого среза
+    // ассерт требовал бы текстов для того, чего человек не увидит никогда.
+    const cut=whole.search(/#\[cfg\(test\)\]\s*\r?\nmod\s/);
+    const body=cut>0?whole.slice(0,cut):whole;
+    ok(body.length>500,'control: '+f+' keeps its production half after cutting the test module');
+    for (const m of body.matchAll(/(?:Err|ok_or|map_err\(\|[^|]*\|)\s*\(?\s*"([a-z_]+)"/g)) codes.add(m[1]);
+  }
+  const mapBlock=(html.match(/function loginRefusalText\(code\) \{\n  var map = (\{[\s\S]*?\});/)||['',''])[1];
+  const mapped=new Set([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[1]));
+  const texts=new Set([...html.matchAll(/"settings\.crewing\.login\.([a-z_]+)"/g)].map((m)=>m[1]));
+  ok(codes.size>=9&&mapped.size>=20,
+     'control: both sides are measured — '+codes.size+' codes, '+mapped.size+' mapped');
+  // Исключения ПРИШПИЛЕНЫ поимённо и с причиной: эти три кода достижимы и текста
+  // не имеют, но их формулировка — продуктовая копия, то есть решение владельца;
+  // передано менеджеру отдельной строкой. Любой НОВЫЙ бестекстовый код обязан
+  // уронить этот ассерт.
+  const OWNER_COPY_PENDING=['connection_expired','ownership_conflict','tenant_mismatch'];
+  // Внедряемые отказы дома называются `synthetic_*` и стоят под `#[cfg(test)]`
+  // на отдельных элементах (не в тестовом модуле), поэтому срезом выше не
+  // ловятся. Исключаем их ПО НАЗВАННОМУ соглашению и проверяем, что фильтр не
+  // пуст, — иначе он тихо перестал бы что-либо исключать.
+  const TEST_ONLY=/^(synthetic_|test_)/;
+  const synthetic=[...codes].filter((c)=>TEST_ONLY.test(c));
+  ok(synthetic.length>0,'control: the test-only fault naming convention still matches something — '+JSON.stringify(synthetic));
+  const textless=[...codes].filter((c)=>!mapped.has(c)&&!TEST_ONLY.test(c)).sort();
+  ok(JSON.stringify(textless)===JSON.stringify([...OWNER_COPY_PENDING].sort()),
+     'No.880/F11: no login-path code is left without a text beyond the pinned three — got '+JSON.stringify(textless));
+  // И вторая сторона: каждое ЗНАЧЕНИЕ карты обязано существовать ключом словаря
+  // в обоих языках, иначе карта указывает в пустоту.
+  const values=[...new Set([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[2]))];
+  const dangling=values.filter((v)=>!texts.has(v));
+  ok(dangling.length===0,'No.880/F11: every map target resolves to a real text key — dangling '+JSON.stringify(dangling));
+  for (const v of values) {
+    const both=(html.match(new RegExp('"settings\\.crewing\\.login\\.'+v+'"','g'))||[]).length;
+    ok(both>=2,'No.880/F11: the text '+v+' exists in BOTH dictionaries — found '+both);
+  }
+});
+
 await run('No.827 — invoke() keys are the camelCase of #[tauri::command] parameters, for every command of the house',async()=>{
   const {defs,renameAll}=rustCommands(rsSources);
   const attrOccurrences=(Object.values(rsSources).join('\n').match(/#\[tauri::command/g)||[]).length;

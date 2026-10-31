@@ -835,7 +835,7 @@ fn native_account_login(
         let transport =
             native_account::AccountClient::new(native_account::TransportConfig::production())?;
         let attempt = state.runtime.start_login(
-            &expected_context, native_lifecycle::CreationPolicy::ExistingOrUncertain)?;
+            &expected_context, native_lifecycle::CreationPolicy::for_interactive_login())?;
         let proof = state.runtime.authenticate(&transport, &email, &password, attempt)?;
         let target = native_lifecycle::NativeSettingsTarget::for_application()?;
         let plan = native_lifecycle::LocalPlan::existing_application();

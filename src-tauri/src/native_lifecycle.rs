@@ -80,6 +80,26 @@ pub(crate) fn private_access(s: &Settings, origins: &[&str], now: DateTime<Utc>)
 // No value of this type comes from JS. Its production allocator remains a later integration.
 #[derive(Clone, Copy)]
 pub(crate) enum CreationPolicy { ExistingOrUncertain, FreshNativeContext }
+impl CreationPolicy {
+    // No.880 S2-fix (F11). Политика ИНТЕРАКТИВНОГО входа живёт в ОДНОМ месте,
+    // которым пользуются и продукт, и тест: иначе продуктовый вызов и тест
+    // расходятся молча — ровно так дефект и прожил весь S2.
+    //
+    // Передаётся БЕЗУСЛОВНО, и это безопасно по двум измеренным причинам.
+    // Первая: на проводе поле называется `create_if_missing`
+    // (`native_account.rs`, `/api/app/crewing/bootstrap`) — сервер создаёт
+    // рабочее место только при отсутствии и не дублирует его вернувшемуся
+    // пользователю. Вторая: `begin()` соединяет политику конъюнкцией с
+    // `current == Mode::Unbound` ПОД ТЕМ ЖЕ барьером, под которым читает
+    // состояние, поэтому намерение не может создать ничего, когда локальные
+    // данные есть, а вызывающему не нужно читать состояние самому — значит и
+    // гонки «прочитал до, предъявил после» не возникает.
+    //
+    // Почему политику НЕ выводят из состояния внутри `begin()`: `create`
+    // уходит на сервер, и контракт «намерение явное» закреплён тестом
+    // `native635_runtime_creation_intent_is_explicit_and_server_response_remains_required`.
+    pub(crate) fn for_interactive_login() -> Self { Self::FreshNativeContext }
+}
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum AttemptKind { Login, Refresh }
 struct Attempt { id: u64, epoch: u64, context: String, snapshot: Settings, kind: AttemptKind, create: bool }
