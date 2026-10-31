@@ -373,11 +373,13 @@ await run('No.880/F11 — every login-path refusal code has its own text',async(
   const texts=new Set([...html.matchAll(/"settings\.crewing\.login\.([a-z_]+)"/g)].map((m)=>m[1]));
   ok(codes.size>=9&&mapped.size>=20,
      'control: both sides are measured — '+codes.size+' codes, '+mapped.size+' mapped');
-  // Исключения ПРИШПИЛЕНЫ поимённо и с причиной: эти три кода достижимы и текста
-  // не имеют, но их формулировка — продуктовая копия, то есть решение владельца;
-  // передано менеджеру отдельной строкой. Любой НОВЫЙ бестекстовый код обязан
-  // уронить этот ассерт.
-  const OWNER_COPY_PENDING=['connection_expired','ownership_conflict','tenant_mismatch'];
+  // No.880 S2-fix2: исключений БОЛЬШЕ НЕТ. Три прежних кода получили тексты по
+  // решению менеджера на словах владельца (1493)/(1495): `tenant_mismatch` и
+  // `ownership_conflict` НЕ сняты вместе со слоем компании, потому что держат
+  // живые инварианты — первый отказывает, когда сервер вернул чужое рабочее
+  // место, второй защищает локальные данные другого аккаунта; сняв их, сняли бы
+  // защиту. Поэтому они остались и получили текст ближайшей живой причины.
+  const OWNER_COPY_PENDING=[];
   // Внедряемые отказы дома называются `synthetic_*` и стоят под `#[cfg(test)]`
   // на отдельных элементах (не в тестовом модуле), поэтому срезом выше не
   // ловятся. Исключаем их ПО НАЗВАННОМУ соглашению и проверяем, что фильтр не
@@ -387,7 +389,8 @@ await run('No.880/F11 — every login-path refusal code has its own text',async(
   ok(synthetic.length>0,'control: the test-only fault naming convention still matches something — '+JSON.stringify(synthetic));
   const textless=[...codes].filter((c)=>!mapped.has(c)&&!TEST_ONLY.test(c)).sort();
   ok(JSON.stringify(textless)===JSON.stringify([...OWNER_COPY_PENDING].sort()),
-     'No.880/F11: no login-path code is left without a text beyond the pinned three — got '+JSON.stringify(textless));
+     'No.880/F11: every login-path refusal code has its own text, with no exemptions — textless '+JSON.stringify(textless)
+     +(OWNER_COPY_PENDING.length?' against pinned '+JSON.stringify(OWNER_COPY_PENDING):''));
   // И вторая сторона: каждое ЗНАЧЕНИЕ карты обязано существовать ключом словаря
   // в обоих языках, иначе карта указывает в пустоту.
   const values=[...new Set([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[2]))];

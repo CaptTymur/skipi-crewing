@@ -2185,6 +2185,9 @@ var UI_STRINGS = {
     "settings.crewing.login.upstream_unavailable": "The server is unavailable. This is on our side — try later.",
     "settings.crewing.login.transport_unreachable": "No connection to the server. Check your network and try again.",
     "settings.crewing.login.migration_required": "This device still holds data from an earlier installation. Signing in over it is not possible — please contact Skipi support.",
+    "settings.crewing.login.ownership_conflict": "The data on this device belongs to a different account. Contact Skipi support.",
+    "settings.crewing.login.tenant_mismatch": "The account and the workspace did not match. Sign in again.",
+    "settings.crewing.login.connection_expired": "Your session has expired. Sign in again.",
     "settings.crewing.login.exchange_failed": "The exchange with the server failed. This is our defect; tell us and we will fix it.",
     "settings.crewing.login.entitlement_missing": "This account has no workspace yet.",
     "settings.crewing.login.entitlement_expired": "The workspace has expired. Renew it to sign in.",
@@ -2425,6 +2428,9 @@ var UI_STRINGS = {
     "settings.crewing.login.upstream_unavailable": "Сервер недоступен. Это на нашей стороне — попробуйте позже.",
     "settings.crewing.login.transport_unreachable": "Нет связи с сервером. Проверьте сеть и попробуйте снова.",
     "settings.crewing.login.migration_required": "На устройстве остались данные прежней установки. Войти поверх них нельзя — напишите в поддержку Skipi.",
+    "settings.crewing.login.ownership_conflict": "Данные на устройстве принадлежат другому аккаунту. Напишите в поддержку Skipi.",
+    "settings.crewing.login.tenant_mismatch": "Аккаунт и рабочее место не совпали. Войдите снова.",
+    "settings.crewing.login.connection_expired": "Сессия истекла. Войдите снова.",
     "settings.crewing.login.exchange_failed": "Обмен с сервером не удался. Это наш дефект: сообщите нам, и мы исправим.",
     "settings.crewing.login.entitlement_missing": "У этого аккаунта пока нет рабочего места.",
     "settings.crewing.login.entitlement_expired": "Рабочее место истекло. Продлите, чтобы войти.",
@@ -14993,7 +14999,7 @@ async function nativeAccountLogin() {
 // STRING and never the call site — the fifteen sites it covers are indistinguishable
 // here. Splitting it needs distinct Rust codes (BACKLOG No.797), not a UI change.
 function loginRefusalText(code) {
-  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "fresh_namespace_unavailable": "fresh_unavailable", "migration_required": "migration_required", "native_binding_missing": "binding_missing"};
+  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "fresh_namespace_unavailable": "fresh_unavailable", "migration_required": "migration_required", "connection_expired": "connection_expired", "tenant_mismatch": "tenant_mismatch", "ownership_conflict": "ownership_conflict", "native_binding_missing": "binding_missing"};
   return 'settings.crewing.login.' + (map[code] || 'refused_unspecified');
 }
 
