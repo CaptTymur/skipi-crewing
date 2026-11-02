@@ -106,7 +106,9 @@ function makeContext({ demo = false, invokeImpl, clipboardImpl, fileReaderImpl }
     __demoMode: demo,
     state: {
       view: 'intake_pilot',
-      settings: { server_url: 'http://127.0.0.1:43123', bearer_token: 'synthetic-token', crewing_id: 'crew-synthetic' },
+      // No.880 пункт 4: готовность пилота определяет АККАУНТ-СЕССИЯ, а не
+      // легаси-токен компании; поле то же, что отдаёт Rust в проекции.
+      settings: { server_url: 'http://127.0.0.1:43123', connection_context: 'synthetic-token', account_session: 'active', crewing_id: 'crew-synthetic' },
       intakePilot: freshPilotState(),
     },
     window: { crypto: { randomUUID: () => 'event-fixed-1', getRandomValues: (arr) => arr.fill(7) } },
@@ -124,7 +126,11 @@ function makeContext({ demo = false, invokeImpl, clipboardImpl, fileReaderImpl }
     },
     getUiLang() { return language; },
     setLang(value) { language = value; },
-    tr(key) { return key === 'settings.connection' ? (language === 'ru' ? 'Подключение' : 'Connection') : key; },
+    // No.880: кнопка отказа ведёт на ВХОД, а не в снятую секцию подключения.
+    tr(key) {
+      const dict = { 'entry.login': { ru: 'Войти', en: 'Sign in' } };
+      return dict[key] ? dict[key][language] : key;
+    },
     escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
     escapeAttr(value) { return String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
     escapeJsString(value) { return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); },
@@ -359,7 +365,7 @@ console.log('# alias ABA lifetime, drafts and settings purge');
   const key = ctx.state.intakePilot.contextKey;
   ctx.state.intakePilot.oneTimeAlias = {value:'old-secret',copied:false,copyError:false,generation,contextKey:key};
   const previous = ctx.state.settings;
-  const next = {...previous, bearer_token:'new-token'};
+  const next = {...previous, connection_context:'new-token'};
   ctx.state.settings = next;
   ctx.__pilot.pilotSettingsChanged(previous, next);
   await ctx.__pilot.pilotCopyAlias();
@@ -369,9 +375,50 @@ console.log('# alias ABA lifetime, drafts and settings purge');
 console.log('# no-config and duplicate-click controls');
 {
   const ctx = makeContext();
-  ctx.state.settings.bearer_token = '';
+  // No.880: «нет сессии» выражается ПОЛЕМ, и каждый не-'active' исход обязан
+  // держать пилота закрытым. Прежний вариант снимал один булев легаси-флаг;
+  // теперь перебираются все исходы, которые Rust может прислать.
+  for (const outcome of ['none', 'locked', 'signed_out', 'expired', 'legacy', 'unavailable']) {
+    const probe = makeContext();
+    probe.state.settings.account_session = outcome;
+    ok(!!probe.state.settings.server_url && !!probe.state.settings.crewing_id && !!probe.state.settings.connection_context,
+      `no-credential control (${outcome}) keeps public URL, company and opaque context nonempty`);
+    probe.__pilot.pilotEnter(); await flush();
+    ok(probe.calls.length === 0, `account_session=${outcome} performs zero invokes`);
+  }
+  // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ рядом: с 'active' тот же путь ДОХОДИТ до вызовов,
+  // иначе «ноль вызовов» доказывал бы лишь то, что пилот сломан совсем.
+  ctx.__pilot.pilotEnter(); await flush();
+  ok(ctx.calls.length > 0, 'control: an active account session does reach the commands');
+}
+{
+  const ctx = makeContext();
+  ctx.state.settings.connection_context = '';
   ctx.__pilot.pilotEnter(); await flush();
   ok(ctx.calls.length === 0, 'unconfigured pilot performs zero network invokes');
+}
+// No.880 (1495), регрессия: экран отказа пилота ПРЕДЛАГАЛ кнопку «Подключение»,
+// которая звала openSettings('connection') → секцию home-crewing-connection,
+// удалённую этим же слайсом, и текст велел ввести Server URL, токен компании и
+// Crewing ID. Кнопка вела в никуда, текст называл несуществующие поля.
+console.log('# No.880: the pilot refusal names no connection controls');
+for (const lang of ['en', 'ru']) {
+  const ctx = makeContext();
+  ctx.setLang(lang);
+  ctx.state.settings.connection_context = '';
+  ctx.__pilot.pilotEnter(); await flush();
+  const html = ctx.nodes.get('main').innerHTML;
+  // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ в том же окне: пустой экран прошёл бы все отрицания
+  // ниже, ничего не доказав.
+  ok(/data-qa="pilot-unconfigured"/.test(html) && html.length > 200,
+    `No.880/${lang}: the refusal screen actually renders (control for the negatives below)`);
+  const banned = html.match(/[Тт]окен|token|Server URL|Crewing ID/);
+  ok(!banned,
+    `No.880/${lang}: the refusal names no token, Server URL or Crewing ID — found ${banned ? JSON.stringify(banned[0]) : 'nothing'}`);
+  ok(/onclick="goAccountSignIn\(\)"/.test(html),
+    `No.880/${lang}: the refusal offers the one sign-in action the entry fork owns`);
+  ok(!/openSettings\(/.test(html),
+    `No.880/${lang}: the refusal no longer routes into a settings section that was deleted`);
 }
 {
   const create = deferred();

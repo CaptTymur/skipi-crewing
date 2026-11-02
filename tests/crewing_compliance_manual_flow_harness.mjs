@@ -74,9 +74,17 @@ globalThis.document = {
   documentElement: { getAttribute: () => 'light', setAttribute() {} },
 };
 globalThis.window = globalThis;
+// No.880: продукт захватывает транспорт ОДИН РАЗ при загрузке
+// (`var __realInvoke = window.__TAURI__.core.invoke`), поэтому подменять его
+// после сборки модуля бесполезно — запись вызовов живёт здесь, в самой заглушке.
+const DISPATCHED = [];
 globalThis.__TAURI__ = {
   core: {
     invoke: async (cmd) => {
+      DISPATCHED.push(cmd);
+      if (cmd === 'crewing_intake_matching_profile_publication') {
+        return { id: 'prof-1', published: true };
+      }
       if (cmd === 'rank_compliance_candidate') {
         return {
           candidate_rank: 'Captain',
@@ -147,7 +155,7 @@ try {
     scriptNoBoot
       + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
       + '\nshowToast = function(msg, kind){ globalThis.__COMPLIANCE_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
-      + '\nreturn { state, invoke, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate, saveCurrentBundleSeafarer };'
+      + '\nreturn { state, invoke, renderApplicationSnapshot, checkApplicationAgainstProfiles, saveRankedCandidate, ignoreRankedCandidate, saveCurrentBundleSeafarer, publishComplianceProfile };'
   )();
 } catch (e) {
   console.error('runtime load failed:', e);
@@ -158,7 +166,8 @@ ok(!!M, 'real desktop inline script loads without boot IIFE');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    // No.880 S2: признак готовности — АККАУНТ-СЕССИЯ.
+    account_session: 'active', connection_context: 'ctx_compliance',
     crewing_id: 'presence-harness',
   };
   M.state.selectedVacancy = { id: 'v1', rank: 'Captain', vessel_type: 'Bulk Carrier' };
@@ -224,6 +233,62 @@ if (M) {
   const savedDocs = await M.invoke('list_saved_seafarer_documents', { seafarerId: 'demo-sf1' });
   ok(Array.isArray(savedDocs) && savedDocs.length === 6, 'golden candidate saved documents are visible in Seafarers DB');
   ok(toasts.some((t) => /Saved to Seafarers DB/i.test(t.msg)), 'golden candidate Save reports success');
+}
+
+// Условие Супервайзора S1-4: вошедший аккаунтом НЕ должен получать отказ
+// публикации. До No.880 гейт публикации требовал `has_bearer_token` — легаси-токен
+// компании, которого у вошедшего аккаунтом нет вовсе, — то есть публикация была
+// закрыта именно для того, кто вошёл по канону. Путь publishComplianceProfile не
+// упоминался ни в одном стенде дома (измерено: 0 вхождений), поэтому дефект был
+// невидим. Проверяются ОБЕ стороны.
+// Этот стенд намеренно работает в ДЕМО (`skipi_crewing_demo`=1), а в демо любая
+// запись отказывает как `demo_read_only` — измерено зондом. Поэтому для гейта
+// публикации собирается ВТОРОЙ экземпляр модуля без демо: предмет проверки —
+// гейт сессии, а не демо-отказ, и смешивать их нельзя.
+let MLive = null;
+store.delete('skipi_crewing_demo');
+try {
+  MLive = new Function(
+    scriptNoBoot
+      + '\nif (typeof serverUrlArg === "undefined") serverUrlArg = function(){ return "https://api.skipi.app"; };'
+      + '\nshowToast = function(msg, kind){ globalThis.__COMPLIANCE_FLOW_TOASTS.push({ msg: String(msg), kind: kind || "" }); };'
+      + '\nreturn { state, __demoMode, publishComplianceProfile };'
+  )();
+} catch (e) {
+  console.error('live (non-demo) instance load failed:', e);
+}
+store.set('skipi_crewing_demo', '1');
+ok(!!MLive && MLive.__demoMode === false,
+  'control: the second instance really is NOT in demo mode (otherwise the gate test would measure demo, not the session)');
+
+if (MLive) {
+  const M = MLive;
+  globalThis.__COMPLIANCE_FLOW_TOASTS.length = 0;
+  M.state.selectedComplianceProfile = { id: 'prof-1', published: false };
+  M.state.settings = { server_url: 'https://api.skipi.app', account_session: 'active',
+    connection_context: 'ctx_compliance', crewing_id: 'presence-harness' };
+  DISPATCHED.length = 0;
+  await M.publishComplianceProfile('prof-1', true);
+  ok(DISPATCHED.includes('crewing_intake_matching_profile_publication'),
+    'No.880/S1-4: a signed-in account reaches publication instead of a refusal — dispatched '
+      + JSON.stringify(DISPATCHED) + ', said ' + JSON.stringify(globalThis.__COMPLIANCE_FLOW_TOASTS.map((x) => x.msg)));
+  ok(!globalThis.__COMPLIANCE_FLOW_TOASTS.some((x) => /не подключ|not connected|подключ/i.test(x.msg)),
+    'No.880/S1-4: a signed-in account sees no «not connected» refusal');
+
+  // ОБРАТНАЯ сторона: без сессии публикация обязана отказать и НЕ ходить в сеть,
+  // иначе первый ассерт прошёл бы и на гейте, который пропускает всех.
+  globalThis.__COMPLIANCE_FLOW_TOASTS.length = 0;
+  for (const outcome of ['none', 'locked', 'expired', 'signed_out']) {
+    DISPATCHED.length = 0;
+    M.state.settings = { server_url: 'https://api.skipi.app', account_session: outcome,
+      connection_context: 'ctx_compliance', crewing_id: 'presence-harness' };
+    await M.publishComplianceProfile('prof-1', true);
+    ok(!DISPATCHED.includes('crewing_intake_matching_profile_publication'),
+      'No.880/S1-4: account_session=' + outcome + ' publishes nothing');
+  }
+  ok(globalThis.__COMPLIANCE_FLOW_TOASTS.length >= 4,
+    'No.880/S1-4: every refusal is said out loud, not swallowed — got '
+      + globalThis.__COMPLIANCE_FLOW_TOASTS.length + ' notices');
 }
 
 if (fail) {

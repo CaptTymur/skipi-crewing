@@ -78,7 +78,7 @@ function loadCtx({ crewingId }) {
     document,
     window: {},
     posts, nav,
-    state: { settings: { server_url: 'https://api.skipi.app', bearer_token: 'crew-token', crewing_id: crewingId } },
+    state: { settings: { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_trial_fixture', crewing_id: crewingId } },
     escapeHtml(v) { return String(v == null ? '' : v); },
     showToast() {},
     shouldUseMobileShell() { return false; },
@@ -96,72 +96,67 @@ function loadCtx({ crewingId }) {
   vm.createContext(ctx);
   // trialGoConnect may not exist on the pre-fix baseline; export it only if defined
   // so this harness fails on a clean behavioural assertion, not a load-time crash.
+  // trialGoSignIn ведёт на развилку (десктоп) или на мобильный экран входа —
+  // обе ветки стабятся, чтобы проверялся МАРШРУТ, а не рендер чужого экрана.
+  ctx.isMobileShellActive = () => false;
+  ctx.renderEntryChoice = () => { ctx.nav.push('renderEntryChoice'); };
+  ctx.entryShowLogin = () => { ctx.nav.push('entryShowLogin'); };
+  ctx.mobileShow = (v) => { ctx.nav.push('mobileShow:' + v); };
+  ctx.tr = (key) => String(key);
+  ctx.escapeHtml = (s) => String(s == null ? '' : s).replace(/[<>&"]/g, (c) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   vm.runInContext(
-    `${extractTrialScript()}\nthis.__trial = { trialActivateLicense, trialShowBlockedOverlay,`
-      + ` trialGoConnect: (typeof trialGoConnect === 'function' ? trialGoConnect : null) };`,
+    `${extractTrialScript()}\nthis.__trial = { trialShowBlockedOverlay,`
+      + ` trialGoSignIn: (typeof trialGoSignIn === 'function' ? trialGoSignIn : null) };`,
     ctx,
   );
   return ctx;
 }
 
-// --- Case 1: unconnected device (empty crewing_id) → NO POST, connect-CTA message.
-{
-  const ctx = loadCtx({ crewingId: '' });
-  const document = ctx.document;
-  document.setNode('trial-license', { value: 'valid-license-token' });
-  document.setNode('trial-license-error');
-  document.setNode('trial-license-btn');
-  await ctx.__trial.trialActivateLicense();
-  assert.equal(ctx.posts.length, 0,
-    'unconnected device must NOT POST /api/trial/activate (would send empty account_id → 422)');
-  const errText = document.getElementById('trial-license-error').textContent || '';
-  assert.ok(/подключите токен компании/i.test(errText),
-    'unconnected device must surface a "connect a company token" message, got: ' + JSON.stringify(errText));
-  console.log('OK: unconnected device — trialActivateLicense does not POST, shows connect message');
-}
+// No.880/(1495): активации по лицензионному токену больше нет — ни функции, ни поля,
+// ни эндпоинта. Свойство, которое защищала эта карточка (BACKLOG No.105 — устройство
+// без аккредитации НЕ должно слать активацию с пустым account_id), сохранено в более
+// сильной форме: оверлей блокировки не шлёт НИЧЕГО и не просит токен НИ В ОДНОМ
+// состоянии, а единственный выход из него — вход аккаунтом.
 
-// --- Case 2: blocked-overlay on unconnected device renders connect-CTA, not the License field.
+// --- Случай 1: без локальной идентичности — ни одного запроса, ни одного поля токена.
 {
   const ctx = loadCtx({ crewingId: '' });
   ctx.__trial.trialShowBlockedOverlay('');
   const overlay = ctx.document.getElementById('trial-block-overlay');
-  assert.ok(overlay, 'blocked overlay present on unconnected device');
-  const html = overlay.innerHTML;
-  assert.ok(/trialGoConnect\(\)/.test(html),
-    'unconnected overlay must expose a connect-CTA (trialGoConnect)');
-  assert.ok(!/id="trial-license"/.test(html),
-    'unconnected overlay must NOT render the dead License-token input');
-  // The connect-CTA actually routes to the existing connection screen (desktop here).
-  assert.ok(typeof ctx.__trial.trialGoConnect === 'function',
-    'trialGoConnect() must be defined (routes the connect-CTA to the connection screen)');
-  ctx.__trial.trialGoConnect();
-  assert.ok(ctx.nav.includes('openSettings:connection'),
-    'connect-CTA must route to the existing connection screen (desktop openSettings), got: ' + JSON.stringify(ctx.nav));
-  console.log('OK: unconnected overlay — connect-CTA present, no License field, routes to connection');
+  assert.ok(overlay, 'blocked overlay present without a local identity');
+  const html = String(overlay.innerHTML || '');
+  assert.equal(ctx.posts.length, 0, 'the blocked overlay sends no request at all');
+  assert.ok(!/id="trial-license"/.test(html), 'no license-token input is rendered');
+  assert.ok(!/токен|token/i.test(html), 'the overlay asks for no token in any wording');
+  assert.ok(/trialGoSignIn\(\)/.test(html), 'the only way out is the sign-in path');
+  console.log('OK: no identity — overlay blocks, asks nothing, offers sign-in');
 }
 
-// --- Case 3 (PRESERVE): connected device still POSTs with a NON-EMPTY account_id and succeeds.
+// --- Случай 2: с локальной идентичностью — поведение то же, без исключений.
 {
   const ctx = loadCtx({ crewingId: 'crew-42' });
-  const document = ctx.document;
   ctx.__trial.trialShowBlockedOverlay('');
   const overlay = ctx.document.getElementById('trial-block-overlay');
-  assert.ok(/id="trial-license"/.test(overlay.innerHTML),
-    'connected overlay must still render the License field (PRESERVE)');
-  document.setNode('trial-license', { value: 'valid-license-token' });
-  document.setNode('trial-license-error');
-  document.setNode('trial-license-btn');
-  await ctx.__trial.trialActivateLicense();
-  const activatePosts = ctx.posts.filter((p) => /\/api\/trial\/activate$/.test(p.url));
-  assert.equal(activatePosts.length, 1, 'connected device POSTs to /api/trial/activate exactly once');
-  assert.ok(activatePosts[0].body && activatePosts[0].body.account_id === 'crew-42',
-    'connected device POSTs with the NON-EMPTY crewing_id as account_id, got: '
-      + JSON.stringify(activatePosts[0].body));
-  assert.equal(ctx.document.getElementById('trial-block-overlay'), null,
-    'connected activation success removes the blocked overlay (PRESERVE)');
-  assert.equal(ctx.localStorage.dump().skipi_license_token, 'valid-license-token',
-    'connected activation stores the license token (PRESERVE)');
-  console.log('OK: connected device — POST with non-empty account_id, overlay removed (PRESERVE)');
+  assert.ok(overlay, 'blocked overlay present with a local identity');
+  const html = String(overlay.innerHTML || '');
+  assert.equal(ctx.posts.length, 0, 'still no request — an identity does not unlock a token path');
+  assert.ok(!/id="trial-license"/.test(html), 'still no license-token input');
+  assert.ok(/trialGoSignIn\(\)/.test(html), 'still the sign-in path, same as without an identity');
+  console.log('OK: with identity — same overlay, no token path, sign-in only');
 }
 
-console.log('\nALL PASS: trial license activation on unconnected device is guarded (BACKLOG №105).');
+// --- Случай 3: выход из оверлея ведёт именно на экран входа.
+{
+  const ctx = loadCtx({ crewingId: '' });
+  assert.ok(typeof ctx.__trial.trialGoSignIn === 'function',
+    'trialGoSignIn() must be defined (routes the overlay out to the account form)');
+  ctx.__trial.trialShowBlockedOverlay('');
+  ctx.__trial.trialGoSignIn();
+  assert.equal(ctx.document.getElementById('trial-block-overlay'), null,
+    'the sign-in path hides the blocking overlay before showing the form');
+  assert.ok(ctx.nav.includes('renderEntryChoice') && ctx.nav.includes('entryShowLogin'),
+    'the sign-in path opens the entry fork and its login door, got: ' + JSON.stringify(ctx.nav));
+  console.log('OK: the overlay routes out to the account sign-in, not to a connection screen');
+}
+
+console.log('\nALL PASS: an expired right blocks the app and the only way out is signing in (No.105 preserved).');

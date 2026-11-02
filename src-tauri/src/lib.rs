@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 mod api;
 mod contact;
@@ -8,6 +8,11 @@ mod crewing_intake;
 mod db;
 mod feedback;
 mod messaging;
+mod native_account;
+mod native_profile;
+mod native_lifecycle;
+mod private_json;
+mod private_store;
 
 #[cfg(target_os = "android")]
 pub(crate) fn app_data_dir() -> PathBuf {
@@ -39,11 +44,29 @@ pub struct InterfacePrefs {
     pub language: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default)]
 #[serde(default)] // forward-compat: any new field added later loads with
                   // its Default value when absent from the JSON, so user
                   // settings survive every upgrade.
 pub struct Settings {
+    // Ephemeral native-issued revision; never persisted or exposed as credential material.
+    #[serde(skip)]
+    connection_revision: Arc<Mutex<ConnectionRevision>>,
+    #[serde(skip)]
+    connection_snapshot: Option<ConnectionSnapshot>,
+
+    // Private lifecycle metadata. No native record is added to legacy serialized files.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) native_account: Option<native_lifecycle::SessionRecord>,
+    #[serde(skip)]
+    pub(crate) native_authorized: bool,
+    #[serde(skip)]
+    pub(crate) native_generation: String,
+    #[serde(skip)]
+    pub(crate) load_uncertain: bool,
+    #[serde(skip)]
+    pub(crate) storage_uncertain: bool,
+
     // ----- Connection (server, identity) -----
     pub server_url: String,
     pub bearer_token: String,
@@ -70,6 +93,56 @@ pub struct Settings {
     pub interface: InterfacePrefs,
 }
 
+impl std::fmt::Debug for Settings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Settings(<private>)")
+    }
+}
+
+// Native snapshots share live authority but carry an immutable local revision.
+impl Clone for Settings {
+    fn clone(&self) -> Self {
+        let revision = connection_context(self);
+        Self {
+            connection_revision: self.connection_revision.clone(),
+            connection_snapshot: Some(ConnectionSnapshot {
+                fingerprint: connection_fingerprint(self), revision, prepared_from: None,
+            }),
+            native_account: self.native_account.clone(),
+            native_authorized: self.native_authorized,
+            native_generation: self.native_generation.clone(),
+            load_uncertain: self.load_uncertain,
+            storage_uncertain: self.storage_uncertain,
+            server_url: self.server_url.clone(),
+            bearer_token: self.bearer_token.clone(),
+            crewing_id: self.crewing_id.clone(),
+            organization_id: self.organization_id.clone(),
+            company_name: self.company_name.clone(),
+            user_display_name: self.user_display_name.clone(),
+            token_scopes: self.token_scopes.clone(),
+            token_expires_at: self.token_expires_at.clone(),
+            team_role: self.team_role.clone(),
+            team_onboarding_seen: self.team_onboarding_seen,
+            reply_to: self.reply_to.clone(),
+            vault_path: self.vault_path.clone(),
+            recent_vaults: self.recent_vaults.clone(),
+            profile: self.profile.clone(),
+            interface: self.interface.clone(),
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug)]
+struct NativePersistError { code: &'static str, phase: &'static str, cleanup_confirmed: bool }
+#[cfg(target_os = "linux")]
+impl NativePersistError {
+    fn from_storage(error: private_store::PersistError) -> Self {
+        Self {code:if error.cleanup_confirmed {"settings_storage_error"} else {"settings_cleanup_unconfirmed"},
+            phase:error.phase,cleanup_confirmed:error.cleanup_confirmed}
+    }
+}
+
 impl Settings {
     fn config_path() -> PathBuf {
         #[cfg(target_os = "android")]
@@ -85,42 +158,90 @@ impl Settings {
     }
 
     pub fn load() -> Self {
-        let path = Self::config_path();
-        // First-run default points at the RF-friendly production endpoint; users on
-        // the local dev backend can override it in Settings → Connection.
-        let first_run = || Settings {
-            server_url: api::RU_API.to_string(),
-            ..Default::default()
-        };
-        let raw = match std::fs::read_to_string(&path) {
-            Ok(s) => s,
-            Err(_) => return first_run(),
+        Self::load_from(&Self::config_path())
+    }
+
+    // This explicit-path loader never writes, copies or logs private configuration.
+    fn load_from(path: &std::path::Path) -> Self {
+        let first_run = || Settings { server_url: api::RU_API.to_string(), ..Default::default() };
+        let uncertain = || Settings { load_uncertain: true, ..first_run() };
+        let raw = match std::fs::read_to_string(path) {
+            Ok(raw) => raw,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                // A dangling symlink or unresolved metadata is not a fresh install.
+                return match std::fs::symlink_metadata(path) {
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => first_run(),
+                    _ => uncertain(),
+                };
+            }
+            Err(_) => return uncertain(),
         };
         match serde_json::from_str::<Settings>(&raw) {
-            Ok(mut s) => {
-                // Auto-migrate stale URLs from old builds that hardcoded
-                // :8443 (nginx now listens on 443). Idempotent.
-                if s.server_url.ends_with(":8443") {
-                    s.server_url = s.server_url.trim_end_matches(":8443").to_string();
-                    let _ = s.save();
-                }
-                s
+            Ok(mut settings) => {
+                // A v1 Linux reference must agree with the outer private tuple.
+                // Refuse the entire file without rewriting; old format stays unchanged.
+                #[cfg(target_os = "linux")]
+                if settings.native_account.as_ref().is_some_and(|record|
+                    record.has_binding() && native_lifecycle::mode(&settings, &[api::PRIMARY_API,api::RU_API]) == native_lifecycle::Mode::Unavailable)
+                { return uncertain(); }
+                // Preserve the existing legacy endpoint correction only in memory.
+                if settings.native_account.is_none() && !settings.bearer_token.trim().starts_with("skn_")
+                    && settings.server_url.ends_with(":8443")
+                { settings.server_url = settings.server_url.trim_end_matches(":8443").to_owned(); }
+                settings
             }
-            Err(e) => {
-                // Forward-compat fallback: settings.json from an older
-                // build is missing required fields. Don't wipe it — back
-                // it up so the user's token/crewing_id can be recovered,
-                // and start with a sensible default.
-                let backup = path.with_extension("json.bak");
-                let _ = std::fs::copy(&path, &backup);
-                eprintln!("settings deserialize failed ({e}); backed up to {backup:?}");
-                first_run()
-            }
+            Err(_) => uncertain(),
         }
     }
 
+    // Explicit Linux native persistence only. The caller owns the Runtime write
+    // gate, Settings mutex and stable app namespace; no UI-selected destination.
+    #[cfg(target_os = "linux")]
+    fn persist_native_to_path(&self, path: &std::path::Path) -> Result<private_store::Durability, &'static str> {
+        self.persist_native_using(path, private_store::atomic_write)
+    }
+    #[cfg(all(test, target_os = "linux"))]
+    fn persist_native_with_fault(&self, path: &std::path::Path, fault: private_store::TestFault)
+        -> Result<private_store::Durability, &'static str> {
+        self.persist_native_using(path, |path, bytes| private_store::atomic_write_with_fault(path, bytes, fault))
+    }
+    #[cfg(target_os = "linux")]
+    fn persist_native_detailed(&self, path: &std::path::Path) -> Result<private_store::Durability, NativePersistError> {
+        self.persist_native_detailed_using(path, private_store::atomic_write)
+    }
+    #[cfg(all(test, target_os = "linux"))]
+    fn persist_native_detailed_with_fault(&self, path: &std::path::Path, fault: private_store::TestFault)
+        -> Result<private_store::Durability, NativePersistError> {
+        self.persist_native_detailed_using(path, |path,bytes| private_store::atomic_write_with_fault(path,bytes,fault))
+    }
+    #[cfg(target_os = "linux")]
+    fn persist_native_using(&self, path: &std::path::Path,
+        write: impl FnOnce(&std::path::Path, &[u8])
+            -> Result<private_store::Durability, private_store::PersistError>,
+    ) -> Result<private_store::Durability, &'static str> {
+        self.persist_native_detailed_using(path,write).map_err(|error| error.code)
+    }
+    #[cfg(target_os = "linux")]
+    fn persist_native_detailed_using(&self, path: &std::path::Path,
+        write: impl FnOnce(&std::path::Path, &[u8])
+            -> Result<private_store::Durability, private_store::PersistError>,
+    ) -> Result<private_store::Durability, NativePersistError> {
+        let origins=[api::PRIMARY_API,api::RU_API];
+        if self.native_account.is_none() || !matches!(native_lifecycle::mode(self,&origins),
+            native_lifecycle::Mode::NativeLocked | native_lifecycle::Mode::NativeSession | native_lifecycle::Mode::SignedOut)
+        { return Err(NativePersistError {code:"settings_unavailable",phase:"native_admission",cleanup_confirmed:true}); }
+        private_store::native_settings_destination(path).map_err(NativePersistError::from_storage)?;
+        let bytes=serde_json::to_vec_pretty(self).map_err(|_| NativePersistError {
+            code:"settings_storage_error",phase:"serialization",cleanup_confirmed:true})?;
+        // This is the same writer and serializer used by the preserved string adapter.
+        // CommittedUnknown remains Ok and never becomes a precommit failure.
+        write(path,&bytes).map_err(NativePersistError::from_storage)
+    }
+
     pub fn save(&self) -> Result<(), String> {
-        let path = Self::config_path();
+        self.save_to_path(&Self::config_path())
+    }
+    fn save_to_path(&self, path: &std::path::Path) -> Result<(), String> {
         let s = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         std::fs::write(&path, s).map_err(|e| e.to_string())
     }
@@ -187,7 +308,69 @@ pub struct MailingRequestDraft {
 // ---------- Tauri commands ----------
 
 pub struct AppState {
-    pub settings: Mutex<Settings>,
+    pub settings: Arc<Mutex<Settings>>,
+    pub(crate) runtime: Arc<native_lifecycle::Runtime>,
+}
+
+impl AppState {
+    fn from_settings(settings: Settings) -> Self {
+        let runtime = native_lifecycle::Runtime::new(settings);
+        Self { settings: runtime.settings_arc(), runtime }
+    }
+}
+
+// Transitional admission until the coherent native consumers are integrated.
+// Even a native_authorized flag alone cannot activate private RPC or resources.
+// Only these three public commands can run in a non-legacy process.
+fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'static str> {
+    // native_account_login is admitted in a non-legacy process on purpose: it is the one
+    // command a person must be able to run BEFORE being connected, and refusing it would
+    // make sign-in unreachable for exactly the user this task exists for. Its size is
+    // pinned by native635_boot_public_commands_and_legacy_dispatch_control below.
+    // No.880 п.5: `open_external_url` в том же списке — дверь «Регистрация»
+    // живёт на развилке, то есть в не-легаси процессе.
+    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "open_external_url")
+        || startup_should_open_db(settings) { Ok(()) } else { Err("login_required") }
+}
+// No.880 п.5 (1495). Дверь «Регистрация» ведёт на страницу Skipi, и открыть её
+// должно приложение, а не инструкция человеку. Открывает ТОЛЬКО эта команда.
+// Аллоулист — граница безопасности: схема одна (`https`) и хост названный, то
+// есть ни `file:`, ни `javascript:`, ни произвольный хост из ответа сервера.
+// Образец взят у Моряка (`skipi-public`, `commands/vault.rs`, прочитан через
+// `git show` объекта), но СТРОЖЕ: у него четыре схемы и хост любой.
+const EXTERNAL_URL_ALLOWED_HOSTS: [&str; 1] = ["assistant.skipi.app"];
+
+fn external_url_allowed(url: &str) -> bool {
+    // Разбор берётся через реэкспорт reqwest — новой зависимости не вводим
+    // (`Cargo.toml` release-sensitive для этой задачи).
+    let Ok(parsed) = reqwest::Url::parse(url) else { return false; };
+    if parsed.scheme() != "https" { return false; }
+    // Креденшал в URL и нестандартный порт — признаки не той ссылки, которую
+    // показывает дверь; принимать их значило бы расширять границу молча.
+    if !parsed.username().is_empty() || parsed.password().is_some() || parsed.port().is_some() { return false; }
+    let Some(host) = parsed.host_str() else { return false; };
+    EXTERNAL_URL_ALLOWED_HOSTS.iter().any(|allowed| host.eq_ignore_ascii_case(allowed))
+}
+
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    if !external_url_allowed(&url) { return Err("external_url_refused".into()); }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(&url).spawn()
+            .map(|_| ()).map_err(|_| "external_url_unavailable".to_string())
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Ни одной платформы, кроме Linux, этот дом сегодня не собирает; молчать
+        // здесь нельзя — отказ обязан быть называемым.
+        Err("external_url_unsupported".into())
+    }
+}
+
+fn locked_asset_response(_request: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Vec<u8>> {
+    tauri::http::Response::builder().status(403).header("Cache-Control", "no-store")
+        .body(Vec::new()).expect("constant locked asset response")
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -283,12 +466,6 @@ pub struct CrewingTeamMember {
     pub token_prefix: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct CrewingTeamMemberWire {
-    user_id: String,
-    display_name: Option<String>,
-    role: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TeamChatMessage {
@@ -311,278 +488,383 @@ pub struct TeamChatAttachment {
     pub data_b64: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct TeamChatMessageWire {
-    sender_nickname: String,
-    body: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    event_type: Option<String>,
-    trigger_llm: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    attachments: Vec<TeamChatAttachment>,
+
+// Context revisions are random, native-issued values. The private fingerprint is never
+// returned. Only the live owner/install publishes; snapshot reads never change authority.
+#[derive(Default)]
+struct ConnectionRevision {
+    unavailable: bool,
+    fingerprint: Option<[u8; 32]>,
+    revision: String,
+}
+impl ConnectionRevision {
+    fn retire(&mut self) { self.unavailable = true; self.revision.clear(); self.fingerprint = None; }
+}
+impl std::fmt::Debug for ConnectionRevision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ConnectionRevision")
+    }
+}
+fn connection_fingerprint(settings: &Settings) -> [u8; 32] {
+    use sha2::{Digest, Sha256};
+    // A repeated bootstrap may return the same tuple. Its new native runtime
+    // authorization generation still invalidates every old snapshot and UI context.
+    let native = settings.native_account.as_ref().map(|record| (
+        &record.account_id, record.signed_out, settings.native_authorized,
+        &settings.native_generation, &settings.vault_path, settings.load_uncertain, settings.storage_uncertain,
+        record.binding_identity().expect("private binding serialization"),
+    ));
+    let tuple = serde_json::to_vec(&(
+        settings.server_url.trim(), settings.bearer_token.trim(), settings.crewing_id.trim(), native,
+    )).expect("connection tuple serialization");
+    Sha256::digest(tuple).into()
+}
+pub(crate) fn connection_context(settings: &Settings) -> String {
+    // Empty is unavailable, never a native-issued revision. Even an old snapshot
+    // must first observe the shared authority's irreversible retirement.
+    let Ok(mut context) = settings.connection_revision.lock() else { return String::new(); };
+    if context.unavailable { return String::new(); }
+    if let Some(snapshot) = &settings.connection_snapshot { return snapshot.revision.clone(); }
+    let fingerprint = connection_fingerprint(settings);
+    if context.fingerprint != Some(fingerprint) {
+        context.fingerprint = Some(fingerprint);
+        context.revision = format!("ctx_{}", uuid::Uuid::new_v4());
+    }
+    context.revision.clone()
 }
 
-fn team_api_context(s: &Settings) -> Result<(String, String, String), String> {
-    let token = s.bearer_token.trim();
-    if token.is_empty() {
-        return Err("Company token is required.".into());
-    }
-    let crewing_id = s.crewing_id.trim();
-    if crewing_id.is_empty() {
-        return Err("Crewing ID is required. Validate the company token first.".into());
-    }
-    Ok((
-        s.server_url.trim().to_string(),
-        token.to_string(),
-        crewing_id.to_string(),
-    ))
+struct ConnectionSnapshot {
+    fingerprint: [u8; 32],
+    revision: String,
+    prepared_from: Option<String>,
 }
-
-fn team_chat_nickname(s: &Settings) -> String {
-    let candidates = [
-        s.user_display_name.trim(),
-        s.company_name.trim(),
-        s.profile.legal_name.trim(),
-    ];
-    for candidate in candidates {
-        if !candidate.is_empty() {
-            return candidate.chars().take(40).collect();
-        }
-    }
-    "Crewing".to_string()
+impl std::fmt::Debug for ConnectionSnapshot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("ConnectionSnapshot") }
 }
-
-#[tauri::command]
-fn get_settings(state: tauri::State<AppState>) -> Settings {
-    state.settings.lock().unwrap().clone()
+// Readers compare both the immutable captured revision/tuple AND current live authority.
+pub(crate) fn connection_context_matches(settings: &Settings, expected: &str) -> bool {
+    if expected.is_empty() { return false; }
+    if connection_context(settings) != expected { return false; }
+    let fingerprint = connection_fingerprint(settings);
+    if settings.connection_snapshot.as_ref().is_some_and(|s| s.fingerprint != fingerprint) { return false; }
+    let Ok(authority) = settings.connection_revision.lock() else { return false; };
+    !authority.unavailable && authority.revision == expected && authority.fingerprint == Some(fingerprint)
 }
-
-#[tauri::command]
-fn save_settings(mut new_settings: Settings, state: tauri::State<AppState>) -> Result<(), String> {
-    // Maintain recent_vaults list whenever vault_path changes via Settings.
-    // Newest-first, deduped, capped at 10.
-    if !new_settings.vault_path.is_empty() {
-        new_settings
-            .recent_vaults
-            .retain(|p| p != &new_settings.vault_path);
-        new_settings
-            .recent_vaults
-            .insert(0, new_settings.vault_path.clone());
-        new_settings.recent_vaults.truncate(10);
-    }
-    new_settings.save()?;
-    *state.settings.lock().unwrap() = new_settings;
+fn prepare_connection_context(proposed: &mut Settings, current: &Settings) {
+    let current_revision = connection_context(current);
+    let fingerprint = connection_fingerprint(proposed);
+    let revision = if fingerprint == connection_fingerprint(current) { current_revision.clone() }
+        else { format!("ctx_{}", uuid::Uuid::new_v4()) };
+    proposed.connection_revision = current.connection_revision.clone();
+    proposed.connection_snapshot = Some(ConnectionSnapshot {
+        fingerprint, revision, prepared_from: Some(current_revision),
+    });
+}
+// Snapshot preparation happens before the authority lock: Settings::clone and
+// context helpers can themselves lock that authority.
+struct PreparedSettingsInstall {
+    proposed: Settings,
+    parent_revision: String,
+    parent_fingerprint: [u8; 32],
+    next_revision: String,
+    next_fingerprint: [u8; 32],
+}
+fn prepare_settings_install(mut proposed: Settings, current: &Settings)
+    -> Result<PreparedSettingsInstall, Settings>
+{
+    let parent_revision = connection_context(current);
+    if parent_revision.is_empty() { return Err(proposed); }
+    let parent_fingerprint = connection_fingerprint(current);
+    let fingerprint = connection_fingerprint(&proposed);
+    let prepared = proposed.connection_snapshot.as_ref().is_some_and(|s|
+        s.fingerprint == fingerprint && s.prepared_from.as_deref() == Some(parent_revision.as_str()));
+    if !prepared { prepare_connection_context(&mut proposed, current); }
+    let Some(snapshot) = proposed.connection_snapshot.take() else { return Err(proposed); };
+    proposed.connection_revision = current.connection_revision.clone();
+    Ok(PreparedSettingsInstall { proposed, parent_revision, parent_fingerprint,
+        next_revision: snapshot.revision, next_fingerprint: snapshot.fingerprint })
+}
+// Caller holds Settings and the captured authority through BOTH publications.
+// No context/clone callbacks, filesystem I/O or DB operation is allowed here.
+fn install_prepared_settings(
+    current: &mut Settings, authority: &mut ConnectionRevision, prepared: PreparedSettingsInstall,
+) -> Result<(), PreparedSettingsInstall> {
+    if authority.unavailable || authority.revision != prepared.parent_revision
+        || authority.fingerprint != Some(prepared.parent_fingerprint)
+        || !Arc::ptr_eq(&current.connection_revision, &prepared.proposed.connection_revision)
+    { return Err(prepared); }
+    authority.fingerprint = Some(prepared.next_fingerprint);
+    authority.revision = prepared.next_revision;
+    *current = prepared.proposed;
     Ok(())
+}
+// Called only after successful persistence while the caller holds Settings.
+fn install_settings(current: &mut Settings, proposed: Settings) {
+    let prepared = match prepare_settings_install(proposed, current) {
+        Ok(prepared) => prepared, Err(_) => panic!("connection revision unavailable"),
+    };
+    let owner = current.connection_revision.clone();
+    let mut authority = owner.lock().expect("connection revision unavailable");
+    if install_prepared_settings(current, &mut authority, prepared).is_err() {
+        panic!("connection revision changed");
+    }
+}
+
+// Production and regression tests use the same persist-before-publish sequencing boundary.
+fn persist_and_install_settings(
+    current: &mut Settings, proposed: Settings,
+    persist: impl FnOnce(&Settings) -> Result<(), String>,
+) -> Result<(), String> {
+    // Unknown original bytes must survive all three Settings writers.
+    if current.load_uncertain || current.connection_revision.lock().map_or(true, |authority| authority.unavailable) {
+        return Err("settings_unavailable".into());
+    }
+    // The legacy process keeps its existing DB/plugin/asset setup. It cannot
+    // transition to a blocked mode through a generic Settings writer. Native
+    // activation requires the future coherent runtime/resource transaction.
+    if startup_should_open_db(current) && !startup_should_open_db(&proposed) {
+        return Err("connection_change_requires_login".into());
+    }
+    persist(&proposed)?;
+    install_settings(current, proposed);
+    Ok(())
+}
+
+// Explicit public allowlist. Private Settings serialization remains complete for persistence.
+#[derive(Clone, Serialize)]
+struct PublicSettings {
+    server_url: String,
+    has_bearer_token: bool,
+    connection_context: String,
+    crewing_id: String,
+    organization_id: String,
+    company_name: String,
+    user_display_name: String,
+    token_scopes: Vec<String>,
+    token_expires_at: Option<String>,
+    team_role: String,
+    team_onboarding_seen: bool,
+    reply_to: String,
+    vault_path: String,
+    recent_vaults: Vec<String>,
+    profile: CrewingProfile,
+    interface: InterfacePrefs,
+    // No.880 (1495), пункт 4. ЕДИНСТВЕННЫЙ признак аккаунт-сессии, пересекающий
+    // границу; имя то же и на стороне UI (`crewingAccountSessionActive` читает
+    // ровно это поле). Тип `&'static str` выбран намеренно: набор значений закрыт
+    // компилятором, опечатка в исходе не доедет до UI молча.
+    account_session: &'static str,
+    // Право живёт отдельно от соединения. Имена взяты из уже утверждённой проекции
+    // «4+1» входа (`NativeAccountLogin`), чтобы на обоих концах было одно имя;
+    // `entitlement_expires_at` — срок ПРАВА и не путается с `token_expires_at`,
+    // который остаётся сроком СОЕДИНЕНИЯ.
+    entitlement_source: String,
+    entitlement_expires_at: Option<String>,
+}
+
+// Все исходы режима названы ПОЛЕМ. `NativeSession` различается дальше по
+// `private_access`, потому что запись сессии может быть на месте, а право или
+// соединение — просрочены: это разные ответы для человека, и схлопывать их
+// в «нет сессии» нельзя (канон UI: неизвестность и устаревание не прячутся).
+fn account_session_state(settings: &Settings, origins: &[&str], now: chrono::DateTime<chrono::Utc>) -> &'static str {
+    match native_lifecycle::mode(settings, origins) {
+        native_lifecycle::Mode::Unavailable => "unavailable",
+        native_lifecycle::Mode::SignedOut => "signed_out",
+        native_lifecycle::Mode::NativeLocked => "locked",
+        native_lifecycle::Mode::LegacyConnected => "legacy",
+        native_lifecycle::Mode::Unbound => "none",
+        native_lifecycle::Mode::NativeSession => match native_lifecycle::private_access(settings, origins, now) {
+            Ok(()) => "active",
+            Err("entitlement_expired") | Err("connection_expired") => "expired",
+            // Запись есть, но предъявить её нельзя: для человека это тот же
+            // ответ, что и перезапуск без авторизации — нужно войти снова.
+            Err(_) => "locked",
+        },
+    }
+}
+fn settings_for_ui(settings: &Settings) -> PublicSettings {
+    let empty = Settings::default();
+    let visible = if startup_should_open_db(settings) { settings } else { &empty };
+    PublicSettings {
+        server_url: settings.server_url.clone(),
+        has_bearer_token: !visible.bearer_token.trim().is_empty(),
+        connection_context: connection_context(settings),
+        crewing_id: visible.crewing_id.clone(),
+        organization_id: visible.organization_id.clone(),
+        company_name: visible.company_name.clone(),
+        user_display_name: visible.user_display_name.clone(),
+        token_scopes: visible.token_scopes.clone(),
+        token_expires_at: visible.token_expires_at.clone(),
+        team_role: visible.team_role.clone(),
+        team_onboarding_seen: visible.team_onboarding_seen,
+        reply_to: visible.reply_to.clone(),
+        vault_path: visible.vault_path.clone(),
+        recent_vaults: visible.recent_vaults.clone(),
+        profile: visible.profile.clone(),
+        interface: settings.interface.clone(),
+        // Признак сессии читается из НАСТОЯЩИХ настроек, а не из `visible`:
+        // скрытая проекция обнуляет рабочее место, но состояние входа человек
+        // обязан видеть именно тогда, когда рабочего места ещё нет.
+        account_session: account_session_state(settings, &[api::PRIMARY_API, api::RU_API], chrono::Utc::now()),
+        entitlement_source: settings.native_account.as_ref()
+            .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
+        entitlement_expires_at: settings.native_account.as_ref()
+            .and_then(|record| record.entitlement.expires_at.clone()),
+    }
+}
+#[tauri::command]
+fn get_settings(state: tauri::State<AppState>) -> PublicSettings {
+    settings_for_ui(&state.settings.lock().unwrap())
+}
+fn merge_ui_settings(
+    mut proposed: Settings, current: &Settings, expected_context: &str,
+) -> Result<Settings, String> {
+    if !connection_context_matches(current, expected_context) {
+        return Err("settings_changed".into());
+    }
+    if !startup_should_open_db(current) {
+        // A hidden public projection contains no workspace. Saving interface
+        // preferences must preserve every private value, including an expired,
+        // signed-out, malformed-native, or partial legacy binding.
+        if (!proposed.bearer_token.trim().is_empty() && proposed.bearer_token != current.bearer_token)
+            || (!proposed.server_url.trim().is_empty() && proposed.server_url != current.server_url)
+            || (!proposed.crewing_id.trim().is_empty() && proposed.crewing_id != current.crewing_id)
+            || (!proposed.organization_id.trim().is_empty() && proposed.organization_id != current.organization_id)
+        { return Err("connection_change_requires_validation".into()); }
+        let mut retained = current.clone();
+        retained.interface = proposed.interface;
+        prepare_connection_context(&mut retained, current);
+        return Ok(retained);
+    }
+    if current.native_account.is_some() || current.bearer_token.trim().starts_with("skn_") {
+        // Native credentials and their tenant/origin are never editable through this bridge.
+        if (!proposed.bearer_token.trim().is_empty() && proposed.bearer_token != current.bearer_token)
+            || proposed.server_url.trim() != current.server_url.trim()
+            || proposed.crewing_id.trim() != current.crewing_id.trim()
+            || proposed.organization_id.trim() != current.organization_id.trim()
+        { return Err("connection_change_requires_validation".into()); }
+    }
+    // The generic settings bridge never accepts private native state from JS.
+    proposed.native_account = current.native_account.clone();
+    proposed.native_authorized = current.native_authorized;
+    proposed.native_generation = current.native_generation.clone();
+    proposed.load_uncertain = current.load_uncertain;
+    proposed.storage_uncertain = current.storage_uncertain;
+    if proposed.bearer_token.trim().is_empty() {
+        // Never attach the hidden credential to a caller-selected different tenant/origin.
+        if !current.bearer_token.trim().is_empty()
+            && (proposed.server_url.trim() != current.server_url.trim()
+                || proposed.crewing_id.trim() != current.crewing_id.trim())
+        { return Err("connection_change_requires_validation".into()); }
+        proposed.bearer_token = current.bearer_token.clone();
+    }
+    prepare_connection_context(&mut proposed, current);
+    Ok(proposed)
+}
+#[tauri::command]
+fn save_settings(
+    new_settings: Settings, expected_context: String, state: tauri::State<AppState>,
+) -> Result<PublicSettings, String> {
+    let mut current = state.settings.lock().unwrap();
+    let mut proposed = merge_ui_settings(new_settings, &current, &expected_context)?;
+    if startup_should_open_db(&current) && !proposed.vault_path.is_empty() {
+        proposed.recent_vaults.retain(|p| p != &proposed.vault_path);
+        proposed.recent_vaults.insert(0, proposed.vault_path.clone());
+        proposed.recent_vaults.truncate(10);
+    }
+    // Publish the candidate revision and native tuple only after successful persistence.
+    persist_and_install_settings(&mut current, proposed, Settings::save)?;
+    Ok(settings_for_ui(&current))
 }
 
 #[tauri::command]
 fn forget_recent_vault(path: String, state: tauri::State<AppState>) -> Result<(), String> {
-    let mut s = state.settings.lock().unwrap().clone();
-    s.recent_vaults.retain(|p| p != &path);
-    s.save()?;
-    *state.settings.lock().unwrap() = s;
+    let mut current = state.settings.lock().unwrap();
+    let mut next = current.clone();
+    next.recent_vaults.retain(|p| p != &path);
+    prepare_connection_context(&mut next, &current);
+    persist_and_install_settings(&mut current, next, Settings::save)?;
     Ok(())
 }
 
-#[tauri::command]
-fn activate_crewing_token(
-    server_url: String,
-    bearer_token: String,
-) -> Result<CrewingTokenActivation, String> {
-    let base = server_url.trim().trim_end_matches('/');
-    if base.is_empty() {
-        return Err("No server URL configured.".into());
+// No.880 S2: продуктового вызывающего больше нет — `activate_crewing_token`
+// снята по слову владельца (1495). Функция оставлена ТЕСТ-ОНЛИ, потому что
+// девять её ассертов проверяют сторож устаревания `expected_context`, снимать
+// который PRESERVE запрещает. Это зафиксировано cfg, а не комментарием: иначе
+// первый проход по «мёртвому коду» снёс бы вместе с ней и это покрытие.
+#[cfg(test)]
+fn activation_token(settings: &Settings, base: &str, supplied: Option<&str>, expected: Option<&str>) -> Result<String, String> {
+    if let Some(token) = supplied.map(str::trim).filter(|token| !token.is_empty()) {
+        return Ok(token.to_string()); // Existing explicit manual input; retired in the full account stage.
     }
-    let token = bearer_token.trim();
-    if token.is_empty() {
+    if !expected.is_some_and(|expected| connection_context_matches(settings, expected)) {
+        return Err("settings_changed".into());
+    }
+    if base.trim_end_matches('/') != settings.server_url.trim().trim_end_matches('/') {
+        return Err("settings_changed".into());
+    }
+    if settings.bearer_token.trim().is_empty() {
         return Err("No company token configured.".into());
     }
-    api::post_empty_json::<CrewingTokenActivation>(
-        Some(base),
-        Some(token),
-        "/api/crewings/token/activate",
-        15,
-    )
+    Ok(settings.bearer_token.trim().to_string())
 }
 
-#[tauri::command]
-fn issue_crewing_trial_token(
+#[derive(Debug, Clone, Serialize)]
+pub struct NativeAccountLogin {
     server_url: String,
-    display_name: Option<String>,
-    contact_email: Option<String>,
-) -> Result<CrewingTrialTokenIssued, String> {
-    let base = server_url.trim().trim_end_matches('/');
-    if base.is_empty() {
-        return Err("No server URL configured.".into());
-    }
-    let body = CrewingTrialTokenRequest {
-        display_name: display_name.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        contact_email: contact_email.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-    };
-    api::post_json(Some(base), None, "/api/crewings/trial-token", &body, 20)
+    scopes: Vec<String>,
+    expires_at: Option<String>,
+    entitlement_source: String,
+    local_outcome: String,
 }
 
+// Registered but NOT admitted. boot_command_allowed (line 325) lets only three
+// commands run in a non-legacy process, so an invoke of this returns login_required
+// until the allowlist is widened together with the test that pins its size.
+// The outcome is projected to a flat string: LocalOutcome is cfg-gated and must not
+// cross into the public surface.
 #[tauri::command]
-fn claim_team_owner(
-    display_name: Option<String>,
+fn native_account_login(
+    email: String,
+    password: String,
+    expected_context: String,
     state: tauri::State<AppState>,
-) -> Result<CrewingTeamMember, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let me = messaging::get_my_identity()?;
-    let display = display_name
-        .and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
+) -> Result<NativeAccountLogin, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let transport =
+            native_account::AccountClient::new(native_account::TransportConfig::production())?;
+        let attempt = state.runtime.start_login(
+            &expected_context, native_lifecycle::CreationPolicy::for_interactive_login())?;
+        let proof = state.runtime.authenticate(&transport, &email, &password, attempt)?;
+        let target = native_lifecycle::NativeSettingsTarget::for_application()?;
+        let plan = native_lifecycle::LocalPlan::existing_application();
+        let outcome = state.runtime.commit_local(proof, plan, target)
+            .map_err(|error| error.code)?;
+        let local_outcome = match outcome {
+            native_lifecycle::LocalOutcome::CommittedInactive { .. } =>
+                "committed_inactive".to_string(),
+            native_lifecycle::LocalOutcome::CommittedBlocked { reason, .. } =>
+                format!("committed_blocked:{reason}"),
+            native_lifecycle::LocalOutcome::CommittedPublicationFailed { reason, .. } =>
+                format!("committed_publication_failed:{reason}"),
+        };
+        let settings = state.settings.lock().map_err(|_| "settings_unavailable")?;
+        Ok(NativeAccountLogin {
+            server_url: settings.server_url.clone(),
+            scopes: settings.token_scopes.clone(),
+            expires_at: settings.token_expires_at.clone(),
+            entitlement_source: settings.native_account.as_ref()
+                .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
+            local_outcome,
         })
-        .or_else(|| {
-            let trimmed = settings.user_display_name.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_string())
-            }
-        })
-        .or_else(|| {
-            let trimmed = settings.company_name.trim();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed.to_string())
-            }
-        });
-    let body = CrewingTeamMemberWire {
-        user_id: me.user_id,
-        display_name: display,
-        role: "owner".into(),
-    };
-    let path = format!("/api/crewings/{}/team/owner", crewing_id);
-    let member: CrewingTeamMember =
-        api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)?;
-
-    let mut next = state.settings.lock().unwrap().clone();
-    next.organization_id = member.organization_id.clone();
-    next.team_role = member.role.clone();
-    if let Some(name) = member.display_name.clone() {
-        next.user_display_name = name;
     }
-    next.save()?;
-    *state.settings.lock().unwrap() = next;
-    Ok(member)
-}
-
-#[tauri::command]
-fn list_team_members(state: tauri::State<AppState>) -> Result<Vec<CrewingTeamMember>, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let path = format!("/api/crewings/{}/team", crewing_id);
-    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn add_team_member(
-    user_id: String,
-    display_name: Option<String>,
-    role: String,
-    state: tauri::State<AppState>,
-) -> Result<CrewingTeamMember, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let role = match role.trim() {
-        "owner" => "owner",
-        "admin" => "admin",
-        _ => "member",
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Native activation is unsupported here; no mobile acceptance claim.
+        let _ = (email, password, expected_context, state);
+        Err("native_unsupported".into())
     }
-    .to_string();
-    let body = CrewingTeamMemberWire {
-        user_id: user_id.trim().to_string(),
-        display_name: display_name.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        role,
-    };
-    let path = format!("/api/crewings/{}/team", crewing_id);
-    api::post_json(Some(&server_url), Some(&bearer_token), &path, &body, 15)
-}
-
-#[tauri::command]
-fn remove_team_member(user_id: String, state: tauri::State<AppState>) -> Result<(), String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let path = format!("/api/crewings/{}/team/{}", crewing_id, user_id.trim());
-    api::delete_empty(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn fetch_team_chat_messages(
-    since: Option<String>,
-    state: tauri::State<AppState>,
-) -> Result<Vec<TeamChatMessage>, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let mut path = format!("/api/crewings/{}/team-chat/messages?limit=200", crewing_id);
-    if let Some(ts) = since.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
-        path.push_str("&since=");
-        path.push_str(&urlenc(ts));
-    }
-    api::get_json(Some(&server_url), Some(&bearer_token), &path, 15)
-}
-
-#[tauri::command]
-fn send_team_chat_message(
-    body: String,
-    trigger_llm: Option<bool>,
-    event_type: Option<String>,
-    attachments: Option<Vec<TeamChatAttachment>>,
-    state: tauri::State<AppState>,
-) -> Result<TeamChatMessage, String> {
-    let settings = state.settings.lock().unwrap().clone();
-    let (server_url, bearer_token, crewing_id) = team_api_context(&settings)?;
-    let trimmed = body.trim();
-    let attachments = attachments.unwrap_or_default();
-    if trimmed.is_empty() && attachments.is_empty() {
-        return Err("Empty message.".into());
-    }
-    let event_type = event_type.and_then(|v| {
-        let t = v.trim().to_string();
-        if t.is_empty() {
-            None
-        } else {
-            Some(t)
-        }
-    });
-    let payload = TeamChatMessageWire {
-        sender_nickname: team_chat_nickname(&settings),
-        body: trimmed.to_string(),
-        event_type,
-        trigger_llm: trigger_llm.unwrap_or(false),
-        attachments,
-    };
-    let path = format!("/api/crewings/{}/team-chat/messages", crewing_id);
-    api::post_json(Some(&server_url), Some(&bearer_token), &path, &payload, 20)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1833,7 +2115,7 @@ fn send_saved_seafarer_ping(
     if settings.crewing_id.trim().is_empty() {
         return Err("No crewing_id configured. Open Settings.".into());
     }
-    messaging::register_my_pubkey(
+    messaging::register_pubkey_native(
         settings.crewing_id.clone(),
         Some(settings.bearer_token.clone()),
         Some(settings.server_url.clone()),
@@ -1909,7 +2191,7 @@ fn send_direct_availability_ping(
     if settings.crewing_id.trim().is_empty() {
         return Err("No crewing_id configured. Open Settings.".into());
     }
-    messaging::register_my_pubkey(
+    messaging::register_pubkey_native(
         settings.crewing_id.clone(),
         Some(settings.bearer_token.clone()),
         Some(settings.server_url.clone()),
@@ -2206,33 +2488,41 @@ fn attach_demo_to_template(
     db::attach_file_to_document(&doc.id, &pdf.to_string_lossy(), &settings.vault_path)
 }
 
+// Actual startup admission seam. Baseline was unconditional DB init.
+fn startup_should_open_db(settings: &Settings) -> bool {
+    matches!(native_lifecycle::mode(settings, &[api::PRIMARY_API, api::RU_API]),
+        native_lifecycle::Mode::LegacyConnected)
+}
+
+// The Linux view receives a fresh ephemeral browser context while blocked. This
+// preserves the old persistent store without exposing its cached values to this
+// view. Wry may construct a persistent context first; zero store I/O is NOT claimed.
+fn configure_boot_windows(windows: &mut [tauri::utils::config::WindowConfig], legacy_boot: bool) {
+    #[cfg(target_os = "linux")]
+    if !legacy_boot { for window in windows { window.incognito = true; } }
+    #[cfg(not(target_os = "linux"))]
+    let _ = (windows, legacy_boot); // Native activation is unsupported, no mobile acceptance claim.
+}
+
 // ---------- App entry ----------
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let settings = Settings::load();
-    db::init(&settings.vault_path).expect("db init");
-    let state = AppState {
-        settings: Mutex::new(settings),
+    let state = AppState::from_settings(Settings::load());
+    let legacy_boot = {
+        let settings = state.settings.lock().expect("settings unavailable");
+        if startup_should_open_db(&settings) {
+            db::init(&settings.vault_path).expect("db init");
+            true
+        } else { false }
     };
 
-    let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::default().build())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .manage(state)
-        .invoke_handler(tauri::generate_handler![
+    let command_handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
             get_build_info,
             get_settings,
             save_settings,
-            activate_crewing_token,
-            issue_crewing_trial_token,
-            claim_team_owner,
-            list_team_members,
-            add_team_member,
-            remove_team_member,
-            fetch_team_chat_messages,
-            send_team_chat_message,
+            native_account_login,
+            open_external_url,
             sync_crewing_profile,
             forget_recent_vault,
             ensure_vault_folder,
@@ -2323,14 +2613,1001 @@ pub fn run() {
             feedback::postpone_app_feedback,
             feedback::submit_app_feedback,
             feedback::list_app_feedback,
-        ]);
+        ];
+
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::default().build())
+        .manage(state)
+        .invoke_handler(move |invoke| {
+            let decision = {
+                let state = invoke.message.state_ref().get::<AppState>();
+                let locked = state.settings.lock();
+                match locked {
+                    Ok(settings) => boot_command_allowed(&settings, invoke.message.command()),
+                    Err(_) => Err("settings_unavailable"),
+                }
+            };
+            if let Err(code) = decision { invoke.resolver.reject(code); return true; }
+            command_handler(invoke)
+        });
+
+    // Plugins dispatch before the app's invoke handler. In a blocked process
+    // neither file/dialog plugin is installed. A custom asset scheme is registered
+    // before window creation and takes precedence over Tauri's builtin file reader.
+    // Generic settings persistence above forbids a boot-Legacy mode transition.
+    let builder = if legacy_boot {
+        builder.plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_fs::init())
+    } else {
+        builder.register_uri_scheme_protocol("asset", |_, request| locked_asset_response(request))
+    };
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let builder = builder
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init());
 
+    let mut context = tauri::generate_context!();
+    configure_boot_windows(&mut context.config_mut().app.windows, legacy_boot);
     builder
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running Skipi Crewing");
+}
+
+#[cfg(test)]
+mod native635_settings_tests {
+    use super::*;
+
+    // These controls exercise the retained legacy edit path; actual native record/orphan negatives live below.
+    const NATIVE_SECRET: &str = "legacy_native635_synthetic_getter_secret";
+
+    fn owner_fixture() -> Settings {
+        Settings {
+            server_url: "https://synthetic.invalid".into(),
+            bearer_token: NATIVE_SECRET.into(),
+            crewing_id: "635-synthetic-company".into(),
+            organization_id: "635-synthetic-organization".into(),
+            company_name: "635 synthetic company".into(),
+            user_display_name: "635 synthetic person".into(),
+            token_scopes: vec!["applications:read".into()],
+            token_expires_at: Some("2026-10-19T12:15:00Z".into()),
+            team_role: "member".into(),
+            team_onboarding_seen: true,
+            reply_to: "fixture@example.invalid".into(),
+            vault_path: "/synthetic/native635/vault".into(),
+            recent_vaults: vec!["/synthetic/native635/previous-vault".into()],
+            profile: CrewingProfile {
+                legal_name: "635 synthetic legal profile".into(),
+                jurisdiction: "GB".into(),
+                registration_number: "SYNTHETIC-635".into(),
+                mlc_cert_number: "SYNTHETIC-MLC-635".into(),
+                mlc_cert_valid_to: "2027-10-19".into(),
+                contact_email: "fixture@example.invalid".into(),
+                contact_phone: "+10000000635".into(),
+                slug: "native635-fixture".into(),
+                public_description: "Only a synthetic owner profile".into(),
+            },
+            interface: InterfacePrefs { theme: "light".into(), language: "ru".into() },
+            connection_revision: Default::default(),
+            connection_snapshot: None,
+            native_account: None,
+            native_authorized: false,
+            native_generation: String::new(),
+            load_uncertain: false,
+            storage_uncertain: false,
+        }
+    }
+
+
+    fn owner_expected() -> serde_json::Value {
+        // Independent JSON expectation: do not serialize the same struct to define its contract.
+        serde_json::json!({
+            "server_url": "https://synthetic.invalid",
+            "bearer_token": NATIVE_SECRET,
+            "crewing_id": "635-synthetic-company",
+            "organization_id": "635-synthetic-organization",
+            "company_name": "635 synthetic company",
+            "user_display_name": "635 synthetic person",
+            "token_scopes": ["applications:read"],
+            "token_expires_at": "2026-10-19T12:15:00Z",
+            "team_role": "member",
+            "team_onboarding_seen": true,
+            "reply_to": "fixture@example.invalid",
+            "vault_path": "/synthetic/native635/vault",
+            "recent_vaults": ["/synthetic/native635/previous-vault"],
+            "profile": {
+                "legal_name": "635 synthetic legal profile",
+                "jurisdiction": "GB",
+                "registration_number": "SYNTHETIC-635",
+                "mlc_cert_number": "SYNTHETIC-MLC-635",
+                "mlc_cert_valid_to": "2027-10-19",
+                "contact_email": "fixture@example.invalid",
+                "contact_phone": "+10000000635",
+                "slug": "native635-fixture",
+                "public_description": "Only a synthetic owner profile"
+            },
+            "interface": { "theme": "light", "language": "ru" }
+        })
+    }
+
+    #[test]
+    fn native635_private_settings_roundtrip_preserves_credential_and_owner_data() {
+        let settings = owner_fixture();
+        // Use exactly the serializer used by Settings::save, without touching a real profile.
+        let stored = serde_json::to_string_pretty(&settings).unwrap();
+        let expected = owner_expected();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&stored).unwrap(), expected);
+        let restored: Settings = serde_json::from_str(&stored).unwrap();
+        assert_eq!(restored.bearer_token, NATIVE_SECRET);
+        assert_eq!(serde_json::to_value(&restored).unwrap(), expected);
+    }
+
+    #[test]
+    fn native635_public_getter_hides_credential_preserving_owner_data() {
+        let settings = owner_fixture();
+        // This is the same production projection called by the registered get_settings command.
+        let public = serde_json::to_value(settings_for_ui(&settings)).unwrap();
+        let expected = owner_expected();
+        for field in ["server_url", "crewing_id", "organization_id", "company_name",
+            "user_display_name", "token_scopes", "token_expires_at", "team_role",
+            "team_onboarding_seen", "reply_to", "vault_path", "recent_vaults", "profile", "interface"] {
+            assert!(public.get(field).is_some(), "owner field missing: {field}");
+            assert_eq!(public.get(field), expected.get(field), "owner field changed: {field}");
+        }
+        assert!(public.get("bearer_token").is_none(), "public get_settings exposes credential field");
+        assert!(!public.to_string().contains(NATIVE_SECRET), "public get_settings exposes credential value");
+    }
+    #[test]
+    fn native635_public_save_preserves_private_credential_and_owner_fields() {
+        let current = owner_fixture();
+        let public = serde_json::to_value(settings_for_ui(&current)).unwrap();
+        let revision = public["connection_context"].as_str().unwrap();
+        assert!(revision.starts_with("ctx_"));
+        assert!(uuid::Uuid::parse_str(&revision[4..]).is_ok());
+        assert_eq!(public["has_bearer_token"], true);
+        let mut incoming: Settings = serde_json::from_value(public.clone()).unwrap();
+        assert!(incoming.bearer_token.is_empty());
+        incoming.interface.theme = "dark".into();
+        let merged = merge_ui_settings(incoming, &current, revision).unwrap();
+        let mut expected = owner_expected(); expected["interface"]["theme"] = "dark".into();
+        assert_eq!(serde_json::to_value(&merged).unwrap(), expected);
+        assert_eq!(connection_context(&merged), revision);
+        let returned = serde_json::to_value(settings_for_ui(&merged)).unwrap();
+        assert!(returned.get("bearer_token").is_none());
+        assert!(!returned.to_string().contains(NATIVE_SECRET));
+    }
+    #[test]
+    fn native635_hidden_credential_never_moves_to_changed_origin_or_company() {
+        let current=owner_fixture(); let revision=connection_context(&current);
+        for field in ["server_url", "crewing_id"] {
+            let mut incoming=serde_json::to_value(settings_for_ui(&current)).unwrap();
+            incoming[field]="different".into();
+            let proposed:Settings=serde_json::from_value(incoming).unwrap();
+            assert!(merge_ui_settings(proposed,&current,&revision).is_err(),"{field}");
+            assert_eq!(serde_json::to_value(&current).unwrap(),owner_expected());
+        }
+        let proposed:Settings=serde_json::from_value(serde_json::to_value(settings_for_ui(&current)).unwrap()).unwrap();
+        assert!(merge_ui_settings(proposed,&current,"ctx_stale").is_err());
+        assert_eq!(serde_json::to_value(&current).unwrap(),owner_expected());
+        assert!(activation_token(&current,"https://different.invalid",None,Some(&revision)).is_err());
+        assert_eq!(activation_token(&current,&current.server_url,None,Some(&revision)).unwrap(),NATIVE_SECRET);
+        assert!(activation_token(&current,&current.server_url,None,Some("ctx_stale")).is_err());
+        let (company,secret,base)=messaging::pubkey_context(&current,&revision).unwrap();
+        assert_eq!(company,"635-synthetic-company");
+        assert_eq!(secret,NATIVE_SECRET);
+        assert_eq!(base,"https://synthetic.invalid");
+        assert!(messaging::pubkey_context(&current,"ctx_stale").is_err());
+    }
+    #[test]
+    fn native635_opaque_context_rotates_on_each_tuple_change_including_aba() {
+        let mut original=owner_fixture(); let first=connection_context(&original);
+        let mut edited=original.clone(); edited.profile.contact_email="changed@example.invalid".into();
+        assert_eq!(connection_context(&edited),first);
+        for field in ["server_url","bearer_token","crewing_id"] {
+            let restored=original.clone();
+            let mut changed=original.clone();
+            match field {
+                "server_url"=>changed.server_url="https://different.invalid".into(),
+                "bearer_token"=>changed.bearer_token="different-secret".into(),
+                _=>changed.crewing_id="different-company".into(),
+            }
+            let before=connection_context(&original);
+            let prepared=merge_ui_settings(changed,&original,&before).unwrap();
+            persist_and_install_settings(&mut original,prepared, |_settings| Ok(())).unwrap();
+            let during=connection_context(&original);
+            assert_ne!(before,during,"{field}");
+            let prepared=merge_ui_settings(restored,&original,&during).unwrap();
+            persist_and_install_settings(&mut original,prepared, |_settings| Ok(())).unwrap();
+            let after=connection_context(&original);
+            assert_ne!(after,before,"ABA reused {field} revision");
+            assert_ne!(after,during,"{field}");
+        }
+    }
+
+    #[test]
+    fn native635_context_stale_snapshot_cannot_rotate_live_issuer() {
+        let mut live=owner_fixture();
+        let old_context=connection_context(&live);
+        let stale=live.clone();
+        live.bearer_token="synthetic-new-company-secret".into();
+        let current_context=connection_context(&live);
+        assert_ne!(current_context,old_context);
+        let _=connection_context(&stale);
+        assert_eq!(connection_context(&live),current_context,
+            "reading a stale native snapshot rotated the live context issuer");
+    }
+    #[test]
+    fn native635_context_unsaved_proposal_cannot_rotate_live_issuer() {
+        let live=owner_fixture();
+        let current_context=connection_context(&live);
+        let mut proposal=live.clone();
+        proposal.bearer_token="synthetic-not-yet-persisted-secret".into();
+        let prepared=merge_ui_settings(proposal,&live,&current_context).unwrap();
+        assert_ne!(connection_context(&prepared),current_context);
+        assert_eq!(connection_context(&live),current_context,
+            "a proposal not yet persisted or installed rotated the live context issuer");
+    }
+
+    #[test]
+    fn native635_context_committed_change_denies_stale_activation_snapshot() {
+        let mut live=owner_fixture();
+        let old_context=connection_context(&live);
+        let stale=live.clone();
+        let mut changed=live.clone();changed.bearer_token="synthetic-committed-activation-secret".into();
+        let prepared=merge_ui_settings(changed,&live,&old_context).unwrap();
+        persist_and_install_settings(&mut live,prepared, |_settings| Ok(())).unwrap();
+        assert_ne!(connection_context(&live),old_context);
+        assert!(activation_token(&stale,&stale.server_url,None,Some(&old_context)).is_err(),
+            "stale activation snapshot accepted after a real connection change");
+    }
+    #[test]
+    fn native635_context_committed_change_denies_stale_pubkey_snapshot() {
+        let mut live=owner_fixture();
+        let old_context=connection_context(&live);
+        let stale=live.clone();
+        let mut changed=live.clone();changed.bearer_token="synthetic-committed-pubkey-secret".into();
+        let prepared=merge_ui_settings(changed,&live,&old_context).unwrap();
+        persist_and_install_settings(&mut live,prepared, |_settings| Ok(())).unwrap();
+        assert_ne!(connection_context(&live),old_context);
+        assert!(messaging::pubkey_context(&stale,&old_context).is_err(),
+            "stale public-key snapshot accepted after a real connection change");
+    }
+
+    #[test]
+    fn native635_context_persist_failure_preserves_live_owner_and_authority() {
+        let mut live=owner_fixture();
+        let current_context=connection_context(&live);
+        let reader=live.clone();
+        let before=serde_json::to_value(&live).unwrap();
+        let authority=live.connection_revision.clone();
+        let mut changed=live.clone();changed.bearer_token="synthetic-never-committed-secret".into();
+        let prepared=merge_ui_settings(changed,&live,&current_context).unwrap();
+        assert_ne!(connection_context(&prepared),current_context);
+        let failure=persist_and_install_settings(&mut live,prepared, |_settings| {
+            assert_eq!(authority.lock().unwrap().revision,current_context,
+                "authority was published before persistence ran");
+            Err("synthetic_persist_failure".to_string())
+        });
+        assert_eq!(failure,Err("synthetic_persist_failure".into()));
+        assert_eq!(serde_json::to_value(&live).unwrap(),before);
+        assert_eq!(connection_context(&live),current_context);
+        assert!(activation_token(&reader,&reader.server_url,None,Some(&current_context)).is_ok());
+        assert!(messaging::pubkey_context(&reader,&current_context).is_ok());
+    }
+
+}
+
+
+#[cfg(all(test, unix))]
+mod native635_lifecycle_red_tests {
+    use super::*;
+    use std::path::Path;
+    use std::os::unix::fs::PermissionsExt;
+    struct Fixture { root: PathBuf, path: PathBuf }
+    impl Fixture {
+        fn new() -> Self {
+            let root = std::env::temp_dir().join(format!("crewing635-lifecycle-red-{}", uuid::Uuid::new_v4()));
+            std::fs::create_dir(&root).unwrap();
+            std::fs::set_permissions(&root, std::fs::Permissions::from_mode(0o700)).unwrap();
+            Self { path: root.join("synthetic-settings.json"), root }
+        }
+        fn write(&self, bytes: &[u8]) { std::fs::write(&self.path, bytes).unwrap(); }
+    }
+    impl Drop for Fixture { fn drop(&mut self) { std::fs::remove_dir_all(&self.root).unwrap(); } }
+    fn legacy() -> Settings {
+        Settings { server_url: "https://synthetic.invalid".into(), bearer_token: "legacy-synthetic-only".into(),
+            crewing_id: "company-synthetic".into(), company_name: "Old synthetic owner".into(),
+            vault_path: "/synthetic/never-opened/vault".into(),
+            profile: CrewingProfile { legal_name: "Synthetic retained profile".into(), ..Default::default() },
+            ..Default::default() }
+    }
+    fn native(signed_out: bool) -> Settings {
+        let mut s=legacy(); s.bearer_token="skn_synthetic_only".into();
+        s.native_account=Some(native_lifecycle::SessionRecord::new(
+            "account-synthetic".into(), "app-synthetic-only".into(), signed_out,
+            native_account::Entitlement {source:"approved_free".into(),expires_at:None},
+        )); s
+    }
+    fn load(path: &Path) -> Settings { Settings::load_from(path) }
+    #[test]
+    fn native635_lifecycle_red_fresh_startup_does_not_open_private_db() {
+        assert!(!startup_should_open_db(&Settings::default()));
+    }
+    #[test]
+    fn native635_lifecycle_red_signed_out_startup_does_not_open_private_db() {
+        let f=Fixture::new(); f.write(&serde_json::to_vec(&native(true)).unwrap());
+        let s=load(&f.path); assert!(!startup_should_open_db(&s));
+    }
+    #[test]
+    fn native635_lifecycle_red_locked_restart_does_not_open_private_db() {
+        let f=Fixture::new(); let mut s=native(false); s.native_authorized=true;
+        f.write(&serde_json::to_vec(&s).unwrap());let loaded=load(&f.path);
+        assert!(!loaded.native_authorized);assert!(!startup_should_open_db(&loaded));
+    }
+    #[test]
+    fn native635_lifecycle_red_orphan_native_never_falls_back_to_legacy() {
+        let mut s=legacy(); s.bearer_token="skn_synthetic_orphan".into();
+        assert!(s.native_account.is_none());assert!(!startup_should_open_db(&s));
+    }
+    #[test]
+    fn native635_lifecycle_red_malformed_config_is_uncertain() {
+        let f=Fixture::new();let bytes=b"{synthetic-malformed";f.write(bytes);
+        let s=load(&f.path);assert!(s.load_uncertain);assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+    }
+    #[test]
+    fn native635_lifecycle_red_malformed_config_does_not_create_backup() {
+        let f=Fixture::new();f.write(b"{synthetic-malformed");let _=load(&f.path);
+        assert!(!f.path.with_extension("json.bak").exists());
+    }
+    #[test]
+    fn native635_lifecycle_red_read_failure_is_not_fresh() {
+        let f=Fixture::new();let s=load(&f.root);assert!(s.load_uncertain);
+    }
+    #[test]
+    fn native635_lifecycle_red_signed_out_public_dto_hides_prior_workspace() {
+        let s=native(true);let dto=serde_json::to_value(settings_for_ui(&s)).unwrap();
+        assert_eq!(dto["crewing_id"], "");assert_eq!(dto["company_name"], "");
+        assert_eq!(dto["vault_path"], "");assert_eq!(dto["recent_vaults"],serde_json::json!([]));
+        assert_eq!(dto["profile"]["legal_name"], "");assert_eq!(dto["has_bearer_token"],false);
+    }
+    #[test]
+    fn native635_lifecycle_red_missing_config_control_starts_unbound() {
+        let f=Fixture::new();let s=load(&f.path);assert!(!s.load_uncertain);
+        assert!(s.crewing_id.is_empty());assert!(s.native_account.is_none());assert!(!f.path.exists());
+    }
+    #[test]
+    fn native635_lifecycle_red_valid_legacy_control_keeps_connection_and_profile() {
+        let f=Fixture::new();let old=legacy();let bytes=serde_json::to_vec(&old).unwrap();f.write(&bytes);
+        let s=load(&f.path);assert!(startup_should_open_db(&s));assert!(!s.native_authorized);
+        assert_eq!(s.bearer_token,"legacy-synthetic-only");assert_eq!(s.profile.legal_name,"Synthetic retained profile");
+        assert_eq!(s.vault_path,"/synthetic/never-opened/vault");assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+    }
+
+    // No.880 (1495), пункт 4: признак АККАУНТ-СЕССИИ в публичной проекции.
+    // Имя одно на обоих концах — `account_session` здесь и в dist. Все исходы
+    // различаются ПОЛЕМ, а не классом ошибки, включая «никогда не было» (`none`).
+    // Ложные источники, которые проверка обязана НЕ принимать за сессию:
+    // `has_bearer_token` (легаси-токен компании) и `crewing_id` (UUID организации).
+    fn session_shape(signed_out: bool, expires_in: chrono::Duration) -> Settings {
+        let mut s = native(signed_out);
+        s.server_url = api::PRIMARY_API.into();
+        s.token_scopes = native_account::COMPANY_SCOPES.iter().map(|scope| scope.to_string()).collect();
+        s.token_expires_at = Some((chrono::Utc::now() + expires_in).to_rfc3339());
+        s
+    }
+    fn session_field(s: &Settings) -> String {
+        serde_json::to_value(settings_for_ui(s)).unwrap()["account_session"].as_str().unwrap().to_string()
+    }
+    #[test]
+    fn native635_880_account_session_names_every_outcome() {
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: поле вообще присутствует в проекции, иначе все
+        // сравнения ниже сравнивали бы null с null.
+        let dto = serde_json::to_value(settings_for_ui(&Settings::default())).unwrap();
+        assert!(dto.get("account_session").is_some(), "control: the projection must carry the field at all");
+
+        assert_eq!(session_field(&Settings::default()), "none",
+            "a virgin install has never had a session");
+        assert_eq!(session_field(&legacy()), "legacy",
+            "the old company-token install is its own outcome, not a session");
+        assert_eq!(session_field(&session_shape(false, chrono::Duration::minutes(10))), "locked",
+            "a stored record without this process being authorized is locked, not active");
+        assert_eq!(session_field(&session_shape(true, chrono::Duration::minutes(10))), "signed_out",
+            "signing out is distinguishable from never having signed in");
+        let mut uncertain = Settings::default(); uncertain.load_uncertain = true;
+        assert_eq!(session_field(&uncertain), "unavailable",
+            "an unreadable store is never reported as «no session»");
+
+        let mut active = session_shape(false, chrono::Duration::minutes(10));
+        active.native_authorized = true;
+        assert_eq!(session_field(&active), "active", "an authorized live session reads active");
+        let mut expired = session_shape(false, chrono::Duration::minutes(-10));
+        expired.native_authorized = true;
+        assert_eq!(session_field(&expired), "expired",
+            "an expired session is its own outcome and never collapses into «none»");
+    }
+    #[test]
+    fn native635_880_account_session_rejects_the_false_sources() {
+        // Ровно три ложных источника из карточки. Ни один не должен дать «active».
+        let mut token_only = Settings::default();
+        token_only.bearer_token = "legacy-synthetic-only".into();
+        assert_ne!(session_field(&token_only), "active", "a company bearer token is not an account session");
+        let mut company_only = Settings::default();
+        company_only.crewing_id = "company-synthetic".into();
+        assert_ne!(session_field(&company_only), "active", "an organization UUID is not an account session");
+    }
+    #[test]
+    fn native635_880_account_entitlement_is_projected_flat() {
+        let mut active = session_shape(false, chrono::Duration::minutes(10));
+        active.native_authorized = true;
+        let expiry = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
+        if let Some(record) = active.native_account.as_mut() {
+            record.entitlement.source = "paddle".into();
+            record.entitlement.expires_at = Some(expiry.clone());
+        }
+        let dto = serde_json::to_value(settings_for_ui(&active)).unwrap();
+        // Имена те же, что в проекции «4+1» входа (NativeAccountLogin).
+        assert_eq!(dto["entitlement_source"], "paddle");
+        assert_eq!(dto["entitlement_expires_at"], serde_json::json!(expiry));
+        // И отдельное имя для отдельного срока: `token_expires_at` — это срок
+        // СОЕДИНЕНИЯ, а не права. Склейка этих двух и была бы молчащим дефектом.
+        assert_ne!(dto["entitlement_expires_at"], dto["token_expires_at"]);
+        // Без записи аккаунта поля пусты, а не отсутствуют.
+        let empty = serde_json::to_value(settings_for_ui(&Settings::default())).unwrap();
+        assert_eq!(empty["entitlement_source"], "");
+        assert_eq!(empty["entitlement_expires_at"], serde_json::Value::Null);
+    }
+
+    #[cfg(target_os = "linux")]
+    fn bindingfmt_old_record() -> Settings {
+        let mut s=native(false);s.server_url=api::PRIMARY_API.into();
+        s.token_scopes=native_account::COMPANY_SCOPES.iter().map(|scope|scope.to_string()).collect();
+        s.token_expires_at=Some((chrono::Utc::now()+chrono::Duration::minutes(10)).to_rfc3339());
+        s
+    }
+    #[cfg(target_os = "linux")]
+    fn bindingfmt_refuses_without_rewrite(json: serde_json::Value) {
+        let f=Fixture::new();let bytes=serde_json::to_vec_pretty(&json).unwrap();f.write(&bytes);
+        let mut loaded=load(&f.path);
+        assert!(loaded.load_uncertain,"unsupported/incomplete native private format must not be treated as a writable record");
+        assert!(!startup_should_open_db(&loaded));let mut proposed=loaded.clone();
+        proposed.interface.language="en".into();let mut writes=0;
+        assert!(persist_and_install_settings(&mut loaded,proposed,|_|{writes+=1;Ok(())}).is_err());
+        assert_eq!(writes,0);assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+        assert_eq!(std::fs::read_dir(&f.root).unwrap().count(),1,"no backup/migration/extra file");
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_unknown_record_version_preserves_bytes_and_blocks_preference_write() {
+        let mut json=serde_json::to_value(bindingfmt_old_record()).unwrap();
+        json["native_account"]["record_version"]=serde_json::json!(2);
+        json["native_account"]["local_binding"]=serde_json::json!({"version":99,"future_private_payload":["synthetic-preserved"]});
+        bindingfmt_refuses_without_rewrite(json);
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_version_one_without_binding_is_not_a_writable_record() {
+        let mut json=serde_json::to_value(bindingfmt_old_record()).unwrap();
+        json["native_account"]["record_version"]=serde_json::json!(1);
+        json["native_account"].as_object_mut().unwrap().remove("local_binding");
+        bindingfmt_refuses_without_rewrite(json);
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_unknown_binding_version_preserves_private_payload() {
+        let mut json=serde_json::to_value(bindingfmt_old_record()).unwrap();
+        json["native_account"]["record_version"]=serde_json::json!(1);
+        json["native_account"]["local_binding"]=serde_json::json!({"version":2,"future_key_descriptor":{"keep":"synthetic-only"}});
+        bindingfmt_refuses_without_rewrite(json);
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_old_record_control_restarts_locked_without_inferred_refs() {
+        let f=Fixture::new();let old=bindingfmt_old_record();let json=serde_json::to_value(&old).unwrap();
+        assert!(json["native_account"].get("record_version").is_none());assert!(json["native_account"].get("local_binding").is_none());
+        let bytes=serde_json::to_vec(&old).unwrap();f.write(&bytes);let loaded=load(&f.path);
+        assert!(!loaded.load_uncertain);assert!(!loaded.native_authorized);assert!(!startup_should_open_db(&loaded));
+        let runtime=native_lifecycle::Runtime::new(loaded);let state=runtime.settings_arc();let locked=state.lock().unwrap();
+        assert_eq!(native_lifecycle::mode(&locked,&[api::PRIMARY_API,api::RU_API]),native_lifecycle::Mode::NativeLocked);
+        let saved=serde_json::to_value(&*locked).unwrap();
+        assert!(saved["native_account"].get("local_binding").is_none());
+        assert_eq!(locked.profile.legal_name,"Synthetic retained profile");
+        assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+    }
+
+    #[cfg(target_os = "linux")]
+    fn bindingfmt_real_record(f: &Fixture, label: &str) -> serde_json::Value {
+        use crate::db::native_database::{Namespace, Owner, Store, native_keys};
+        let dbroot=f.root.join(format!("db-{label}"));let keyroot=f.root.join(format!("key-{label}"));
+        for root in [&dbroot,&keyroot] {
+            std::fs::create_dir(root).unwrap();
+            std::fs::set_permissions(root,std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        let stable=uuid::Uuid::new_v4().to_string();
+        let owner=Owner::from_validated_binding("account-synthetic".into(),"company-synthetic".into(),stable.clone()).unwrap();
+        let slot=std::sync::Mutex::new(None);let quarantine=std::sync::Mutex::new(None);
+        let store=Store::new(&slot,&quarantine);
+        let prepared=store.prepare_fresh(Namespace::inspect(&dbroot).unwrap(),owner.clone()).unwrap();
+        prepared.validate_before_persist().unwrap();
+        let database_ref=serde_json::to_value(prepared.reference()).unwrap();
+        // Close the sole owned SQLite handle before any fixture inventory/cleanup.
+        drop(prepared);store.close_all().unwrap();
+        let key=native_keys::prepare_fresh(&Namespace::inspect(&keyroot).unwrap(),owner).unwrap();
+        let key_ref=serde_json::to_value(key.reference()).unwrap();drop(key);
+        let mut json=serde_json::to_value(bindingfmt_old_record()).unwrap();
+        json["native_account"]["record_version"]=serde_json::json!(1);
+        json["native_account"]["local_binding"]=serde_json::json!({
+            "version":1,"stable_uuid":stable,"database_ref":database_ref,"key_ref":key_ref
+        });
+        json
+    }
+    #[cfg(target_os = "linux")]
+    fn bindingfmt_reject_raw(f: &Fixture, bytes: &[u8]) {
+        f.write(bytes);let mut loaded=load(&f.path);
+        assert!(loaded.load_uncertain);assert!(!startup_should_open_db(&loaded));
+        let mut proposed=loaded.clone();proposed.interface.language="en".into();let mut writes=0;
+        assert!(persist_and_install_settings(&mut loaded,proposed,|_|{writes+=1;Ok(())}).is_err());
+        assert_eq!(writes,0);assert_eq!(std::fs::read(&f.path).unwrap(),bytes);
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_real_refs_roundtrip_restart_locked_and_profile_preserved() {
+        let f=Fixture::new();let input=bindingfmt_real_record(&f,"roundtrip");
+        f.write(&serde_json::to_vec(&input).unwrap());let loaded=load(&f.path);
+        assert!(!loaded.load_uncertain);assert!(!loaded.native_authorized);assert!(!startup_should_open_db(&loaded));
+        let saved=serde_json::to_value(&loaded).unwrap();
+        assert_eq!(saved["native_account"],input["native_account"]);
+        let runtime=native_lifecycle::Runtime::new(loaded);let state=runtime.settings_arc();let locked=state.lock().unwrap();
+        assert_eq!(native_lifecycle::mode(&locked,&[api::PRIMARY_API,api::RU_API]),native_lifecycle::Mode::NativeLocked);
+        assert_eq!(locked.profile.legal_name,"Synthetic retained profile");
+        assert_eq!(locked.persist_native_to_path(&f.path),Ok(private_store::Durability::Confirmed));
+        let reloaded=load(&f.path);assert!(!reloaded.load_uncertain);
+        assert_eq!(serde_json::to_value(&reloaded).unwrap()["native_account"],input["native_account"]);
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_record_version_only_with_real_refs_is_refused() {
+        let f=Fixture::new();let mut input=bindingfmt_real_record(&f,"record-version");
+        f.write(&serde_json::to_vec(&input).unwrap());assert!(!load(&f.path).load_uncertain);
+        input["native_account"]["record_version"]=serde_json::json!(2);
+        bindingfmt_reject_raw(&f,&serde_json::to_vec(&input).unwrap());
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_binding_version_only_with_real_refs_is_refused() {
+        let f=Fixture::new();let mut input=bindingfmt_real_record(&f,"binding-version");
+        f.write(&serde_json::to_vec(&input).unwrap());assert!(!load(&f.path).load_uncertain);
+        input["native_account"]["local_binding"]["version"]=serde_json::json!(2);
+        bindingfmt_reject_raw(&f,&serde_json::to_vec(&input).unwrap());
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_opaque_nested_metadata_survives_known_updates_without_authority() {
+        let f=Fixture::new();let mut input=bindingfmt_real_record(&f,"opaque");
+        let original=input["native_account"]["local_binding"].clone();
+        input["native_account"]["metadata"]=serde_json::json!({"account_id":"other","crewing_id":"other","entitlement":{"source":"paddle"}});
+        input["native_account"]["entitlement"]["metadata"]=serde_json::json!({"source":"paddle","expires_at":"invalid-synthetic"});
+        input["native_account"]["local_binding"]["metadata"]=serde_json::json!({"root":"/synthetic-other","stable_uuid":"other","version":99});
+        input["native_account"]["local_binding"]["database_ref"]["owner"]["metadata"]=serde_json::json!({"account":"other","context":"other"});
+        input["native_account"]["local_binding"]["key_ref"]["metadata"]=serde_json::json!({"local_origin":"LegacySnapshot","root":"/synthetic-other"});
+        f.write(&serde_json::to_vec(&input).unwrap());let mut loaded=load(&f.path);assert!(!loaded.load_uncertain);
+        assert_eq!(loaded.crewing_id,"company-synthetic");let record=loaded.native_account.as_mut().unwrap();
+        assert_eq!(record.account_id,"account-synthetic");assert_eq!(record.entitlement.source,"approved_free");
+        record.app_credential="app-synthetic-updated".into();record.signed_out=true;
+        record.entitlement.source="paddle".into();record.entitlement.expires_at=Some((chrono::Utc::now()+chrono::Duration::hours(1)).to_rfc3339());
+        assert_eq!(loaded.persist_native_to_path(&f.path),Ok(private_store::Durability::Confirmed));
+        let reloaded=load(&f.path);assert!(!reloaded.load_uncertain);
+        let output=serde_json::to_value(&reloaded).unwrap();let out=&output["native_account"];let before=&input["native_account"];
+        assert_eq!(out["metadata"],before["metadata"]);
+        assert_eq!(out["entitlement"]["metadata"],before["entitlement"]["metadata"]);
+        assert_eq!(out["local_binding"],before["local_binding"]);
+        assert_eq!(out["local_binding"]["database_ref"]["root"],original["database_ref"]["root"]);
+        assert_eq!(out["local_binding"]["key_ref"]["local_origin"],original["key_ref"]["local_origin"]);
+        assert_eq!(out["app_credential"],"app-synthetic-updated");assert_eq!(out["signed_out"],true);
+        assert_eq!(out["entitlement"]["source"],"paddle");
+        assert_eq!(native_lifecycle::mode(&reloaded,&[api::PRIMARY_API,api::RU_API]),native_lifecycle::Mode::SignedOut);
+        let public=serde_json::to_string(&settings_for_ui(&reloaded)).unwrap();
+        assert!(!public.contains("metadata"));assert!(!public.contains("local_binding"));assert!(!public.contains("app-synthetic"));
+        assert_eq!(format!("{:?}",reloaded),"Settings(<private>)");
+        assert_eq!(format!("{:?}",reloaded.native_account.as_ref().unwrap()),"SessionRecord(<private>)");
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_opaque_numbers_and_literal_reserved_keys_roundtrip_raw() {
+        let f=Fixture::new();let input=bindingfmt_real_record(&f,"raw");
+        let mut text=serde_json::to_string(&input).unwrap();
+        let needle="\"native_account\":{";
+        assert!(text.contains(needle));
+        text=text.replacen(needle,r#""native_account":{"opaque_array":[{"$serde_json::private::RawValue":"literal-synthetic","huge":18446744073709551617,"negative":-18446744073709551617,"exponent":1e10000,"precise":1.2345678901234567890123456789}],"# ,1);
+        f.write(text.as_bytes());let loaded=load(&f.path);assert!(!loaded.load_uncertain);
+        let roundtrip=serde_json::to_string(&loaded).unwrap();
+        for literal in ["18446744073709551617","-18446744073709551617","1e10000","1.2345678901234567890123456789",r#""$serde_json::private::RawValue":"literal-synthetic""#] {
+            assert!(roundtrip.contains(literal),"opaque raw value changed");
+        }
+        assert_eq!(loaded.persist_native_to_path(&f.path),Ok(private_store::Durability::Confirmed));
+        let reloaded=load(&f.path);assert!(!reloaded.load_uncertain);
+        assert!(serde_json::to_string(&reloaded).unwrap().contains("1e10000"));
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_duplicate_escaped_keys_and_array_members_are_refused() {
+        let f=Fixture::new();let input=bindingfmt_real_record(&f,"duplicate");
+        let good=serde_json::to_string(&input).unwrap();
+        for addition in [
+            r#""account\u005fid":"other","#,
+            r#""metadata":[{"root":"first","\u0072oot":"second"}],"#,
+            r#""metadata":{"unknown":1,"unknown":2},"#,
+        ] {
+            let text=good.replacen("\"native_account\":{",&format!("\"native_account\":{{{addition}"),1);
+            bindingfmt_reject_raw(&f,text.as_bytes());
+        }
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_null_partial_types_ranges_and_outer_owner_are_refused() {
+        let f=Fixture::new();let good=bindingfmt_real_record(&f,"known");
+        for pointer in ["/native_account/record_version","/native_account/local_binding",
+            "/native_account/local_binding/version","/native_account/local_binding/database_ref/owner/account",
+            "/native_account/local_binding/key_ref/local_origin"] {
+            let mut input=good.clone();*input.pointer_mut(pointer).unwrap()=serde_json::Value::Null;
+            bindingfmt_reject_raw(&f,&serde_json::to_vec(&input).unwrap());
+        }
+        for value in [serde_json::json!("1"),serde_json::json!(1.0),serde_json::json!(256),serde_json::json!(-1)] {
+            let mut input=good.clone();input["native_account"]["record_version"]=value;
+            bindingfmt_reject_raw(&f,&serde_json::to_vec(&input).unwrap());
+        }
+        let mut no_version=good.clone();no_version["native_account"].as_object_mut().unwrap().remove("record_version");
+        bindingfmt_reject_raw(&f,&serde_json::to_vec(&no_version).unwrap());
+        for (pointer,value) in [
+            ("/crewing_id",serde_json::json!("other-synthetic")),
+            ("/native_account/account_id",serde_json::json!("other-synthetic")),
+            ("/native_account/local_binding/database_ref/root_identity/uid",serde_json::json!(4294967296u64)),
+            ("/native_account/local_binding/database_ref/main_identity/inode",serde_json::json!(-1)),
+            ("/native_account/local_binding/stable_uuid",serde_json::json!("ctx_synthetic")),
+            ("/native_account/local_binding/key_ref/raw_key_sha256",serde_json::json!("bad-synthetic")),
+            ("/native_account/local_binding/key_ref/public_key_b64",serde_json::json!("bad-synthetic")),
+        ] {
+            let mut input=good.clone();*input.pointer_mut(pointer).unwrap()=value;
+            bindingfmt_reject_raw(&f,&serde_json::to_vec(&input).unwrap());
+        }
+    }
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native635_bindingfmt_private_ref_swap_invalidates_existing_context() {
+        let f=Fixture::new();let first=bindingfmt_real_record(&f,"first");let second=bindingfmt_real_record(&f,"second");
+        let mut loaded:Settings=serde_json::from_value(first).unwrap();let context=connection_context(&loaded);
+        let other:Settings=serde_json::from_value(second).unwrap();loaded.native_account=other.native_account;
+        assert!(!connection_context_matches(&loaded,&context));assert_ne!(connection_context(&loaded),context);
+        assert!(!startup_should_open_db(&loaded));
+    }
+
+    #[test]
+    fn native635_lifecycle_red_private_record_control_persists_without_runtime_auth() {
+        let f=Fixture::new();let mut s=native(false);s.native_authorized=true;s.native_generation="synthetic-runtime-generation".into();
+        f.write(&serde_json::to_vec(&s).unwrap());let bytes=std::fs::read(&f.path).unwrap();
+        let json:serde_json::Value=serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["native_account"]["app_credential"],"app-synthetic-only");
+        assert!(json.get("native_authorized").is_none());assert!(json.get("native_generation").is_none());
+        let loaded=load(&f.path);assert!(!loaded.native_authorized);assert!(loaded.native_generation.is_empty());
+        let public=serde_json::to_string(&settings_for_ui(&loaded)).unwrap();
+        assert!(!public.contains("app-synthetic-only"));assert!(!public.contains("skn_synthetic_only"));
+    }
+    #[test]
+    fn native635_lifecycle_red_bridge_injected_record_cannot_replace_native_identity() {
+        let mut current=native(false);current.native_authorized=true;current.native_generation="live-synthetic-generation".into();
+        let expected=connection_context(&current);let mut json=serde_json::to_value(&current).unwrap();
+        json["native_account"]["account_id"]=serde_json::json!("attacker-synthetic");
+        json["native_account"]["app_credential"]=serde_json::json!("attacker-app-synthetic");
+        json["native_account"]["signed_out"]=serde_json::json!(true);
+        let proposed:Settings=serde_json::from_value(json).unwrap();
+        let merged=merge_ui_settings(proposed,&current,&expected).unwrap();
+        let record=merged.native_account.as_ref().unwrap();assert_eq!(record.account_id,"account-synthetic");
+        assert_eq!(record.app_credential,"app-synthetic-only");assert!(!record.signed_out);
+        assert!(merged.native_authorized);assert_eq!(merged.native_generation,"live-synthetic-generation");
+    }
+    #[test]
+    fn native635_lifecycle_red_bridge_omission_cannot_drop_private_state() {
+        let mut current=native(false);current.native_authorized=true;current.native_generation="live-synthetic-generation".into();
+        current.load_uncertain=true;current.storage_uncertain=true;let expected=connection_context(&current);
+        let mut json=serde_json::to_value(&current).unwrap();json.as_object_mut().unwrap().remove("native_account");
+        let proposed:Settings=serde_json::from_value(json).unwrap();assert!(proposed.native_account.is_none());
+        let merged=merge_ui_settings(proposed,&current,&expected).unwrap();
+        assert_eq!(merged.native_account.as_ref().unwrap().account_id,"account-synthetic");
+        assert!(merged.native_authorized);assert_eq!(merged.native_generation,"live-synthetic-generation");
+        assert!(merged.load_uncertain);assert!(merged.storage_uncertain);
+    }
+    #[test]
+    fn native635_lifecycle_red_bridge_injection_cannot_bind_legacy_owner() {
+        let current=legacy();let expected=connection_context(&current);let mut json=serde_json::to_value(&current).unwrap();
+        json["native_account"]=serde_json::to_value(native(false).native_account).unwrap();
+        let proposed:Settings=serde_json::from_value(json).unwrap();assert!(proposed.native_account.is_some());
+        let merged=merge_ui_settings(proposed,&current,&expected).unwrap();
+        assert!(merged.native_account.is_none());assert!(!merged.native_authorized);
+        assert_eq!(merged.bearer_token,"legacy-synthetic-only");assert_eq!(merged.crewing_id,"company-synthetic");
+    }
+
+    #[test]
+    fn native635_lifecycle_extra_red_settings_debug_contains_no_private_fields() {
+        let s=native(false);let debug=format!("{:?}",s);
+        for private in ["skn_synthetic_only","app-synthetic-only","account-synthetic","Synthetic retained profile","/synthetic/never-opened/vault"] {
+            assert!(!debug.contains(private),"Settings Debug contains private field");
+        }
+    }
+    #[test]
+    fn native635_lifecycle_extra_red_legacy_url_normalization_does_not_rewrite_config() {
+        let f=Fixture::new();let mut s=legacy();s.server_url="https://synthetic.invalid:8443".into();
+        let bytes=serde_json::to_vec(&s).unwrap();f.write(&bytes);let loaded=load(&f.path);
+        assert_eq!(loaded.server_url,"https://synthetic.invalid");
+        assert_eq!(std::fs::read(&f.path).unwrap(),bytes,"startup must not rewrite credentials");
+        assert!(!f.path.with_extension("json.bak").exists());
+    }
+
+    #[test]
+    fn native635_lifecycle_extra_red_trimmed_native_orphans_never_expose_workspace() {
+        for token in [" skn_synthetic_orphan ","\tskn_synthetic_orphan\n","skn_"] {
+            let mut current=legacy();current.bearer_token=token.into();
+            let dto=serde_json::to_value(settings_for_ui(&current)).unwrap();
+            assert_eq!(dto["crewing_id"],"");assert_eq!(dto["profile"]["legal_name"],"");
+            assert_eq!(dto["has_bearer_token"],false);
+        }
+    }
+    #[test]
+    fn native635_lifecycle_extra_red_native_public_preferences_roundtrip_preserves_private_workspace() {
+        let current=native(true);let expected=connection_context(&current);
+        let mut json=serde_json::to_value(settings_for_ui(&current)).unwrap();
+        json["interface"]["theme"]=serde_json::json!("dark");
+        let proposed:Settings=serde_json::from_value(json).unwrap();
+        let merged=merge_ui_settings(proposed,&current,&expected).expect("safe interface save must preserve workspace");
+        assert_eq!(merged.interface.theme,"dark");assert_eq!(merged.bearer_token,"skn_synthetic_only");
+        assert_eq!(merged.crewing_id,"company-synthetic");assert_eq!(merged.vault_path,"/synthetic/never-opened/vault");
+        assert_eq!(merged.profile.legal_name,"Synthetic retained profile");
+        assert_eq!(merged.native_account.as_ref().unwrap().app_credential,"app-synthetic-only");
+        assert!(merged.native_account.as_ref().unwrap().signed_out);
+    }
+    #[test]
+    fn native635_lifecycle_extra_red_partial_legacy_preferences_roundtrip_preserves_private_workspace() {
+        let mut current=legacy();current.bearer_token.clear();current.crewing_id.clear();
+        let expected=connection_context(&current);let mut json=serde_json::to_value(settings_for_ui(&current)).unwrap();
+        json["interface"]["language"]=serde_json::json!("ru");
+        let proposed:Settings=serde_json::from_value(json).unwrap();let merged=merge_ui_settings(proposed,&current,&expected).unwrap();
+        assert_eq!(merged.interface.language,"ru");assert!(merged.bearer_token.is_empty());assert!(merged.crewing_id.is_empty());
+        assert_eq!(merged.company_name,"Old synthetic owner");assert_eq!(merged.vault_path,"/synthetic/never-opened/vault");
+        assert_eq!(merged.profile.legal_name,"Synthetic retained profile");
+    }
+    #[test]
+    fn native635_lifecycle_extra_red_native_binding_cannot_be_replaced_by_manual_credential() {
+        let current=native(false);let expected=connection_context(&current);let mut json=serde_json::to_value(&current).unwrap();
+        json["bearer_token"]=serde_json::json!("skn_other_synthetic");json["crewing_id"]=serde_json::json!("other-synthetic-company");
+        json["server_url"]=serde_json::json!("https://other-synthetic.invalid");
+        let proposed:Settings=serde_json::from_value(json).unwrap();
+        assert!(merge_ui_settings(proposed,&current,&expected).is_err(),"native company credentials cannot come from settings UI");
+    }
+
+    #[test]
+    fn native635_loader_uncertain_persistence_never_calls_writer_or_changes_original() {
+        let f=Fixture::new();let raw=b"{synthetic-malformed-private-settings";f.write(raw);
+        let mut current=load(&f.path);let before=connection_context(&current);
+        let mut proposed=current.clone();proposed.interface.language="ru".into();
+        let result=persist_and_install_settings(&mut current,proposed,|_| {
+            panic!("uncertain configuration reached a persistence callback");
+        });
+        assert_eq!(result,Err("settings_unavailable".into()));
+        assert_eq!(connection_context(&current),before);
+        assert_eq!(std::fs::read(&f.path).unwrap(),raw);
+        assert!(current.load_uncertain);
+    }
+    #[test]
+    fn native635_loader_dangling_symlink_is_uncertain_without_mutation() {
+        let f=Fixture::new();std::os::unix::fs::symlink(f.root.join("absent-target"),&f.path).unwrap();
+        let loaded=load(&f.path);assert!(loaded.load_uncertain);
+        assert!(std::fs::symlink_metadata(&f.path).unwrap().file_type().is_symlink());
+        assert_eq!(std::fs::read_dir(&f.root).unwrap().count(),1);
+    }
+}
+
+#[cfg(test)]
+mod native635_revision_red_tests {
+    use super::*;
+    fn synthetic(native: bool) -> Settings {
+        let mut s = Settings::default();
+        s.server_url = api::PRIMARY_API.into(); s.crewing_id = "synthetic-revision-company".into();
+        s.bearer_token = if native { "skn_synthetic-revision-secret" } else { "synthetic-legacy-revision-secret" }.into();
+        s.vault_path = "/synthetic-revision-old-vault-never-opened".into();
+        if native {
+            s.native_account = Some(native_lifecycle::SessionRecord::new(
+                "synthetic-revision-account".into(), "synthetic-revision-app-secret".into(), false,
+                native_account::Entitlement { source: "approved_free".into(), expires_at: None },
+            ));
+            s.native_authorized = true; s.native_generation = "synthetic-generation-old".into();
+        }
+        s
+    }
+    #[test]
+    fn native635_revision_same_connection_new_native_generation_invalidates_old_snapshot() {
+        let mut current = synthetic(true); let context = connection_context(&current); let snapshot = current.clone();
+        let mut next = current.clone(); next.native_generation = "synthetic-generation-new".into();
+        install_settings(&mut current, next);
+        assert_ne!(connection_context(&current), context, "fresh native authorization must rotate context even for identical connection tuple");
+        assert!(!connection_context_matches(&snapshot, &context), "old immutable snapshot cannot own new authorization");
+    }
+    #[test]
+    fn native635_revision_native_vault_change_invalidates_old_snapshot() {
+        let mut current = synthetic(true); let context = connection_context(&current); let snapshot = current.clone();
+        let mut next = current.clone(); next.vault_path = "/synthetic-revision-new-vault-never-opened".into();
+        install_settings(&mut current, next);
+        assert_ne!(connection_context(&current), context, "native private workspace is part of context identity");
+        assert!(!connection_context_matches(&snapshot, &context));
+    }
+    #[test]
+    fn native635_revision_legacy_preferences_preserve_existing_context_behavior() {
+        let mut current = synthetic(false); let context = connection_context(&current); let snapshot = current.clone();
+        let mut next = current.clone(); next.vault_path = "/synthetic-legacy-new-vault-never-opened".into();
+        next.interface.theme = "light".into(); next.profile.legal_name = "Synthetic preference edit".into();
+        install_settings(&mut current, next);
+        assert_eq!(connection_context(&current), context); assert!(connection_context_matches(&snapshot, &context));
+    }
+}
+
+#[cfg(test)]
+mod native635_boot_tests {
+    use super::*;
+    fn legacy() -> Settings {
+        Settings { server_url: "https://synthetic.invalid".into(),
+            bearer_token: "legacy-synthetic-only".into(), crewing_id: "company-synthetic".into(),
+            ..Default::default() }
+    }
+    fn native() -> Settings {
+        let mut s=legacy(); s.server_url=api::PRIMARY_API.into(); s.bearer_token="skn_synthetic_only".into();
+        s.token_scopes=native_account::COMPANY_SCOPES.iter().map(|s|s.to_string()).collect();
+        s.token_expires_at=Some((chrono::Utc::now()+chrono::Duration::minutes(10)).to_rfc3339());
+        s.native_account=Some(native_lifecycle::SessionRecord::new(
+            "account-synthetic".into(), "app-synthetic-only".into(), false,
+            native_account::Entitlement {source:"approved_free".into(),expires_at:None},
+        )); s
+    }
+    fn blocked_modes() -> Vec<Settings> {
+        let mut signed=native();signed.native_account.as_mut().unwrap().signed_out=true;
+        let mut authorized=native(); authorized.native_authorized=true;
+        let mut orphan=legacy(); orphan.bearer_token=" skn_synthetic_orphan ".into();
+        let mut uncertain=legacy(); uncertain.load_uncertain=true;
+        let mut partial=legacy();partial.crewing_id.clear();
+        vec![Settings::default(),native(),signed,authorized,orphan,uncertain,partial]
+    }
+    #[test]
+    fn native635_boot_private_dispatch_never_reaches_side_effects_in_blocked_modes() {
+        for settings in blocked_modes() {
+            for command in ["get_my_identity","list_documents","crewing_intake_open_saved",
+                "download_encrypted_attachment","open_path_with_default","init_app_diagnostics",
+                "activate_crewing_token","issue_crewing_trial_token","unknown_future_command","get_settings_extra"] {
+                let mut reached=0;
+                let result=boot_command_allowed(&settings,command).map(|_|{reached+=1;});
+                assert_eq!(reached,0,"private dispatch reached handler: {command}");
+                assert!(result.is_err(),"{command}");
+            }
+        }
+    }
+    #[test]
+    fn native635_boot_public_commands_and_legacy_dispatch_control() {
+        for settings in blocked_modes() {
+            // No.880 п.5: `open_external_url` допущена до входа намеренно — дверь
+            // «Регистрация» живёт на развилке, то есть ИМЕННО в не-легаси процессе,
+            // и отказ сделал бы регистрацию недостижимой для того, для кого эта
+            // задача и существует.
+            for command in ["get_build_info","get_settings","save_settings","native_account_login","open_external_url"] {
+                assert_eq!(boot_command_allowed(&settings,command),Ok(()));
+            }
+            // ОТРИЦАТЕЛЬНАЯ сторона того же пина: список закрыт, и команда вне
+            // него в заблокированном процессе отказывает. Без этой половины пин
+            // прошёл бы и на гейте, который пускает всё.
+            for command in ["get_my_identity","list_documents","crewing_intake_open_saved","save_compliance_profile"] {
+                assert_eq!(boot_command_allowed(&settings,command),Err("login_required"));
+            }
+        }
+        for command in ["get_my_identity","list_documents","crewing_intake_open_saved","get_settings"] {
+            assert_eq!(boot_command_allowed(&legacy(),command),Ok(()));
+        }
+    }
+
+    // No.880 п.5 (1495): внешнюю ссылку открывает ТОЛЬКО эта проверка, и только
+    // https на названный хост. Образец — Моряк (`skipi-public`, blob прочитан
+    // через `git show`), но аллоулист СТРОЖЕ: у Моряка four схемы
+    // (https/http/mailto/tel) и хост любой, здесь — одна схема и один хост,
+    // потому что предмет один: страница регистрации Skipi.
+    #[test]
+    fn native635_880_external_url_allowlist_is_scheme_and_host() {
+        assert!(external_url_allowed("https://assistant.skipi.app/register"),
+            "control: the registration page itself must be allowed, else every refusal below is vacuous");
+        for refused in [
+            "http://assistant.skipi.app/register",      // не https
+            "file:///etc/passwd",                        // локальный файл
+            "javascript:alert(1)",                       // исполнение в вебвью
+            "https://evil.example.com/register",         // чужой хост
+            "https://assistant.skipi.app.evil.com/x",    // хост-приставка
+            "https://user:pass@assistant.skipi.app/x",   // креденшал в URL
+            "https://assistant.skipi.app:8443/register",  // нестандартный порт
+            "data:text/html,<script>1</script>",
+            "",
+            "assistant.skipi.app/register",              // без схемы вовсе
+        ] {
+            assert!(!external_url_allowed(refused), "must be refused: {refused}");
+        }
+        // Регистр хоста не делает ссылку чужой.
+        assert!(external_url_allowed("https://ASSISTANT.skipi.app/register"));
+    }
+    #[test]
+    fn native635_boot_app_state_constructor_never_reuses_native_authorization() {
+        let mut input=native();input.native_authorized=true;
+        let state=AppState::from_settings(input);
+        assert!(!state.settings.lock().unwrap().native_authorized);
+    }
+    #[test]
+    fn native635_boot_legacy_mode_transition_denies_before_persistence_and_preserves_state() {
+        for mutation in ["orphan","empty_company","empty_origin"] {
+            let mut current=legacy();let before=serde_json::to_value(&current).unwrap();
+            let context=connection_context(&current);let mut next=current.clone();
+            match mutation { "orphan"=>next.bearer_token="skn_synthetic_only".into(),
+                "empty_company"=>next.crewing_id.clear(), _=>next.server_url.clear() }
+            let mut reached=0;
+            let outcome=persist_and_install_settings(&mut current,next,|_|{reached+=1;Ok(())});
+            assert!(outcome.is_err(),"{mutation} was persisted");
+            assert_eq!(reached,0);assert_eq!(serde_json::to_value(&current).unwrap(),before);
+            assert_eq!(connection_context(&current),context);
+        }
+    }
+}
+
+#[cfg(test)]
+mod native635_boot_resource_tests {
+    use super::*;
+    #[test]
+    fn native635_boot_locked_asset_callback_denies_get_head_and_range_without_content() {
+        for method in ["GET","HEAD"] {
+            for range in [None,Some("bytes=0-31")] {
+                let mut request=tauri::http::Request::builder().method(method)
+                    .uri("asset://localhost/synthetic-never-opened-private-file");
+                if let Some(range)=range {request=request.header("Range",range);}
+                let response=locked_asset_response(request.body(Vec::new()).unwrap());
+                assert_eq!(response.status(),403);
+                assert_eq!(response.headers()["cache-control"],"no-store");
+                assert!(response.body().is_empty());
+            }
+        }
+    }
+    #[test]
+    fn native635_boot_app_state_shares_the_only_runtime_settings_owner() {
+        let state=AppState::from_settings(Settings::default());
+        assert!(Arc::ptr_eq(&state.settings,&state.runtime.settings_arc()));
+    }
+    #[test]
+    fn native635_boot_legacy_default_vault_admission_preserves_exact_empty_reference() {
+        let settings=Settings {server_url:"https://synthetic.invalid".into(),
+            bearer_token:"legacy-synthetic-only".into(), crewing_id:"company-synthetic".into(),
+            vault_path:String::new(), ..Default::default()};
+        let state=AppState::from_settings(settings);
+        let locked=state.settings.lock().unwrap();
+        assert!(startup_should_open_db(&locked)); assert_eq!(locked.vault_path,"");
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod native635_boot_window_tests {
+    use super::*;
+    #[test]
+    fn native635_boot_blocked_linux_view_uses_ephemeral_storage_without_changing_window_options() {
+        let mut first=tauri::utils::config::WindowConfig::default();
+        first.label="synthetic-main".into();first.incognito=false;
+        let mut second=first.clone();second.label="synthetic-second".into();
+        let mut windows=vec![first,second];
+        let original=serde_json::to_value(&windows).unwrap();
+        configure_boot_windows(&mut windows,false);
+        for window in &windows { assert!(window.incognito); }
+        let mut expected=original;
+        for window in expected.as_array_mut().unwrap() {window["incognito"]=serde_json::json!(true);}
+        assert_eq!(serde_json::to_value(&windows).unwrap(),expected);
+    }
+    #[test]
+    fn native635_boot_existing_legacy_view_retains_all_browser_storage_options() {
+        let mut window=tauri::utils::config::WindowConfig::default();window.incognito=false;
+        let mut windows=vec![window];let original=serde_json::to_value(&windows).unwrap();
+        configure_boot_windows(&mut windows,true);
+        assert_eq!(serde_json::to_value(&windows).unwrap(),original);
+    }
 }

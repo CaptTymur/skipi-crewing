@@ -367,9 +367,12 @@ try {
 ok(!!M, 'real desktop inline script loads without boot IIFE');
 
 if (M) {
+  // No.880 пункт 4: эти фикстуры изображают РАБОТАЮЩЕГО оператора, поэтому несут
+  // account_session:'active'. Легаси-флаг оставлен рядом намеренно: он проверяет,
+  // что продукт читает именно поле сессии, а не старый булев признак.
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness',
     token_scopes: ['applications:read'],
     interface: { theme: 'light', language: 'en' },
@@ -696,62 +699,62 @@ if (M && typeof M.initLeftPanelResizer === 'function') {
 // overlay instead of going anywhere. Net effect: no path to a server at all,
 // while the empty Crew Flow told the operator to go to a screen that no longer
 // exists.
+//
+// No.880 (1495), ЧТО ИЗ ЭТОГО ОСТАЛОСЬ: владелец снял саму вкладку подключения
+// («вся эта вкладка "подключение" по моему разумению не имеет смысла», «ее нужно
+// убрать»; «никаких токенов и командных элементов. точка»). Задача R2 — «дойти до
+// экрана, которого требует продукт» — не отменена, у неё сменился предмет: экран
+// теперь ВХОД аккаунтом на развилке, а не секция подключения. Поэтому ассерты
+// ниже требуют не присутствия снятой секции, а того, чтобы ни один псевдоним
+// настроек не вёл в несуществующую секцию.
 // ============================================================================
-section('R2 task 1: the connection path is reachable in the unified settings shell');
+section('R2 task 1 (No.880): every settings alias lands on a section that exists');
 if (M) {
   ok(typeof M.crewingSettingsSectionFor === 'function' && typeof M.crewingSettingsSections === 'function',
     'R2/1: the Crewing settings adapter is reachable from the inline module');
-  ok(M.crewingSettingsSectionFor && M.crewingSettingsSectionFor('connection') === 'home-crewing-connection',
-    "R2/1: openSettings('connection') resolves to the connection section, not to 'profile' — got "
-    + (M.crewingSettingsSectionFor ? M.crewingSettingsSectionFor('connection') : 'n/a'));
+  {
+    const MODULE_OWNED = ['profile', 'devices', 'application'];
+    const hostIds = (M.crewingSettingsSections ? M.crewingSettingsSections() : []).map((s) => s && s.id);
+    const resolvable = new Set([...MODULE_OWNED, ...hostIds]);
+    // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: на пустом реестре любой id прошёл бы молча.
+    ok(hostIds.length >= 1 && resolvable.size >= 4,
+      'R2/1: the settings section registry is measured — ' + resolvable.size + ' ids');
+    for (const alias of ['connection', 'token', 'team', 'access', 'work_data', 'crew_flow']) {
+      const id = M.crewingSettingsSectionFor(alias);
+      ok(resolvable.has(id),
+        "R2/1: openSettings('" + alias + "') lands on a section that exists — got " + id);
+    }
+  }
 
   const r2Sections = M.crewingSettingsSections ? M.crewingSettingsSections() : [];
   const r2Conn = r2Sections.filter((s) => s && s.id === 'home-crewing-connection')[0] || null;
   const r2Work = r2Sections.filter((s) => s && s.id === 'home-crewing-crew-flow')[0] || null;
-  ok(!!r2Conn, 'R2/1: the unified shell carries a Crewing-owned connection section');
 
   const r2Opened = [];
-  const r2Saved = [];
   const r2Ctx = {
+    settings: M.state.settings,
     t: M.tr,
     escapeHtml: M.escapeHtml,
     escapeAttr: M.escapeAttr,
-    saveSettings: (next) => { r2Saved.push(next); return Promise.resolve(next); },
+    saveSettings: (next) => Promise.resolve(next),
     refresh: () => Promise.resolve(),
     open: (id) => { r2Opened.push(String(id)); return true; },
   };
 
-  const r2ConnHtml = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(/id="s-url"/.test(r2ConnHtml),
-    'R2/1: the connection section renders the Server URL field under the SAME id the connect code reads (s-url)');
-  ok(/id="s-token"/.test(r2ConnHtml),
-    'R2/1: the connection section renders the company-token field (s-token)');
-  ok(/type="password"/.test(r2ConnHtml), 'R2/1: the company token field is masked');
-  ok(/data-settings-action="crewing-activate-token"/.test(r2ConnHtml)
-    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-activate-token']) === 'function',
-    'R2/1: the section offers the validate action and wires a handler for it');
-  ok(/data-settings-action="crewing-start-trial"/.test(r2ConnHtml)
-    && typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-start-trial']) === 'function',
-    'R2/1: the section offers the trial action and wires a handler for it');
-  ok(typeof (r2Conn && r2Conn.handlers && r2Conn.handlers['crewing-save-connection']) === 'function',
-    'R2/1: the Server URL can be stored without a token (the stand case) — a save handler exists');
-
-  // the fail-closed legacy renderer is NOT the only place the fields live
-  const legacyOnly = (HTML.match(/function renderSettingsModal\(\)[\s\S]*?\n\}/) || [''])[0];
+  // No.880: секции подключения больше нет — вместе с ней ушли Server URL, поле
+  // токена, Validate и триал ((1607)/(1495)). Утверждения R2/1 не выброшены: каждое
+  // заменено обратным по смыслу, плюс сказано, ГДЕ теперь живёт вход.
+  ok(!r2Conn, 'R2/1: the unified shell no longer carries a Crewing-owned connection section');
   const modulePart = (HTML.match(/function _crewingSettingsSections\(\)\{([\s\S]*?)\n\}\n/) || ['', ''])[1];
-  ok(/id="s-url"/.test(modulePart) || /'s-url'/.test(modulePart),
-    'R2/1: the Server URL field exists in the module-owned sections, not only in the fail-closed renderer');
-  ok(/id=.s-url/.test(legacyOnly) || /'s-url'/.test(legacyOnly),
-    'R2/1 (control): the legacy fail-closed renderer still has its own field — this test would be vacuous otherwise');
-
-  // RU and EN both render
-  store.set('skipi-crewing-ui-language', 'ru');
-  const r2ConnRu = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(/[Ѐ-ӿ]/.test(r2ConnRu), 'R2/1: the connection section renders in Russian');
-  store.set('skipi-crewing-ui-language', 'en');
-  const r2ConnEn = r2Conn ? String(r2Conn.renderHtml(r2Ctx)) : '';
-  ok(!/[Ѐ-ӿ]/.test(r2ConnEn) && /Server URL/.test(r2ConnEn),
-    'R2/1: the connection section renders in English with no Cyrillic left behind');
+  for (const [needle, what] of [["'s-url'", 'Server URL'], ["'s-token'", 'the company-token field'],
+                                ["'s-crewing-id'", 'Crewing ID'], ['crewing-activate-token', 'the validate action'],
+                                ['crewing-start-trial', 'the trial action']]) {
+    ok(!modulePart.includes(needle), 'R2/1: the module-owned sections no longer offer ' + what);
+  }
+  const entryBody = (HTML.match(/function renderEntryChoice\(next\)\{[\s\S]*?\n\}/) || [''])[0]
+    || (HTML.match(/function renderEntryChoice\(next\) \{[\s\S]*?\n\}/) || [''])[0];
+  ok(/id="a-email"/.test(entryBody) && /id="a-password"/.test(entryBody),
+    'R2/1: the account form moved to the entry fork, where sign-in now happens');
 
   // the «Open profile» button used to close the overlay and land nowhere
   if (r2Work && r2Work.handlers && typeof r2Work.handlers['crewing-open-profile'] === 'function') {
@@ -768,10 +771,10 @@ if (M) {
   const emptyUnconnected = [...HTML.matchAll(/'crew_flow\.empty_unconnected':'([^']*)'/g)].map((m) => m[1]);
   ok(emptyUnconnected.length === 2, 'R2/1: crew_flow.empty_unconnected is defined in both dictionaries — got '
     + emptyUnconnected.length);
-  ok(!emptyUnconnected.some((v) => /Доступ \/ токены|Access \/ tokens/i.test(v)),
-    'R2/1: the empty-queue hint no longer sends the operator to the retired «Access / tokens» tab');
-  ok(/Connection/i.test(emptyUnconnected[0] || '') && /Подключени/i.test(emptyUnconnected[1] || ''),
-    'R2/1: the hint names the connection screen that actually exists, EN and RU');
+  ok(!emptyUnconnected.some((v) => /Доступ \/ токены|Access \/ tokens|Подключени|Connection/i.test(v)),
+    'R2/1: the empty-queue hint no longer sends the operator to a retired connection screen');
+  ok(/Skipi account/i.test(emptyUnconnected[0] || '') && /аккаунт Skipi/i.test(emptyUnconnected[1] || ''),
+    'R2/1: the hint names signing in with a Skipi account, EN and RU');
 }
 
 // ============================================================================
@@ -922,7 +925,7 @@ ok(r2RuntimeReady, 'R2/2: the screen keeps the already-loaded evaluations and th
 if (r2RuntimeReady) {
   MR2.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness',
     interface: { theme: 'light', language: 'en' },
   };
@@ -1618,7 +1621,7 @@ if (r3Ready) {
   ] };
 
   MR3.state.settings = {
-    server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' },
   };
   store.set('skipi-crewing-ui-language', 'en');
@@ -2073,7 +2076,7 @@ section('No.623: the queue row says who responded, and only where it can');
       row('N-noname', 'skipi_response', headline({ first_name: null, surname: null }), null),
     ], limit: 50, offset: 0, total: 5 };
     R2_FIXTURES.profiles = { items: [{ id: 'p-main', name: 'Master · Bulk Carrier', version: 1, state: 'active' }] };
-    M623.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+    M623.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
       crewing_id: 'crew-flow-demo-harness', interface: { theme: 'light', language: 'en' } };
     store.set('skipi-crewing-ui-language', 'en');
 
@@ -2424,7 +2427,7 @@ const na683 = (profileId) => ({
 if (m683Ready) {
   M683.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-683',
     interface: { theme: 'light', language: 'en' },
   };
@@ -2670,7 +2673,7 @@ ok(!!M683B, 'No.683B: the non-demo inline script loads a second time, with no pr
 if (M683B && typeof M683B.crewFlowCacheRanks === 'function') {
   M683B.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-683b',
     interface: { theme: 'light', language: 'en' },
   };
@@ -2740,7 +2743,7 @@ const s3bSaved = () => ({ i3b: { action: 'saved_to_db', saved_to_db: true, at: '
 const s3bFresh = () => ({});
 const s3bSaveBtn = (html) => (String(html).match(/<button[^>]*data-qa="crew-flow-action-save"[^>]*>[\s\S]*?<\/button>/) || [''])[0];
 const s3bPrime = (M) => {
-  M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-s3b', interface: { theme: 'light', language: 'en' } };
   M.state.intakePilot.detail = { intakeId: 'i3b', generation: 1, facts: [], responseContact: null,
     card: { summary: { candidate_name: 'Oleksandr K.' } } };
@@ -2981,7 +2984,7 @@ function cfBuild(aliases, reveal, rows) {
   store.delete('skipi_crewing_demo');
   elements.clear();
   const M = loadInlineModuleForCurrentStore();
-  M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK',
+  M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, account_session: 'active', connection_context: 'ctx_crewflow',
     crewing_id: 'crew-flow-demo-harness' };
   return M;
 }

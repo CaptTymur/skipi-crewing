@@ -1,3 +1,4 @@
+import { crewingPublicSettingsFixture } from './fixtures/crewing_public_settings.mjs';
 // Presence contract for Skipi Crewing required modules.
 //
 // Closes the "module silently disappears from UI" regression class before
@@ -199,9 +200,12 @@ globalThis.document = {
 globalThis.window = globalThis;
 globalThis.__TAURI__ = {
   core: {
-    invoke: async (cmd) => {
-      if (cmd === 'get_settings') return {};
-      if (cmd === 'save_settings') return 'ok';
+    invoke: async (cmd, args = {}) => {
+      if (cmd === 'get_settings') return crewingPublicSettingsFixture();
+      if (cmd === 'save_settings') {
+        if (!args.expectedContext || args.expectedContext !== args.newSettings.connection_context) throw new Error('settings_changed');
+        return crewingPublicSettingsFixture(args.newSettings);
+      }
       if (cmd === 'sync_crewing_profile') return 'synced';
       if (cmd === 'activate_crewing_token') return {
         crewing_id: 'presence-harness',
@@ -252,9 +256,15 @@ const exportsNeeded = [
   'mobileShow',
   'mobileOpenSettings',
   'mobileOpenSettingsHome',
-  'mobileSaveConnection',
   'mobileSetTheme',
   'mobileSetLanguage',
+  'mobileSaveOrg',
+  // Условие Супервайзора S1-2: предикат и ТОТ, КТО ПО НЕМУ РЕШАЕТ, проверяются
+  // вместе. До этого shouldShowEntryChoice не упоминался в tests/ ни разу —
+  // решение о показе развилки было непокрыто.
+  'crewingAccountSessionActive',
+  'shouldShowEntryChoice',
+  'crewingWorkspaceLive',
   'mobileBack',
   'mobileState',
   '_crewingSettingsSections',
@@ -271,9 +281,12 @@ try {
     'showToast',
     scriptNoBoot + '\nreturn {' + exportsNeeded.join(',') + '};'
   )(
-    async (cmd) => {
-      if (cmd === 'get_settings') return {};
-      if (cmd === 'save_settings') return 'ok';
+    async (cmd, args = {}) => {
+      if (cmd === 'get_settings') return crewingPublicSettingsFixture();
+      if (cmd === 'save_settings') {
+        if (!args.expectedContext || args.expectedContext !== args.newSettings.connection_context) throw new Error('settings_changed');
+        return crewingPublicSettingsFixture(args.newSettings);
+      }
       if (cmd === 'sync_crewing_profile') return 'synced';
       if (cmd === 'activate_crewing_token') return {
         crewing_id: 'presence-harness',
@@ -308,7 +321,7 @@ ok(!!M, 'real inline script loads without boot IIFE');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     token_scopes: ['team:read', 'team:write'],
     interface: { theme: 'light', language: 'en' },
@@ -342,7 +355,7 @@ section('settings 5-section shell anti-regression');
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     organization_id: 'org-presence',
     company_name: 'Presence Harness Crewing',
@@ -371,7 +384,9 @@ if (M) {
   ok(!legacyDesktop.includes('settings5-shell'), 'flag-off desktop keeps legacy settings renderer');
   // K2 (OWNER (654)/(658)): the legacy work settings page retired with the
   // vacancies/mailings modules; the remaining legacy sections still must exist.
-  ['Организация', 'Данные организации', 'Сопряжённые устройства', 'Доступ / токены', 'Приложение'].forEach((label) => {
+  // No.880: вкладки «Сопряжённые устройства» и «Доступ / токены» удалены вместе со
+  // слоем токена ((1495)); остальные обязаны остаться.
+  ['Организация', 'Данные организации', 'Приложение'].forEach((label) => {
     ok(legacyDesktop.includes(label), 'flag-off legacy desktop settings still includes ' + label);
   });
   M.mobileOpenSettingsHome();
@@ -398,12 +413,16 @@ if (M) {
       tokens: ['openMailboxSettings', 'settings.modules.sources'],
     },
     identity: {
-      ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc', 's-url', 's-token', 's-crewing-id'],
-      tokens: ['activateCompanyToken', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+      // No.880: s-url / s-token / s-crewing-id и activateCompanyToken удалены вместе
+      // со слоем токена компании; профиль организации остаётся и проверяется как был.
+      ids: ['s-company', 'p-email', 'p-phone', 'p-legal', 'p-jur', 'p-reg', 'p-mlc', 'p-mlc-to', 'p-slug', 'p-public-desc'],
+      tokens: ['Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
+      absent: ['s-url', 's-token', 's-crewing-id', 'activateCompanyToken'],
     },
     storage: {
       ids: [],
-      tokens: ['createNamedCrewingVault', 'openVaultPickerInline', "switchToVault('')", 'forgetVault', "openConnectDialog({context:'device'})", 'settings.storage.sync'],
+      tokens: ['createNamedCrewingVault', 'openVaultPickerInline', "switchToVault('')", 'forgetVault', 'settings.storage.sync'],
+      absent: ["openConnectDialog({context:'device'})"],
     },
     appearance: {
       ids: ['i-theme', 'i-lang'],
@@ -411,7 +430,8 @@ if (M) {
     },
     paid: {
       ids: [],
-      tokens: ['startTrialAccess', 'Paid Service', 'AI Assistant'],
+      tokens: ['Paid Service', 'AI Assistant'],
+      absent: ['startTrialAccess'],
     },
   };
   for (const [sectionId, spec] of Object.entries(desktopSections)) {
@@ -421,6 +441,7 @@ if (M) {
     if (sectionId === 'modules') ok(!/showView\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 desktop modules has no Open Apps entry (K2.2 L1)');
     for (const id of spec.ids) ok(html.includes('id="' + id + '"'), 'settings5 desktop ' + sectionId + ' mounts #' + id);
     for (const token of spec.tokens) ok(html.includes(token), 'settings5 desktop ' + sectionId + ' contains ' + token);
+    for (const token of (spec.absent || [])) ok(!html.includes(token), 'settings5 desktop ' + sectionId + ' no longer offers ' + token);
     ok(html.includes('data-qa="app-build-sha"'), 'settings5 desktop ' + sectionId + ' keeps app-build-sha in footer');
     ok(html.includes('checkForUpdatesManual') && html.includes("openFeedbackDialog('about')"), 'settings5 desktop ' + sectionId + ' keeps About actions in footer');
   }
@@ -443,33 +464,122 @@ if (M) {
   ok(!fiveMobileList.includes('Вакансии / Рассылки'), 'flag-on mobile shell does not carry legacy work-content row');
 
   const mobileSections = {
-    modules: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'],
-    identity: ['id="m-company"', 'id="m-server-url"', 'id="m-token"', 'id="m-crewing-id"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy'],
-    storage: ["openConnectDialog({context:'device'})", 'settings.storage.sync'],
-    appearance: ['mobileSetTheme', 'mobileSetLanguage'],
-    paid: ['mobileStartTrialAccess', 'Paid Service'],
+    modules: { present: ['id="m-reply"', 'openMailboxSettings', 'settings.modules.sources'] },
+    identity: {
+      present: ['id="m-company"', 'Login model', 'RBAC hierarchy', 'Trust Score', 'settings.identity.privacy', 'mobileSaveOrg'],
+      // No.880 (1495): командных элементов снятого слоя здесь быть не должно.
+      absent: ['id="m-server-url"', 'id="m-token"', 'id="m-crewing-id"', 'mobileSaveConnection', 'token controls'],
+    },
+    storage: { present: ['settings.storage.sync'] },
+    appearance: { present: ['mobileSetTheme', 'mobileSetLanguage'] },
+    paid: { present: ['Paid Service'] },
   };
-  for (const [sectionId, tokens] of Object.entries(mobileSections)) {
+  for (const [sectionId, spec] of Object.entries(mobileSections)) {
     M.mobileOpenSettings(sectionId);
     const html = elFor('mobile-main').innerHTML;
     if (sectionId === 'modules') ok(!/mobileShow\(['"]apps['"]\)|Open Apps|Apps launcher/.test(html), 'settings5 mobile modules has no Open Apps entry (K2.2 L1)');
-    for (const token of tokens) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
+    for (const token of spec.present) ok(html.includes(token), 'settings5 mobile ' + sectionId + ' contains ' + token);
+    for (const token of (spec.absent || [])) ok(!html.includes(token), 'settings5 mobile ' + sectionId + ' no longer offers ' + token);
   }
 
-  elFor('m-server-url').value = 'https://api.skipi.app';
-  elFor('m-token').value = 'TOKEN-DO-NOT-LEAK';
-  elFor('m-crewing-id').value = 'presence-harness';
+  // No.880: поля m-token / m-crewing-id / m-server-url удалены вместе со слоем
+  // токена, и mobileSaveConnection тоже — путь сохранения подключения больше не
+  // существует. Остаются те же пути темы и языка, которые этот блок и защищал.
   elFor('m-company').value = 'Presence Harness Crewing';
   let mobileSaveErr = null;
   try {
     M.mobileOpenSettings('identity');
-    await M.mobileSaveConnection(false);
     await M.mobileSetTheme('dark');
     await M.mobileSetLanguage('en');
   } catch (e) {
     mobileSaveErr = e;
   }
-  ok(!mobileSaveErr, 'settings5 mobile save/theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
+  ok(!mobileSaveErr, 'settings5 mobile theme/language paths do not throw' + (mobileSaveErr ? ' — ' + mobileSaveErr : ''));
+
+  // No.880, РЕГРЕССИЯ ЭТОГО СЛАЙСА: mobileSaveConnection был единственным, кто
+  // переносил company_name из мобильного интерфейса, и §2 удалил его вместе с
+  // кнопкой. Поле «Название организации» осталось правимым, а сохранить его
+  // стало нечем — правка молча терялась. Путь восстановлен как ПРОФИЛЬНЫЙ.
+  M.mobileOpenSettings('identity');
+  elFor('m-company').value = 'Presence Harness Org Save';
+  const savedOrg = await M.mobileSaveOrg(false);
+  ok(M.state.settings.company_name === 'Presence Harness Org Save',
+    'No.880: the mobile organization name has a save path again — got ' + JSON.stringify(M.state.settings.company_name));
+  ok(savedOrg && !savedOrg.bearer_token,
+    'No.880: the profile save carries no token value — got ' + JSON.stringify(savedOrg && savedOrg.bearer_token));
+
+  // Условие Супервайзора S1-2: ДВУСТОРОННИЙ ассерт — поле проекции и решение о
+  // развилке проверяются ВМЕСТЕ и по всем исходам, которые Rust может прислать.
+  // Односторонняя проверка («с 'active' развилки нет») прошла бы и на предикате,
+  // который всегда false, и на том, который всегда true для непустой строки.
+  {
+    const SESSION_OUTCOMES = ['none', 'locked', 'signed_out', 'expired', 'legacy', 'unavailable', 'active'];
+    const saved = JSON.parse(JSON.stringify(M.state.settings));
+    const savedDemo = globalThis.__demoMode;
+    try {
+      for (const outcome of SESSION_OUTCOMES) {
+        M.state.settings = Object.assign({}, saved, { account_session: outcome });
+        const active = M.crewingAccountSessionActive(M.state.settings);
+        const shows = M.shouldShowEntryChoice();
+        ok(active === (outcome === 'active'),
+          `No.880/${outcome}: the predicate reads the field and ONLY 'active' is a session — got ${active}`);
+        // Обе стороны: предикат истинен ⇔ развилки нет.
+        ok(shows === !active,
+          `No.880/${outcome}: the fork shows exactly when there is no session — predicate=${active} shows=${shows}`);
+        ok(M.crewingWorkspaceLive(M.state.settings) === (outcome === 'active' || outcome === 'legacy'),
+          `No.880/${outcome}: «workspace live» is the two named outcomes, not a third reading of the field`);
+      }
+      // Поле, которого НЕТ вовсе (старый Rust, забывший его отдать), обязано
+      // читаться как «нет сессии», а не как «есть».
+      const без = Object.assign({}, saved); delete без.account_session;
+      M.state.settings = без;
+      ok(M.crewingAccountSessionActive(без) === false && M.shouldShowEntryChoice() === true,
+        'No.880: a projection with no account_session at all reads as «no session», never as a session');
+    } finally {
+      M.state.settings = saved;
+      globalThis.__demoMode = savedDemo;
+    }
+  }
+
+  // No.880, РЕГРЕССИЯ КЛАССА «висячий вызов». Дважды за этот слайс удаление
+  // функции оставляло живой вызов: mobileSaveConnection (роутер настроек тихо
+  // потерял ~230 ассертов, потому что страница падала) и пара
+  // mobileSettingsAccessHtml / mobileSettingsDevicesHtml (роутер отправлял на
+  // удалённые рендереры — ReferenceError при открытии страницы). Проверка
+  // пришпилена ПОИМЁННО: каждое имя, снятое слайсом, обязано иметь ноль
+  // упоминаний в dist, иначе ссылка осталась.
+  {
+    const DELETED_BY_880 = [
+      'activateCompanyToken', 'startTrialAccess', 'teamConnectionStatusHtml',
+      'teamOnboardingOpenAccess', 'openConnectDialog', 'connectShowTab',
+      'connectClearToken', 'connectSubmitToken', 'closeConnectDialog',
+      'connectFriendlyError', 'mobileSettingsAccessHtml', 'mobileSettingsDevicesHtml',
+      'mobileConnectionIntroHtml', 'mobileConnectionHtml', 'mobileValidateConnection',
+      'mobileSaveConnection', 'mobileStartTrialAccess', 'mobileReadConnection',
+      'trialActivateLicense', 'chooseUseApp', 'entryChoiceMade', 'trialGoConnect',
+      'mobileHasConnection', 'home-crewing-connection',
+      // No.880 S2: сняты вместе со слоем токена. `trialServerPhase` спрашивал у
+      // сервера годность токена компании, `trialTokenExpiryPhase` читал его срок,
+      // `trialIsAuthFailure` распознавал отказ того же запроса. Платный слой
+      // теперь читает ПРАВО аккаунта из проекции.
+      'trialServerPhase', 'trialTokenExpiryPhase', 'trialIsAuthFailure',
+    ];
+    // Предмет — ВЫЗОВ, а не упоминание: комментарий, называющий снятую функцию,
+    // это провенанс и он разрешён (mobileSaveOrg прямо ссылается на ту, что
+    // заменил). Поэтому сверяется форма вызова `имя(`, а для id секции — само имя.
+    const callForm = (name) => (name.startsWith('home-') ? name : name + '(');
+    // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ в том же окне и ТЕМ ЖЕ предикатом: иначе весь
+    // список ниже пройдёт на поиске, который ничего не умеет находить.
+    for (const alive of ['mobileSaveOrg', 'goAccountSignIn', 'crewingAccountSessionActive']) {
+      ok(HTML.includes(callForm(alive)),
+        'No.880 control: the call-site sweep can find a live symbol — ' + alive);
+    }
+    for (const gone of DELETED_BY_880) {
+      const needle = callForm(gone);
+      const hits = HTML.split(needle).length - 1;
+      ok(hits === 0, 'No.880: nothing calls the retired symbol ' + gone + ' — found ' + hits);
+    }
+  }
 
   // K2 (owner654/658, 2026-09-24): the legacy work modules (vacancies, mailings) are retired from the product;
   // the presence floor for them is intentionally dropped together with the manifest entries (PR-P).
@@ -564,7 +674,7 @@ if (M) {
     // attributes, string literals) and followed by a quote/paren/space/'>'/';'/',' — not by function name.
     const RETIRED_NAV = /(['"(=])(vacancies|mailings|mail|documents|apps)(?=['")\s>;,])/g;
     const b2 = { badBack: [], rendered: [], errors: [] };
-    M.state.settings = { server_url: 'https://api.skipi.app', bearer_token: 'TOKEN-DO-NOT-LEAK', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
+    M.state.settings = { server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_presence', crewing_id: 'presence-harness', interface: { theme: 'light', language: 'en' } };
     const mobileShowSrc = (HTML.match(/function mobileShow\(view\) \{([\s\S]*?)\nfunction mobileBack\(\)/) || [])[1] || '';
     const renderViews = [...new Set([...mobileShowSrc.matchAll(/if \(view === '([a-z_]+)'\) return mobileRender/g)].map((m) => m[1]))];
     ok(renderViews.length >= 18, 'B2: the mobileShow render branches are enumerated from the source — got ' + renderViews.length);
@@ -661,28 +771,60 @@ section('mobile rail canon — 3 slots since K2.2 (was 5), canonical QA, no scro
 if (M) {
   M.state.settings = {
     server_url: 'https://api.skipi.app',
-    bearer_token: 'TOKEN-DO-NOT-LEAK',
+    has_bearer_token: true, connection_context: 'ctx_presence',
     crewing_id: 'presence-harness',
     interface: { theme: 'light', language: 'en' },
   };
+  // Условие Супервайзора S1-3: пин K2.2 ВЕРНУЛСЯ НА ОТРЕНДЕРЕННЫЙ РЕЛЬС.
+  // В S1 сессию внести было нечем (предикат-заглушка всегда возвращал false и
+  // резолвился лексически), поэтому канон трёх слотов читался из текста реестра —
+  // а текст реестра может совпадать при другом отрисованном рельсе. Теперь
+  // предикат читает ПОЛЕ проекции, значит сессия вносится состоянием, и рельс
+  // проверяется там, где его видит человек. Реестр оставлен рядом: он ловит
+  // расхождение исходника с отрисованным, но сам по себе доказательством не был.
   M.mobileShow('vacancies');
-  const chrome = elFor('mobile-root').innerHTML;
-  const railHtml = (chrome.match(/<nav class="mobile-bottom[\s\S]*?<\/nav>/) || [''])[0];
-  ok(!!railHtml, 'mobile chrome renders the bottom rail');
-  const railBtns = [...railHtml.matchAll(/<button[^>]*data-mview="([^"]+)"[^>]*>/g)];
-  const railViews = railBtns.map((b) => b[1]);
-  ok(railViews.join(',') === 'crew_flow,compliance,seafarers',
-    'rail renders exactly 3 buttons in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railViews.join(',') + ']');
-  const railQa = railBtns.map((b) => (b[0].match(/data-qa="([^"]+)"/) || [])[1] || '(none)');
+  const noSessionChrome = elFor('mobile-root').innerHTML;
+  ok(!/<nav class="mobile-bottom/.test(noSessionChrome),
+    'without an account session the mobile shell shows no rail — it shows the sign-in screen');
+  {
+    const savedSettings = JSON.parse(JSON.stringify(M.state.settings));
+    try {
+      M.state.settings = Object.assign({}, savedSettings, { account_session: 'active' });
+      M.mobileShow('crew_flow');
+      const railChrome = elFor('mobile-root').innerHTML;
+      // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: рельс действительно отрисован, иначе все
+      // утверждения о его составе прошли бы на пустой строке.
+      ok(/<nav class="mobile-bottom/.test(railChrome),
+        'K2.2/rendered: an account session renders the bottom rail (control for the slot assertions below)');
+      const renderedSlugs = [...railChrome.matchAll(/data-qa="bottom-nav-(\w+)"/g)].map((m) => m[1]);
+      ok(renderedSlugs.join(',') === 'crew_flow,compliance,seafarers',
+        'K2.2/rendered: the RENDERED rail carries exactly 3 slots in canonical order crew_flow,compliance,seafarers — got [' + renderedSlugs.join(',') + ']');
+      for (const retired of ['apps', 'documents', 'vacancies', 'mailings', 'more', 'home', 'workspace', 'settings']) {
+        ok(!renderedSlugs.includes(retired),
+          'K2.2/rendered: the rendered rail has no ' + retired + ' slot');
+      }
+      ok(!/data-qa="bottom-nav-\w+"[^>]*onclick="mobileOpenSettingsHome\(\)"/.test(railChrome),
+        'K2.2/rendered: settings never enters from the rail (only the header gear)');
+    } finally {
+      M.state.settings = savedSettings;
+    }
+  }
+  const railRegistry = (HTML.match(/var MOBILE_RAIL_QA[\s\S]*?\};/) || [''])[0];
+  const railSlots = [...railRegistry.matchAll(/(\w+)\s*:\s*'bottom-nav-(\w+)'/g)].map((m) => m[1]);
+  ok(railSlots.join(',') === 'crew_flow,compliance,seafarers',
+    'rail registry keeps exactly 3 slots in canonical order crew_flow,compliance,seafarers (K2.2) — got [' + railSlots.join(',') + ']');
+  const railQa = [...railRegistry.matchAll(/'bottom-nav-(\w+)'/g)].map((m) => 'bottom-nav-' + m[1]);
   ok(railQa.join(',') === 'bottom-nav-crew_flow,bottom-nav-compliance,bottom-nav-seafarers',
-    'rail buttons carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
-  ok(!railHtml.includes('data-mview="apps"') && !railHtml.includes('data-mview="documents"') && !railHtml.includes('bottom-nav-apps') && !railHtml.includes('bottom-nav-documents'),
+    'rail slots carry canonical bottom-nav-<view> QA slugs — got [' + railQa.join(',') + ']');
+  ok(!railRegistry.includes('data-mview="apps"') && !railRegistry.includes('data-mview="documents"') && !railRegistry.includes('bottom-nav-apps') && !railRegistry.includes('bottom-nav-documents'),
     'K2.2: the rail has no Apps or Documents slot');
-  ok(!railHtml.includes('bottom-nav-more') && !railHtml.includes('data-mview="settings"') && !railHtml.includes('mobileOpenSettingsHome'),
+  ok(!railRegistry.includes('bottom-nav-more') && !railRegistry.includes('data-mview="settings"') && !railRegistry.includes('mobileOpenSettingsHome'),
     'rail has no "More"/Settings slot (settings enters only via header gear)');
-  ok(!railHtml.includes('bottom-nav-home') && !railHtml.includes('bottom-nav-workspace'),
+  ok(!railRegistry.includes('bottom-nav-home') && !railRegistry.includes('bottom-nav-workspace'),
     'no legacy bottom-nav-home / bottom-nav-workspace slugs on the rail');
-  const headerHtml = (chrome.match(/<header[\s\S]*?<\/header>/) || [''])[0];
+  // Шапка мобильной оболочки рендерится и без сессии (на экране входа), поэтому
+  // читаем её из ОТРИСОВАННОГО корня, как и раньше.
+  const headerHtml = elFor('mobile-root').innerHTML;
   ok(/class="mobile-top-home[^"]*"[^>]*onclick="mobileShow\('crew_flow'\)"/.test(headerHtml),
     'header keeps home button (mobile-top-home → crew_flow)');
   ok(headerHtml.includes('mobileOpenSettingsHome()'), 'header keeps settings gear (mobileOpenSettingsHome)');
@@ -1216,6 +1358,565 @@ if (M && typeof M._crewingSettingsSections === 'function') {
   M.state.intakePilot = null; M.state.crewFlowReadState = {};
 } else {
   ok(false, 'No.765d-66..69: the wiring checks require _crewingSettingsSections');
+}
+
+
+section('No.635 single-user Team retirement — real callers, unchanged connection');
+{
+  const oldNative = globalThis.__TAURI__.core.invoke;
+  const oldConfirm = globalThis.confirm;
+  let confirmations = 0;
+  globalThis.confirm = () => { confirmations++; return true; };
+  const savedRole = localStorage.getItem('skipi_crewing_work_role');
+  const savedEntry = localStorage.getItem('skipi_crewing_entry');
+  const savedDemo = localStorage.getItem('skipi_crewing_demo');
+  const savedLang = localStorage.getItem('skipi-crewing-ui-language');
+  let fixture = {};
+  const calls = [];
+  let deferIdentity = false;
+  const identities = [];
+  globalThis.__TAURI__.core.invoke = async (cmd, args) => {
+    calls.push(cmd);
+    if (cmd === 'get_settings') return fixture;
+    if (cmd === 'get_my_identity') {
+      if (deferIdentity) return new Promise((resolve) => identities.push(resolve));
+      return { user_id: 'synthetic-single-user' };
+    }
+    if (cmd === 'save_settings') throw new Error('unexpected settings write from retired Team entrypoint');
+    if (cmd === 'get_mailbox_status') return { configured: false };
+    if (cmd.startsWith('fetch_') || cmd.startsWith('list_')) return [];
+    return {};
+  };
+  localStorage.removeItem('skipi_crewing_demo');
+  localStorage.setItem('skipi_crewing_entry', 'use');
+  const names = [
+    'renderEntryChoice', '_crewingTeamRemoveMember',
+    'seedRetiredTeamCache: function(){ _crewingTeamMemberCache = [{ user_id: "synthetic-other-user", role: "member" }]; }',
+    'state', 'mobileState', 'hasTeamAccess', 'crewingSettingsHost', '_crewingSettingsSectionFor',
+    '_crewingSettingsSections',
+    'showView', 'mobileShow', 'shouldShowTeamOnboarding', 'maybeShowTeamOnboarding',
+    'openTeamOnboarding', 'closeTeamOnboarding', 'renderTeamOnboarding',
+    'renderTeamView', 'renderTeamTree', 'renderTeamMain', 'mobileRenderTeam',
+    'shouldShowMobileWorkRoleChoice', 'mobileChooseWorkRole', 'mobileChangeWorkRole',
+    'mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin',
+    'mobileSettingsOrgHtml', 'mobileSettingsFiveIdentityHtml',
+    'claimOwnerAccess', 'addTeamMember', 'removeTeamMember', 'refreshTeamMembers',
+    'startTeamChatPoll', 'teamChatPollOnce', 'copyIssuedTeamToken'
+  ];
+  let C;
+  const pendingRenders = [];
+  try {
+    C = new Function('invoke', 'showToast', '__testConfirm', '__testPending',
+      'requestAnimationFrame', 'clearInterval',
+      scriptNoBoot + '\ninAppConfirm = __testConfirm;'
+      + '\nfunction _recomputeTeamChatUnread() {}'
+      + '\nfunction renderTeamChatUnread() {}'
+      + '\nfunction _hideTeamChatNewBadge() {}'
+      + '\nfunction _playTeamChatBeep() {}'
+      + '\nvar __oldTeamRender = renderTeamView;'
+      + '\nrenderTeamView = function(){ var p = Promise.resolve(__oldTeamRender.apply(this, arguments)); p.catch(function(){}); __testPending.push(p); return p; };'
+      + '\nvar __oldTeamPoll = teamChatPollOnce;'
+      + '\nteamChatPollOnce = function(){ var p = Promise.resolve(__oldTeamPoll.apply(this, arguments)); p.catch(function(){}); __testPending.push(p); return p; };'
+      + '\nreturn {' + names.join(',') + '};')(
+        globalThis.__TAURI__.core.invoke, () => {}, async () => true, pendingRenders,
+        () => 0, () => {});
+    const teamRpc = new Set([
+      'list_team_members', 'claim_team_owner', 'add_team_member', 'remove_team_member',
+      'fetch_team_chat_messages', 'send_team_chat_message'
+    ]);
+    const teamMarkup = /team-onboarding-modal|team-onboarding-id|team-onboarding-choice|team-members-table|team-chat-stream|mobile-role-choice|mobile-team-user-id/;
+    for (const lang of ['ru', 'en']) {
+      for (const variant of [
+        { name: 'fresh', role: '', scopes: [], connected: false },
+        { name: 'owner', role: 'owner', scopes: ['*'], connected: true },
+        { name: 'member', role: 'member', scopes: ['team:read', 'team:write'], connected: true }
+      ]) {
+        const label = '635/' + lang + '/' + variant.name;
+        fixture = {
+          server_url: 'https://synthetic.invalid',
+          has_bearer_token: variant.connected, connection_context: 'ctx_retired_fixture',
+          crewing_id: variant.connected ? 'own-company' : '',
+          organization_id: variant.connected ? 'own-org' : '',
+          company_name: 'Synthetic company', team_role: variant.role,
+          token_scopes: variant.scopes, token_expires_at: null,
+          profile: { contact_email: 'synthetic@example.invalid', legal_name: 'Synthetic company' },
+          interface: { theme: 'light', language: lang }
+        };
+        C.state.settings = fixture;
+        C.state.myIdentity = { user_id: 'synthetic-single-user' };
+        localStorage.setItem('skipi-crewing-ui-language', lang);
+        localStorage.setItem('skipi_crewing_work_role', variant.role || 'member');
+        calls.length = 0;
+        const before = JSON.stringify(fixture);
+        // Exercise the real first-run renderer; the permissive shared fake DOM
+        // otherwise always reports an overlay as already mounted.
+        const oldLookup = document.getElementById;
+        const oldAppend = document.body.appendChild;
+        let entryOverlay = null;
+        document.getElementById = (id) => id === 'entry-choice-overlay' ? null : oldLookup(id);
+        document.body.appendChild = (child) => {
+          if (child.id === 'entry-choice-overlay') entryOverlay = child;
+          return child;
+        };
+        try { C.renderEntryChoice(() => {}); }
+        finally {
+          document.getElementById = oldLookup;
+          document.body.appendChild = oldAppend;
+        }
+        // No.880: предусловие было «есть кнопка ec-create» — дверь «новая компания»,
+        // которой больше нет. Теперь предусловие — три двери канона, а утверждение о
+        // команде остаётся тем же: развилка не предлагает ничего командного.
+        ok(!!entryOverlay && /id="ec-login"/.test(entryOverlay.innerHTML)
+          && /id="ec-register"/.test(entryOverlay.innerHTML)
+          && /id="ec-demo"/.test(entryOverlay.innerHTML)
+          && !/team|команд/i.test(entryOverlay.innerHTML),
+          label + ': real first-run entry choice offers the three canon doors and never a team');
+        ok(!C.hasTeamAccess(), label + ': old Team scopes do not enable a retired module');
+        ok(!C.crewingSettingsHost().team, label + ': shared Settings receives no Team capability');
+        ok(C._crewingSettingsSectionFor('team') === 'profile'
+          && C._crewingSettingsSectionFor('access') === 'profile',
+          label + ': old Settings aliases land on Profile');
+        // No.880 (1495): секции home-crewing-connection больше нет, поэтому прежний
+        // ассерт «existing connection stays reachable» закреплял УДАЛЁННЫЙ id.
+        // Проверка стала сильнее своего предшественника: каждый псевдоним обязан
+        // вести в секцию, которая РЕАЛЬНО существует. Именно этого инструмента не
+        // хватило, когда 'connection' четырьмя правками позже вёл в никуда.
+        {
+          const MODULE_OWNED = ['profile', 'devices', 'application'];
+          const hostIds = C._crewingSettingsSections().map((s) => s.id);
+          const resolvable = new Set([...MODULE_OWNED, ...hostIds]);
+          // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: пустой набор принял бы любой id.
+          ok(hostIds.length >= 1 && resolvable.size >= 4,
+            label + ': the settings section registry is measured (' + resolvable.size + ' ids)');
+          for (const alias of ['connection', 'token', 'team', 'access', 'profile', 'devices',
+                               'work_data', 'crew_flow', 'appearance', 'interface', 'app', 'language']) {
+            const id = C._crewingSettingsSectionFor(alias);
+            ok(resolvable.has(id),
+              label + ": settings alias '" + alias + "' lands on a section that exists — got " + id);
+          }
+        }
+        ok(!C.shouldShowTeamOnboarding() && !C.shouldShowMobileWorkRoleChoice(),
+          label + ': neither first-run role gate can reopen');
+        C.showView('team');
+        ok(C.state.view === 'crew_flow', label + ': desktop Team alias lands on Crew Flow');
+        for (const route of ['work_role', 'member_join']) {
+          C.mobileShow(route);
+          ok(C.mobileState.view === 'connection', label + ': mobile ' + route + ' is inert');
+        }
+        for (const render of ['renderTeamView', 'renderTeamTree', 'renderTeamMain']) {
+          const container = render === 'renderTeamTree' ? 'left-panel' : 'main';
+          elFor(container).innerHTML = '';
+          await C[render]();
+          const rendered = elFor(container).innerHTML;
+          ok(!teamMarkup.test(rendered) && !/openTeamOnboarding|refreshTeamMembers/.test(rendered), label + ': direct ' + render + ' cannot restore Team');
+        }
+        for (const render of ['mobileRenderWorkRoleChoice', 'mobileRenderMemberJoin', 'mobileRenderTeam']) {
+          elFor('mobile-main').innerHTML = '';
+          await C[render]();
+          ok(!teamMarkup.test(elFor('mobile-main').innerHTML), label + ': direct ' + render + ' cannot restore Team');
+        }
+        const roleHtml = C.mobileSettingsOrgHtml()
+          + C.mobileSettingsFiveIdentityHtml();
+        ok(!/mobileChangeWorkRole|member_join|mobileChooseWorkRole/.test(roleHtml),
+          label + ': connection and both fallback settings have no membership controls');
+        elFor('team-new-user-id').value = 'synthetic-other-user';
+        await C.claimOwnerAccess();
+        await C.addTeamMember();
+        await C.removeTeamMember('synthetic-other-user');
+        await C.refreshTeamMembers(true);
+        C.seedRetiredTeamCache();
+        const helperCallStart = calls.length;
+        const confirmsBefore = confirmations;
+        await Promise.resolve(C._crewingTeamRemoveMember('synthetic-other-user')).catch(() => {});
+        ok(confirmations === confirmsBefore
+          && !calls.slice(helperCallStart).includes('remove_team_member'),
+          label + ': cached direct Team remove helper does not confirm or revoke access');
+        C.startTeamChatPoll();
+        await C.teamChatPollOnce(true, true);
+        const settled = await Promise.allSettled(pendingRenders.splice(0));
+        ok(settled.every((r) => r.status === 'fulfilled'),
+          label + ': all started Team render/poll calls terminate without setup errors');
+        ok(!calls.some((cmd) => teamRpc.has(cmd)), label + ': stale Team callers issue no Team RPC');
+        ok(!calls.includes('save_settings') && JSON.stringify(C.state.settings) === before,
+          label + ': credential, tenant, profile and role are preserved without a settings write');
+      }
+    }
+    // A pre-existing member onboarding callback must not resurrect the removed screen
+    // after it has been closed. The real native boundary is delayed, not its renderer.
+    fixture = { server_url: 'https://synthetic.invalid', has_bearer_token: false, connection_context: 'ctx_retired_fresh', crewing_id: '',
+      organization_id: '', token_scopes: [], profile: {}, interface: { language: 'en' } };
+    C.state.settings = fixture;
+    C.state.myIdentity = null;
+    deferIdentity = true;
+    elFor('modal-host').innerHTML = '';
+    C.openTeamOnboarding('member');
+    await C.closeTeamOnboarding(false);
+    for (const resolve of identities.splice(0)) resolve({ user_id: 'late-synthetic-user' });
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
+    ok(!teamMarkup.test(elFor('modal-host').innerHTML),
+      '635: delayed identity completion cannot recreate Member onboarding after close');
+  } finally {
+    globalThis.__TAURI__.core.invoke = oldNative;
+    if (oldConfirm === undefined) delete globalThis.confirm; else globalThis.confirm = oldConfirm;
+    for (const [key, value] of [
+      ['skipi_crewing_work_role', savedRole], ['skipi_crewing_entry', savedEntry],
+      ['skipi_crewing_demo', savedDemo], ['skipi-crewing-ui-language', savedLang]
+    ]) {
+      if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+    }
+  }
+}
+
+// No.635 — exercise the shipped Settings renderer and the actual credential screens.
+// These are product regressions, not an account wire-contract or an expected-red exemption.
+section('635 real Settings and no manual credential entry');
+{
+  const { createContext, runInContext } = await import('node:vm');
+  const settingsVendor = fs.readFileSync(path.join(ROOT, 'dist/skipi-settings.js'), 'utf8');
+  function credentialFixture(language, mode, phase) {
+    const nodes = new Map();
+    const storage = new Map([
+      ['skipi-crewing-ui-language', language],
+      ['skipi_crewing_settings5', '0'],
+      ['skipi_crewing_demo', phase === 'demo' ? '1' : '0'],
+    ]);
+    const document = {};
+    function node(id = '', tag = 'div') {
+      const attributes = {};
+      const classes = new Set();
+      const listeners = new Map();
+      const value = {
+        id, tagName: tag.toUpperCase(), nodeType: 1, ownerDocument: document,
+        parentNode: null, children: [], style: {}, value: '', textContent: '',
+        _html: '', _derived: new Map(), className: '',
+        get innerHTML() { return this._html; },
+        set innerHTML(html) {
+          for (const child of [...this.children, ...this._derived.values()]) child.parentNode = null;
+          this.children = [];
+          this._derived.clear();
+          this._html = String(html);
+        },
+        classList: {
+          add(...names) { names.forEach((name) => classes.add(name)); },
+          remove(...names) { names.forEach((name) => classes.delete(name)); },
+          contains(name) { return classes.has(name); },
+          toggle(name, force) {
+            const next = force === undefined ? !classes.has(name) : !!force;
+            if (next) classes.add(name); else classes.delete(name);
+            return next;
+          },
+        },
+        setAttribute(name, val) { attributes[name] = String(val); if (name === 'id') this.id = String(val); },
+        getAttribute(name) { return name === 'id' ? this.id || null : (attributes[name] ?? null); },
+        hasAttribute(name) { return this.getAttribute(name) !== null; },
+        addEventListener(type, fn) {
+          if (!listeners.has(type)) listeners.set(type, new Set());
+          listeners.get(type).add(fn);
+        },
+        removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
+        appendChild(child) { child.parentNode = this; this.children.push(child); return child; },
+        removeChild(child) {
+          this.children = this.children.filter((item) => item !== child); child.parentNode = null;
+        },
+        remove() {
+          if (this.parentNode) this.parentNode.removeChild(this);
+          if (nodes.get(this.id) === this) nodes.delete(this.id);
+        },
+        contains(other) {
+          for (let current = other; current; current = current.parentNode) if (current === this) return true;
+          return false;
+        },
+        focus() { document.activeElement = this; },
+        querySelector(selector) {
+          if (selector.startsWith('#')) {
+            const found = document.getElementById(selector.slice(1));
+            return found && this.contains(found) ? found : null;
+          }
+          return null;
+        },
+        querySelectorAll() { return []; },
+        getBoundingClientRect() { return { width: mode === 'mobile' ? 680 : 1100, height: 750 }; },
+      };
+      return value;
+    }
+    document.body = node('body', 'body');
+    document.head = node('head', 'head');
+    document.documentElement = node('html', 'html');
+    document.activeElement = null;
+    for (const id of ['body', 'head', 'settings-root', 'skipi-settings-overlay',
+      'modal-host', 'mobile-root', 'mobile-main', 'main', 'tree']) {
+      const item = id === 'body' ? document.body : id === 'head' ? document.head : node(id);
+      nodes.set(id, item);
+      if (id !== 'body' && id !== 'head') document.body.appendChild(item);
+    }
+    function findIn(parent, id) {
+      if (parent.id === id) return parent;
+      for (const child of parent.children) {
+        const found = findIn(child, id);
+        if (found) return found;
+      }
+      const escaped = escapeRe(id);
+      const opening = parent.innerHTML.match(new RegExp('<([A-Za-z][\\w-]*)\\b[^>]*\\s+id=["\\x27]' + escaped + '["\\x27][^>]*>'));
+      if (!opening) return null;
+      if (!parent._derived.has(id)) {
+        const child = node(id, opening[1]);
+        child.parentNode = parent;
+        for (const attr of opening[0].matchAll(/([\w-]+)=["']([^"']*)["']/g)) child.setAttribute(attr[1], attr[2]);
+        parent._derived.set(id, child);
+      }
+      return parent._derived.get(id);
+    }
+    document.getElementById = (id) => nodes.get(id) || findIn(document.body, id) || null;
+    document.createElement = (tag) => node('', tag);
+    document.querySelector = (selector) => selector.startsWith('#') ? document.getElementById(selector.slice(1)) : null;
+    document.querySelectorAll = () => [];
+    document.addEventListener = () => {};
+    document.removeEventListener = () => {};
+    document.dispatchEvent = () => true;
+    if (mode === 'mobile') document.body.classList.add('mobile-shell');
+    const connected = phase !== 'fresh';
+    const fixture = {
+      server_url: 'https://synthetic.invalid',
+      has_bearer_token: connected, connection_context: 'ctx_actual_vendor_fixture',
+      crewing_id: connected ? 'company-a' : '', organization_id: connected ? 'org-a' : '',
+      company_name: '635 regression company', user_display_name: '635 regression person',
+      team_role: phase === 'owner' ? 'owner' : 'member', team_onboarding_seen: true,
+      token_scopes: ['applications:read'], token_expires_at: phase === 'blocked' ? '2000-01-01T00:00:00Z' : '2099-01-01T00:00:00Z',
+      reply_to: 'owner@example.test', vault_path: '', recent_vaults: [],
+      profile: { legal_name: '635 regression company', contact_email: 'owner@example.test' },
+      interface: { language, theme: 'light' },
+    };
+    const nativeCalls = [];
+    const fetchCalls = [];
+    const pendingReads = [];
+    const nativeRead = (command) => {
+      const pending = Promise.resolve().then(() => {
+      nativeCalls.push(command);
+      if (command === 'get_settings') return JSON.parse(JSON.stringify(fixture));
+      if (command === 'get_build_info') return { version: 'fixture', build_sha: 'fixture' };
+      if (command === 'get_mailbox_status') return { configured: false, status: 'not_configured' };
+      if (command === 'get_my_identity') return { user_id: 'fixture-device', pubkey_b64: 'fixture-public-key' };
+      throw new Error('635 fixture forbids native command: ' + command);
+      });
+      pendingReads.push(pending);
+      return pending;
+    };
+    async function drainReads() {
+      for (let turn = 0; turn < 20; turn++) {
+        const count = pendingReads.length;
+        await Promise.all(pendingReads);
+        for (let tick = 0; tick < 8; tick++) await Promise.resolve();
+        if (pendingReads.length === count) return;
+      }
+      throw new Error('635 fixture native reads did not settle');
+    }
+    const sandbox = {
+      console, document, navigator: { userAgent: mode === 'mobile' ? 'Android fixture' : 'desktop fixture', onLine: false },
+      location: { hash: mode === 'mobile' ? '#mobile' : '#desktop', reload() {} },
+      innerWidth: mode === 'mobile' ? 680 : 1100,
+      localStorage: {
+        getItem: (key) => storage.has(key) ? storage.get(key) : null,
+        setItem: (key, val) => storage.set(key, String(val)), removeItem: (key) => storage.delete(key),
+      },
+      history: { pushState() {}, replaceState() {}, back() {}, state: null },
+      __TAURI__: { core: { invoke: nativeRead, convertFileSrc: (p) => 'fixture://' + p } },
+      setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+      requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+      addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+      getComputedStyle: () => ({ getPropertyValue: () => '' }),
+      matchMedia: () => ({ matches: false, addListener() {}, removeListener() {} }),
+      fetch: async (...args) => {
+        fetchCalls.push(args);
+        throw new Error('635 fixture forbids network');
+      },
+      alert() {}, confirm: () => false, URL, URLSearchParams, performance: { now: () => 0 },
+    };
+    sandbox.window = sandbox;
+    const context = createContext(sandbox);
+    runInContext(scriptNoBoot + '\nglobalThis.__fixture = {' +
+      'state, mobileState, openSettings, mobileOpenSettingsHome, mobileOpenSettings, mobileShow,' +
+      'crewingSettingsHost, renderEntryChoice, entryShowLogin, entryOpenRegister,' +
+      'trialShowBlockedOverlay, trialHideOverlay,' +
+      'getInstance: function(){return _skipiSettingsInstance;}};', context);
+    const app = sandbox.__fixture;
+    app.state.settings = JSON.parse(JSON.stringify(fixture));
+    return {
+      app, sandbox, context, document, storage, nativeCalls, fetchCalls, drainReads,
+      target: document.getElementById('settings-root'),
+      loadVendor() { runInContext(settingsVendor, context); return sandbox.SkipiSettings; },
+      cleanup() { app.getInstance()?.unmount(); storage.clear(); nodes.clear(); },
+    };
+  }
+  // Условие Супервайзора S1-1 (аудит 802b7349): дрель «рабочее поле Server URL на
+  // легаси-странице org» прошла ЗЕЛЁНОЙ — продукт был чист, но гард её не видел,
+  // потому что в списке не было ни id полей Server URL, ни самой подписи.
+  // Server URL — командный элемент снятого слоя ровно как токен и Crewing ID:
+  // по (1495) его в интерфейсе нет, и отсутствие обязано доказываться.
+  const forbiddenControl = /<input\b[^>]*\bid=["'](?:s-token|m-token|connect-token-input|trial-license|s-crewing-id|m-crewing-id|s-url|m-server-url)["']|(?:crewing-activate-token|crewing-start-trial|connectSubmitToken|activateCompanyToken|startTrialAccess|mobileValidateConnection|mobileStartTrialAccess|trialActivateLicense|trialGoConnect|mobileSaveConnection)\s*(?:["'(])/i;
+  const manualHelp = /(?:company|license)[ -]?token|токен(?:а|у|ом|ы)?(?: компании)?|enter (?:the |a )?token|ввести токен|server\s*url|адрес\s*сервера/i;
+  function noManual(markup, label) {
+    ok(typeof markup === 'string' && markup.replace(/<[^>]*>/g, ' ').trim().length > 15,
+      label + ': actual caller produced a nonempty screen');
+    ok(!forbiddenControl.test(markup) && !manualHelp.test(markup.replace(/<[^>]*>/g, ' '))
+      && !markup.includes('INTERNAL-COMPANY-CREDENTIAL'),
+      label + ': no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM');
+  }
+  for (const language of ['ru', 'en']) for (const mode of ['desktop', 'mobile']) {
+    for (const phase of ['fresh', 'member', 'owner', 'blocked', 'demo']) {
+      const label = '635 real UI ' + language + '/' + mode + '/' + phase;
+      let fixture;
+      let control;
+      try {
+        fixture = credentialFixture(language, mode, phase);
+        const { app, sandbox, document, target, storage } = fixture;
+        const vendor = fixture.loadVendor();
+        if (mode === 'mobile') await app.mobileOpenSettingsHome(); else await app.openSettings('profile');
+        const instance = app.getInstance();
+        ok(!!instance, label + ': real gear caller mounts vendored Settings');
+        if (!instance) continue;
+        await instance.ready;
+        const loaded = instance.getState();
+        ok(!loaded.loading && loaded.version === vendor.version && loaded.sections.includes('profile'),
+          label + ': real vendor finishes loading a valid Profile');
+        ok(instance.open('profile') && target.innerHTML.includes('data-qa="settings.profile.user"'),
+          label + ': actual Profile content renders');
+        ok(!loaded.sections.includes('team') && instance.open('team') === false,
+          label + ': real navigation cannot open Team');
+        ok(!/settings\.profile\.team_role|profile-team|settings\.team\.join|settings\.team\.role/.test(target.innerHTML),
+          label + ': real Profile contains no membership, role or Open Team');
+        // No.880: утверждение «секция Подключения достижима» заменено ОБРАТНЫМ по
+        // смыслу утверждением новой модели — секции больше нет, а форма аккаунта
+        // живёт на развилке входа. Счёт утверждений тот же, молчаливого удаления нет.
+        ok(!instance.open('home-crewing-connection'),
+          label + ': the Connection section is gone from settings — the account form lives on the entry fork');
+        noManual(target.innerHTML, label + ' shared Connection');
+        const settingsBefore = JSON.stringify(app.state.settings);
+        instance.unmount();
+
+        if (phase === 'owner') {
+          const host = app.crewingSettingsHost();
+          host.team = {
+            getTeam: async () => ({ name: 'Synthetic positive control', role: 'member', replyTo: 'fixture@example.test', serverStatus: 'fixture' }),
+            getRole: async () => 'member',
+            join: async () => { throw new Error('positive-control join is never executed'); },
+          };
+          control = vendor.mount(target, host, { mode, initialSection: 'profile', mobileInitialView: 'section' });
+          await control.ready;
+          ok(!control.getState().loading && control.getState().sections.includes('team')
+            && target.innerHTML.includes('settings.profile.team_role'),
+            label + ': positive control real vendor renders Team navigation and Profile role');
+          ok(control.open('team') && target.innerHTML.includes('settings.team.role')
+            && target.innerHTML.includes('settings.team.join.root'),
+            label + ': positive control real vendor renders Membership and Join');
+          control.unmount(); control = null;
+        }
+
+        if (phase === 'fresh') {
+          // No.880: развилка канона — Вход · Регистрация · Демо. Прежние утверждения
+          // («first-run profile button is wired», «create handler persists choice»,
+          // «QR fallback», «first-run connect») описывали СТАРЫЙ гейт по токену/QR и
+          // заменены здесь поимённо на утверждения новой модели, а не удалены.
+          let continuationCalls = 0;
+          const next = mode === 'mobile'
+            ? runInContext('(function(){ mobileShow("work_role"); })', fixture.context)
+            : () => { continuationCalls++; };
+          app.renderEntryChoice(next);
+          const overlay = document.getElementById('entry-choice-overlay');
+          const forkHtml = overlay?.innerHTML || '';
+          noManual(forkHtml, label + ' first-run choice');
+          ok(/id="ec-login"/.test(forkHtml) && /id="ec-register"/.test(forkHtml) && /id="ec-demo"/.test(forkHtml),
+            label + ': the entry fork offers exactly the three canon doors (login, register, demo)');
+          ok(!/id="ec-open"/.test(forkHtml) && !/id="ec-create"/.test(forkHtml),
+            label + ': the retired token/QR and new-company doors are gone from the fork');
+          ok(/onclick="entryShowLogin\(true\)"/.test(forkHtml)
+            && /onclick="entryOpenRegister\(\)"/.test(forkHtml)
+            && /onclick="enterDemoMode\(\)"/.test(forkHtml),
+            label + ': every door carries its handler as an on*= ATTRIBUTE, inside escaping coverage');
+          ok(!/\.onclick\s*=/.test(forkHtml), label + ': the fork assigns no .onclick property');
+          // No.880 S3-fix (решение менеджера после находки стенда): у `#ec-doors`
+          // инлайновый `display` ПЕРЕКРЫВАЛ атрибут `hidden` (правило
+          // `[hidden]{display:none}` имеет наименьшую специфичность), и после
+          // «Войти» на экране оставались и двери, и форма — нарушение принципа 1
+          // канона UI, который слайс и закрывал. Стенд видит ТРИ разных слоя, и
+          // каждый назван в имени ассерта: разметка вывода · таблица стилей ·
+          // свойство элемента. Ни один из них по отдельности дефект не ловит.
+          {
+            const doorsTag = (forkHtml.match(/<div[^>]*id="ec-doors"[^>]*>/) || [''])[0];
+            ok(doorsTag.length > 0, label + ': СЛОЙ РАЗМЕТКИ — контейнер дверей найден в выводе (контроль)');
+            const inlineDisplay = (doorsTag.match(/style\s*=\s*"([^"]*)"/) || ['',''])[1].match(/display\s*:/);
+            ok(!inlineDisplay,
+              label + ': СЛОЙ РАЗМЕТКИ — у контейнера дверей нет инлайнового display, иначе он перекроет hidden — got ' + doorsTag.slice(0, 120));
+            const doorsHiddenRule = RULES.some((r) => /#ec-doors\[hidden\]/.test(r.selector) && /display\s*:\s*none/i.test(r.body));
+            ok(doorsHiddenRule,
+              label + ': СЛОЙ СТИЛЕЙ — есть правило #ec-doors[hidden]{display:none}, то есть скрытие пережинает любое ID-правило display');
+          }
+          app.entryShowLogin(true);
+          {
+            const doorsEl = document.getElementById('ec-doors');
+            const formEl = document.getElementById('ec-login-form');
+            ok(doorsEl && doorsEl.hidden === true,
+              label + ': СЛОЙ СВОЙСТВА — после «Войти» двери помечены hidden — got ' + (doorsEl ? String(doorsEl.hidden) : 'нет элемента'));
+            ok(formEl && formEl.hidden === false,
+              label + ': СЛОЙ СВОЙСТВА — после «Войти» форма не скрыта — got ' + (formEl ? String(formEl.hidden) : 'нет элемента'));
+            // ОБРАТНАЯ сторона: «Назад» возвращает двери и убирает форму. Без неё
+            // ассерты выше прошли бы и на обработчике, который только прячет.
+            app.entryShowLogin(false);
+            ok(doorsEl.hidden === false && formEl.hidden === true,
+              label + ': СЛОЙ СВОЙСТВА — «Назад» возвращает двери и убирает форму');
+            app.entryShowLogin(true);
+          }
+          const loginHtml = document.getElementById('entry-choice-overlay')?.innerHTML || '';
+          ok(/id="a-email"/.test(loginHtml) && /id="a-password"/.test(loginHtml),
+            label + ': the login door reveals the account form with both inputs');
+          ok(/id="ec-login-error"/.test(loginHtml),
+            label + ': the refusal has a place BESIDE the button, not only a fading toast');
+          noManual(loginHtml, label + ' first-run login form');
+          // storage фикстуры — Map: отсутствующий ключ даёт undefined, не null.
+          ok(fixture.storage.get('skipi_crewing_entry') == null,
+            label + ': the fork persists no "never ask again" flag — only an account session may skip it');
+          ok(continuationCalls === 0 && !!document.getElementById('entry-choice-overlay'),
+            label + ': the fork does not let anyone past without signing in');
+          if (mode !== 'mobile') {
+            ok(/renderEntryChoice\(bootDesktopMain\)/.test(HTML),
+              label + ': desktop boot still dispatches the fork with the real continuation');
+          }
+        }
+
+        if (mode === 'mobile') {
+          app.mobileShow('connection');
+          noManual(document.getElementById('mobile-root').innerHTML + document.getElementById('mobile-main').innerHTML,
+            label + ' actual mobile Connection caller and header');
+        }
+        sandbox.SkipiSettings = undefined;
+        for (const flag of ['0', '1']) {
+          storage.set('skipi_crewing_settings5', flag);
+          // No.880: страницы 'access' и 'devices' удалены вместе со слоем токена;
+          // остаются те, что пережили удаление.
+          const pages = flag === '0' ? ['org', 'data', 'app'] : ['identity', 'storage', 'paid'];
+          for (const page of pages) {
+            if (mode === 'mobile') app.mobileOpenSettings(page); else await app.openSettings(page);
+            noManual(document.getElementById(mode === 'mobile' ? 'mobile-main' : 'modal-host').innerHTML,
+              label + ' real fallback flag=' + flag + '/' + page);
+          }
+        }
+        if (phase === 'blocked' || phase === 'fresh') {
+          app.trialShowBlockedOverlay('fixture: access denied');
+          noManual(document.getElementById('trial-block-overlay')?.innerHTML || '', label + ' blocked-access overlay');
+          app.trialHideOverlay();
+        }
+        await fixture.drainReads();
+        ok(JSON.stringify(app.state.settings) === settingsBefore,
+          label + ': renderer visits preserve internal credential, tenant and profile');
+        ok(fixture.nativeCalls.every((cmd) => ['get_settings', 'get_build_info', 'get_my_identity', 'get_mailbox_status'].includes(cmd))
+          && fixture.fetchCalls.length === 0,
+          label + ': no mutation, activation, trial issuance or real network attempt');
+      } catch (error) {
+        ok(false, label + ': fixture/setup error — ' + (error && error.stack || error));
+      } finally {
+        try { control?.unmount(); } finally { fixture?.cleanup(); }
+      }
+    }
+  }
 }
 
 
