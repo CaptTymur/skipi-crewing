@@ -211,7 +211,32 @@ await run('No.635 slice A — account login reachable from the interface',async(
 });
 await run('No.635 slice A — the form and its refusal texts exist in the shipped source',async()=>{
   ok(html.includes('\'a-email\'')&&html.includes('\'a-password\''),'the login form declares both inputs');
-  const missing=['settings.crewing.login.bad_email','settings.crewing.login.invalid_credentials','settings.crewing.login.too_many_attempts','settings.crewing.login.upstream_unavailable','settings.crewing.login.transport_unreachable','settings.crewing.login.exchange_failed','settings.crewing.login.entitlement_missing','settings.crewing.login.entitlement_expired','settings.crewing.login.entitlement_revoked','settings.crewing.login.scope_denied','settings.crewing.login.refused_unspecified','settings.crewing.login.restart_needed','settings.crewing.login.storage_error','settings.crewing.login.local_damaged','settings.crewing.login.settings_changed','settings.crewing.login.unsupported_platform','settings.crewing.login.fresh_unavailable','settings.crewing.login.binding_missing'].filter(k=>!(html.includes('"'+k+'"')));
+  // No.898/F12: список ключей ВЫВОДИТСЯ из значений карты, а не набирается рукой. Прежняя
+  // форма держала 18 имён поимённо, и удаление ключа из источника делало её лгущей о
+  // требовании: копия рядом с источником — второе место сборки одного решения.
+  const mapForKeys=(html.match(/function loginRefusalText\(code\) \{\n  var map = (\{[\s\S]*?\});/)||['',''])[1];
+  const derivedKeys=[...new Set([...mapForKeys.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[2]))];
+  // `refused_unspecified` — цель ФОЛЛБЭКА, она живёт в коде функции, а не в карте; назвать
+  // её здесь обязательно, иначе ключ, который человек видит чаще всего, никем не проверен.
+  const expectedKeys=[...new Set(derivedKeys.concat(['refused_unspecified']))];
+  // No.898 под-стадия 2 (Н2): порог `>=18` СНЯТ. Это было число из размера СТАРОГО
+  // рукописного списка, то есть оно отставало от измеренного ещё в момент написания (после
+  // F12 карта даёт 27 пар и 23 цели — отставание на пять). Вместо числа, которое надо
+  // поддерживать руками, стоят контроли РАЗБОРА: если регекс карты сломается, список
+  // обрушится, и поймают это они, а не порог.
+  ok(/"bad_email":\s*"bad_email"/.test(mapForKeys),'control: the map block really parsed — a known pairing is present');
+  // No.898 3a, долг 2: УСЛОВИЕ ДОСТАТОЧНОСТИ стоит механизмом, а не комментарием. Контроли
+  // разбора выше сидят на 0 %, 41 % и 56 % блока карты и потому НЕ ограничивают хвостовую
+  // обрезку; достаточны они ровно ПОКА КАРТА ПЛОСКАЯ, потому что в плоской карте нежадный
+  // `};` не может оборваться раньше её собственной закрывающей скобки. Поэтому плоскость
+  // ПРОВЕРЯЕТСЯ: в день, когда внутрь карты попадёт вложенный объект, это покраснеет и
+  // скажет читателю, что контролей разбора больше не хватает — вместо того чтобы молча
+  // перестать хватать.
+  ok(!/\{[^{}]*\{/.test(mapForKeys),'control: the map is FLAT, which is the condition under which the parse controls above are sufficient');
+  ok(expectedKeys.includes('refused_unspecified')&&expectedKeys.includes('storage_error'),
+     'control: the derived list holds known-required keys, so it is a list and not a fragment');
+  ok(expectedKeys.length>0,'control: the derived key list is non-empty — '+expectedKeys.length+' keys, measured and not a maintained constant');
+  const missing=expectedKeys.map((k)=>'settings.crewing.login.'+k).filter((k)=>!(html.includes('"'+k+'"')));
   ok(missing.length===0,'every login text key is defined :: missing '+JSON.stringify(missing));
 });
 await run('No.635 slice A — a refusal code reaches the person as its own text',async()=>{
@@ -347,58 +372,305 @@ function keyMismatches(defs,sites){
   }
   return {byName,out};
 }
-// No.880 S2-fix (F11): КАЖДЫЙ код отказа пути входа обязан иметь СВОЙ текст.
-// Без этого человек получает «Во входе отказано» без причины — именно так
-// `migration_required` прожил весь S2, будучи единственным вхождением на репозиторий.
-// Модули названы ПОИМЁННО: грубая сверка всех `Err(...)` в доме втягивает коды
-// тестового HTTP-сервера (`header_shape`, `write_timeout`, `request_line`…),
-// и такой ассерт лгал бы о покрытии.
-await run('No.880/F11 — every login-path refusal code has its own text',async()=>{
-  const LOGIN_PATH=['native_local_commit.rs','native_lifecycle.rs','native_account.rs'];
-  const codes=new Set();
-  for (const f of LOGIN_PATH) {
-    const whole=rsSources[f];
-    ok(!!whole,'control: '+f+' is among the parsed Rust sources');
-    // Отрезаем ТЕСТОВЫЙ МОДУЛЬ файла, а не первый попавшийся `#[cfg(test)]`:
-    // внутри него живёт синтетический HTTP-сервер со своими кодами
-    // (`header_shape`, `write_timeout`, `request_line`…), и без этого среза
-    // ассерт требовал бы текстов для того, чего человек не увидит никогда.
-    const cut=whole.search(/#\[cfg\(test\)\]\s*\r?\nmod\s/);
-    const body=cut>0?whole.slice(0,cut):whole;
-    ok(body.length>500,'control: '+f+' keeps its production half after cutting the test module');
-    for (const m of body.matchAll(/(?:Err|ok_or|map_err\(\|[^|]*\|)\s*\(?\s*"([a-z_]+)"/g)) codes.add(m[1]);
+// No.898/F12: популяция ассерта определяется ДОСТИЖИМОСТЬЮ до `loginRefusalText`, а не
+// рукописным списком модулей. Прежняя форма имела два слоя дефекта: (а) модули выбраны
+// рукой, поэтому `lib.rs` и `native_fresh.rs` в неё не входили вовсе; (б) предикат искал
+// только `Err("…")`/`ok_or`/`map_err` и НЕ ВИДЕЛ кодов, собранных полем структуры
+// (`AllocationError { code }`, `Self { code: if … }`). Расширение списка модулей само по
+// себе (б) не закрывает: `native_fresh.rs` прежним предикатом даёт ровно 0 кодов.
+// Достижимость заменяет и список исключений: код, недостижимый продуктом, выходит из
+// популяции ПО ПРАВИЛУ, а не попадает в пин исключений — возврат `OWNER_COPY_PENDING`
+// отменял бы решение, принятое на слове владельца ((1493)/(1495)).
+await run('No.898/F12 — every login refusal code within the measured horizon has its own text',async()=>{
+  // Якорь со стороны интерфейса: популяция имеет право начинаться с одной команды только
+  // пока `loginRefusalText` питается именно ей. Если появится второй источник — покраснеет
+  // здесь, а не тихо сузит популяцию.
+  const refusalCalls=(html.match(/loginRefusalText\(/g)||[]).length;
+  ok(refusalCalls===4,'No.898: loginRefusalText has its definition plus exactly three call sites — found '+refusalCalls);
+  const nalStart=html.indexOf('async function nativeAccountLogin(');
+  ok(nalStart>0,'control: nativeAccountLogin is present in dist');
+  const nalBody=html.slice(nalStart,html.indexOf('\n}',nalStart));
+  const nalCmds=[...new Set([...nalBody.matchAll(/invoke\('([a-z_]+)'/g)].map((m)=>m[1]))];
+  ok(nalCmds.length===1&&nalCmds[0]==='native_account_login',
+     'No.898: the refusal-text consumer is fed by exactly ONE command — '+JSON.stringify(nalCmds));
+
+  // Срез по cfg: атрибут — тестовый гейт только если `test` ВЫЖИВАЕТ после удаления всех
+  // not(...). Без этого шага тот же шаблон ловит и `#[cfg(not(test))]` и срезает
+  // ПРОДУКТОВУЮ ветвь — так и было в первой версии, и это поймал положительный контроль.
+  function cfgIsTestGate(inner){
+    let bare=inner,g=0;
+    for(;;){const n=bare.replace(/not\s*\([^()]*\)/g,'');if(n===bare||++g>50)break;bare=n;}
+    return /\btest\b/.test(bare);
   }
+  function productionHalf(s){
+    let out=s,guard=0;
+    for(;;){
+      if(++guard>500)throw new Error('productionHalf did not converge');
+      let hit=null;
+      for(const cand of out.matchAll(/#\[cfg\(/g)){
+        const open=cand.index+cand[0].length-1;
+        const close=balancedEnd(out,open+1,'(',')','"');
+        if(close<0)continue;
+        if(!cfgIsTestGate(out.slice(open+1,close)))continue;
+        const endAttr=out.indexOf(']',close);
+        hit={index:cand.index,end:endAttr+1};
+        break;
+      }
+      if(!hit)break;
+      let i=hit.end;
+      while(i<out.length&&/\s/.test(out[i]))i++;
+      while(out[i]==='#'){const e=out.indexOf(']',i);i=e<0?out.length:e+1;while(i<out.length&&/\s/.test(out[i]))i++;}
+      let end;
+      if(out[i]==='{')end=balancedEnd(out,i+1,'{','}','"');
+      else{const b=out.indexOf('{',i),sc=out.indexOf(';',i);
+        if(b>=0&&(sc<0||b<sc))end=balancedEnd(out,b+1,'{','}','"');else end=sc<0?out.length:sc+1;}
+      out=out.slice(0,hit.index)+out.slice(end);
+    }
+    return out;
+  }
+  // КОНТРОЛЬ среза, и это НЕ `body.length>500`: тот проходит ровно в том случае, ради
+  // которого стоит, потому что при несработавшем срезе body — весь файл (решение (1702)).
+  const cutFixture='fn keep(){\n#[cfg(test)]\n{ x.ok_or("FIXTURE_TEST_ONLY")?; }\n#[cfg(not(test))]\n{ return Err("FIXTURE_PRODUCTION"); }\n}\n'
+    +'#[cfg(all(test, target_os = "linux"))]\nmod t { fn a(){ Err("FIXTURE_IN_MODULE") } }\nfn after(){ Err("FIXTURE_AFTER") }\n';
+  const cut=productionHalf(cutFixture);
+  ok(!cut.includes('FIXTURE_TEST_ONLY'),'control: the cut removes a #[cfg(test)] BLOCK inside a function');
+  ok(cut.includes('FIXTURE_PRODUCTION'),'control: the cut KEEPS the #[cfg(not(test))] branch — the arm the first version destroyed');
+  ok(!cut.includes('FIXTURE_IN_MODULE'),'control: the cut removes a module gated by the COMPOUND cfg(all(test, …)) form');
+  ok(cut.includes('FIXTURE_AFTER'),'control: the cut keeps code after a stripped item');
+
+  const prod=Object.fromEntries(Object.entries(rsSources).map(([f,s])=>[f,productionHalf(s)]));
+  // Строки, которые сам код использует как `phase`, кодами отказа не являются. Словарь
+  // ВЫВОДИТСЯ из дерева, не набирается рукой, и несёт контроль непустоты.
+  const PHASES=new Set();
+  for(const s of Object.values(rsSources)){
+    for(const m of s.matchAll(/\bphase\s*[:,]\s*"([a-z_]+)"/g))PHASES.add(m[1]);
+    for(const m of s.matchAll(/\.phase\s*,\s*"([a-z_]+)"/g))PHASES.add(m[1]);
+    for(const m of s.matchAll(/failed\([^,)]*,\s*"([a-z_]+)"\)/g))PHASES.add(m[1]);
+  }
+  ok(PHASES.size>0,'control: the phase vocabulary is derived and non-empty — '+PHASES.size+' names');
+
+  // В закрытой форме литерал в map_err обязан БЫТЬ результатом замыкания, а не аргументом
+  // внутри него: `map_err(|_| failed(Error::X, "write"))` возвращает структуру.
+  const CODE_RE=/(?:Err|ok_or)\s*\(?\s*"([a-z_]+)"|map_err\(\s*\|[^|]*\|\s*"([a-z_]+)"\s*(?:\.to_string\(\))?\s*\)/g;
+  function initializer(b,at){let d=0;
+    for(let i=at;i<b.length;i++){const c=b[i];
+      if('{(['.includes(c))d++;else if('})]'.includes(c)){if(d===0)return b.slice(at,i);d--;}
+      else if(c===','&&d===0)return b.slice(at,i);}
+    return b.slice(at);}
+  function codesIn(body){const o=new Set();
+    for(const m of body.matchAll(CODE_RE))o.add(m[1]||m[2]);
+    // No.898 3c: ЧЕТВЁРТАЯ форма рождения кода — плечо `match`, возвращающее голый литерал.
+    // Прежние три формы её не видели, и это давало ЛОЖНОЕ ЗЕЛЁНОЕ: на fixture-дереве 157/0 и
+    // `textless []` при Rust 3c и нетронутом dist, то есть два кода БЕЗ ТЕКСТА при зелёном
+    // ассерте покрытия.
+    // Образец обязан СОДЕРЖАТЬ строковый литерал, а не БЫТЬ им. Это измерено, а не выбрано:
+    //   образец ЕСТЬ литерал      -> 2 значения, и НИ ОДНОГО из карты отказов;
+    //   образец СОДЕРЖИТ литерал  -> 15, из них 12 кодов карты;
+    //   любое плечо               -> 36, из них 24 вне карты (построитель фаз и режимов).
+    // Двенадцать — это таблица статус->код `native_account.rs:434-453`, где образцы КОРТЕЖИ
+    // (`(403, "tenant_mismatch")`). Прежний оракул не видел и их: `Err(match …)` под
+    // CODE_RE не подходит, потому что за `Err(` идёт не кавычка. То есть узкая форма была бы
+    // слепа к самому вероятному месту появления СЛЕДУЮЩЕГО кода.
+    for(const m of body.matchAll(/(?:^|[\s(|])[^=\n]*"[a-z_]+"[^=\n]*=>\s*"([a-z_]+)"\s*,/g))o.add(m[1]);
+    for(const m of body.matchAll(/\bcode\s*:\s*/g))
+      for(const t of initializer(body,m.index+m[0].length).matchAll(/"([a-z_]+)"/g))o.add(t[1]);
+    return o;}
+  const FN=new Map();
+  function isFn(n){if(FN.has(n))return FN.get(n);
+    const re=new RegExp('fn\\s+'+n+'\\s*(?:<[^>]*>)?\\s*\\(');
+    const v=Object.values(prod).some((s)=>re.test(s));FN.set(n,v);return v;}
+  function bodyOf(n){
+    for(const [f,s] of Object.entries(prod)){
+      const m=s.match(new RegExp('fn\\s+'+n+'\\s*(?:<[^>]*>)?\\s*\\('));
+      if(!m)continue;
+      const b=s.indexOf('{',m.index+m[0].length);
+      if(b<0)continue;
+      const e=balancedEnd(s,b+1,'{','}','"');
+      if(e<0)continue;
+      return {file:f,body:s.slice(b,e)};
+    }
+    return null;}
+  // No.898 3c: `account_session_state` (lib.rs:669) — производитель СОСТОЯНИЙ СЕССИИ, не кодов
+  // отказа. Его значения (`active`, `locked`, `expired`, `legacy`, `none`, …) доходят до
+  // интерфейса через `s.account_session` (dist:1319, 1686), а НЕ через `loginRefusalText`;
+  // `settings.crewing.login.expired` в dist встречается ноль раз. Его плечи имеют ту же форму,
+  // что таблица отказов, поэтому вычитать их надо ИМЕНЕМ ФУНКЦИИ, а не формой образца.
+  // Словарь ВЫВОДИТСЯ из тела, как PHASES, и несёт те же два контроля — непустоту и
+  // столкновение с картой: если в эту функцию однажды положат настоящий код отказа,
+  // исключение не станет молчаливой дырой.
+  const STATES=new Set();
+  const SKIP=new Set(['if','match','while','for','return','Ok','Err','Some','None','String','Vec',
+    'format','println','assert','assert_eq','clone','to_string','unwrap','expect','map','and_then',
+    'map_err','ok_or','is_some','is_none','as_ref','as_str','trim','len','push','insert','lock','borrow_mut']);
+  // Обход параметризован ГЛУБИНОЙ, и это не косметика. Предикат измеряет не «достижимость»
+  // в смысле компилятора, а «в пределах N переходов по именам вызовов» — и граница N обязана
+  // быть ЗАМЕРЕНА, а не выбрана так, чтобы получился желаемый ответ. Замер (свип 1..12):
+  // популяция НАСЫЩАЕТСЯ на 16 кодах к глубине 5 и не меняется на 6, а на 7 впервые входит
+  // код, чей потребитель к пути входа не относится вовсе (`no_mail_client` из `contact.rs`,
+  // `connection_not_configured` из `messaging.rs`). Поэтому 6 — граница с запасом в один
+  // уровень с каждой стороны, и ОБА её края закреплены ассертами ниже: иначе число 6
+  // осталось бы магическим, то есть верным ответом по неверной причине.
+  {
+    const asb=bodyOf('account_session_state');
+    if(asb)for(const m of asb.body.matchAll(/=>\s*"([a-z_]+)"/g))STATES.add(m[1]);
+  }
+  function populate(maxDepth){
+    const seen=new Set(),codes=new Set();let reached=0;
+    (function walk(n,depth){
+      if(depth>maxDepth||seen.has(n))return;
+      seen.add(n);
+      const f=bodyOf(n);
+      if(!f)return;
+      reached++;
+      for(const c of codesIn(f.body))codes.add(c);
+      // Функция может быть ПЕРЕДАНА без скобок — `map_err(NativePersistError::from_storage)`
+      // именно так и достаёт `settings_cleanup_unconfirmed`, а шаблон `name(` его не видит.
+      for(const m of f.body.matchAll(/\b([a-z_][a-z0-9_]*)\b/g)){
+        const k=m[1];
+        if(SKIP.has(k)||seen.has(k))continue;
+        if(isFn(k))walk(k,depth+1);
+      }
+    })('native_account_login',0);
+    for(const c of [...codes])if(PHASES.has(c)||STATES.has(c))codes.delete(c);
+    return {reached,codes};
+  }
+  const HORIZON=6;
+  const below=populate(HORIZON-1), at=populate(HORIZON), above=populate(HORIZON+1);
+  const reached=at.reached, codes=at.codes;
+  ok(reached>50,'control: the walk is not trivially empty — functions reached='+reached);
+  // Нижний край: на выбранной границе популяция НАСЫЩЕНА, то есть ещё один уровень вниз
+  // ничего не теряет. Если появится новый код между 5 и 6 — горизонт мал, и это красное.
+  const lostBelow=[...at.codes].filter((c)=>!below.codes.has(c)).sort();
+  ok(lostBelow.length===0,'control: the population is SATURATED at the horizon — depth '+(HORIZON-1)+' already finds all of them, extra at '+HORIZON+': '+JSON.stringify(lostBelow));
+
   const mapBlock=(html.match(/function loginRefusalText\(code\) \{\n  var map = (\{[\s\S]*?\});/)||['',''])[1];
   const mapped=new Set([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[1]));
-  const texts=new Set([...html.matchAll(/"settings\.crewing\.login\.([a-z_]+)"/g)].map((m)=>m[1]));
-  ok(codes.size>=9&&mapped.size>=20,
-     'control: both sides are measured — '+codes.size+' codes, '+mapped.size+' mapped');
-  // No.880 S2-fix2: исключений БОЛЬШЕ НЕТ. Три прежних кода получили тексты по
-  // решению менеджера на словах владельца (1493)/(1495): `tenant_mismatch` и
-  // `ownership_conflict` НЕ сняты вместе со слоем компании, потому что держат
-  // живые инварианты — первый отказывает, когда сервер вернул чужое рабочее
-  // место, второй защищает локальные данные другого аккаунта; сняв их, сняли бы
-  // защиту. Поэтому они остались и получили текст ближайшей живой причины.
-  const OWNER_COPY_PENDING=[];
-  // Внедряемые отказы дома называются `synthetic_*` и стоят под `#[cfg(test)]`
-  // на отдельных элементах (не в тестовом модуле), поэтому срезом выше не
-  // ловятся. Исключаем их ПО НАЗВАННОМУ соглашению и проверяем, что фильтр не
-  // пуст, — иначе он тихо перестал бы что-либо исключать.
-  const TEST_ONLY=/^(synthetic_|test_)/;
-  const synthetic=[...codes].filter((c)=>TEST_ONLY.test(c));
-  ok(synthetic.length>0,'control: the test-only fault naming convention still matches something — '+JSON.stringify(synthetic));
-  const textless=[...codes].filter((c)=>!mapped.has(c)&&!TEST_ONLY.test(c)).sort();
-  ok(JSON.stringify(textless)===JSON.stringify([...OWNER_COPY_PENDING].sort()),
-     'No.880/F11: every login-path refusal code has its own text, with no exemptions — textless '+JSON.stringify(textless)
-     +(OWNER_COPY_PENDING.length?' against pinned '+JSON.stringify(OWNER_COPY_PENDING):''));
-  // И вторая сторона: каждое ЗНАЧЕНИЕ карты обязано существовать ключом словаря
-  // в обоих языках, иначе карта указывает в пустоту.
+  ok(mapped.size>=20&&codes.size>=10,'control: both sides measured — reachable codes='+codes.size+' mapped='+mapped.size);
+  // Защита от собственного сужения: имя из словаря фаз не имеет права быть известным кодом,
+  // иначе сужение молча удалило бы настоящий отказ.
+  const collide=[...PHASES].filter((p)=>mapped.has(p)).sort();
+  ok(collide.length===0,'control: no derived phase name is also a known refusal code — '+JSON.stringify(collide));
+
+  // Положительные контроли на ДВЕ формы, которые прежний предикат не видел.
+  ok(codes.has('fresh_namespace_unavailable'),'No.898: a code assembled as a STRUCT FIELD enters the population (native_fresh.rs)');
+  ok(codes.has('settings_cleanup_unconfirmed'),'No.898: a code in the SECOND ARM of a ternary enters the population (lib.rs:141)');
+  ok(STATES.size>0,'control: the session-state vocabulary is derived and non-empty :: '+STATES.size+' names');
+  const stateCollide=[...STATES].filter((v)=>mapped.has(v)).sort();
+  ok(stateCollide.length===0,'control: no derived session state is also a known refusal code — '+JSON.stringify(stateCollide));
+  ok(STATES.has('expired')&&!codes.has('expired'),
+     'No.898/3c: the session-state producer is subtracted BY FUNCTION, not by arm shape — `expired` is a state, absent from dist as a login text key');
+  ok(codes.has('workspace_unreachable')&&codes.has('workspace_unavailable'),
+     'No.898/3c: a code born as a MATCH ARM enters the population (native_lifecycle.rs second_step_code)');
+  for(const c of ['tenant_mismatch','ownership_conflict','entitlement_revoked','too_many_attempts','bad_email','scope_denied'])
+    ok(codes.has(c),'No.898/3c: the status->code TABLE is now covered — '+c+' was invisible to the old oracle (Err(match …) escapes CODE_RE)');
+  for(const p of ['base_create','base_sync','container_metadata','database_sync','keys_sync','context_metadata'])
+    ok(!codes.has(p),'No.898/3c: the rule keeps the enum->label phase builder OUT (native_fresh.rs:55,64) — '+p);
+  // Отрицательные: недостижимое выходит ПО ПРАВИЛУ, а не по списку исключений.
+  ok(!codes.has('fresh_context_unavailable'),'No.898: a cfg(test)-only code stays OUT of the population by compiler semantics, not by exemption');
+  for(const c of ['external_url_refused','external_url_unavailable','external_url_unsupported'])
+    ok(!codes.has(c),'No.898: '+c+' stays OUT — its consumer discards the code and shows the address verbatim');
+  for(const c of ['connection_change_requires_login','connection_change_requires_validation'])
+    ok(!codes.has(c),'No.898: '+c+' stays OUT — zero occurrences in dist, born behind save_settings, not the login command');
+
+  // Верхний край: на один уровень ВЫШЕ горизонта обход обязан втянуть код, которого в карте
+  // нет — то есть выйти за путь входа. Это доказывает, что граница лежит именно там, где
+  // названа, а не что при любом N ответ один и тот же.
+  // РАСТЯЖКА, названная заранее: этот контроль покраснеет и если кто-нибудь ЗАКОННО даст
+  // текст одному из кодов, которые сегодня втягиваются на 7 (`no_mail_client`,
+  // `connection_not_configured`) — тогда на 7 не останется неотображённых кодов. Красное
+  // тогда значит «горизонт надо ПЕРЕМЕРИТЬ свипом», а НЕ «текст пропал»: проверь свип
+  // 1..12 и подними HORIZON до нового края насыщения.
+  const admittedAbove=[...above.codes].filter((c)=>!at.codes.has(c)&&!mapped.has(c)).sort();
+  ok(admittedAbove.length>0,
+     'control: one level ABOVE the horizon the walk leaves the login path and admits unmapped codes — '+JSON.stringify(admittedAbove));
+  const textless=[...codes].filter((c)=>!mapped.has(c)).sort();
+  ok(textless.length===0,'No.898/F12: every login refusal code within the MEASURED horizon ('+HORIZON+' call-name hops, saturated at '+(HORIZON-1)+', contaminated at '+(HORIZON+1)+') has its own text — textless '+JSON.stringify(textless));
+
+  // No.898 3c: различение ДВУХ ступеней живёт в карте, а не только в Rust-тесте. Пара обязана
+  // остаться парой: слияние потеряло бы «проверьте сеть» (действие СЕЙЧАС) и «это на нашей
+  // стороне» (действие ЖДАТЬ) — два разных действия по правилу дома.
+  const pairs=Object.fromEntries([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>[m[1],m[2]]));
+  for(const c of ['workspace_unreachable','workspace_unavailable'])
+    ok(typeof pairs[c]==='string','No.898/3c: the second-step code '+c+' is mapped to a text');
+  ok(pairs['workspace_unreachable']!==pairs['workspace_unavailable'],
+     'No.898/3c: the two second-step codes map to DIFFERENT texts — collapsing them would merge two different actions');
+  // Первый шаг и `refresh` по-прежнему выдают исходные коды, поэтому их тексты обязаны остаться.
+  for(const c of ['transport_unreachable','upstream_unavailable'])
+    ok(typeof pairs[c]==='string','No.898/3c: the first-step code '+c+' keeps its own text — refresh and step one still emit it');
+
+  // И вторая сторона, сохранённая: каждое ЗНАЧЕНИЕ карты существует ключом словаря в обоих
+  // языках, иначе карта указывает в пустоту. No.898 3a долг 3: нарезаемая таблица —
+  // `SETTINGS_I18N`, популяция ассерта — ЗНАЧЕНИЯ карты `loginRefusalText`, не её ключи.
   const values=[...new Set([...mapBlock.matchAll(/"([a-z_]+)":\s*"([a-z_]+)"/g)].map((m)=>m[2]))];
-  const dangling=values.filter((v)=>!texts.has(v));
-  ok(dangling.length===0,'No.880/F11: every map target resolves to a real text key — dangling '+JSON.stringify(dangling));
-  for (const v of values) {
-    const both=(html.match(new RegExp('"settings\\.crewing\\.login\\.'+v+'"','g'))||[]).length;
-    ok(both>=2,'No.880/F11: the text '+v+' exists in BOTH dictionaries — found '+both);
+  const dangling=values.filter((v)=>!(html.includes('"settings.crewing.login.'+v+'"')));
+  ok(dangling.length===0,'No.898: every map target resolves to a real text key — dangling '+JSON.stringify(dangling));
+  // No.898 под-стадия 2 (Н1): «в ОБОИХ словарях» измеряется НАРЕЗКОЙ, а не счётом. Прежнее
+  // `>=2 вхождений` проходило и на двух вхождениях в ОДНОМ словаре — то есть не различало
+  // того, ради чего стояло.
+  const siAt=html.indexOf('var SETTINGS_I18N');
+  const ruAt=html.indexOf('\n  ru: {',siAt);
+  ok(siAt>0&&ruAt>siAt,'control: both dictionary regions are locatable — SETTINGS_I18N at '+siAt+', ru at '+ruAt);
+  // No.898 3a, долг 1: собственный счётчик скобок заменён на `balancedEnd` ИЗ ЭТОГО ЖЕ ФАЙЛА —
+  // он принимает символ кавычки и пропускает строковые литералы. Прежний IIFE был к кавычкам
+  // слеп, и верно он вставал СЛУЧАЙНО: в области 479 строковых значений, 17 из них содержат
+  // фигурные скобки (`{name}`, `{n}`), и все они сегодня сбалансированы. Дрейф несимметричен,
+  // и это и есть причина правки: лишняя `}` в будущем тексте закроет область рано, поздние
+  // ключи дадут inRu=0 — ГРОМКО; лишняя `{` продлит область за словарь, ключи по-прежнему
+  // будут по одному, `length>1000` пройдёт — МОЛЧА с неверной областью. Писать свой счётчик
+  // рядом с готовым хелпером, принимающим кавычку, было небрежностью.
+  const siEnd=balancedEnd(html,html.indexOf('{',siAt)+1,'{','}','"');
+  const enRegion=html.slice(siAt,ruAt), ruRegion=html.slice(ruAt,siEnd);
+  ok(enRegion.length>1000&&ruRegion.length>1000,'control: both regions are substantial — en '+enRegion.length+' B, ru '+ruRegion.length+' B');
+  // Контроль, что нарезка РАЗДЕЛИЛА ЯЗЫКИ, а не отрезала произвольно: английский текст
+  // известного ключа обязан лежать в en-области и НЕ лежать в ru-области, и наоборот.
+  // Без этого обе области могли бы оказаться половинами одного словаря.
+  ok(/That does not look like an email/.test(enRegion)&&!/That does not look like an email/.test(ruRegion),
+     'control: the en region holds the ENGLISH text of a known key and the ru region does not');
+  ok(/Это не похоже/.test(ruRegion)&&!/Это не похоже/.test(enRegion),
+     'control: the ru region holds the RUSSIAN text of a known key and the en region does not');
+  // No.898 3d: the refusal line must be READABLE, not merely correct. Caught by the manager
+  // reading the smoke frames: the text was the palest thing on the screen - declared 1.46:1
+  // against a 4.5:1 AA floor, while the heading ran 15.32:1 and plain body text 5.37:1.
+  // The colour was a HOUSE defect (inline attribute byte-identical to base f145c601), but a
+  // fix without a guard is a fix that comes back, so the floor is pinned here.
+  // The panel is translucent, so the background is COMPOSITED from the declared rgba over the
+  // light --bg token; that model was validated against the real pixels of a captured frame
+  // (predicted rgb(242,221,223) vs measured rgb(242,221,222), a rounding difference).
+  {
+    const el=(html.match(/id="ec-login-error"[^>]*/)||[''])[0];
+    const fg=(el.match(/color:#([0-9a-fA-F]{6})/)||[])[1];
+    const bgm=el.match(/background:rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+    // The LIGHT theme's --bg, and only it: the dark one is declared first on bare :root, so a
+    // pattern that merely mentions data-theme="light" nearby captures the WRONG value. This
+    // error happened and the discriminating control below is what exposed it, by scoring the
+    // replaced colour at 9.06:1 instead of 1.46:1.
+    // The SELECTOR `:root[data-theme="light"]`, not the bare attribute: `<html
+    // data-theme="light">` sits at offset 32, long before the CSS, so anchoring on the
+    // attribute captures the DARK --bg declared first on bare :root. Require the closing `]`.
+    const page=(html.match(/data-theme="light"\][\s\S]{0,800}?--bg:\s*#([0-9a-fA-F]{6});/)||[])[1];
+    ok(!!fg&&!!bgm&&!!page,'No.898/3d: the refusal box declares a colour, a translucent background and a light --bg :: fg='+fg+' bg='+(bgm&&bgm[0])+' page='+page);
+    const hex=(h)=>[0,2,4].map((i)=>parseInt(h.slice(i,i+2),16));
+    const lin=(v)=>{v/=255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4);};
+    const lum=(c)=>0.2126*lin(c[0])+0.7152*lin(c[1])+0.0722*lin(c[2]);
+    const ratio=(a,b)=>{const la=lum(a),lb=lum(b),hi=Math.max(la,lb),lo=Math.min(la,lb);return (hi+0.05)/(lo+0.05);};
+    const over=(c,bg,a)=>c.map((v,i)=>Math.round(a*v+(1-a)*bg[i]));
+    // Guard against extracting the WRONG theme's background - the failure that actually
+    // happened twice here. A light theme's page colour must be light; if this fires, the
+    // contrast number below is about the wrong surface and means nothing.
+    ok(lum(hex(page))>0.5,'control: the extracted light-theme --bg is actually light :: #'+page+' relative luminance '+lum(hex(page)).toFixed(3));
+    const panel=over([+bgm[1],+bgm[2],+bgm[3]],hex(page),parseFloat(bgm[4]));
+    const got=ratio(hex(fg),panel);
+    ok(got>=4.5,'No.898/3d: the refusal line meets the WCAG AA floor for body text :: '+got.toFixed(2)+' : 1 on composited panel rgb('+panel+'), floor 4.5');
+    // The predicate must DISCRIMINATE: the colour this replaced has to fail it, or the assert
+    // would pass on anything and prove nothing.
+    const wasRatio=ratio(hex('fca5a5'),panel);
+    ok(wasRatio<3,'control: the predicate rejects the colour this replaced :: #fca5a5 scores '+wasRatio.toFixed(2)+' : 1, below even the 3:1 large-text floor');
+  }
+
+  for(const v of values){
+    const key='"settings.crewing.login.'+v+'"';
+    const inEn=enRegion.split(key).length-1, inRu=ruRegion.split(key).length-1;
+    ok(inEn===1&&inRu===1,'No.898: the text '+v+' exists ONCE IN EACH dictionary — en='+inEn+' ru='+inRu);
   }
 });
 
@@ -433,10 +705,27 @@ await run('No.827 — invoke() keys are the camelCase of #[tauri::command] param
        'No.880/№793: the production fresh branch allocates a real native-owned context');
     ok(!/#\[cfg\(not\(test\)\)\][\s\S]{0,80}return Err\("fresh_context_unavailable"\)/.test(commit),
        'No.880/№793: the production fresh branch is no longer a refusal stub');
-    // Отказ аллокатора обязан иметь ТЕКСТ: иначе человек увидит «отказ по
-    // неизвестной причине» вместо называемой причины (канон UI).
-    ok(/"fresh_namespace_unavailable":\s*"fresh_unavailable"/.test(html),
-       'No.880/№793: the allocator refusal code maps to a named text, not to refused_unspecified');
+    // No.898 под-стадия 2: ассерт следует за КЛЮЧОМ, а не за одной буквальной парой. Прежняя
+    // форма пинила `"fresh_namespace_unavailable": "fresh_unavailable"` и краснела бы ПО
+    // ПОСТРОЕНИЮ при любой смене ключа — по верной причине в неподходящий момент.
+    const mapFresh=(html.match(/function loginRefusalText\(code\) \{\n  var map = (\{[\s\S]*?\});/)||['',''])[1];
+    const freshTarget=(mapFresh.match(/"fresh_namespace_unavailable":\s*"([a-z_]+)"/)||[])[1];
+    ok(!!freshTarget,'No.898: the live allocator refusal code is mapped at all — target '+String(freshTarget));
+    ok((html.match(new RegExp('"settings\\.crewing\\.login\\.'+freshTarget+'"','g'))||[]).length===2,
+       'No.898: the allocator refusal key '+freshTarget+' has a text in both dictionaries');
+    // ДВА ассерта на само УДАЛЕНИЕ: «новый ключ работает» не ловит «старый остался», и без них
+    // следующий писатель вернёт мёртвую запись, не покраснев. Заметь, ЧТО они различают: эти
+    // два — про КАРТУ и СЛОВАРИ, тогда как отрицательный контроль популяции выше — про то, что
+    // код под `cfg(test)` вне ПОПУЛЯЦИИ по семантике компилятора. Разные объекты, и снятие
+    // записи из карты второй контроль не задевает.
+    ok(!/"fresh_context_unavailable"\s*:/.test(mapFresh),
+       'No.898: the test-only code fresh_context_unavailable is ABSENT from the map — dead data; it is unreachable in a product build by cfg');
+    ok(!/"settings\.crewing\.login\.fresh_unavailable"/.test(html),
+       'No.898: the retired key fresh_unavailable is ABSENT from both dictionaries');
+    // Контроль инструмента рядом с двумя нулями: тот же предикат обязан НАХОДИТЬ существующий
+    // ключ, иначе нули выше — свойство сломанного поиска, а не отсутствия.
+    ok((html.match(/"settings\.crewing\.login\.storage_error"/g)||[]).length===2,
+       'control: the same predicate finds a key that DOES exist (storage_error), so the two absences above are measured');
   }
 
   // No.880 S2 п.5: цепочка «дверь → помощник → команда» закрывается здесь на
@@ -492,6 +781,32 @@ await run('No.827 — invoke() keys are the camelCase of #[tauri::command] param
   const red=keyMismatches(rustCommands(synth).defs,jsInvokes("await invoke('demo_cmd', { foo_bar: x });")).out;
   const green=keyMismatches(rustCommands(synth).defs,jsInvokes("await invoke('demo_cmd', { fooBar: x });")).out;
   ok(red.length===1&&/foo_bar/.test(red[0])&&green.length===0,'mutation negative in memory: synthetic foo_bar/foo_bar reddens, fooBar/foo_bar stays green :: red='+JSON.stringify(red)+' green='+JSON.stringify(green));
+});
+
+// No.894 (половина, достижимая в dist): подпись про демонстрацию принадлежит двери «Демо»,
+// а не форме входа. До правки `<p>` с `entry.demo_note` лежал ПОСЛЕ обоих контейнеров —
+// вне `ec-doors` и вне `ec-login-form`, — поэтому `entryShowLogin(true)` скрывал двери,
+// показывал форму, а подпись оставалась под формой и читалась как её описание. Это
+// воспроизведено в разметке, а не выведено из жалобы: индексы были doors 139119,
+// form 140263, note 141758. Теперь подпись внутри `ec-doors` и скрывается вместе с ними.
+// Ассерт ПОЗИЦИОННЫЙ и текста не касается: текст идёт владельцу на живую приёмку, и пин
+// к буквальной строке дал бы ложный красный ровно в момент, когда он её поменяет.
+await run('No.894 — the demonstration caption belongs to the Demo door, not to the login form',async()=>{
+  const doors=html.indexOf('id="ec-doors"');
+  const form=html.indexOf('id="ec-login-form"');
+  const note=html.indexOf('id="ec-demo-note"');
+  ok(doors>0&&form>doors,'control: both containers present and ordered — doors at '+doors+', form at '+form);
+  ok(note>0,'No.894: the caption carries its own id so its PLACE can be asserted — ec-demo-note');
+  ok(note>doors&&note<form,
+     'No.894: the caption sits INSIDE the doors container and hides with the door it describes — note '+note+' between '+doors+' and '+form);
+  // Контроль инструмента: тот же предикат на синтетической разметке, где подпись стоит
+  // ПОСЛЕ формы (как было до правки), обязан быть ЛОЖНЫМ — иначе он согласен на любое
+  // положение и не различает того, ради чего стоит.
+  const synth='<div id="ec-doors"></div><div id="ec-login-form"></div><p id="ec-demo-note"></p>';
+  const sD=synth.indexOf('id="ec-doors"'),sF=synth.indexOf('id="ec-login-form"'),sN=synth.indexOf('id="ec-demo-note"');
+  ok(!(sN>sD&&sN<sF),'control: on markup with the caption AFTER the form the same predicate is FALSE, so it discriminates position');
+  // И подпись по-прежнему рисуется из КЛЮЧА, а не из литерала — иначе перевод отвалится молча.
+  ok(/tr\('entry\.demo_note'\)/.test(html),'No.894: the caption still renders from the key entry.demo_note, not from a literal');
 });
 
 console.log(JSON.stringify({passed,failed,setup_errors:setup,coverage:'actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately'}));

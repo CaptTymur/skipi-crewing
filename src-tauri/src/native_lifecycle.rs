@@ -124,6 +124,25 @@ impl AccountTransport for native_account::AccountClient {
     }
 }
 
+/// The second step of an interactive login carries its own refusal codes.
+///
+/// `transport_unreachable` and `upstream_unavailable` are both born inside the single `post()`
+/// helper that serves BOTH `login` and `bootstrap`, so the code alone cannot say which step
+/// failed -- only the call site can. And only the interactive path has two steps: `refresh`
+/// replays a stored credential and has no first step, so an identical failure there must keep
+/// the original code rather than imply an accepted account.
+///
+/// The pair is NOT collapsed into one code: the two shipped texts ask for two different
+/// actions -- check your own network and retry now, versus wait because it is on our side --
+/// and a status code having arrived at all is what distinguishes them.
+fn second_step_code(code: &'static str) -> &'static str {
+    match code {
+        "transport_unreachable" => "workspace_unreachable",
+        "upstream_unavailable" => "workspace_unavailable",
+        other => other,
+    }
+}
+
 enum VerifiedIdentity {
     Interactive(LoginResponse),
     SameProcessRefresh { account_id: String, app_credential: String },
@@ -558,7 +577,8 @@ impl Runtime {
                 return Err("tenant_mismatch");
             }
             let company = (!attempt.snapshot.crewing_id.trim().is_empty()).then_some(attempt.snapshot.crewing_id.as_str());
-            let response = transport.bootstrap(&identity.token, &identity.account_id, company, attempt.create)?;
+            let response = transport.bootstrap(&identity.token, &identity.account_id, company, attempt.create)
+                .map_err(second_step_code)?;
             self.recheck(&attempt)?;
             response.validate(&identity.account_id, company, &self.origins(), self.clock.now())?;
             Ok(response)
@@ -839,15 +859,18 @@ mod runtime_tests {
         identity: LoginResponse, reply: BootstrapResponse, calls: RefCell<Vec<String>>,
         on_login: Option<Box<dyn Fn() + 'a>>, on_bootstrap: Option<Box<dyn Fn() + 'a>>,
         on_logout: Option<Box<dyn Fn() + 'a>>, remote_error: bool,
+        fail_login: Option<&'static str>, fail_bootstrap: Option<&'static str>,
     }
     impl Default for Fake<'_> {
         fn default() -> Self { Self { identity: login(), reply: response(), calls: RefCell::new(vec![]),
-            on_login: None, on_bootstrap: None, on_logout: None, remote_error: false } }
+            on_login: None, on_bootstrap: None, on_logout: None, remote_error: false,
+            fail_login: None, fail_bootstrap: None } }
     }
     impl AccountTransport for Fake<'_> {
         fn login(&self, _email: &str, _password: &str) -> Result<LoginResponse, &'static str> {
             self.calls.borrow_mut().push("login".into());
             if let Some(callback) = &self.on_login { callback(); }
+            if let Some(code) = self.fail_login { return Err(code); }
             Ok(self.identity.clone())
         }
         fn bootstrap(&self, credential: &str, account: &str, company: Option<&str>, create: bool)
@@ -856,6 +879,7 @@ mod runtime_tests {
             assert_eq!(account, self.identity.account_id, "bootstrap account must come from the validated native identity");
             self.calls.borrow_mut().push(format!("bootstrap:{}:{}", company.unwrap_or("none"), create));
             if let Some(callback) = &self.on_bootstrap { callback(); }
+            if let Some(code) = self.fail_bootstrap { return Err(code); }
             Ok(self.reply.clone())
         }
         fn logout(&self, credential: &str) -> Result<(), &'static str> {
@@ -1906,5 +1930,50 @@ mod runtime_tests {
         assert!(rt.denied.load(Ordering::SeqCst)); assert_ne!(rt.context().unwrap(), context);
         // Denial occurs before private_access asks the test clock for another time.
         assert!(rt.ticket(&rt.context().unwrap()).is_err());
+    }
+    #[test]
+    fn native635_runtime_second_step_unreachable_is_distinguishable_from_the_first() {
+        // `transport_unreachable` and `upstream_unavailable` are born inside the single `post()`
+        // helper serving BOTH login and bootstrap, so the code alone cannot say which step
+        // failed. These arms pin the distinction to the call site.
+        // The pair stays a pair: the two shipped texts ask for two different actions, so
+        // each second-step failure keeps its own code rather than collapsing into one.
+        let mut seen: Vec<&'static str> = vec![];
+        for (code, expected) in [("transport_unreachable", "workspace_unreachable"),
+                                 ("upstream_unavailable", "workspace_unavailable")] {
+            let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true)); let old = f.bytes();
+            let fake = Fake { fail_bootstrap: Some(code), ..Fake::default() };
+            let pending = rt.start_login(&rt.context().unwrap(), CreationPolicy::FreshNativeContext).unwrap();
+            let got = rt.authenticate(&fake, "synthetic", "synthetic", pending).unwrap_err();
+            assert_eq!(got, expected, "second step failing with {code} must carry its own step-two code");
+            seen.push(got);
+            // Step one was reached and accepted before step two was attempted -- this is what
+            // lets the text say the account details were accepted.
+            assert_eq!(fake.calls.borrow().as_slice(), ["login", "bootstrap:synthetic-company:false"]);
+            // And nothing was written -- this is what lets the text say so.
+            assert_eq!(f.bytes(), old); assert!(f.row().is_some());
+        }
+        // Control: the SAME code on step ONE keeps the original. Without this arm a blanket
+        // rename of the transport codes would pass.
+        let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true)); let old = f.bytes();
+        let fake = Fake { fail_login: Some("transport_unreachable"), ..Fake::default() };
+        let pending = rt.start_login(&rt.context().unwrap(), CreationPolicy::FreshNativeContext).unwrap();
+        assert_eq!(rt.authenticate(&fake, "synthetic", "synthetic", pending).unwrap_err(), "transport_unreachable");
+        assert_eq!(fake.calls.borrow().as_slice(), ["login"]); assert_eq!(f.bytes(), old);
+        // Control: `refresh` replays a stored credential and has NO first step, so an identical
+        // bootstrap failure there must not imply an accepted account. This arm fails if the code
+        // is renamed in native_account.rs instead of mapped at the interactive call site.
+        let f = Fixture::new(); let (rt, _) = connected(&f);
+        let fake = Fake { fail_bootstrap: Some("transport_unreachable"), ..Fake::default() };
+        assert_eq!(rt.refresh(&fake, &rt.context().unwrap()).unwrap_err(), "transport_unreachable");
+        assert_eq!(fake.calls.borrow().as_slice(), ["bootstrap:synthetic-company:false"]);
+        // Control: the two second-step codes must stay DISTINCT from each other. Collapsing
+        // them would merge "check your network and retry" with "wait, it is on our side".
+        assert_ne!(seen[0], seen[1], "the second-step pair must not collapse into one code");
+        // Control: the mapping is narrow -- a non-transport second-step refusal is untouched.
+        let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true));
+        let fake = Fake { fail_bootstrap: Some("ownership_conflict"), ..Fake::default() };
+        let pending = rt.start_login(&rt.context().unwrap(), CreationPolicy::FreshNativeContext).unwrap();
+        assert_eq!(rt.authenticate(&fake, "synthetic", "synthetic", pending).unwrap_err(), "ownership_conflict");
     }
 }

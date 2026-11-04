@@ -1770,6 +1770,7 @@ function renderEntryChoice(next){
     +   '<button id="ec-demo" onclick="enterDemoMode()" style="'+doorStyle+'border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-weight:600;">'
     +     '&#127909; '+escapeHtml(tr('entry.show_demo'))
     +     '<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
+    +   '<p id="ec-demo-note" style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'
     + '</div>'
     + '<div id="ec-login-form" hidden style="text-align:left;">'
     +   '<div style="font-size:15px;font-weight:700;color:var(--text,#e5e7eb);margin-bottom:4px;">'+escapeHtml(tr('settings.crewing.login.title'))+'</div>'
@@ -1778,10 +1779,9 @@ function renderEntryChoice(next){
     +   '<input id="a-password" type="password" autocomplete="current-password" placeholder="'+escapeAttr(tr('settings.crewing.login.password'))+'" style="'+inputStyle+'">'
     +   '<button id="ec-login-submit" onclick="entryAccountLogin()" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;text-align:center;">'
     +     escapeHtml(tr('settings.crewing.login.action'))+'</button>'
-    +   '<div id="ec-login-error" hidden role="alert" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.45);color:#fca5a5;font-size:13px;line-height:1.45;"></div>'
+    +   '<div id="ec-login-error" hidden role="alert" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.45);color:#991b1b;font-size:13px;line-height:1.45;"></div>'
     +   '<button onclick="entryShowLogin(false)" style="margin-top:12px;background:none;border:none;color:var(--text2,#9aa4b2);font-size:13px;cursor:pointer;padding:0;">'+escapeHtml(tr('entry.back'))+'</button>'
     + '</div>'
-    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'
     + '</div>';
   document.body.appendChild(ov);
 }
@@ -2184,6 +2184,8 @@ var UI_STRINGS = {
     "settings.crewing.login.too_many_attempts": "Too many attempts. Wait a minute before trying again.",
     "settings.crewing.login.upstream_unavailable": "The server is unavailable. This is on our side — try later.",
     "settings.crewing.login.transport_unreachable": "No connection to the server. Check your network and try again.",
+    "settings.crewing.login.workspace_unreachable": "Account accepted, but we didn't reach your Crewing workspace — sign-in did not complete. Check your network and try again.",
+    "settings.crewing.login.workspace_unavailable": "Account accepted, but your Crewing workspace refused the request — sign-in did not complete. This is on our side, try later.",
     "settings.crewing.login.migration_required": "This device still holds data from an earlier installation. Signing in over it is not possible — please contact Skipi support.",
     "settings.crewing.login.ownership_conflict": "The data on this device belongs to a different account. Contact Skipi support.",
     "settings.crewing.login.tenant_mismatch": "The account and the workspace did not match. Sign in again.",
@@ -2196,10 +2198,11 @@ var UI_STRINGS = {
     "settings.crewing.login.refused_unspecified": "Sign-in was refused and the app was given no reason. Try signing in again; if it repeats, tell us.",
     "settings.crewing.login.restart_needed": "Local data could not be read. Restart the app.",
     "settings.crewing.login.storage_error": "Nothing could be written: check free space and permissions.",
+    "settings.crewing.login.storage_cleanup_unconfirmed": "Settings could not be written, and we could not confirm the leftover file was removed. Sign-in did not complete. Try again; if it repeats, tell us.",
     "settings.crewing.login.local_damaged": "The local data of this installation is damaged. We will need to help.",
     "settings.crewing.login.settings_changed": "The settings changed while you were signing in. Reload and repeat.",
     "settings.crewing.login.unsupported_platform": "Sign-in is not supported on this system.",
-    "settings.crewing.login.fresh_unavailable": "Signing in on a new installation is not available yet.",
+    "settings.crewing.login.workspace_not_created": "We could not prepare local storage for this account on this device. Sign-in did not complete. Try again; if it repeats, tell us.",
     "settings.crewing.login.binding_missing": "This installation has no account binding. Your data is not at fault.",
     "settings.crewing.login.title": "Skipi account",
     "settings.crewing.login.description": "Sign in with your Skipi account.",
@@ -2427,6 +2430,8 @@ var UI_STRINGS = {
     "settings.crewing.login.too_many_attempts": "Слишком много попыток. Подождите минуту и попробуйте снова.",
     "settings.crewing.login.upstream_unavailable": "Сервер недоступен. Это на нашей стороне — попробуйте позже.",
     "settings.crewing.login.transport_unreachable": "Нет связи с сервером. Проверьте сеть и попробуйте снова.",
+    "settings.crewing.login.workspace_unreachable": "Аккаунт приняли, но до рабочего места Крюинга не дошли — вход не завершён. Проверьте сеть и попробуйте снова.",
+    "settings.crewing.login.workspace_unavailable": "Аккаунт приняли, но рабочее место Крюинга запрос не приняло — вход не завершён. Это на нашей стороне, попробуйте позже.",
     "settings.crewing.login.migration_required": "На устройстве остались данные прежней установки. Войти поверх них нельзя — напишите в поддержку Skipi.",
     "settings.crewing.login.ownership_conflict": "Данные на устройстве принадлежат другому аккаунту. Напишите в поддержку Skipi.",
     "settings.crewing.login.tenant_mismatch": "Аккаунт и рабочее место не совпали. Войдите снова.",
@@ -2439,10 +2444,11 @@ var UI_STRINGS = {
     "settings.crewing.login.refused_unspecified": "Во входе отказано, и приложение не получило причину. Попробуйте войти ещё раз; если повторится — скажите нам.",
     "settings.crewing.login.restart_needed": "Не удалось прочитать локальные данные. Перезапустите приложение.",
     "settings.crewing.login.storage_error": "Не удалось записать: проверьте свободное место и права.",
+    "settings.crewing.login.storage_cleanup_unconfirmed": "Не удалось записать настройки, и мы не смогли подтвердить, что остаточный файл удалён. Вход не завершён. Попробуйте ещё раз; если повторится — скажите нам.",
     "settings.crewing.login.local_damaged": "Локальные данные этой установки повреждены. Без нас это не починить.",
     "settings.crewing.login.settings_changed": "Настройки изменились, пока вы входили. Обновите и повторите.",
     "settings.crewing.login.unsupported_platform": "Вход не поддерживается на этой системе.",
-    "settings.crewing.login.fresh_unavailable": "Вход на новой установке пока недоступен.",
+    "settings.crewing.login.workspace_not_created": "Не удалось подготовить локальное хранилище для этого аккаунта на этом устройстве. Вход не завершён. Попробуйте ещё раз; если повторится — скажите нам.",
     "settings.crewing.login.binding_missing": "У этой установки нет привязки аккаунта. Дело не в ваших данных.",
     "settings.crewing.login.title": "Аккаунт Skipi",
     "settings.crewing.login.description": "Вход по аккаунту Skipi.",
@@ -14999,7 +15005,7 @@ async function nativeAccountLogin() {
 // STRING and never the call site — the fifteen sites it covers are indistinguishable
 // here. Splitting it needs distinct Rust codes (BACKLOG No.797), not a UI change.
 function loginRefusalText(code) {
-  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "fresh_namespace_unavailable": "fresh_unavailable", "migration_required": "migration_required", "connection_expired": "connection_expired", "tenant_mismatch": "tenant_mismatch", "ownership_conflict": "ownership_conflict", "native_binding_missing": "binding_missing"};
+  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "workspace_unreachable": "workspace_unreachable", "workspace_unavailable": "workspace_unavailable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "settings_cleanup_unconfirmed": "storage_cleanup_unconfirmed", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_namespace_unavailable": "workspace_not_created", "migration_required": "migration_required", "connection_expired": "connection_expired", "tenant_mismatch": "tenant_mismatch", "ownership_conflict": "ownership_conflict", "native_binding_missing": "binding_missing"};
   return 'settings.crewing.login.' + (map[code] || 'refused_unspecified');
 }
 
