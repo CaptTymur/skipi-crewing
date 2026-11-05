@@ -1,0 +1,2 @@
+    +     '<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
+    + '</div>'

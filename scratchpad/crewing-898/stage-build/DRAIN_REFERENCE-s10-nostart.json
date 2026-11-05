@@ -1,0 +1,10 @@
+{
+  "verdict": "DRAIN_REFERENCE",
+  "instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "epoch": 48,
+  "revision": 2,
+  "input_sha256": "e62e8a56490eec0affa911ecb461e3699d4a8136b82a58a9c292f5950e76d78f",
+  "stage": "VERIFY_BUILD",
+  "lease_id": "6dc5794df664497b8ee279ed0ea599aa",
+  "expires_at": "2026-11-05T06:01:44+00:00"
+}

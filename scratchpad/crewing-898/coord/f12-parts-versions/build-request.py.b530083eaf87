@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Build / advance a No.898 coordinator bundle. Every value is measured at run time.
+
+Conventions taken from skipi-parallel-coordinator/REQUEST-SCHEMA.md (the published
+authority; names are NOT guessed):
+  * 13 required non-empty STRINGS per stream; `new`/`preserve`/`stop` are strings,
+    never arrays.
+  * all 13 surface categories present, empty ones included - absent means "forgotten".
+  * every real file on disk is declared `path:` with an absolute path. `card:`/`guard:`
+    stay for non-file abstractions, because overlaps() compares kind FIRST and so is
+    blind to one file declared under two kinds.
+  * no annotation inside a token - it makes overlaps() false. Prose goes in notes.
+  * evidence_files REQUIRED for every stage except START and PREP.
+  * the two-step marker is a TOP-LEVEL `submission` OBJECT. A flat `submission_mode`
+    is rejected. `mode` is one bare token; explanation goes in `note`.
+  * step 3 may differ from the reviewed step 1 ONLY in streams[*].event_id,
+    streams[*].heartbeat, any `heartbeat_note`, and the whole `submission` subtree.
+    So no other field may carry a value that moves on its own - the coordinator-instance
+    read time therefore lives INSIDE `submission`.
+  * the neighbour is named in `active_neighbors` prose, never as a second stream: a
+    declared stream owes the same 13 checks and its own evidence_files, which cannot be
+    produced on its behalf.
+
+Usage:
+  build-request.py new   <STAGE> <LABEL> <review-only|grant> [--files f1,f2,...]
+  build-request.py step3 <path-to-step1.json>
+"""
+import hashlib, json, os, subprocess, sys
+from datetime import datetime, timezone
+
+HOME_REPO = "/home/linux/Developer/skipi-crewing"   # my artefacts always live here
+REPO = os.environ.get("CREWING_REQUEST_REPO", HOME_REPO)  # the repo the stage declares
+OPS  = "/home/linux/Developer/skipi-ops"
+CARD_REL = "handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+COORD = "/home/linux/Developer/skipi-parallel-coordinator"
+OUT = os.path.join(HOME_REPO, "scratchpad/crewing-898/coord")
+STAGES = {"START","PREP","IMPLEMENT","VERIFY_BUILD","OWNER_REVIEW","INTEGRATE","FINALIZE_END"}
+SURFACES = ("code","contracts","schema","generated","tests","database","ports","cache",
+            "build","guard","release","card","logs")
+NO_EVIDENCE_NEEDED = {"START","PREP"}
+
+def git(repo, *a, text=True):
+    return subprocess.check_output(["git","-C",repo,*a], text=text)
+
+def sha_bytes(b): return hashlib.sha256(b).hexdigest()
+def sha_path(p):
+    with open(p,"rb") as f: return sha_bytes(f.read())
+
+def canonical(bundle):
+    return sha_bytes(json.dumps(bundle, sort_keys=True, ensure_ascii=False,
+                                separators=(',',':')).encode())
+
+def measure():
+    """Everything that is a property of the moment, in one place."""
+    m = {}
+    m["head"] = git(REPO,"rev-parse","HEAD").strip()
+    m["status_norm_sha"] = sha_bytes(git(REPO,"status","--porcelain=v1",
+                                         "--untracked-files=normal", text=False))
+    # The -uall enumeration lists every untracked file INCLUDING the request bundles this
+    # script writes, so declaring it raw makes the field move every time a bundle is built -
+    # i.e. self-invalidating, and step 3 could never match the reviewed step 1. Exclude this
+    # slice's own declared log subtree and SAY SO inside the value: a filtered measurement
+    # must carry its filter. status_sha256 (normal mode) stays unfiltered - it is what the
+    # gate compares, and `scratchpad/` collapses to one line there, so it is stable anyway.
+    # The self-log exclusion applies ONLY when the declared repo IS the canonical checkout,
+    # because that is the only tree my artefacts live in. Declaring an exclusion for a path
+    # that cannot appear reads as "something was hidden" when there is nothing to hide - the
+    # coordinator measured the worktree at 0 untracked lines in BOTH units.
+    SELF = "scratchpad/crewing-898/"
+    raw = git(REPO,"status","--porcelain=v1","--untracked-files=all")
+    if REPO == HOME_REPO:
+        kept = [ln for ln in raw.splitlines() if SELF not in ln]
+        m["untracked"] = ("EXCLUDES this slice's own declared log subtree %s (artefacts written by "
+                          "this generator, covered by logs.writes); everything else verbatim:\n%s"
+                          % (SELF, "\n".join(kept)))
+    else:
+        kept = raw.splitlines()
+        m["untracked"] = ("No exclusion applies: the declared repo is not the checkout my artefacts "
+                          "live in, so this is the raw --untracked-files=all output, %d line(s)%s"
+                          % (len(kept), (":\n" + "\n".join(kept)) if kept else " (empty)."))
+    m["status_all_sha"] = sha_bytes(("\n".join(kept)).encode())
+    m["live_main"] = git(REPO,"ls-remote","origin","refs/heads/main").split()[0]
+    m["cached_main"] = git(REPO,"rev-parse","origin/main").strip()
+    card_abs = os.path.join(OPS, CARD_REL)
+    m["card_abs"] = card_abs
+    m["card_file"] = sha_path(card_abs)
+    m["card_head"] = sha_bytes(git(OPS,"show","HEAD:"+CARD_REL, text=False))
+    m["ops_head"] = git(OPS,"rev-parse","HEAD").strip()
+    m["ops_porcelain"] = git(OPS,"status","--porcelain=v1")
+    try:
+        cs = json.load(open(os.path.join(COORD,"reports/coordination-state.json")))
+        m["coord_instance"], m["coord_epoch"] = cs.get("instance"), cs.get("epoch")
+    except (OSError, ValueError):
+        m["coord_instance"], m["coord_epoch"] = None, None
+    return m
+
+def load_content(path):
+    """Free-text fields live in a FILE, never in my hands: step 3 must reproduce the
+    reviewed step 1 byte for byte outside the allowed paths, and re-typed prose cannot."""
+    if not path: return {}
+    with open(path) as f: return json.load(f)
+
+def build(stage, label, mode, files, m, now, content=None, content_file_recorded=None):
+    hb = now.isoformat()
+    event_id = "crewing-898-%s-%s-%s" % (stage, label, now.strftime("%Y%m%dT%H%M%SZ"))
+    empty = lambda: {"reads": [], "writes": []}
+    ro = lambda *r: {"reads": list(r), "writes": []}
+    s = {k: empty() for k in SURFACES}
+    s["code"]      = ro("path:"+REPO+"/src-tauri/src", "path:"+REPO+"/dist/index.html")
+    s["tests"]     = ro("path:"+REPO+"/tests")
+    s["contracts"] = ro("path:/home/linux/Developer/skipi-contracts")
+    s["guard"]     = ro("path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+                        "path:/home/linux/Developer/skipi-guard/bin/skipi-guard")
+    # Real files on disk, so path: - not card: - despite sitting in the `card` category.
+    s["card"]      = ro("path:"+m["card_abs"], "path:"+OPS+"/BACKLOG.md", "path:"+OPS+"/DECISIONS.md")
+    stage_logs = os.path.normpath(os.path.join(OUT, "..", "stage-%s-%s" % (stage.lower(), label)))  # under HOME_REPO, never the declared repo
+    s["logs"]      = {"reads": [], "writes": ["path:"+stage_logs]}
+    if stage in {"IMPLEMENT","VERIFY_BUILD"}:
+        s["code"]["writes"]  = ["path:"+REPO+"/dist/index.html"]
+        s["tests"]["writes"] = ["path:"+REPO+"/tests"]
+
+    missing = [p for p in files if not os.path.isfile(p)]
+    if missing:
+        print("REFUSING: declared evidence file(s) absent from disk - a pin cannot be "
+              "computed for a file that is not there:", file=sys.stderr)
+        for p in missing: print("   " + p, file=sys.stderr)
+        print("If the file exists only at live main, the stage needs a worktree FIRST.", file=sys.stderr)
+        sys.exit(6)
+    evidence = [{"path": p, "sha256": sha_path(p)} for p in files]
+    if stage not in NO_EVIDENCE_NEEDED and not evidence:
+        print("REFUSING: stage %s requires evidence_files; pass --files" % stage, file=sys.stderr)
+        sys.exit(4)
+
+    stream = {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": event_id,
+      "stage": stage,
+      "outcome": "SET BEFORE SENDING - the generator does not invent it",
+      "repo": REPO,
+      "head": m["head"],
+      "status_sha256": m["status_norm_sha"],
+      "status_sha256_uall": m["status_all_sha"],
+      "untracked": m["untracked"],
+      "new": "SET BEFORE SENDING",
+      "preserve": "SET BEFORE SENDING",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "SET BEFORE SENDING",
+      "heartbeat": hb,
+      "heartbeat_note": "review-only pulse; do not compute a window from it" if mode=="review-only" else "grant pulse",
+      "proves": "SET BEFORE SENDING",
+      "depends": "SET BEFORE SENDING",
+      "active_neighbors": "SET BEFORE SENDING - prose, never a second declared stream",
+      "next_action": "SET BEFORE SENDING",
+      "owner_window": "SET BEFORE SENDING",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": m["card_abs"],
+        "sha256_file": m["card_file"],
+        "sha256_at_ops_head": m["card_head"],
+        "revisions_agree": m["card_file"] == m["card_head"],
+        "ops_head": m["ops_head"],
+        "ops_porcelain": m["ops_porcelain"],
+      },
+      "baseline_provenance": {
+        "live_main": m["live_main"],
+        "cached_origin_main": m["cached_main"],
+        "cache_is_fresh": m["live_main"] == m["cached_main"],
+        "note": ("Live main is read by object; the checkout is not moved. The hook routes "
+                 "merge-base(origin/main)..head for a new branch, so fetch origin main before "
+                 "the first push and re-measure the route then."),
+      },
+      "surfaces": s,
+      "resource_identities": {},
+      "evidence_files": evidence,
+    }
+    for k, v in (content or {}).items():
+        stream[k] = v
+    bundle = {
+      "coordinator_instance": m["coord_instance"],
+      "coordinator_epoch": m["coord_epoch"],
+      "pilot_card": m["card_abs"],
+      "inventory_complete": True,
+      "heartbeat_max_seconds": 300,
+      "requested_stream_id": "crewing/898-client-slice",
+      "streams": [stream],
+      # Top-level object, per the schema. Values that move on their own live HERE,
+      # because `submission` is the only subtree step 3 may change.
+      "submission": {
+        "version": "v1",
+        "mode": mode,
+        "note": ("Step 1 of two: read the content without spending a window."
+                 if mode == "review-only" else
+                 "Step 3: only event_id, heartbeat and this subtree differ from the reviewed step 1."),
+        "coordinator_instance_read_at": hb,
+        "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+        "content_file": content_file_recorded,
+      },
+    }
+    return bundle, event_id, hb
+
+ALLOWED_SUFFIX = {"event_id","heartbeat","heartbeat_note"}
+
+def diff_paths(a, b, path=()):
+    """Every path where two bundles differ."""
+    out = []
+    if type(a) is not type(b):
+        return [path]
+    if isinstance(a, dict):
+        for k in set(a) | set(b):
+            if k not in a or k not in b: out.append(path+(k,))
+            else: out += diff_paths(a[k], b[k], path+(k,))
+    elif isinstance(a, list):
+        if len(a) != len(b): return [path]
+        for i,(x,y) in enumerate(zip(a,b)): out += diff_paths(x,y,path+(str(i),))
+    elif a != b:
+        out.append(path)
+    return out
+
+def main():
+    if len(sys.argv) < 2: print(__doc__); return 2
+    cmd = sys.argv[1]
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    m = measure()
+    if not m["coord_instance"]:
+        print("REFUSING: coordinator instance unreadable - a value I did not measure "
+              "must not be interpolated into a request", file=sys.stderr)
+        return 3
+
+    if cmd == "new":
+        if len(sys.argv) < 5 or sys.argv[2] not in STAGES or sys.argv[4] not in {"review-only","grant"}:
+            print(__doc__); return 2
+        stage, label, mode = sys.argv[2], sys.argv[3], sys.argv[4]
+        files, contentfile = [], None
+        for i,a in enumerate(sys.argv):
+            if a == "--files" and i+1 < len(sys.argv):
+                files = [os.path.abspath(p) for p in sys.argv[i+1].split(",") if p]
+            if a == "--content" and i+1 < len(sys.argv):
+                contentfile = sys.argv[i+1]
+        content = load_content(contentfile)
+        bundle, event_id, hb = build(stage, label, mode, files, m, now, content, contentfile)
+        name = "%s-%s-%s-%s.json" % (stage, label, mode, now.strftime("%Y%m%dT%H%M%SZ"))
+    elif cmd == "step3":
+        src = sys.argv[2]
+        prev = json.load(open(src))
+        stream0 = prev["streams"][0]
+        stage, label = stream0["stage"], stream0["event_id"].split("-")[3]
+        files = [e["path"] for e in stream0.get("evidence_files", [])]
+        cf = prev.get("submission", {}).get("content_file")
+        bundle, event_id, hb = build(stage, label, "grant", files, m, now, load_content(cf), cf)
+        # Self-check: nothing outside the allowed paths may have moved.
+        bad = [p for p in diff_paths(prev, bundle)
+               if p and p[0] != "submission" and p[-1] not in ALLOWED_SUFFIX]
+        if bad:
+            print("REFUSING step 3: these paths moved since the reviewed step 1 -", file=sys.stderr)
+            for p in sorted(bad): print("   " + ".".join(p), file=sys.stderr)
+            print("Re-review is required; preflight_step3 would reject this.", file=sys.stderr)
+            return 5
+        name = "%s-%s-grant-%s.json" % (stage, label, now.strftime("%Y%m%dT%H%M%SZ"))
+    else:
+        print(__doc__); return 2
+
+    path = os.path.join(OUT, name)
+    with open(path,"w") as f: json.dump(bundle, f, ensure_ascii=False, indent=2)
+    print("path: " + path)
+    print("canonical_input_sha256: " + canonical(bundle))
+    print("file_bytes_sha256: " + sha_path(path))
+    print("event_id: " + event_id + "   heartbeat: " + hb + "   mode: " + bundle["submission"]["mode"])
+    print("coordinator: %s  epoch %s  (read now; confirm against his live word)"
+          % (m["coord_instance"], m["coord_epoch"]))
+    print("repo HEAD %s   live main %s   cache fresh %s"
+          % (m["head"], m["live_main"], m["live_main"] == m["cached_main"]))
+    print("card %s (file) / %s (HEAD)  agree %s"
+          % (m["card_file"], m["card_head"], m["card_file"] == m["card_head"]))
+    print("evidence_files: %d" % len(bundle["streams"][0]["evidence_files"]))
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

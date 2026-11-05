@@ -1,0 +1,8 @@
+case      : workspace_unavailable
+language  : ru
+produced  : step two returned 503 -> upstream_unavailable
+text      : Аккаунт приняли, но рабочее место Крюинга запрос не приняло — вход не завершён. Это на нашей стороне, попробуйте позже.
+          POST /api/app/login mode=unavailable
+          04/Nov/2026 18:39:49 "POST /api/app/login HTTP/1.1" 200 -
+          POST /api/app/crewing/bootstrap mode=unavailable
+          04/Nov/2026 18:39:49 "POST /api/app/crewing/bootstrap HTTP/1.1" 503 -

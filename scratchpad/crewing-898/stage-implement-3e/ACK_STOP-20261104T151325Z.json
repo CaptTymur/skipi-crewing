@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-3e-ACKSTOP-20261104T151325Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T15:13:26+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "c2a71157411b653278476270fe1acc0ee61c6d94c5a43a7f28884497bf33757d",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-3e/after.txt",
+      "sha256": "0c6a54778188af5c1f8959ac18773f938cd51b9f299de69efa57c14bced25950",
+      "content": "driver_sha256=c2a71157411b653278476270fe1acc0ee61c6d94c5a43a7f28884497bf33757d\ndist_mode=664\nharness_mode=664\nrust_mode=664\nrust_pre=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nrust_post=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nrust_post_expected=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\njoint_mode=664\njoint_pre=a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d\njoint_post=ecdd480d3df4eeafb15fc7060a81e62cb88234da0c631417e02a77bb222b81b3\njoint_post_expected=ecdd480d3df4eeafb15fc7060a81e62cb88234da0c631417e02a77bb222b81b3\nworktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nworktree_branch=feat/crewing-898-login-texts-20261104\ndist_pre=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\ndist_post=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\ndist_post_expected=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\nharness_pre=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\nharness_post=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\nharness_post_expected=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\ncargo_ran_in_window=no\ngen_schemas_exists=no\nsrc_tauri_target_exists=no\nworktree_changed_files=4\n M dist/index.html\n M src-tauri/src/native_lifecycle.rs\n M src-tauri/src/native_local_joint_tests.rs\n M tests/crewing635_public_settings_harness.mjs\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":184,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "Only ONE of the route's 19 harnesses was run. Nothing here says the guard route passes, nothing was pushed, no commit was made, and no stand was built. The Rust suite was NOT run in this window: its 249/0 is evidence of a dry run on a COPY under umask 0022, and under the machine's default umask 0002 that same suite is 234/15 for the pre-existing reason filed as No.922. The subject of THIS stage is a TEST, not product behaviour: it pins the side of the migration_required fork that nothing asserted, and it changes nothing a person can see. The JS harness count is unchanged at 184 precisely because the twin is a Rust test. Nothing here may be read as permission to push or release."
+}

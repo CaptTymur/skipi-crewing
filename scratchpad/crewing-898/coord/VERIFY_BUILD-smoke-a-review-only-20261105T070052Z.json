@@ -1,0 +1,187 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-VERIFY_BUILD-smoke-a-20261105T070052Z",
+      "stage": "VERIFY_BUILD",
+      "outcome": "Stage 11 part A: the smoke on the RELEASE binary 1488c7004c14ea60. Three runs on Xephyr :9, each a complete interactive login attempt against a loopback proxy, producing nine frames and three app logs in a NEW directory smoke-release-a/. What it establishes that nothing else does: the release binary LAUNCHES and draws the entry screen, and it renders S1 `transport_unreachable` in EN and RU. S1 has no frame anywhere today - not on this candidate and not on any build - so these are the first frames of that state, not a repeat of smoke-3d.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "Two writes, both inside the card's scratchpad. (1) /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-release-a - created by this stage, nine PNG frames plus three app logs. It MUST NOT exist beforehand: 'frames appear where there were none' is this stage's positive control and the driver refuses if the directory is already there. (2) /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-smoke-a - ACK documents, per-run analyses, the texts read out of the dist, the before/after digest lists, and three throwaway stand profiles. Nothing in the repository proper is written: the canonical checkout's tracked-change count is measured before and after and must not move.",
+      "preserve": "smoke-3d/ and smoke-3c/ are closed evidence and are PRESERVED BY MEASUREMENT, not by intention: every file's sha256 is listed before the first run and compared after the last, and a difference is exit 15. The manager's instruction was that new frames must not replace or cancel the old ones; a promise of that shape is worth exactly the comparison that backs it. smoke-3d/README.md is NOT corrected even though it is now known to overstate its own coverage ('the four second-step texts' are four FILES of TWO states): its digest list includes its own digest and the stage is closed, so the correction travels into the NEW README instead. HEAD stays at e5132934, the worktree stays porcelain-empty, and the release binary is read and never rebuilt.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP before acting if: the gate does not yield PERMIT_CURRENT as a FIELD; the window remainder is above the 300 s ceiling or below the 90 s floor; the release binary, the dist, or smoke-tool.py does not match its pinned sha256; HEAD is not e5132934 or the worktree is dirty; Xephyr, xdotool, python-Xlib or PIL is absent; /tmp/.X11-unix/X9 already exists or any Xephyr is already running; something is listening on the closed port 127.0.0.1:19165 - re-measured before EVERY run, not once up front, because a listener appearing between run 1 and run 3 would silently turn condition 1 into a different experiment; smoke-release-a/ already exists. STOP mid-run if: a captured frame holds fewer than 50 distinct colours (a near-uniform frame is what a broken capture produces, not evidence the app drew nothing); a frame is UNCHANGED after a click or after submit (the step did not take, and typing into a screen that is not the form would produce a confident wrong frame); no refusal box is found at the declared colour; the app's log does not show the loopback proxy intercepting https://assistant.skipi.app/; or either typed credential appears in a log this stage publishes. A FAILED BIND IS NOT A STOP: if the 503 proxy cannot take 19166 the driver records a FINDING and retries on 19167, and only the loss of both ports stops the stage. An instrument that dies of a busy address loses a stage to weather.",
+      "heartbeat": "2026-11-05T07:00:52+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "On the RELEASE binary 1488c7004c14ea60, built from e5132934: that it launches under Xephyr and draws the entry screen; that a login attempt against an unreachable proxy renders the S1 refusal line; and that the line renders in EN and in RU as two different strings. Each .txt is read OUT OF the shipped dist by key after the dist's sha256 is checked against the pin - never transcribed from a picture, the same discipline smoke-3d recorded. The rendered colour is measured two ways because they answer different questions: contrast_core (darkest glyph pixel against the modal background) asks whether the DECLARED colour landed and returns 6.40 exactly; contrast_mean averages every glyph pixel including antialiased edges and returns about 5.55. smoke-3d's README recorded 6.09/5.94, which is a THIRD estimator over a different glyph population - not a disagreement to reconcile, and not a confirmation either. What all three agree on is the only thing the threshold asks: every reading clears the AA floor of 4.5.",
+      "depends": "The release binary built under the 06:05Z certificate and unchanged since (pinned by sha256). The dist pinned at 96b6bd50...fdf3fa, which is both the build's input and the bytes smoke-3d's frames were taken against. smoke-tool.py, pinned by sha256 and verified by the driver at run time; it was calibrated BEFORE this request against the existing smoke-3d frames, where it reproduces the declared 6.40 on all four and measures their boxes at h=31. Xephyr, xdotool, python-Xlib 0.33 and PIL 10.2.0, all present. The display :9 free - re-measured INSIDE the stage, because 'free at 06:29Z' is a statement about a moment and a free display is not a reserved one.",
+      "active_neighbors": "PROSE, never a second declared stream. The coordinator reported 0 of 2 slots taken at 06:29Z, with the seafarer stream refused on the same minute over drift in another document, so there is no queue ahead of this. The resources worth naming are not files: the X display :9 (exclusive - the driver refuses if any Xephyr is already running rather than sharing a nested server), and two loopback TCP ports. skipi-dev-tails.timer fetches every 10 min and does not touch this gitdir; this stage does not read the gitdir beyond rev-parse and status.",
+      "next_action": "Stage B2: a new DEBUG run with the preserved loopback stub answering 5xx on the FIRST step, to give S2 its only frames. Then the acceptance act, in three separate lines with three different build fingerprints - A (release) / B1 (debug, smoke-3d) / B2 (debug, new) - at the manager's instruction, so that a reader a month from now cannot take B for something shot on release. That separation exists because the opposite error happened twice today: one piece of evidence read as belonging to another object. Then the owner's live acceptance, which is his gate and which none of this replaces, and only after it the merge question - which is the route owner's, not mine.",
+      "owner_window": "NOT required. This stage shows nobody anything: it produces frames on a nested display the owner cannot see, and `shown_to_owner=no` goes into the record explicitly so that the existence of frames can never later be read as the acceptance having happened. The owner's display is :1; the capture subcommand refuses :0 and :1 outright, so a typo cannot photograph his screen.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file_at_read": "2b96183749b62d2eaa16c0faaf09b5c5f23a8429c5d3ee2361074d0ab2d002b7",
+        "read_at": "2026-11-05T07:00:52+00:00",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": false,
+        "ops_head": "38ec4a1babb9a6de64e4f805b23abb86e72decc2",
+        "card_porcelain": " M handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md\n",
+        "card_porcelain_note": "status of THIS CARD only. The whole ops tree is the manager's working area and moves on his keystrokes; a stream field that does that cannot survive a step-3 re-filing. The volatile tree reading is in `submission`."
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing"
+          ],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [
+            "net:4026531840|tcp|127.0.0.1|19165"
+          ],
+          "writes": [
+            "hostresource:/tmp/.X11-unix/X9",
+            "net:4026531840|tcp|127.0.0.1|19166",
+            "net:4026531840|tcp|127.0.0.1|19167"
+          ]
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+          ],
+          "writes": []
+        },
+        "guard": {
+          "reads": [],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-3c",
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-3d",
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/smoke-tool.py"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-release-a",
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-smoke-a"
+          ]
+        },
+        "logs": {
+          "reads": [],
+          "writes": []
+        }
+      },
+      "resource_identities": {
+        "hostresource:/tmp/.X11-unix/X9": "The nested X display :9, named by the socket because that is how its exclusivity is observable. The owner's session is :1 and is never addressed; /tmp/.X11-unix currently holds X1 only.",
+        "net:4026531840|tcp|127.0.0.1|19166": "The CONNECT-refusing proxy this stage binds for run 3. It never dials anything - every CONNECT is answered 503 and closed - so it cannot reach production even in principle.",
+        "net:4026531840|tcp|127.0.0.1|19165": "NOT bound by this stage: the deliberately closed port for runs 1 and 2. The driver proves it refuses connections before starting, because a listener there would quietly turn condition 1 into a different experiment.",
+        "net:4026531840|tcp|127.0.0.1|19167": "The ALTERNATE port for the 503 proxy. Declared because the stage may bind it: a busy 19166 is recorded as a finding and retried here rather than killing the stage. An undeclared fallback would be a write the gate reserved nothing for."
+      },
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s11-smoke-a.sh",
+          "sha256": "645d794ae37c90beb8614daee3ba956fd91a099312a33f40ea795b115b8e1da8"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/smoke-tool.py",
+          "sha256": "89da3a2f8b6c6f42984c11a0c6af9350a4beb74994e89aff8f9393f2b65876e1"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing",
+          "sha256": "1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa"
+        }
+      ],
+      "why_only_S1_and_why_that_is_not_a_reduction_in_scope": "Three borders, each measured on this commit and on the built binary, and the second one closes the obvious workaround. (1) ACCOUNT_ORIGIN is a compile-time const (native_account.rs:7) and the dev override is option_env! (:382) - the COMPILER's environment, so a running app cannot be redirected. (2) That branch and the direct_loopback_qa field it reads are both #[cfg(debug_assertions)] (:381, :385-386), so the branch does not exist in a release build at all: rebuilding the RELEASE profile with the variable set still yields the production origin. (3) The account client is reqwest 0.12.28 with feature rustls-tls, which reqwest's own Cargo.toml:148 defines as rustls-tls-webpki-roots - bundled Mozilla roots, no runtime path to add a certificate. So S2/S3/S4 each need a completed TLS session to a domain we do not own, signed by a public CA; we do not obtain one and we do not stand up our own CA (manager, 05.11, as a prohibition rather than an observation). S1 needs no TLS - only a failed connection - and is therefore the one state this binary can show honestly. The loopback stand being debug-only is a SECURITY BOUNDARY the product states in its own comment, so DEBUG is not a weaker profile here; it is the only instrument that reaches the other three.",
+      "a_correction_to_my_own_stated_cause_that_the_coordinator_measured": "I first attributed the SSL_CERT_FILE string in the binary to reqwest 0.13.2 and rustls-platform-verifier. He measured 0 occurrences in all three crates I named: the string comes from openssl-probe 0.2.1, reached via rustls-native-certs 0.8.3 via rustls-platform-verifier via reqwest 0.13.2 - the UPDATER's client. I verified both halves myself rather than adopting them: reqwest 0.12.28/src holds 0 occurrences, and its Cargo.toml:148 reads rustls-tls = [\"rustls-tls-webpki-roots\"]. The conclusion survived and the stated cause did not. The form matters more than the fix: a correct conclusion carried on a non-existent mechanism would have gone into the acceptance record as a reason any reader could refute with one grep - and had the Cargo.toml said rustls-tls-native-roots instead, the conclusion itself would have been FALSE.",
+      "the_prediction_this_stage_tests_written_before_the_run": "upstream_unavailable (S2) is born ONLY inside response_json(status, &bytes, login) (native_account.rs:424-452), reached only after request.send() has succeeded (:480) and the body has been read (:484); both of those failures yield transport_unreachable. A proxy answering 503 to the CONNECT never lets the tunnel stand up, so send() fails. PREDICTED: run 3 draws S1, not S2. The prediction is the coordinator's, written into the driver and into this request BEFORE the run, so that a surprise stays a finding instead of becoming a re-interpretation afterwards. It is worth its cost in either outcome: it either yields S2 on release, or it closes a question that would otherwise travel into the acceptance as 'almost certainly'. A mismatch is reported loudly and does NOT fail the stage - it is a measurement, not a gate.",
+      "the_coverage_matrix_that_this_stage_corrects": "Measured across the whole card: smoke-3c/ and smoke-3d/ hold four PNG each, and those are TWO states in two languages - distinct states are workspace_unreachable and workspace_unavailable; files named for transport_unreachable: 0; for upstream_unavailable: 0. The first-step codes DO appear inside the 3d .txt files, but as the SOURCE of the mapping ('produced : step two dropped the connection -> transport_unreachable'), not as a shown state - so a grep for coverage by code name would have found them and closed the point. Hence: S1 has no frame anywhere (the 25.10 stand measured its texts on commit b31b3213, a different object), S2 has never been run at all, S3 and S4 are covered by smoke-3d on debug. This stage gives S1 its first frames; S2 becomes stage B2, a new debug run, confirmed by the manager as executing a promise the card already made rather than widening scope.",
+      "mutates": [
+        "hostresource:/tmp/.X11-unix/X9",
+        "net:4026531840|tcp|127.0.0.1|19166",
+        "net:4026531840|tcp|127.0.0.1|19167",
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-release-a",
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-smoke-a"
+      ],
+      "expected_post": "smoke-release-a/ holds 12 files: nine PNG (entry, form and refusal for each of three runs) and three app logs. stage-smoke-a/ holds the two ACK documents, after.txt, three analysis JSONs, three texts JSONs, the before/after digest lists of the prior evidence, and three stand profiles. smoke-3c/ and smoke-3d/ are byte-identical to before. The canonical checkout's tracked-change count is unmoved. HEAD remains e5132934 and the worktree remains porcelain-empty. No binary is rebuilt, nothing is pushed, no PR is touched, and no acceptance exists.",
+      "measured_duration": {
+        "rehearsed": "12 s for one COMPLETE run - Xephyr up, app launched, window mapped, entry frame captured, button located, clicked, credentials typed, submitted, refusal frame captured and analysed. Measured outside the lease on this very binary, in the session scratchpad, touching no surface this stage declares.",
+        "this_stage": "three such runs plus preconditions and four controls, so about 60 s",
+        "floor": "90 s, and here the floor means something different from the build's. The build's 30 s covered only 'reach ACK_START legitimately', because a build outlasts any lease by design. This stage FITS inside a window, so its floor is set to cover the WHOLE stage: it starts only if it can plausibly finish, which for a short stage is worth more than a drain.",
+        "why_the_rehearsal_came_first": "The riskiest unknown was not the measurement but whether this release binary would launch under Xephyr and open its login form at all. Answering that with a lease running would have spent a window on a question a scratchpad could answer. It also produced the floor as a measured number rather than a guess, which is what the coordinator asked for."
+      },
+      "resource_identities_note": "The namespace is the host netns inode 4026531840, read from /proc/self/ns/net, matching the spelling used in this card's earlier requests. 19165 is listed under reads although the stage never binds it: it is a resource the stage DEPENDS on being absent, and an absence that matters is worth naming.",
+      "surfaces_note": "smoke-3c/ and smoke-3d/ are declared as READS and appear in no writes list: this stage computes their digests twice and must not alter a byte. The release binary is a read under `generated` because that is where the previous stage wrote it. The dist is declared as the single FILE rather than the directory, because what is read is index.html by key and by sha256. The X display is declared under `ports` rather than a category of its own: the schema names exactly thirteen categories and `host` is not among them, and since every category's reads/writes are flattened before overlaps() runs, the choice of category is presentation - so it sits beside the net tokens it belongs with.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s11-smoke-a.sh",
+        "note": "Self-hashing; recomputed at run time into both ACK documents. It also pins smoke-tool.py by sha256 and refuses to run if that file has moved - the helper carries the measurements, so leaving it unpinned would mean a reviewed driver calling an unreviewed instrument. bash -n clean; check_undefined_funcs clean (called_but_not_defined empty, 57 heredoc lines skipped); check-driver-prose clean on all predicates.",
+        "sha256": "645d794ae37c90beb8614daee3ba956fd91a099312a33f40ea795b115b8e1da8"
+      },
+      "the_instrument_was_calibrated_before_this_request_and_two_faults_fell_out": "smoke-tool.py was run against the existing smoke-3d frames before being pinned here, on the principle that an instrument should be aimed at a known object before it is aimed at an unknown one. Two faults surfaced that would otherwise have reached the stage. First, its text extractor returned a confident ZERO for all four RU keys: the language-table opener `ru: {` sits at indent 2 while `en: {` sits at indent 4, and there are four `en:` tables in the file, so a regex pinned to one indentation found English and silently missed Russian. It now attributes each key occurrence to the nearest opener above it rather than slicing 'the' table. Second, its unescaping went through `.encode().decode('unicode_escape')`, which routes UTF-8 through latin-1 and turned every em-dash into mojibake; it now uses json.loads. A third fault was cosmetic but worth naming: the line counter at gap 6 reported the two-line second-step boxes as one line, which is why box HEIGHT and not line count is the discriminator this stage relies on.",
+      "what_the_app_log_proves_and_why_it_outranks_the_geometry": "The rehearsal found, rather than the design anticipating, that reqwest logs at TRACE and the binary therefore states its own case: `proxy(http://127.0.0.1:19165/) intercepts 'https://assistant.skipi.app/'`. That single line proves at RUNTIME what the source said at compile time - this release binary's account origin IS production - and simultaneously proves the request went to the loopback proxy instead of to the real host. Geometry says a refusal was drawn; the log says which host was asked and that nothing reached it. The driver requires that line in every run. The same log was also checked for both typed credentials and held neither (measured: 0 occurrences of each, in a 1405-byte log), which matters because these files are published to a person rather than merely stored.",
+      "why_the_ports_sit_below_the_ephemeral_range": "The coordinator's required correction, re-measured by me before adopting it. My first choice, 19165/19166, sat INSIDE the kernel's ephemeral range: /proc/sys/net/ipv4/ip_local_port_range is 32768-60999, ip_local_reserved_ports is EMPTY, and 166 sockets occupy that range right now. Two distinct consequences, and only the second is about my own port. (1) The bind on the proxy port could fail with EADDRINUSE through nobody's fault, and my STOP list had no entry for a failed bind, so it would have surfaced as some other error. (2) The 'closed port' claim is a point measurement of a MOVING property - the kernel can hand that number to any process as an outgoing port mid-stage. Declaring the port in `reads` reserves nothing, and even `writes` only excludes DECLARED neighbours while the hazard here is an unnamed system process - so the declaration is not the cure and the choice of port is. 19165/19166/19167 are below 32768, which the kernel never hands out; all three measured free. The port predicate is now ONE shell function called both in the preconditions and before every run, because two copies of a predicate drift and the copy that drifts is the one nobody re-reads.",
+      "why_this_is_a_fresh_step_1_and_not_a_step_3": "The coordinator asked for step 3 after three required edits. The edits themselves make step 3 structurally impossible, and his own generator says so: with CREWING_REQUEST_REPO set correctly, `build-request.py step3` refuses on exactly six paths - card_provenance.sha256_file (removed), card_provenance.sha256_file_at_read and read_at (added), driver.sha256 and evidence_files[0].sha256 (the driver, changed by the port fix and the bind-retry), and evidence_files[1].sha256 (smoke-tool.py, changed by the bind exit code). Step 3 may differ from the reviewed step 1 only in event_id, heartbeat, heartbeat_note and submission. So this is a fresh review-only bundle: the reviewed bytes changed because the reviewer required them to change, and re-review is what the rule is for. A first attempt also moved repo/head/status/untracked because I ran the generator without CREWING_REQUEST_REPO - the same implicit-input trap already recorded in my notes, caught by the generator rather than by me."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-05T07:00:52+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "ops_tree_porcelain_at_build": " M AGENTS.md\n M BACKLOG.md\n M DECISIONS.md\n M PROJECT_STATE.md\n M docs/CANON-station-metrology-v1.md\n M handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md\n M handoffs/TASKCARD-2026-11-04-crewing-930-session-activation.md\n?? artifacts/git-morning/summary-20261105T055624Z.json\n?? handoffs/HANDOFF-2026-11-05-settings-929-four-edits.md\n?? handoffs/TASKCARD-2026-11-05-seafarer-935-identity-derive-dedup.md\n",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s11.json",
+    "content_file_sha256": "3771c8e38fa8ee8510b139b1a47652af8bce4ac575e8e45011370ece80d4805d"
+  }
+}

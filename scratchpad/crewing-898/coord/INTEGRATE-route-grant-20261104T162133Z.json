@@ -1,0 +1,170 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-INTEGRATE-route-20261104T162133Z",
+      "stage": "INTEGRATE",
+      "outcome": "Stage 6 of the tail: measure the PUSH ROUTE with the guard's own `verify`, on the values stage 5 fetched. Produces a route VERDICT plus the machine-readable guard JSON. No push, no PR, no harness execution, no product file touched.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "One log subtree, /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-route, holding: `guard-verify.json` (the guard's own machine-readable result - this stage's post-image), `verify.stdout`, `verify.stderr`, `parsed.txt` (the fields this driver read, extracted BY NAME), `refnames-live.txt`, `after.txt`, and the two ACK documents. Nothing outside that subtree. The file set in the subtree is recorded before and after, so every file in it is attributable.",
+      "preserve": "HEAD and refs/heads/feat/crewing-898-login-texts-20261104 stay at e5132934064c8ccf701b0061570971c2af220403; origin/main stays at f145c601 (the value stage 5 fetched, and the precondition REFUSES if it is anything else - a route measured on a different base is not the route); the worktree stays porcelain-EMPTY in the -uall unit; the remote-ref NAME SET stays identical to the pinned list; `git worktree list` stays at 86 lines; the canonical checkout stays at 0 tracked changes. No product file is opened at all - not even read.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP if: the certificate does not yield PERMIT_CURRENT read as a FIELD; under 30 s remain; the ref-name pin file is absent or its digest differs; HEAD or the branch ref is not at e5132934; the worktree is not clean; origin/main is not the fetched f145c601; the remote ref NAME SET differs from the pin (exit 8, and the message NAMES what was added and what is gone); `git worktree list` is not 86 lines; `guard-verify.json` already exists before the run (its creation must stay attributable to this stage); verify exits 2 or more (exit 10 - an INSTRUMENT failure, which is NOT a verdict); the JSON is absent or empty afterwards; any harness reports a status other than not_run (exit 11 - that would mean this was not the read-only measurement declared); HEAD, the branch ref, origin/main, worktree cleanliness or the worktree count moved afterwards (exit 12); or the canonical checkout's tracked-change count moved (exit 13, after ACK_STOP). A route or file count differing from the prediction is REPORTED as a FINDING and does NOT fail the stage - see below.",
+      "heartbeat": "2026-11-04T16:21:33+00:00",
+      "heartbeat_note": "grant pulse",
+      "proves": "Driver self-hashes and prints its sha256. Gate verdict read as a FIELD. Window read out of the certificate. Three pairwise-distinct ACK ids checked against each other before anything runs. ACK_START inside the script below the window gate; ACK_STOP the stage's LAST action. The guard JSON is parsed BY FIELD NAME into `parsed.txt`, never by substring of the printed summary. `--run-harness` is absent, and that absence is then CHECKED against the result rather than trusted.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on stage 5: the value f145c601 in `origin/main` is what that stage fetched, and this stage refuses to measure against anything else.",
+      "active_neighbors": "PROSE, never a second declared stream. `skipi-dev-tails.timer`, user scope, every 10 min; its service runs `git fetch` over repositories it finds by walking directories. It is now confirmed FIVE times not to touch this gitdir - three readings mine, two the coordinator's, the strongest taken while the service was mid-run. Measured runs: 15:37:25-15:39:38Z, 15:47:25-15:49:44Z, 15:57:25-15:59:53Z, each exit 0, with the shared FETCH_HEAD unmoved at 2026-11-02 10:00:37 +04 throughout. Durations 2m13s, 2m19s, 2m28s. Next firing 16:07:25Z plus 10-minute steps; I will stay out of its interval if the granted window allows. For THIS stage the neighbour matters less than it did for stage 5: a fetch by anyone else would move refs/remotes/origin/main, and the precondition refuses to measure unless it equals the fetched f145c601, so interference cannot silently change the route - it stops the stage instead. Nothing of mine runs outside this stage.",
+      "next_action": "Push, as its own request - and the route verdict this stage produces is an input to that decision, not the decision itself. Then the PR. A conclusion of mine or of the coordinator authorises neither a merge nor a release.",
+      "owner_window": "NOT required. A read-only measurement changes nothing a person can see. The texts and the colour were accepted earlier today and this stage does not reopen them.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "8d4ae8c3ce036e4d82539575758dac2daf3330f1",
+        "ops_porcelain": " M handoffs/TASKCARD-2026-11-04-seafarer-924-remove-local-storage.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/.git/objects",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feat/crewing-898-login-texts-20261104",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/main"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/bin/skipi-guard",
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-route",
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-route/guard-verify.json"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s6-route.sh",
+          "sha256": "03ffa2c1fe94692c8824c36da1ba93413a0e027fdd46f5bbb9dfa5890f23b28c"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt",
+          "sha256": "de27f05ff072f1fd4476e3810186653a254e9c015575312b2f43efcd11d42297"
+        }
+      ],
+      "the_prediction_exists_and_is_NOT_the_answer": "Measured on a fixture carrying the same four paths: route `crewing-635-single-user`, status pass, changed files 4, protected 0, release false, comparison triple-dot, 19 harness commands all `not_run`, exit 0, and 0.04-0.06 s over three runs. That is a PREDICTION about a fixture, not a verdict about the vehicle, and the driver treats it as such: if the real route or file count differs, it prints a FINDING and still closes cleanly, because the stage succeeded in MEASURING. Failing the stage there would be the wrong shape - it would turn an unexpected measurement into a broken instrument, and the push decision does not belong inside this script.",
+      "what_this_measurement_does_NOT_establish": "All 19 harness commands print `not_run`, so this certifies ROUTE, SCOPE, protected-path touches and release-sensitivity - and NOT that the harnesses pass. That caveat has to travel with the number every time it is quoted. Two further limits worth carrying: one of the 19, `shared_host_runtime_isolation`, would run OUTSIDE this worktree entirely (in skipi-plugins/_host-runtime) if it ever ran, which is one reason not to run them here; and the route's allowlist includes src-tauri/Cargo.{toml,lock}, which are release-sensitive and blocked for a non-release task - so a clean route is not permission to touch them.",
+      "the_flag_that_makes_this_stage_not_read_only": "The coordinator's finding, and he was right: `verify --json <path>` WRITES that file and calls `mkdir(parents=True, exist_ok=True)` on its parent (bin/skipi-guard 1149, 816-817, 633-637). Omit the flag and `verify` writes nothing at all - its body, lines 664-821, contains no other write primitive, which I checked by scanning that range rather than trusting the function's reputation. I keep the flag because the machine-readable verdict IS this stage's evidence, and I put the path INSIDE the declared log directory which the driver creates first, so write_json's mkdir is a no-op on an already-declared subtree. Worth recording the contrast he also measured: for `pre-push-ref` `--json` DEFAULTS to /tmp/skipi-guard-pre-push-<home>.json (853), while `verify` has no default - so the same flag name is opt-in on one subcommand and unavoidable on the other.",
+      "why_verify_and_not_pre_push_ref": "`pre_push_ref` does `git worktree add` into the SHARED gitdir (bin/skipi-guard:865) and `shutil.rmtree` (894), and calls verify with run_harness=True, executing harnesses in other repositories. Both primitives appear ONLY in that function; `verify` occupies 664-821 and contains neither - established by the function's line boundaries, not by the absence of the words nearby. And because the commit now exists, no fixture stand-in is needed: earlier in this task the route had to be predicted on a fixture precisely because `pre-push-ref` needs a sha that did not yet exist. The real object can now be measured directly, which is strictly better evidence.",
+      "rc_1_is_a_verdict_not_a_failure": "`verify` returns `0 if result[\"status\"] == \"pass\" else 1` (line 820). So the driver maps 0 to pass, 1 to fail, and 2-or-more to an instrument failure, and keeps them apart. Conflating them cuts both ways: a refused route would be reported as a broken tool, or a broken tool as a clean route. Drilled with a stub guard exiting 2: exit 10, 'an INSTRUMENT failure, not a verdict'.",
+      "the_stage_5_debt_is_PAID_and_drilled_on_the_case_a_count_cannot_see": "Stage 5's precondition pinned the ref COUNT (149), which the coordinator flagged as my own instrument applied inconsistently - I had already replaced a count with a name set twelve lines below, after the count cried FINDING over a merely re-packed ref. Here the precondition pins the SORTED NAME LIST in a declared sidecar (/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt, sha256 de27f05ff072f1fd4476e3810186653a254e9c015575312b2f43efcd11d42297, 149 names, verified sorted and duplicate-free) and compares it with `comm`, reporting ADDED and GONE BY NAME. Drilled on the exact case the count is blind to: a SWAP - one ref deleted and one added, count identical at 3 = 3, set different - and the predicate stopped at exit 8 naming both sides: 'added [refs/remotes/origin/other2] gone [refs/remotes/origin/spare]'. A plain addition drills it too (exit 8, named), but the swap is the one that proves the replacement was worth making. The debt's removal criterion is therefore met in the same driver that declared it.",
+      "a_drill_of_mine_that_was_illegal_and_how_I_caught_it": "My first attempt at the swap drill deleted refs/remotes/origin/HEAD, which made `git rev-parse origin/main` unresolvable - it echoes its input back, so the variable held the literal string 'origin/main' and an EARLIER gate fired (exit 7) before the predicate under test was ever reached. The output looked like a failure of the thing I was testing and was not. Repaired the fixture, added a spare ref so a swap could use a non-load-bearing name, re-pinned, re-established a clean baseline FIRST, and only then mutated. Same lesson as the no-op sed earlier in this task: a drill must be a LEGAL mutation, and a clean baseline immediately before it is what tells a real catch from collateral damage.",
+      "a_process_error_of_mine_with_no_damage_measured_not_assumed": "Reporting it because stray execution near the vehicle must not be hidden. Building this driver I ran a python generator inside a shell heredoc whose delimiter was PYEOF - the same token appears inside the driver text being generated, so the outer heredoc terminated early and a few lines of the driver's body executed as shell. My own note says to build files with python rather than shell heredocs, and I broke it. Measured consequences, not assumed: the file was never created; the stray `> /verify.stdout` redirect failed with Permission denied so the guard never ran; `say` was undefined so those lines were no-ops. Verified afterwards - worktree HEAD e5132934 and porcelain empty, origin/main f145c601, canonical 0 tracked, `worktree list` 86 lines, no stray file at /, no stage-route directory and no guard-verify.json. The driver was then written with a single Write call instead, and the generator pattern retired for this class of file. Unique delimiters where a heredoc is unavoidable.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s6-route.sh",
+        "sha256": "03ffa2c1fe94692c8824c36da1ba93413a0e027fdd46f5bbb9dfa5890f23b28c",
+        "note": "Self-hashing; recomputed at run time and written into both ACK documents. bash -n clean; check_undefined_funcs clean; check-driver-prose.py clean on all three predicates (usage-names-self ok, count-agrees no numeric claim, subject-announced no announcement) - that checker exists because six copied drivers carried inherited text, and this driver is a copy of stage 5's gate block. 261 lines. Exit codes: 1,2,3,4,5,6,7,8,9,10,11,12,13."
+      },
+      "expected_post": {
+        "why": "pinned as exit conditions; the driver EXITS on each difference named in `stop`",
+        "guard_verify_json": "CREATED where nothing existed. Its CONTENT cannot be pinned by digest - it is the verdict being measured, and pinning it would make the stage certify its own answer. Pinned by PROPERTIES instead: absent before, non-empty after, parses as JSON, carries schema_version skipi-guard.v1, and every field this driver reads is read by NAME. Same shape as stage 4, where the new commit's sha was unpredictable and was asserted by properties",
+        "route_and_count": "MEASURED, not predicted; a difference from crewing-635-single-user / 4 files is a FINDING",
+        "harness_statuses": "every one of them `not_run`; any other value exits 11",
+        "head_and_branch_ref": "BOTH unchanged at e5132934064c8ccf701b0061570971c2af220403",
+        "origin_main": "unchanged at f145c6017eaea3804a5429e5aa428b6fb0ece6d9, checked before AND after",
+        "remote_ref_name_set": "identical to the pin; ADDED and GONE both empty",
+        "worktree_list_lines": "86 before and after - the control for the claim that verify creates no worktree",
+        "worktree_porcelain": "EMPTY before and after, -uall unit",
+        "canonical_checkout": "0 tracked changes before and after; exit 13 if that moves",
+        "log_file_set": "recorded before and after, so every file written is attributable"
+      },
+      "measured_duration": {
+        "verify": "0.04-0.06 s over three fixture runs with the same four paths",
+        "rehearsal": "control plus four drills, each under a second",
+        "stage_total_expected": "a few seconds; refuses below 30 s remaining"
+      },
+      "resource_identities_note": "NO network resource this time, and that is a change from stage 5 worth stating: `verify` computes the diff with local git and reads the guard config from disk - it makes no connection, so `ports` is empty rather than carrying an egress token. No database, no port binding, no release artefact. The guard binary and its config are READS; the only writes are inside one declared log subtree.",
+      "surfaces_note": "`tests` is EMPTY deliberately, and it is the one category a reader might expect to be filled: the changed set NAMES tests/crewing635_public_settings_harness.mjs, but `verify` without `--run-harness` compares path STRINGS against allowlist patterns and never opens the file. A name in a diff is not a read. `contracts` is empty for the same reason - nothing in this stage reads them. `ports` empty because there is no network call. Empty means considered, per the schema; absent would mean forgotten."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "grant",
+    "note": "Step 3: only event_id, heartbeat and this subtree differ from the reviewed step 1.",
+    "coordinator_instance_read_at": "2026-11-04T16:21:33+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s6.json",
+    "content_file_sha256": "e928926eaf2ec5468a0b3320e3c320174402a933c921cc19ea284d46d503d06b"
+  }
+}

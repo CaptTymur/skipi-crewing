@@ -1,0 +1,7 @@
+case      : workspace_unreachable
+language  : en
+produced  : step two dropped the connection -> transport_unreachable
+text      : Account accepted, but we didn't reach your Crewing workspace — sign-in did not complete. Check your network and try again.
+          POST /api/app/login mode=unreachable
+          04/Nov/2026 18:12:48 "POST /api/app/login HTTP/1.1" 200 -
+          POST /api/app/crewing/bootstrap mode=unreachable

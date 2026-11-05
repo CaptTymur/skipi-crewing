@@ -1,0 +1,16 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-PREP-vehicle-20261104T072619Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T07:29:32+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-prep-vehicle/after.txt",
+      "sha256": "b0f25ae0caf3f4407f136fbad395289820f28d27b0bbf552a574cd3a5b8c66a0",
+      "content": "canonical_head_BEFORE=0223bbd3148d695b3c226fd70c2c6196acf28334\ncanonical_status_BEFORE=d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796\nworktrees_before=85\nworktrees_after=86\nnew_worktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nexpected_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\ncanonical_head_after=0223bbd3148d695b3c226fd70c2c6196acf28334\ncanonical_head_pinned=0223bbd3148d695b3c226fd70c2c6196acf28334\ncanonical_status_after=d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796\ncanonical_status_pinned=d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796\ntarget_present dist/index.html 2f0bded661d64d6b0d5a914216685df6b041903ad09bfaf62da84a7d361c9930\ntarget_present tests/crewing635_public_settings_harness.mjs 894e3e3c0687c4cdbcd9662e1e249887680b44ac2852d657f0464e98483594f4\ntarget_present tests/fixtures/crewing_public_settings.mjs cd56cfec73c53a044920dc23c126490306fae687794fd6b7dbd68084073c24c4\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "No harness was run, no application launched, no stand built, no push attempted and no guard route re-measured. The worktree's existence says nothing about any test passing."
+}

@@ -1,0 +1,16 @@
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+[2026-11-05][07:17:19][reqwest::blocking::wait][TRACE] (ThreadId(1)) park without timeout
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] (ThreadId(4)) start runtime::block_on
+[2026-11-05][07:17:19][reqwest::blocking::wait][TRACE] wait at most 12s
+[2026-11-05][07:17:19][reqwest::blocking::wait][TRACE] (ThreadId(1)) park timeout 11.999999622s
+[2026-11-05][07:17:19][reqwest::connect][DEBUG] starting new connection: https://assistant.skipi.app/
+[2026-11-05][07:17:19][reqwest::connect][DEBUG] proxy(http://127.0.0.1:19166/) intercepts 'https://assistant.skipi.app/'
+[2026-11-05][07:17:19][reqwest::connect][TRACE] tunneling HTTPS over proxy
+[2026-11-05][07:17:19][reqwest::retry][TRACE] shouldn't retry!
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] closing runtime thread (ThreadId(4))
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] signaled close for runtime thread (ThreadId(4))
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] (ThreadId(4)) Receiver is shutdown
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] (ThreadId(4)) end runtime::block_on
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] (ThreadId(4)) finished
+[2026-11-05][07:17:19][reqwest::blocking::client][TRACE] closed runtime thread (ThreadId(4))

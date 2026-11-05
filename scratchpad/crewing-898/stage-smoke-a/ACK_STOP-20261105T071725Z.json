@@ -1,0 +1,6 @@
+{"stage":"s11-smoke-a","driver_sha256":"84cc396d7a6cabe9326f9b30bba31f9a5fcf7780a574bc7469c3355a13379bdb","frames":12,
+ "prediction_run3":"confirmed","prior_evidence_unchanged":true,"owner_display_touched":false,
+ "limits":["S2/S3/S4 unreachable on an unmodified release build - three measured borders",
+           "contrast_core reproduces the declared 6.40; contrast_mean uses a wider glyph population than smoke-3d's estimator and reads lower - both clear AA 4.5",
+           "no owner acceptance is created by this stage; frames are a condition of the show, not a substitute for it"],
+ "stopped_at":"2026-11-05T07:17:25Z"}

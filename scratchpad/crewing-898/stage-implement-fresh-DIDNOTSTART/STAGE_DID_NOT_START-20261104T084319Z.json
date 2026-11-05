@@ -1,0 +1,37 @@
+{
+  "document": "STAGE_DID_NOT_START",
+  "stage_did_not_start_event_id": "crewing-898-IMPLEMENT-fresh-DIDNOTSTART-20261104T084319Z",
+  "writer": "crewing-writer@skipi-crewing-17",
+  "stream_id": "crewing/898-client-slice",
+  "lease_id": "ab7629ecf86047b9a30bf5f63b55f141",
+  "observed_at": "2026-11-04T08:47:34+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "evidence": [
+    {
+      "vacuity_named": "BOTH booleans above are TRUE VACUOUSLY, and that is the whole point of this document: no operation of the stage is running because none ever began. The driver exited at a PRECONDITION gate, before ACK_START and before any write. There was no queue to cancel.",
+      "exit_code": 7,
+      "refusal_line_verbatim": "2026-11-04T08:44:18Z STOP: worktree is not clean (2 lines) before the write",
+      "driver_sha256": "40f1e73ac2aefd23780964aaecb435d3d08ca7413924751a71df3dd6fff72975",
+      "gates_that_passed_before_it": [
+        "driver self-hash printed",
+        "check --certificate -> PERMIT_CURRENT",
+        "window from the certificate: 240 s remaining against a 30 s threshold"
+      ],
+      "proof_nothing_started": {
+        "claim": "No ACK_START exists, so the stage never began - proved by ABSENCE of the log directory, not by my word.",
+        "stage_log_dir": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-fresh",
+        "exists": false
+      },
+      "worktree_still_at_the_declared_PRE_state": {
+        "porcelain_uall_verbatim": " M dist/index.html\n M tests/crewing635_public_settings_harness.mjs\n",
+        "dist_sha256": "9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a",
+        "dist_sha256_pinned_PRE": "9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a",
+        "harness_sha256": "bcab85b6fbb859dbf009c8042978380bd5c9a082327fa4bfce02f63ed10dbc0a",
+        "harness_sha256_pinned_PRE": "bcab85b6fbb859dbf009c8042978380bd5c9a082327fa4bfce02f63ed10dbc0a"
+      },
+      "defect": "MINE: the precondition was carried over from the F12 driver, where a CLEAN worktree was correct because nothing had been applied yet. Here the two modified files ARE the declared PRE state - the F12 POST this stage builds on - so the predicate tested the wrong property. The fix requires a step-1 v3 with a re-pinned driver digest; running other bytes under a certificate issued for 40f1e73a would be the superseded-digest defect I reported on F12."
+    }
+  ],
+  "what_this_document_does_NOT_claim": "It does not claim the stage ran, partially ran, or was interrupted. It claims the opposite: terminality by NON-INITIATION. No product byte moved, no lifecycle start document exists, and the vehicle is byte-identical to its state before the certificate was issued."
+}

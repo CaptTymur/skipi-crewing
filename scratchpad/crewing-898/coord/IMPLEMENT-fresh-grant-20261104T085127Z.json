@@ -1,0 +1,177 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-IMPLEMENT-fresh-20261104T085127Z",
+      "stage": "IMPLEMENT",
+      "outcome": "Sub-stage 2 of No.898 in the vehicle: the Fresh codes, plus Н1 and Н2. THE THREE FRESH EDITS LAND IN ONE APPLICATION BY NECESSITY, not by preference - every intermediate state is red by construction, as the coordinator measured: removing the fresh_unavailable texts while any key still targets it makes `dangling` red, and repointing fresh_namespace_unavailable without giving the new target texts makes `dangling` red. One atomic write pair means no intermediate state exists on disk, and the POST pins are the proof of that rather than a claim about ordering. TERMINOLOGY, corrected by him and accepted: fresh_namespace_unavailable already HAS a map key - what is new is its own TARGET with its own two texts, so it is REPOINTED, not added. Edits: (1) the key fresh_namespace_unavailable is repointed from the shared target fresh_unavailable to its own new target workspace_not_created, which gains RU and EN texts; (2) the key fresh_context_unavailable is REMOVED from the map and given NO text - dead data, unreachable in a product build by cfg and confirmed absent from the emitted IR by audit 0d8c7ebb; (3) the target fresh_unavailable is deleted together with both its language texts and is NOT reused, because a reused key name outlives its meaning; (4) the :438 literal-pairing assert is rewritten to follow the KEY, with TWO asserts on the DELETION itself; (5) Н1 - 'exists in BOTH dictionaries' is measured by SLICING the two dictionary regions instead of counting >=2 occurrences; (6) Н2 - the >=18 threshold is removed. DRY-RUN: baseline 141/0, after 151 passed / 0 failed / 0 setup_errors.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+      "status_sha256": "7b4f1037b551624be28cb4656b594e16f52c6eff09a5898a97ce348a2608c489",
+      "status_sha256_uall": "7b4f1037b551624be28cb4656b594e16f52c6eff09a5898a97ce348a2608c489",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 2 line(s):\n M dist/index.html\n M tests/crewing635_public_settings_harness.mjs",
+      "new": "dist: one map repoint, one map entry removed, two new texts for workspace_not_created, two texts for fresh_unavailable deleted. harness: the Fresh assert follows the key and gains two deletion asserts plus an instrument control; the both-dictionaries check becomes a region slice with four controls of its own; the threshold becomes two parse controls. No Rust byte changes.",
+      "preserve": "The vehicle stays on feat/crewing-898-login-texts-20261104 at base f145c601; exactly the two declared files change and the driver EXITS if either POST differs from the pinned value. src-tauri/ READ ONLY. Cargo.toml and Cargo.lock untouched. The F12 work already in the tree is not disturbed - its PRE digests are this stage's starting pins. The canonical checkout's TRACKED content is preserved, verifiable unit `git status --porcelain=v1 --untracked-files=no`, counted before AND after in the same run; I do write inside its working directory (logs.writes) and the normal-mode fingerprint structurally cannot see that, so the `-uno` unit is the one that carries the claim. OWNER_COPY_PENDING is NOT reintroduced. No worktree removed or pruned; no commit, no push, no tag; no git byte written at all.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP and report instead of acting if: either declared file is not at its pinned PRE digest; any of the six anchors matches other than exactly once; the harness does not reach 151 passed / 0 failed / 0 setup_errors; or live main moves off f145c601. No pre-push-ref, no push, no tags, no workflow_dispatch (standing STOP, RISKS No.293b). No commit in this stage. AND A STOPPING RULE I NOW OWE THE WHOLE EXPERIMENT: while any stream holds a window, killing by pattern is forbidden - I stop by RECORDED PID. If a pattern is unavoidable it must be needle-grade, a token that cannot occur in another writer's argv, and after any such kill I verify WHAT SURVIVED rather than what died. This stage starts no background process, so no kill is expected at all.",
+      "heartbeat": "2026-11-04T08:51:27+00:00",
+      "heartbeat_note": "grant pulse",
+      "proves": "The driver hashes ITSELF first, prints driver_sha256, and carries it into both lifecycle documents. THREE DISTINCT IDS, each its own exit: ACK_START now has its OWN id as well, so the journal can tell the request event from the act of starting - the coordinator's point, adopted. Evidence: PRE and POST digests against expected_post; the vehicle's changed-file list; the canonical checkout's tracked-line count before and after; the harness log. The post-patch count is a MEASUREMENT: the driver runs the harness, parses the summary, and requires passed==151 AND failed==0 AND setup_errors==0, exiting 12 on anything else AND on a missing summary line. THREE DRILLS ALREADY PERFORMED on copies: restoring the dead map entry reddens the first deletion assert by name; restoring the retired key reddens the second; and the decisive one for Н1 - moving storage_error's second occurrence into the SAME dictionary - fails the new assert by name (en=2 ru=0) while the OLD predicate counts 2 and `>=2` PASSES on that exact state. The fix is therefore demonstrated to catch what the old form could not see. AND AN HONEST DEFECT IN MY OWN DRILL METHOD, reported because it bears on how the POST was obtained: my restoration after drill 2 did NOT return the bytes - I re-inserted a deleted line at a different offset, so the file came back semantically equal and byte-wise different (75ac1075 against f9b0758c) WHILE THE SUITE STILL READ 151/0. A green run is not proof of restoration; only the digest is. I did not repair the drifted mirror and read its numbers. The POST pinned here comes from TWO fresh clean applications that agree with each other and with the first dry run, so the patch is deterministic and only my hand-restoration drifted. This stage proves NOTHING about the other 18 harnesses of the route, nothing about the route, and nothing about the stand.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md cited by FIELD NAME plus the digest read: 8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103 at ops 9b0b4baf3299a8c20a0bb43ab184d4519670e778, verified by three arms, ops tree clean. Builds on F12, STAGE_COMPLETE at 08:26:41Z, whose POST digests are this stage's PRE pins. Decision (1707) verified at ops HEAD. Expects nothing from another stream.",
+      "active_neighbors": "PROSE, not a second declared stream. Neighbour: the server writer on server/903, a different store, reported by the coordinator to be outside any window on a per-file candidate run of roughly fifty minutes - so our windows likely do not even meet. This stage writes no git byte, so the shared gitdir that was the vehicle stage's one collision point is absent here. Lease counts are a property of the moment; I quote none.",
+      "next_action": "Sub-stage 3: No.894, the two steps after login (dist only). Then the decisive experiment for migration_required, held behind its own decision.",
+      "owner_window": "Two user-visible string pairs now exist for the owner's live acceptance (CANON-ui-v1, No.930): storage_cleanup_unconfirmed from F12 and workspace_not_created from this stage, RU and EN each. Neither promises that nothing was changed, because neither code can support that: private_store reports a cleanup it could not confirm, and native_fresh carries phase/effects for a partly-created namespace. The stand will be declared through a CHANGE before it is used.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "9b0b4baf3299a8c20a0bb43ab184d4519670e778",
+        "ops_porcelain": " M BACKLOG.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+          ]
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests"
+          ]
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+            "path:/home/linux/Developer/skipi-guard/bin/skipi-guard"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+            "path:/home/linux/Developer/skipi-ops/BACKLOG.md",
+            "path:/home/linux/Developer/skipi-ops/DECISIONS.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-fresh"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+          "sha256": "bcab85b6fbb859dbf009c8042978380bd5c9a082327fa4bfce02f63ed10dbc0a"
+        }
+      ],
+      "expected_post": {
+        "why": "Pinned as an exit condition, not described: the driver EXITS 11 if either POST differs. Both values come from TWO independent clean applications of the same patch script, which agree.",
+        "files": [
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+            "sha256_pre": "9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a",
+            "sha256_post": "f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+            "sha256_pre": "bcab85b6fbb859dbf009c8042978380bd5c9a082327fa4bfce02f63ed10dbc0a",
+            "sha256_post": "88a8f62fd735b178cccbee7f72a69b9835d6c0d3a57bb799a29a832beebba93a"
+          }
+        ]
+      },
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s3-fresh.sh",
+        "sha256": "ab50ce7881cdd066ebb739f8f9b87cf9bd9bcbfcda63b6d35e198498532ad892",
+        "patch_script": {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s3-fresh.py",
+          "sha256": "62cd49c93d17575b0a8483391881e3f4aa31db97e98b9067fbe59ec3b30c1606",
+          "note": "Replacement blocks in coord/s3-parts/, byte-versioned copies in coord/f12-parts-versions/ style alongside."
+        },
+        "gate_arms_exercised": "Predicates in ISOLATION, never by invoking the driver with a forged permit: the summary parser on four logs (151/0/0 -> OK, 141/0/0 -> MISMATCH, 151 with 2 failed -> MISMATCH, no summary -> NOSUMMARY which exits 12); and the THREE-ID predicates on six cases. R1 FIXED: the pair ACK_EVENT != ACK_STOP was MISSING - I had it on F12 and lost it when adding the third id, which is a derived-document regression in my own refactor. Three ids need three pairwise predicates; all three are now present with their own exits, and the restored pair matters because a replay of `complete` under the request's id would return the recorded outcome instead of a fresh one. Exercised on six cases (start absent, request absent, stop absent, start==request, start==stop, all distinct) - my first run of that test used a mis-specified case that passed for the wrong reason, so I re-specified it rather than let a bad case stand as validation.",
+        "precondition_fixed_after_a_refusal": "The previous driver (40f1e73a) REFUSED with exit 7 on the live certificate: it required the vehicle to be CLEAN, a predicate carried over from the F12 driver where zero modified files was correct because nothing had been applied yet. Here the two modified files ARE the declared PRE state - the F12 POST this stage builds on - so the predicate tested the wrong property. NOTHING RAN: the gate sits before ACK_START, no log directory was created, and the vehicle stayed byte-identical to both PRE pins. The replacement compares the WHOLE porcelain output against the exactly-expected two lines rather than counting them, so it also keeps what the zero-check was really guarding: a stray .tmp-* from an interrupted write does not match and refuses. Exercised on three states: the live vehicle passes, a stray .tmp-* refuses, an empty (pre-F12) tree refuses. THE CONTRADICTION WAS INSIDE THE BUNDLE I SUBMITTED: this same input declares status_sha256 over a TWO-LINE porcelain and an `untracked` field that says '2 line(s)' and names both files, while the driver demanded zero. Two halves of one document disagreeing - which is why the coordinator calls his miss a review gap and I call mine a predicate copied without re-reading what it was about."
+      },
+      "measured_duration": {
+        "harness_run": "0.54 / 0.53 / 0.53 s on the patched mirror and 0.53 / 0.53 s against the VEHICLE's own dist/ and src-tauri/ through symlinks, read-only - the final 151-assert harness, the one this stage installs. Unchanged from F12 because the three walks were already there and this sub-stage only adds assert count. Comparability proven, not asserted: the Rust sources dominate the cost and are byte-identical in both, sha256 310e0556a606a662b8923d0761a74e5dc033a7ada184be23253e57ee03cef239 with the ORDER NAMED this time (LC_ALL=C sort over *.rs), so a third reader can reproduce it - the coordinator's point that my previous digest was valid as a comparison but not as a pin.",
+        "patch_apply": "under 1 s - three text substitutions in the harness and three in dist.",
+        "stage_total_expected": "a few seconds; the driver refuses below a 30 s remainder, ~55x the measured need."
+      },
+      "resource_identities_note": "Empty by fact: no network, no database, no port, no host resource, and no git byte - no commit, branch, ref or worktree. The shared gitdir does not appear in this stage at all.",
+      "negative_control_unaffected": "Stated in words at the coordinator's request, and he then measured it himself: removing the fresh_context_unavailable MAP entry does NOT weaken the F12 negative control that asserts the same code is absent from the POPULATION. They are about different objects - the population is built by walking the Rust sources with cfg(test) stripped, while `mapped` is read from dist. The control continues to discriminate exactly what it did: a code reachable only under cfg(test) stays out of the population by compiler semantics rather than by an exemption list. The code itself remains in the sources unchanged, so the control keeps a real subject.",
+      "owed_next_touch_of_the_harness": "TWO limits the coordinator named and deliberately did not block, scheduled here so they are an obligation and not an intention. Both are fixed at the next edit of the harness, which is sub-stage 3 (No.894). (1) The brace matcher in the H1 block is QUOTE-BLIND: it counts braces with an inline IIFE that does not skip string literals. He measured the live dist - 479 string values in the region, 17 of them containing braces ({name}, {n}), ALL balanced, which is exactly why the counter lands correctly today. The drift is ASYMMETRIC and that is why it matters: a stray `}` in a future text closes the region early and late keys read inRu=0, which is LOUD; a stray `{` extends the region past the dictionary while keys still appear once and length>1000 still passes, which can pass SILENTLY with a wrong region. The cure is already in the same file - `balancedEnd(s, i, '{', '}', '\"')` takes the quote character - so the IIFE is replaced by that helper. (2) The H2 parse controls sit at 0%, 41% and 56% of the map block and therefore do not bound a TAIL truncation; they are sufficient only WHILE THE MAP IS FLAT - he verified it contains no nested `};` and that the capture ends on the map's own closing brace - and they stop being sufficient the day a nested object appears. That condition goes into the code as a line of comment, not into anyone's memory.",
+      "status_digest_unit_corrected": "The coordinator asked for the exact command behind status_sha256_uall rather than calling it a discrepancy, and he was right to ask: it WAS a different unit. My previous value (c285774528c84c7f368c0e182c2ad0a0942e941ad6fbe938840df07d1817eb45) was sha256(\"\\n\".join(output.splitlines())) - git's TRAILING NEWLINE dropped - while its neighbour status_sha256 is over raw bytes. Measured: raw bytes give 7b4f1037b551624be28cb4656b594e16f52c6eff09a5898a97ce348a2608c489, exactly his number, and the difference is the trailing newline and nothing else. So the value was right for its unit and the NAME implied its neighbour's unit. Both fields are now over raw bytes, and the bundle carries status_sha256_uall_command naming the producing command verbatim. Same family as the .strip() defect in my own notes: a helper written fresh loses a correction the fixed one already had - and his inspector does not read this field at all, so only naming the unit could have caught it."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "grant",
+    "note": "Step 3: only event_id, heartbeat and this subtree differ from the reviewed step 1.",
+    "coordinator_instance_read_at": "2026-11-04T08:51:27+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "coord/content-s3-fresh.json"
+  }
+}

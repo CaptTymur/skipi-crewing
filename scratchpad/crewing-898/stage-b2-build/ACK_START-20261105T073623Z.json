@@ -1,0 +1,4 @@
+{"stage":"s12-b2-build","driver_sha256":"9e8364eeb51801396765749a215db8652285bf167cda798b77ae96b5f39447fe","commit":"e5132934064c8ccf701b0061570971c2af220403",
+ "dev_origin_baked":"http://127.0.0.1:19168","profile":"debug","window_left_s":99,
+ "release_binary_must_not_move":"1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73",
+ "started_at":"2026-11-05T07:36:23Z"}

@@ -1,0 +1,58 @@
+САЙТЫ БЕЗ КОРРЕКТНОЙ ЗАЩИТЫ: объемлющая функция и происхождение данных
+
+--- dist/index.html:2671  вызов cdToggle(id)  внутри функции nationalitySelectHtml() @:2650 ---
+    +   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
+
+--- dist/index.html:3098  вызов setFeedbackRating(i)  внутри функции feedbackStarsHtml() @:3095 ---
+    h += '<button type="button" class="'+(i<=appFeedbackRating?'on':'')+'" onclick="setFeedbackRating('+i+')" aria-label="'+i+'">★</button>';
+
+--- dist/index.html:3904  вызов removeTeamChatAttachment(i)  внутри функции renderTeamChatAttachmentPreview() @:3884 ---
+    + '<button type="button" onclick="removeTeamChatAttachment('+i+')" title="Remove">&times;</button>'
+
+--- dist/index.html:4026  вызов _onTeamChatMsgContextMenu(msgIdAttr)  внутри функции renderTeamChatStream() @:3992 ---
+    html += '<div class="'+cls+'" oncontextmenu="_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')">'
+
+--- dist/index.html:5070  вызов profileRemoveExtra(i)  внутри функции renderProfileExtras() @:5056 ---
+    + (readonly?'':'<div style="display:flex;justify-content:flex-end;"><button class="ghost" onclick="profileRemoveExtra('+i+')" style="padding:5px 10px;font-size:12px;">Remove</button></div>')
+
+--- dist/index.html:7677  вызов pilotLoadQueue(q.offset)  внутри функции pilotQueueHtml() @:7663 ---
+    return rows+'<div class="pilot-pagination" data-qa="pilot-pagination"><button class="ghost" onclick="pilotLoadQueue('+Math.max(0,q.offset-q.limit)+')" '+(q.offset<=0?'disabled':'')+'>'+escapeHtml(pilotT('previous'))+'</b
+
+--- dist/index.html:8801  вызов pilotShortlistWithdraw(jsPair)  внутри функции listHtml() @:8758 ---
+    ? '<button class="ghost" data-qa="pilot-withdraw" onclick="pilotShortlistWithdraw('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_withdraw'))+'</button><span class="pilot-note">'+escapeHtml(cardT
+
+--- dist/index.html:8804  вызов pilotShortlistConfirm(jsPair)  внутри функции listHtml() @:8758 ---
+    : '<button data-qa="pilot-confirm" onclick="pilotShortlistConfirm('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_add'))+'</button>');
+
+--- dist/index.html:9138  вызов pilotAttachmentDownload(ordinal)  внутри функции pilotCardAttachmentsHtml() @:9120 ---
+    ? '<button class="ghost" data-qa="pilot-attachment-download" data-ordinal="'+escapeAttr(key)+'" onclick="pilotAttachmentDownload('+String(ordinal)+')"'+(((saved && saved.loading) || web) ? ' disabled' : '')+'>'+escapeHtm
+
+--- dist/index.html:9139  вызов pilotAttachmentOpenSaved(ordinal)  внутри функции pilotCardAttachmentsHtml() @:9120 ---
+    + ((saved && saved.path) ? '<button class="ghost" data-qa="pilot-attachment-open-saved" onclick="pilotAttachmentOpenSaved('+String(ordinal)+')">'+escapeHtml(cardT('attach_open_saved'))+'</button>' : '')
+
+--- dist/index.html:11330  вызов setSeafarerFilter(key)  внутри функции seafarerFilterSelect() @:11329 ---
+    var html = '<select class="'+(extraClass || '')+'" onchange="setSeafarerFilter(\''+key+'\',this.value)">';
+
+--- dist/index.html:14966  вызов openSettings(id)  внутри функции renderSettingsModal() @:14958 ---
+    + '" onclick="openSettings(\''+id+'\')">'
+
+--- dist/index.html:15127  вызов openSettings(id)  внутри функции renderSettingsFiveShell() @:15118 ---
+    return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+
+--- dist/index.html:16009  вызов mobileShow(t.view)  внутри функции appsMobileModuleTilesHtml() @:15997 ---
+    + '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+t.view+'\')">'
+
+--- dist/index.html:16063  вызов appsDisable(id)  внутри функции appsDetailHtml() @:16055 ---
+    else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+id+'\')">Open</button><button class="apps-btn secondary" onclick="appsDisable(\''+id+'\')">Disable</button>';
+
+--- dist/index.html:16350  вызов mobileShow(view)  внутри функции mobileNavButton() @:16348 ---
+    return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><span class="ico">'+icon+'</span><span class="mobile-nav-label">'+escapeHt
+
+--- dist/index.html:16629  вызов mobileOpenSettings(it.id)  внутри функции mobileRenderSettingsList() @:16621 ---
+    html += '<button class="ios-row" onclick="mobileOpenSettings(\''+it.id+'\')">'
+
+--- dist/index.html:15952  вызов appsOpen(p.id)  внутри функции appsLaunchTileHtml() @:15950 ---
+    + '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+escapeHtml(p.id)+'\')">'
+
+--- dist/index.html:16041  вызов appsOpenDetail(p.id)  внутри функции appsManageHtml() @:16038 ---
+    return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+escapeHtml(p.id)+'\')">'

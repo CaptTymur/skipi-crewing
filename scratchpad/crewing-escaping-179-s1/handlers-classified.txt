@@ -1,0 +1,167 @@
+КЛАССИФИКАЦИЯ inline-обработчиков по ФАКТИЧЕСКОЙ защите (единица счёта: САЙТЫ = совпадения on*=, не строки)
+
+=== RAW: 18 сайтов ===
+  2671	onclick	cdToggle(\''+id+'\')
+  3098	onclick	setFeedbackRating('+i+')
+  3904	onclick	removeTeamChatAttachment('+i+')
+  4026	oncontextmenu	_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')
+  5070	onclick	profileRemoveExtra('+i+')
+  7677	onclick	pilotLoadQueue('+Math.max(0,q.offset-q.limit)+')
+  7677	onclick	pilotLoadQueue('+(q.offset+q.limit)+')
+  8801	onclick	pilotShortlistWithdraw('+jsPair+')
+  8804	onclick	pilotShortlistConfirm('+jsPair+')
+  9138	onclick	pilotAttachmentDownload('+String(ordinal)+')
+  9139	onclick	pilotAttachmentOpenSaved('+String(ordinal)+')
+  11330	onchange	setSeafarerFilter(\''+key+'\',this.value)
+  14966	onclick	openSettings(\''+id+'\')
+  15127	onclick	openSettings(\''+id+'\')
+  16009	onclick	mobileShow(\''+t.view+'\')
+  16063	onclick	appsDisable(\''+id+'\')
+  16350	onclick	mobileShow(\''+view+'\')
+  16629	onclick	mobileOpenSettings(\''+it.id+'\')
+
+=== escapeHtml: 2 сайтов ===
+  15952	onclick	appsOpen(\''+escapeHtml(p.id)+'\')
+  16041	onclick	appsOpenDetail(\''+escapeHtml(p.id)+'\')
+
+=== escapeAttr: 70 сайтов ===
+  2660	onchange	cdUpdateLabel(\''+escapeAttr(id)+'\')
+  3543	onclick	removeTeamMember(\''+escapeAttr(m.user_id)+'\')
+  3606	onclick	setTeamChatTarget(\''+escapeAttr(target)+'\')
+  4558	onclick	openThread(\''+escapeAttr(t.application_id)+'\')
+  4764	onclick	openVacancyById(\''+escapeAttr(v.id)+'\')
+  4867	onclick	openComplianceProfileById(\''+escapeAttr(p.id)+'\')
+  4941	onclick	restoreComplianceProfile(\''+escapeAttr(p.id)+'\')
+  4942	onclick	archiveComplianceProfile(\''+escapeAttr(p.id)+'\')
+  4984	onclick	publishComplianceProfile(\''+escapeAttr(p.id)+'\','+(published ? 'false' : 'true')+')
+  5151	onclick	restoreComplianceProfile(\''+escapeAttr(profile.id)+'\')
+  5152	onclick	saveComplianceProfile('+(editing?'\''+escapeAttr(profile.id)+'\'':'null')+')
+  7194	onclick	event.stopPropagation();track1CandidateAction(\''+escapeAttr(a.id)+'\', \'cf-demo-mail-cv-oleksandr\')
+  7348	onclick	openCrewFlowSignal(\''+escapeAttr(row.id)+'\')
+  7432	onclick	crewFlowAddSignal(\''+escapeAttr(row.id)+'\')
+  7433	onclick	crewFlowIgnoreSignal(\''+escapeAttr(row.id)+'\')
+  11008	onclick	openMailingRequestById(\''+escapeAttr(r.id)+'\')
+  11047	onclick	closeMailingRequest(\''+escapeAttr(r.id)+'\')
+  11048	onclick	reopenMailingRequest(\''+escapeAttr(r.id)+'\')
+  11049	onclick	deleteMailingRequest(\''+escapeAttr(r.id)+'\')
+  11402	onclick	openSeafarerById(\''+escapeAttr(s.id)+'\')
+  11467	onclick	pingSavedSeafarer(\''+escapeAttr(s.id)+'\')
+  11468	onclick	refreshSavedSeafarerReplies(\''+escapeAttr(s.id)+'\')
+  11469	onclick	openSavedSeafarerFolder(\''+escapeAttr(s.id)+'\')
+  11478	onclick	saveSeafarerMeta(\''+escapeAttr(s.id)+'\')
+  11691	onclick	openDocumentById(\''+escapeAttr(d.id)+'\')
+  11782	onclick	openDoc(\''+escapeAttr(d.id)+'\')
+  11783	onclick	attachFile(\''+escapeAttr(d.id)+'\')
+  11789	onclick	attachFile(\''+escapeAttr(d.id)+'\')
+  11796	onclick	useDemoSample(\''+escapeAttr(d.template_id)+'\')
+  11803	onclick	deleteDoc(\''+escapeAttr(d.id)+'\')
+  12272	onclick	closeVacancy(\''+escapeAttr(v.id)+'\')
+  12273	onclick	reopenVacancy(\''+escapeAttr(v.id)+'\')
+  12274	onclick	editVacancy(\''+escapeAttr(v.id)+'\')
+  12275	onclick	copyVacancyAsNew(\''+escapeAttr(v.id)+'\')
+  12276	onclick	deleteVacancy(\''+escapeAttr(v.id)+'\')
+  12558	onclick	toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')
+  12632	onclick	toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||'')+'\')
+  12831	onclick	event.stopPropagation();saveRankedCandidate(\''+escapeAttr(applicationId)+'\')
+  12832	onclick	event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(applicationId)+'\')
+  12844	onclick	event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')
+  12849	onclick	event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')
+  12991	onclick	event.stopPropagation();openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAtt
+  13151	onkeydown	if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seaf
+  13152	onclick	sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')
+  13157	onclick	closeApplicationChat(\''+escapeAttr(applicationId)+'\')
+  13158	onclick	requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')
+  13309	onclick	openDocumentsBundle(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'\',\''+escapeAttr(fname)+'
+  13310	onclick	openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_type:\
+  13350	onclick	openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')
+  13351	onclick	openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')
+  13369	onclick	openDocumentsBundle(\''+m.application_id+'\',\''+bundle.id+'\',\''+bCounterpart+'\',\''+escapeAttr(bundle.filename||'documents.zip')+'\')
+  13394	onclick	openAttachmentInApp(\''+escapeAttr(m.application_id)+'\',{id:\''+escapeAttr(info.id)+'\',original_filename:\''+escapeAttr(fname)+'\',mime_ty
+  13807	onclick	toggleBundleCategory(\''+escapeAttr(cat)+'\')
+  13816	onclick	selectBundleDoc(\''+escapeAttr(d.id)+'\')
+  13898	onclick	invoke(\'open_path_with_default\',{path:\''+escapeAttr(openPath)+'\'})
+  13901	onclick	enableBundlePreview(\''+escapeAttr(d.id)+'\')
+  15020	onclick	switchToVault(\''+escapeAttr(pp)+'\')
+  15021	onclick	forgetVault(\''+escapeAttr(pp)+'\')
+  15232	onclick	switchToVault(\''+escapeAttr(pp)+'\')
+  15233	onclick	forgetVault(\''+escapeAttr(pp)+'\')
+
+=== escapeJsString: 7 сайтов ===
+  3942	onclick	openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')
+  7639	onclick	pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeJsString(a.id)+'\')
+  7640	onclick	pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeJsString(a.id)+'\')
+  7641	onclick	pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeJsString(a.id)+'\')
+  7642	onclick	pilotAliasAction(\'crewing_intake_alias_revoke\',\''+escapeJsString(a.id)+'\')
+  7672	onclick	pilotOpenCard(\''+escapeJsString(item.intake_id)+'\')
+  8624	onclick	pilotFactStartCorrection(\''+escapeJsString(String(item.field))+'\')
+
+=== escapeAttr(escapeJsString): 3 сайтов ===
+  11500	onclick	invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(d.file_path))+'\'})
+  17781	onclick	invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(d.file_path))+'\'})
+  17820	onclick	invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(s.docs_dir))+'\'})
+
+=== Number/parse: 0 сайтов ===
+
+=== const: 331 сайтов ===
+  6	ontent	width=device-width,initial-scale=1
+  983	onclick	showView('crew_flow')
+  986	onclick	showView('compliance')
+  990	onclick	showView('seafarers')
+  996	onclick	openSettings('vaults')
+  997	onclick	openSettings()
+  1009	onclick	if(event.target===this)closeSettings()
+  1047	once	
+  1128	ontent	' + csp + '
+  1132	once	' + nonce + '
+  1667	onclick	exitDemoMode()
+  1758	onclick	closeConnectDialog()
+  1762	onclick	connectShowTab(\'token\')
+  1763	onclick	connectShowTab(\'qr\')
+  1771	onclick	connectClearToken()
+  1772	onclick	connectSubmitToken()
+  1782	onclick	connectShowTab(\'token\')
+  1818	ontent	
+  1838	ontent	Подключаю…
+  1870	ontent	Подключить
+  2446	onchange	setUiLang(this.value)
+  2479	onOMY_CACHE_KEY	skipi-taxonomy
+  2730	ontent	Select nationalities…
+  3071	ontext	manual
+  3114	onclick	if(event.target===this)postponeFeedback()
+  3116	onclick	postponeFeedback()
+  3121	onclick	postponeFeedback()
+  3121	onclick	submitFeedback()
+  3144	ontent	...
+  3353	onclick	openTeamOnboarding(\'start\')
+  3354	onclick	teamOnboardingOpenConnection()
+  3359	onclick	copyMyTeamUserId()
+  3366	onclick	openTeamOnboarding(\'start\')
+  3367	onclick	teamOnboardingOpenConnection()
+  3368	onclick	teamOnboardingOpenAccess()
+  3372	onclick	openTeamOnboarding(\'owner\')
+  3376	onclick	openTeamOnboarding(\'member\')
+  3382	onclick	closeTeamOnboarding(true)
+  3386	onclick	if(event.target===this)closeTeamOnboarding(false)
+  3390	onclick	closeTeamOnboarding(false)
+  3433	onclick	refreshTeamMembers(true)
+  3437	onclick	var el=document.getElementById(\'team-access-section\');if(el)el.scrollIntoView({block:\'s
+  3438	onclick	openTeamOnboarding(\'start\')
+  3439	onclick	openSettings(\'connection\')
+  3559	onclick	copyMyTeamUserId()
+  3562	onclick	claimOwnerAccess()
+  3569	onclick	addTeamMember()
+  3575	onclick	refreshTeamMembers(true)
+  3581	onclick	copyIssuedTeamToken()
+  3582	onclick	state.lastTeamMemberToken=null;renderTeamMain();
+  3600	onclick	setTeamChatTarget(\'ai\')
+  3602	onclick	setTeamChatTarget(\'team\')
+  3610	onclick	setTeamChatTarget(\'team\')
+  3637	onclick	openTeamOnboarding(\'start\')
+  3637	onclick	openSettings(\'connection\')
+  3642	oninput	state.settings=state.settings||{};state.settings.user_display_name=this.value;renderTeamCh
+  3642	onblur	saveTeamChatNameInline()
+  3645	onscroll	handleTeamChatScroll()
+  3646	onclick	scrollTeamChatToBottom(true)
+  3654	onclick	cancelTeamChatReply()
+
+ВСЕГО сайтов on*=: 431

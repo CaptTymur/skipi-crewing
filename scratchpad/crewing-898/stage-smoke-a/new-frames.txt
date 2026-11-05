@@ -1,0 +1,12 @@
+03ed3a21b5074dcfca9e9c9e002641f19c9b4c1ad56b1a70dec417a09a6eb9a1  ./ru-closed-app.log
+0bba7203fef4f38185845c974c47b449c4f8fb8c7865ebce3220b9bf93ce4b94  ./en-closed-app.log
+3f000f054ab56668a5adc56462ea01d511dc95d32f40c130deef081ed5645abf  ./ru-closed-1-entry.png
+57160a5671826974ac3bf50d19d0e7767472540227aaf7bf9d673a8952d0ad24  ./ru-closed-3-refusal.png
+a3fbeff2883891bd2b47c8a8ddc46e0c716628454c554dcdd0ee8a61e776600d  ./ru-closed-2-form.png
+a46d10324c09880aaf054664bcb7107c98be980e627e73e61dd6ae16d88cf193  ./en-503-app.log
+ab2ef7847efac28cc93e385eb787c9b5aafc4f095008ff65dd6b683d8e60b41f  ./en-503-1-entry.png
+ab2ef7847efac28cc93e385eb787c9b5aafc4f095008ff65dd6b683d8e60b41f  ./en-closed-1-entry.png
+c7ee39b34de4aa2d44bea263e308366e2ffa55195386c858d9a5d699663fa4d9  ./en-503-2-form.png
+c7ee39b34de4aa2d44bea263e308366e2ffa55195386c858d9a5d699663fa4d9  ./en-closed-2-form.png
+f7cf0e23fc7d0da8183ce67a1b9ae534cea58ef484a86eab57c6737d3fa6321c  ./en-503-3-refusal.png
+f7cf0e23fc7d0da8183ce67a1b9ae534cea58ef484a86eab57c6737d3fa6321c  ./en-closed-3-refusal.png

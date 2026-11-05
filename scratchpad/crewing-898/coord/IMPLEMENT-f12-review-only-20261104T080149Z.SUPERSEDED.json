@@ -1,0 +1,167 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-IMPLEMENT-f12-20261104T080149Z",
+      "stage": "IMPLEMENT",
+      "outcome": "F12 in the No.898 worktree: replace the login-refusal assert's population with one defined by REACHABILITY to loginRefusalText, give the single reachable textless code its text, and replace the hand-written key list with a derived one. Three product effects: (1) dist/index.html gains the map entry settings_cleanup_unconfirmed -> storage_cleanup_unconfirmed plus that key's RU and EN texts; (2) the harness's hand-picked LOGIN_PATH module list and narrow Err(...) predicate are replaced by the reachability walk, which sees codes assembled as a STRUCT FIELD and as the SECOND ARM of a ternary; (3) the 18-name hand-written key list is derived from the map's targets. ALREADY DRY-RUN on copies outside any window: baseline 126 passed / 0 failed, after the patch 139 passed / 0 failed / 0 setup_errors, and the durable patch script reproduces the tested POST digests byte-for-byte on a fresh mirror.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "In dist/index.html: one map entry and two text lines (RU+EN) for storage_cleanup_unconfirmed. In the harness: the reachability population with 8 membership controls, a 4-arm fixture control for the cfg cut, a derived phase vocabulary with a non-emptiness control and a collision control, and a derived key list. No Rust source is changed. No commit of Cargo files. Nothing else.",
+      "preserve": "The worktree stays on branch feat/crewing-898-login-texts-20261104 at base f145c601; exactly the two declared files change, and the driver EXITS if either POST digest differs from the pinned value. src-tauri/ is READ ONLY here - no Rust byte moves. src-tauri/Cargo.toml and Cargo.lock are untouched (release-sensitive). The Fresh keys (fresh_unavailable, fresh_context_unavailable) are deliberately NOT touched - they are the next sub-stage, and the order was inverted precisely so each is green alone. OWNER_COPY_PENDING is NOT reintroduced: restoring an exemption list would reverse a decision taken on the owner's word ((1493)/(1495)). No existing worktree is removed or pruned; contracts/ and skipi-verify untouched; the systemd fleet untouched. ABOUT THE CANONICAL CHECKOUT, with the unit, because the claim is narrower than it first sounds: what is preserved is its TRACKED content, and the verifiable unit is `git status --porcelain=v1 --untracked-files=no`, counted before AND after in the same run by the driver. I do write inside its WORKING DIRECTORY - logs.writes names scratchpad/crewing-898/stage-implement-f12 - and the normal-mode fingerprint structurally CANNOT see that, because `scratchpad/` collapses to the single line `?? scratchpad/` whatever is inside it (checked: git check-ignore returns no rule, so the directory is untracked rather than ignored). The `all` unit must NOT be used for this claim: it would enumerate my own artefacts and move with every write I make, which would destroy the control instead of tightening it.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP and report instead of acting if: either declared file is not at its pinned PRE digest when the patch runs; any anchor matches a number of times other than exactly one; the harness does not reach 139 passed / 0 failed after the patch; or live main has moved off f145c601. I will not run pre-push-ref, will not push, will not create or push tags, and will not run workflow_dispatch (standing STOP, RISKS No.293b). I will not commit in this stage. Lifting condition for each: a written answer from the manager.",
+      "heartbeat": "2026-11-04T08:01:49+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "The driver hashes ITSELF first and prints driver_sha256, and both ACK_START and ACK_STOP carry that value - so a reviewer measures what executed, not what they read (the rule bought by my own superseded digest on the vehicle stage). Evidence written to the declared log dir: PRE and POST digests of both files against the values pinned in expected_post; the worktree's changed-file list; the canonical checkout's tracked-line count before and after; and the harness log. THE POST-PATCH ZERO IS A MEASUREMENT, NOT AN EXPECTATION, and here is its command and moment: after the patch and inside the window the driver runs `node <worktree>/tests/crewing635_public_settings_harness.mjs`, captures the summary line, and a parser requires passed==139 AND failed==0 AND setup_errors==0, exiting 12 on anything else and on a MISSING summary line (an absent summary is an instrument failure, not a pass). The textless list reaching [] is read from that same run's own assert line, 'No.898/F12: every REACHABLE login refusal code has its own text — textless []'. Already performed on copies outside any window: baseline 126 passed / 0 failed, after the patch 139 / 0 / 0, and a DRILL where removing the new map entry reddens exactly one assert BY NAME, restored by the inverse mutation with the digest returning to 9f1bd2f9. This stage proves NOTHING about the other 18 harnesses of the guard route, nothing about the route itself, and nothing about the stand: none is run here.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md cited by FIELD NAME plus the digest read: ceb20148a37d2e6b406b4b6620fc3769478a6fe9f5171ece506e4573f0d906d7 at ops commit 614334cc3b862d1549618baf771eff006c149c3c (verified by three arms: file, show HEAD:, show 614334cc:), governing fields OUTCOME/BASELINE/NEW/PRESERVE/WORK/STOP/DONE, rev. 6 with the inverted sub-stage order. Dead digests of the same card: 95faaeed, b4804b5b, 63392c48, 2fb0b6dd, d4e0adbd. Expects nothing from another stream.",
+      "active_neighbors": "PROSE, not a second declared stream - a declared neighbour owes the same thirteen checks and its own evidence_files, which cannot be produced on its behalf. Neighbour: the server writer on server/903, a different store; the coordinator compared our declarations against each other and found no overlap. This stage does not touch the shared gitdir at all: no worktree is created, no ref is moved, no commit is made - so the one collision point of the vehicle stage is absent here. Lease counts are a property of the moment, so I quote none; ask the coordinator who holds what.",
+      "next_action": "Sub-stage 2 (the Fresh codes) in the same worktree: a new key for fresh_namespace_unavailable, the fresh_context_unavailable map entry removed with no text given to it, the fresh_unavailable key deleted with both language texts, and the :438 assert rewritten to follow the KEY - with two asserts on the DELETION itself. Its patch script and dry run already exist and were what proved the order had to invert.",
+      "owner_window": "No owner-visible result from the harness work. The ONE new user-visible string pair (storage_cleanup_unconfirmed, RU+EN) goes to the owner's live acceptance with the rest of the slice's texts (CANON-ui-v1, No.930); the stand will be declared through a CHANGE before it is used. The draft deliberately does NOT promise that nothing was changed: private_store reports a cleanup it could not confirm, so a reassurance about rollback would be a sentence the code cannot back.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "ceb20148a37d2e6b406b4b6620fc3769478a6fe9f5171ece506e4573f0d906d7",
+        "sha256_at_ops_head": "ceb20148a37d2e6b406b4b6620fc3769478a6fe9f5171ece506e4573f0d906d7",
+        "revisions_agree": true,
+        "ops_head": "614334cc3b862d1549618baf771eff006c149c3c",
+        "ops_porcelain": " M DECISIONS.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+          ]
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs"
+          ]
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-f12"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "2f0bded661d64d6b0d5a914216685df6b041903ad09bfaf62da84a7d361c9930"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+          "sha256": "894e3e3c0687c4cdbcd9662e1e249887680b44ac2852d657f0464e98483594f4"
+        }
+      ],
+      "expected_post": {
+        "why": "Pinned, not described: a digest named in a message is neither immutable nor part of the input digest. Both values were computed BEFORE the grant, on TWO independent fresh mirrors, and the driver EXITS (code 11) if either POST differs from the value pinned here.",
+        "files": [
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+            "sha256_pre": "2f0bded661d64d6b0d5a914216685df6b041903ad09bfaf62da84a7d361c9930",
+            "sha256_post": "9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+            "sha256_pre": "894e3e3c0687c4cdbcd9662e1e249887680b44ac2852d657f0464e98483594f4",
+            "sha256_post": "742d29ea23c31a852d5e2a523bbd2182055af23b4953abf9c56152cad75d97e4"
+          }
+        ]
+      },
+      "measured_duration": {
+        "harness_run": "0.17 / 0.18 / 0.17 s over three runs, measured IN THE VEHICLE (/home/linux/Developer/worktrees/crewing-898-20261104), not on a mirror - the object is named because a figure taken on a mirror would be about a different tree. The harness is read-only: a scan for writeFile/appendFile/mkdir/unlink/createWriteStream/.write( found no call (with a positive control proving the scan matches when a write IS present), and the worktree stayed at 0 untracked lines in both units across all three runs.",
+        "patch_apply": "under 1 s - two text substitutions over a 6.3 MiB file plus one over the harness.",
+        "stage_total_expected": "a few seconds of work; the driver refuses to start below a 30 s remainder. The un-measured part is process start-up, not the work."
+      },
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s2-f12.sh",
+        "sha256": "c0506bb8e70d9f2960316459668d20cc19303ed16e3e61d1ce5c5241f79b5b73",
+        "self_hash": "The driver hashes \"$0\" as its FIRST action and prints driver_sha256=<hex>; the same value goes into ACK_START and into ACK_STOP under the key driver_sha256. If $0 does not name a file (a pipe, bash -c, a login shell) it EXITS 1 rather than hashing the wrong subject.",
+        "patch_script": {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s2-f12.py",
+          "sha256": "693b6e7133d4511f8b91c7bc7a7019f6f813a14d4a84ab8b71e73b6d204bd26c",
+          "note": "Carries the replacement blocks in coord/f12-parts/ - the same bytes that were dry-run to 139/0."
+        },
+        "gate_arms_exercised": "Predicates tested in ISOLATION, never by invoking the driver with a forged permit (that shortcut once ran an unpermitted stage): the window extractor on five certificates (240s PROCEED, 5s refuse, expired refuse, nested lease.expires_at PROCEED, field absent -> refuse rather than report a fit it cannot compute); the harness-summary parser on four logs (139/0/0 -> OK, 137/1/0 -> MISMATCH, setup_errors 2 -> MISMATCH, no summary -> NOSUMMARY which exits); and the $0 guard on four values."
+      },
+      "resource_identities_note": "resource_identities is empty BY FACT, not by omission: this stage opens no network connection, touches no database, binds no port and claims no host resource. It also writes no git byte at all - no commit, no branch, no ref, no worktree - so the shared gitdir that was the vehicle stage's one collision point does not appear here."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-04T08:01:49+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "coord/content-s2-f12.json"
+  }
+}

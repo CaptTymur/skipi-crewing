@@ -1,0 +1,192 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-INTEGRATE-pr-20261104T174955Z",
+      "stage": "INTEGRATE",
+      "outcome": "Stage 9: open the pull request for refs/heads/feat/crewing-898-login-texts-20261104 against main, and FETCH the PR's head ref as a LOCAL witness. Two external calls. No merge, no release, no push.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "Four writes. (1) A local ref `refs/remotes/origin/pr/<N>` holding this slice's commit - the witness. (2) Its reflog. (3) The per-worktree FETCH_HEAD, REWRITTEN (not created - see the control below). (4) Possibly the shared .git/config, if `gh` writes `remote.origin.gh-resolved` on first use. Plus this stage's log subtree. The PR itself is state on GitHub, the only effect outside this machine.",
+      "preserve": "HEAD, refs/heads/feat/crewing-898-login-texts-20261104 and refs/remotes/origin/feat/crewing-898-login-texts-20261104 all stay at e5132934 - `gh` must not push, and that is CHECKED rather than trusted. The remote-tracking reflog stays at exactly ONE line. The worktree stays porcelain-EMPTY, `worktree list` at 86, the canonical checkout at 0 tracked changes. main is not touched: this stage opens a request, it does not merge it.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP before acting if: the gate does not yield PERMIT_CURRENT as a FIELD; under 120 s remain; `gh` is not executable; the PR body digest differs from the pin; the shared .git/config digest differs; HEAD, the branch ref or the remote-tracking ref is not at e5132934; the worktree is not clean; the remote branch is not at e5132934 (a PR cannot be opened for an unpublished head); a PR already exists for this head (exit 7 - this stage declared a creation); the per-worktree FETCH_HEAD is absent or its CONTENT differs from the pin (exit 8 - the control compares content, so its baseline must be the declared one); the remote-tracking reflog does not hold exactly one line (exit 8 - a second line would already mean something pushed); refs/remotes/origin/pr/* is non-empty; or `worktree list` is not 86. AFTER: exit 20 if `gh pr create` fails (a verdict about the request, nothing created), exit 21 if no PR number can be parsed from its output, exit 22 if the PR exists but a control failed, exit 13 if the canonical checkout moved. A witness that does not hold this slice's commit, a failed witness fetch, a changed .git/config and a dirty worktree are FINDINGS.",
+      "heartbeat": "2026-11-04T17:49:55+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "Driver self-hashes. Gate verdict read as a FIELD. Window from the certificate. Three pairwise-distinct ACK ids. ACK_START below the window gate; ACK_STOP the stage's LAST action, including before the exit-22 line. `--head` passed so gh cannot push or fork; `-u` absent; `--dry-run` absent and explained. The PR body is PINNED by digest, because it is what a reviewer reads. One source for the command: the same array is executed and echoed into after.txt. Both halves of every pair measured before the record is written.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on stage 8: the branch must be published at e5132934, and stage 8's reflog is this stage's negative control baseline. Depends on stage 5 only as a cautionary inheritance - it spent the FETCH_HEAD transition.",
+      "active_neighbors": "PROSE, never a second declared stream. The manager sequenced it: my push first, the plugins stage (card No.936) after, and its `mkdir`/`git init` run outside the coordinator's gate by his permission. The coordinator has already reported my irreversible stage closed, so that stream may now be released - and it does not touch this surface: its `mkdir` creates a SIBLING subdirectory and never the bytes of `_host-runtime`. `skipi-dev-tails.timer` still fetches every 10 minutes and has been confirmed five times not to touch this gitdir; for this stage an overlap would be caught rather than absorbed, since the FETCH_HEAD control compares CONTENT against a pinned baseline and a neighbour's fetch would move it.",
+      "next_action": "Nothing further in this task without a decision that is not mine. The PR is a request for review: merging is the route owner's call, and the owner has NOT accepted the texts or the colour - the body says so in full. Remaining on my side: the WORKLOG handover section, the backlog items already raised (No.922 umask, No.925 the mobile 2.79:1, No.930 the session that never activates), and clearing the 2.7 G warm cargo target in /tmp.",
+      "owner_window": "NOT required to OPEN it, and that distinction matters. A pull request publishes a review request, changes nothing a pilot user can reach, and is reversible by closing. What the owner has NOT done is accept the texts or the colour - he never saw the four lines on a SCREEN and the contrast was never put to him - and the PR body states that verbatim rather than leaving a reader to assume acceptance from the existence of a PR.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "ec753b2740beb507e96e5a61df8679ba12d797bf",
+        "ops_porcelain": " M DECISIONS.md\n M PROJECT_STATE.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/.git/objects",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feat/crewing-898-login-texts-20261104",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/feat/crewing-898-login-texts-20261104",
+            "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/remotes/origin/feat/crewing-898-login-texts-20261104"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/pr",
+            "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/remotes/origin/pr",
+            "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-898-20261104/FETCH_HEAD",
+            "path:/home/linux/Developer/skipi-crewing/.git/config"
+          ]
+        },
+        "contracts": {
+          "reads": [],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": [
+            "net:4026531840|tcp|0.0.0.0|443"
+          ]
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/pr-body-898.md"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-pr"
+          ]
+        }
+      },
+      "resource_identities": {
+        "net:4026531840|tcp|0.0.0.0|443": "Both external calls go here. `gh` talks to the GitHub API and `git fetch` to the same host over the same transport: origin is https://github.com/CaptTymur/skipi-crewing.git, so tcp/443. Namespace 4026531840 is the netns inode from `readlink /proc/self/ns/net`, written bare to match the form the existing GitHub-443 entries use. Address 0.0.0.0, the schema's honest broadest, because GitHub rotates its addresses. In `ports.writes` and not reads: `gh pr create` creates server-side state, which is a write on the other side even though the fetch half only reads."
+      },
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s9-pr.sh",
+          "sha256": "68f5c0adc07ad5bf196bd12be35f1a850c99b3f69901a77babe5436f0e82e76f"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/pr-body-898.md",
+          "sha256": "1b9efa3484ea0ed12ae5a12a3f024c83c5b7c4452f05cc72becc9ae98f379fb4"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt",
+          "sha256": "de27f05ff072f1fd4476e3810186653a254e9c015575312b2f43efcd11d42297"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-plugins/_host-runtime/dist/RUNTIME_VERSION",
+          "sha256": "022f85f4c6990ee9074c8323a5af07f1ef241ffa1f2a9d180e7df18bbf40b0d1"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/.git/config",
+          "sha256": "04e1ad8de9c58ecd7e70f36dfe39014374d5130febb2fcbf5d3d24fab1cc10fe"
+        }
+      ],
+      "the_witness_problem_is_a_CLASS_and_I_am_naming_it_not_filling_it": "`gh pr create` leaves NO local artefact proving a PR exists. `refs/pull/*` appear only after a fetch - the command does not write them - so the PR number and URL are MY report over the network and can never be the coordinator's measurement. Unlike the push, opening a PR has no witness of its own. I am stating that as a class rather than looking for a substitute, because he asked for exactly that and because a substitute would be worse than an absence.\n\nBUT A WITNESS IS DERIVABLE, and his refinement of my proposal is the precise version. Measured: the remote PUBLISHES refs/pull/* - 79 of them exist there now - and such a ref exists only for an existing pull request. Its sha must equal e5132934, this slice's unique commit, pushed twenty minutes earlier. So after the fetch HE reads, himself and without network: a local ref exists, and its sha is that commit. His measurement is therefore 'a PR whose head is THIS commit exists'. The NUMBER and the URL stay my report. Two halves with two sources, and the report must not merge them into one voice - which is the form he used for stage 8 and the form this stage keeps.\n\nTHE LIMIT, carried in his words because a reader could take one for the other: the reflog of the fetched ref will read `fetch …: storing ref`, NOT `update by push`. That verb attributes the LOCAL ref to the fetch, which is correct and expected. What proves the PR exists is the sha plus the ref being published server-side - never the verb in that reflog.",
+      "the_positive_control_CHANGED_SHAPE_because_stage_5_spent_the_old_one": "His finding, and the general lesson is worth more than the stage. Stage 5's positive control was 'per-worktree FETCH_HEAD absent -> exists'. That stage SUCCEEDED, and in succeeding it SPENT its own control: the file now exists (verified: /home/linux/Developer/skipi-crewing/.git/worktrees/crewing-898-20261104/FETCH_HEAD, sha d735ef165a4a277ed96aef52a564dd9cb183648a3df7310b9664a8f8ace86866, mtime 1793808424.105761294, body `f145c601… branch 'main' of https://github.com/CaptTymur/skipi-crewing`). So this stage's fetch REWRITES it rather than creating it, and 'the file is there' would be true even if the fetch never ran.\n\nA SUCCESSFUL ACTION CAN STRIP A PREDICATE OF ITS DISCRIMINATING POWER. That is the rule, and it is not about this file: any control built on a first-time transition is single-use, and the stage that uses it must hand its successor a different one. Here the control becomes CONTENT: the sha is pinned before and must DIFFER after, with the nanosecond mtime as the secondary reading. NOT existence, and NOT the inode - measured earlier in this task, git rewrites this file in place, so the inode is stable across fetches and ctime equals mtime to the nanosecond.",
+      "a_negative_control_that_gh_did_NOT_push_which_already_exists_in_the_repo": "His, and it needed nothing new. `--head` is a promise from gh's own help - 'explicitly skip any forking or pushing behavior' - and a promise is not a measurement. It is CHECKED by three readings taken after the stage: refs/heads/feat/crewing-898-login-texts-20261104 and refs/remotes/origin/feat/crewing-898-login-texts-20261104 must still hold e5132934, and the remote-tracking reflog must still have EXACTLY ONE line. Any push by `gh` would add a second line, so stage 8's own artefact is the detector, already in place and currently measured at 1 line. A second reason not to let gh near a push: `gh auth status` reports `Git operations protocol: ssh` while this remote is HTTPS.",
+      "dry_run_was_unavailable_so_the_rehearsal_is_a_stub": "Worth saying out loud rather than omitting. The ordinary way to rehearse an external command is `--dry-run`, and gh's help says it 'Print details instead of creating the PR. MAY STILL PUSH GIT CHANGES.' So it is not a dry run in the sense this protocol needs, and it is not used. The driver was rehearsed against a STUB `gh` plus a fixture remote carrying a synthetic refs/pull/<N>/head - the same technique as the stubbed guard in stages 6 and 7, and for the same reason: running the real instrument outside a window would BE the action.",
+      "mutates_is_now_a_read_field_and_I_differ_on_ONE_token": "His new inspector check requires every `mutates` token to be covered by some `surfaces.*.writes` under `overlaps()`. The field was required by AGENTS prose and read by nothing until now, so a request could declare a shared object in `mutates`, duplicate it in `resource_identities`, and reserve NOTHING - because collisions are built from `surfaces` alone. None of my seven bundles carried `mutates` at all, so none was affected; this stage carries it.\n\nWHERE I DIFFER, with the reason rather than silently: he suggested leaving the shared .git/config OUT, on the ground that I guard it rather than write it, and for the PUSH that was exactly right - stage 8 measured it byte-identical before and after. For THIS stage the actor is `gh`, not git-push, and writing `remote.origin.gh-resolved` on first use is documented gh behaviour that I cannot cheaply exclude: today that key is unset and there are zero `gh.*` keys. Three findings in a row on this very genus - the index in stage 3a, the per-worktree FETCH_HEAD in stage 5, the reflog in stage 8 - all were undeclared writes into a gitdir shared by 86 worktrees. So I would rather over-declare a shared file than risk a fourth, and it sits in both `writes` and `mutates` with the FINDING-on-change kept as detection. If he judges that too broad I will take it out, but the asymmetry of cost points this way.",
+      "N_is_not_knowable_before_the_action_so_the_parents_are_declared": "The PR number does not exist until `gh` creates it, so `refs/remotes/origin/pr/<N>` and its reflog cannot be named as concrete paths in advance. Declared as their PARENT directories - the same situation and the same honest form as the hook's mkdtemp suffix in stage 8, where only the container was expressible. Measured so the breadth costs nothing: local `refs/remotes/origin/pr/*` is currently EMPTY (0 refs). And a naming caution he flagged: a legacy `refs/remotes/pr79merge` exists from an old fetch, so the `origin/pr/<N>` form is deliberately NOT that shape and cannot collide with it.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s9-pr.sh",
+        "note": "Self-hashing; recomputed at run time into both ACK documents. Its digest is NOT written here - the generator supplies it from disk in the same call that computes evidence_files. bash -n clean; check_undefined_funcs clean; check-driver-prose.py clean on all three predicates. 327 lines. Exit codes 1-9, 13, 20 (gh refused, nothing created), 21 (no parsable PR number), 22 (PR exists but a control failed). Checked for forbidden flags the way he taught - count PLUS composition: two matches for the pattern, both `date -u` in the `say` helper and the timestamp, and zero occurrences of --no-verify, --force or git's -u.",
+        "sha256": "68f5c0adc07ad5bf196bd12be35f1a850c99b3f69901a77babe5436f0e82e76f"
+      },
+      "mutates": [
+        "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/pr",
+        "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/remotes/origin/pr",
+        "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-898-20261104/FETCH_HEAD",
+        "path:/home/linux/Developer/skipi-crewing/.git/config"
+      ],
+      "expected_post": {
+        "why": "pinned as exit conditions; the kinds of exit are listed in `stop`",
+        "pull_request": "CREATED on GitHub against main from this branch. Its NUMBER and URL are MY report - the coordinator has no network and this can never be his measurement",
+        "witness_ref": "refs/remotes/origin/pr/<N> EXISTS locally and its sha EQUALS e5132934064c8ccf701b0061570971c2af220403. THIS is the coordinator's own measurement, taken without network, and it establishes 'a PR whose head is this commit exists'",
+        "witness_reflog": "exists, and reads `fetch …: storing ref` - expected, and NOT evidence of the PR; it attributes the local ref to the fetch",
+        "per_worktree_FETCH_HEAD": "REWRITTEN: content sha MUST differ from d735ef165a4a277ed96aef52a564dd9cb183648a3df7310b9664a8f8ace86866 and the nanosecond mtime must move. Existence is NOT the control - stage 5 spent it",
+        "branch_and_tracking_refs": "BOTH still e5132934; the remote-tracking reflog still exactly ONE line",
+        "shared_git_config": "expected unchanged at 04e1ad8d…, and a change is a FINDING naming remote.origin.gh-resolved - detection, not prediction",
+        "worktree_porcelain": "EMPTY before and after",
+        "worktree_list_lines": "86 before and after - this stage creates no worktree",
+        "canonical_checkout": "0 tracked changes before and after, both halves in the record",
+        "main": "UNTOUCHED. merged=no, released=no"
+      },
+      "measured_duration": {
+        "gh_pr_create": "UNKNOWN - never measured here; no upper bound in any code I can read",
+        "witness_fetch": "about 1 s by analogy with stage 5's fetch, which is an analogy and not a measurement",
+        "threshold": "120 s from cost of error: reversible by closing, but visible and notifying, with TWO external calls"
+      },
+      "resource_identities_note": "One net resource covering BOTH external calls. No database, no port binding. `gh` authenticates from its own keyring as CaptTymur - that credential is not a declarable path and is named here instead: this stage acts as that account, which is why the PR will be attributed to it while the git reflog of stage 8 carries the repo-local stub identity. Two different identities on two artefacts of one task, and the reason is that one came from gh's keyring and the other from `user.*`.",
+      "surfaces_note": "`guard` is EMPTY and that is the difference from every stage since the fifth: no hook runs on a PR creation, no harness executes, and the guard binary is not invoked. `tests` empty for the same reason. `code.reads` names stage 8's reflog because this stage READS it as the negative-control baseline - a read of an artefact another stage wrote. `code.writes` carries the two PARENTS (N unknowable in advance), the per-worktree FETCH_HEAD, and the shared config for the reason given above. Empty categories mean considered, per the schema."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-04T17:49:55+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s9.json",
+    "content_file_sha256": "9ce8cf8dee7916bbe57dc796bffecc45c6b318f17aa8b28b3f1d800b2b5dfeaa"
+  }
+}

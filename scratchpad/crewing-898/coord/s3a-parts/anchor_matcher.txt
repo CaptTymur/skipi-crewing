@@ -1,0 +1,1 @@
+  const siEnd=(()=>{let b=html.indexOf('{',siAt),d=0,i=b;for(;i<html.length;i++){if(html[i]==='{')d++;else if(html[i]==='}'){d--;if(d===0)break;}}return i;})();

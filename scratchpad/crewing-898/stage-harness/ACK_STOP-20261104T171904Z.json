@@ -1,0 +1,13 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-VERIFY_BUILD-harness-ACKSTOP-20261104T171904Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T17:19:19+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "a38e938daf51e74ea9a36c143f8195b207e692106e0056c952bb85bb8e391171",
+  "evidence": {
+    "after_state_path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-harness/after.txt",
+    "after_state_sha256": "96a2d4510ab7915dc2f579fe53b4f24af0c97554a691266672498f3584c8cb02"
+  }
+}

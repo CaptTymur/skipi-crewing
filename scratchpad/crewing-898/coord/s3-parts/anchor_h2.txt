@@ -1,0 +1,1 @@
+  ok(expectedKeys.length>=18,'control: the key list is DERIVED and non-trivial — '+expectedKeys.length+' keys');

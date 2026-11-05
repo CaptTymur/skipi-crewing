@@ -1,0 +1,199 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-IMPLEMENT-3d-20261104T143658Z",
+      "stage": "IMPLEMENT",
+      "outcome": "Sub-stage 3d: make the login refusal line readable. The colour is a HOUSE defect, found by the manager reading 3c's smoke frames - the one message the person is looking at was the palest text on the screen.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+      "status_sha256": "b521a2c065b70a18b961e821739a861a46a3c4edc10fe5ac90bf6f3d7064df7e",
+      "status_sha256_uall": "b521a2c065b70a18b961e821739a861a46a3c4edc10fe5ac90bf6f3d7064df7e",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 3 line(s):\n M dist/index.html\n M src-tauri/src/native_lifecycle.rs\n M tests/crewing635_public_settings_harness.mjs",
+      "new": "One inline attribute on ec-login-error: color #fca5a5 -> #991b1b, 1.46:1 -> 6.40:1 on the composited panel. Plus four harness asserts pinning the WCAG AA floor, because the house rule gives a caught bug its regression test in the same fix and this was a red review.",
+      "preserve": "Rust is NOT touched: RS_PRE and RS_POST are pinned to the SAME digest, so an accidental write fails at exit 11 rather than passing unnoticed. No cargo runs.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP if: any of three PRE digests differs; porcelain is not the three-file state 3c left; any POST differs from its pin; the harness is not exactly 184/0/0.",
+      "heartbeat": "2026-11-04T14:36:58+00:00",
+      "heartbeat_note": "grant pulse",
+      "proves": "Driver self-hashes; three distinct ACK ids pairwise; window from the certificate; PRE and POST for all three files including the unchanged Rust one; harness summary parsed; node rc and stderr size checked; canonical tracked-count compared with its own exit.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+      "active_neighbors": "PROSE, not a second stream. Nothing of mine runs outside this stage.",
+      "next_action": "Re-run the smoke, then the decisive experiment (4). Separate backlog items: the house's pale error colour as a CAUSE even though the effect is fixed here, and the mobile --warn token at 2.79:1 in light theme, which is a TOKEN change and a different decision.",
+      "owner_window": "REQUIRED and not satisfied here. After this stage I re-run the smoke on Xephyr :9 and hand the manager four fresh frames, so the owner accepts WORDS and LEGIBILITY in one look.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "738affe222bb5131070b6bc8b3a25d4c07cb0ab6",
+        "ops_porcelain": " M BACKLOG.md\n M DECISIONS.md\n M handoffs/HANDOFF-2026-10-22-skipi-feed-ack-buttons.md\n?? handoffs/TASKCARD-2026-11-04-fleet-926-explain-better-button.md\n?? handoffs/TASKCARD-2026-11-04-seafarer-924-remove-local-storage.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+          ]
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs"
+          ]
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-3d"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "016e6141e83476e93b9609ef8f2891afa87edc228c1d082f1fef524904a6e384"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+          "sha256": "7264bd55cab733869e39f2792a0d1fa223363e2384e65f8fe67cbf7c67e088c8"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs",
+          "sha256": "e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48"
+        }
+      ],
+      "why_not_ours_but_fixed_now": "Proved three ways that 3c did not cause it: dist <style> blocks byte-identical to base f145c601 (87698 B both), the element's inline attribute byte-identical to base, and patch-s3c-dist.py contains zero style words. #fca5a5 occurs ONCE in the file - Tailwind red-300, a dark-theme red on a light panel. Fixed now anyway because the colour is itself a UI change needing owner acceptance and he is about to look at this exact screen: a pale line would cost a SECOND owner visit, and his attention is the scarce resource.",
+      "radius": "Two numbers answering different questions. EDIT: one occurrence in one file. EFFECT: all 28 refusal codes reaching the desktop box. The mobile path is a separate element (m-login-error, class mobile-status warn -> color var(--warn)) and is NOT touched.",
+      "measurements": {
+        "method": "two independent measurements agreeing - the coordinator's read of declared colours and my pixel sampling of glyph cores from a captured frame; the composite model was validated against real pixels (predicted rgb(242,221,223) vs measured rgb(242,221,222))",
+        "desktop_before": "1.46:1 declared, 1.96:1 rendered - rendered is BETTER, i.e. the frame flatters the product",
+        "desktop_after": "6.40:1",
+        "same_screen_for_scale": "heading 15.32:1, subtitle 5.37:1, Back 5.48:1, hint 4.85:1 - the refusal line was the only element below the floor",
+        "mobile_light_NOT_FIXED": "var(--warn) #d97706 on var(--panel2) #eef0f4 = 2.79:1 at 11px - below AA and below even the 3:1 large-text floor",
+        "mobile_dark_ok": "#f59e0b on #232932 = 6.82:1"
+      },
+      "two_defects_in_my_own_assert_caught_by_its_own_control": "The contrast assert first extracted the DARK theme's --bg twice: once by a pattern matching the dark value followed by the light selector, once by anchoring on the bare attribute on the html element at offset 32, long before the CSS. Both times the DISCRIMINATING control exposed it by scoring the replaced colour at 9.06:1 instead of 1.46:1. A third control now asserts the extracted light background is actually light.",
+      "expected_post": {
+        "why": "pinned as an exit condition; the driver EXITS 11 on any difference",
+        "vehicle_porcelain_stays": [
+          " M dist/index.html",
+          " M src-tauri/src/native_lifecycle.rs",
+          " M tests/crewing635_public_settings_harness.mjs"
+        ],
+        "files": [
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+            "sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa",
+            "mode": "664"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+            "sha256": "78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f",
+            "mode": "664"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs",
+            "sha256": "e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48",
+            "mode": "664",
+            "note": "UNCHANGED - pinned equal on both sides so a stray write fails"
+          }
+        ],
+        "harness": "exactly 184 passed / 0 failed / 0 setup_errors (180 after 3c, +4 here)"
+      },
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s3d.sh",
+        "sha256": "5bb21c34dc300ea8dda549f747804453e74121731ee554503e7b5eb5fb6e7bbc",
+        "patch_scripts": [
+          {
+            "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s3d-contrast.py",
+            "sha256": "a954b093c8ded2ac37a243470bec8bbb0c817e5463912e2d74e13e278d71a914",
+            "note": "refuses unless the pale colour sits on ec-login-error and lands exactly once"
+          }
+        ],
+        "exit_codes": "as 3c, plus exit 11 also fires if the Rust file changes at all"
+      },
+      "measured_duration": {
+        "patch": "under 1 s",
+        "harness": "~0.55 s",
+        "no_cargo": "none runs",
+        "stage_total_expected": "a few seconds; refuses below 30 s remaining"
+      },
+      "resource_identities_note": "Empty by fact: no network, database, port, host resource, or git byte.",
+      "inherited_text_defects_fixed_before_submission": "Coordinator review of step 1 found three, and a sweep for the same class found a fourth. All were text copied from 3c that no longer named this stage's subject: the refusal message said 'two declared modified files' where WT_EXPECT holds three; the comment above it said the same and named the F12 POST instead of the 3c POST; and - the one that mattered - ACK_STOP's what_this_run_does_NOT_establish said 'the new TEXTS are not owner-accepted' when this stage changes the COLOUR. That last one lands in an IMMUTABLE artefact of a stage that exists because of an acceptance question, so it would have recorded a disclaimer about the wrong object. ACK_STOP now also carries the desktop-only scope limit.",
+      "acceptance_scope_limit": "After this stage the DESKTOP refusal line is 6.40:1 while the MOBILE one stays 2.79:1 in the light theme - same login screen, same class of message. Four desktop frames would let the owner accept 'legibility fixed' when it is fixed on one path only. The acceptance must be named as 'the desktop refusal line', not 'legibility'. Raised by the coordinator; carried here and into ACK_STOP so the limit survives in the record, not only in a message.",
+      "what_I_did_NOT_verify": "The 28-code effect radius rests on my harness's reachability walk. The coordinator's regex probe gave 7 and he correctly called his own instrument unfit rather than correcting the number - a text window does not measure reachability. And my earlier generalisation that the house's LIGHT THEME is neglected is NOT established: the sweep I wrote to check it segmented the whole HTML including <script> blocks, so JavaScript braces were read as CSS rules and four 'hits' came from JS string literals. Two measured points stand; the generalisation does not."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "grant",
+    "note": "Step 3: only event_id, heartbeat and this subtree differ from the reviewed step 1.",
+    "coordinator_instance_read_at": "2026-11-04T14:36:58+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s3d.json",
+    "content_file_sha256": "df26dc4a835de0bb11c78d69a69c45efd50ca228555d014ef816cae5f03758e6"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-VERIFY_BUILD-release-NOSTART-ACKSTOP-20261105T060255Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-05T06:02:55+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "evidence": {
+    "outcome": "stage did not start: own floor refused",
+    "driver_rc": 4,
+    "stop_line": "only 199s left, floor 240s",
+    "ack_start": "never written",
+    "target": "absent",
+    "writes": "none",
+    "queued_operations_cancelled_meaning": "vacuously true - nothing was queued",
+    "lease": "6dc5794df664497b8ee279ed0ea599aa",
+    "verified_after_the_refusal": {
+      "ack_start_files": 0,
+      "worktree_target": "absent",
+      "worktree_porcelain": "empty",
+      "cargo_registry_src_dirs": 521,
+      "cargo_processes": 0
+    },
+    "distinctness": "this id differs from the request id (…-20261105T055644Z) and from the start id exported but never used (…-ACKSTART-20261105T055824Z)"
+  }
+}

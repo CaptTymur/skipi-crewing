@@ -1,0 +1,41 @@
+{
+  "frame": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-release-a/ru-closed-3-refusal.png",
+  "sha256": "57160a5671826974ac3bf50d19d0e7767472540227aaf7bf9d673a8952d0ad24",
+  "size": [
+    1100,
+    750
+  ],
+  "glyph_pixels": 489,
+  "lines_by_gap": {
+    "3": 1,
+    "6": 1,
+    "9": 1
+  },
+  "occupied_scanlines": 13,
+  "refusal_box": {
+    "x": 305,
+    "y": 531,
+    "w": 367,
+    "h": 13
+  },
+  "background_rgb": [
+    242,
+    221,
+    222
+  ],
+  "foreground_core_rgb": [
+    153,
+    27,
+    27
+  ],
+  "foreground_mean_rgb": [
+    160,
+    41,
+    41
+  ],
+  "contrast_core": 6.4,
+  "contrast_mean": 5.69,
+  "contrast_declared": 6.4,
+  "wcag_aa_floor": 4.5,
+  "verdict": "REFUSAL_BOX_FOUND"
+}

@@ -1,0 +1,172 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-INTEGRATE-fetch-20261104T160412Z",
+      "stage": "INTEGRATE",
+      "outcome": "Stage 5 of the tail: `git fetch origin main` in the vehicle, with an explicit refspec, so that the push route can afterwards be re-measured on FETCHED values. No push, no PR, no guard run, no product file touched.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "THREE writes, and the first one I had missed. (1) The PER-WORKTREE FETCH_HEAD at /home/linux/Developer/skipi-crewing/.git/worktrees/crewing-898-20261104/FETCH_HEAD - `git -C <wt> rev-parse --git-path FETCH_HEAD` returns this, not the shared file, because in a linked worktree `.git` is a file and the per-worktree gitdir is where a fetch run from there writes. It does NOT exist today, so its appearance would otherwise have been a write outside my declared set. (2) The SHARED FETCH_HEAD, declared because the stage READS it as the neighbour detector; a worktree fetch does not write it, and that is measured below, not assumed. (3) `refs/remotes/origin/main`, which IS shared - `--git-path refs/remotes/origin/main` resolves to the common dir, so that token was right. Plus this stage's log subtree. Nothing else: an explicit `origin main` refspec cannot invent a new remote-tracking ref.",
+      "preserve": "HEAD and refs/heads/feat/crewing-898-login-texts-20261104 both stay at e5132934064c8ccf701b0061570971c2af220403 - a fetch has no business moving either, and the driver EXITS 11 if either moves. The worktree stays porcelain-EMPTY in the -uall unit. The remote-ref NAME SET stays at its 149 members. The canonical checkout at /home/linux/Developer/skipi-crewing stays at 0 tracked changes. The four committed product files are not opened at all.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP if: the certificate does not yield PERMIT_CURRENT read as a FIELD; under 45 s remain in the window (a network call deserves more slack than a local write, and the fetch itself carries a hard 30 s timeout); HEAD or the branch ref is not at e5132934; the worktree is not clean before the fetch; the remote-ref name set is not the declared 149 before the fetch (something changed it since this request, so the before-value I am comparing against is not the one reviewed); the fetch exits non-zero, 124 meaning it hit the timeout; HEAD, the branch ref or worktree cleanliness changed after the fetch; or the canonical checkout's tracked-change count moved (exit 13, after ACK_STOP - drift in a tree I do not own is reported, not silently carried). A change in the remote-ref NAME set is REPORTED as a FINDING and does not fail the stage: a named ref is attributable and the neighbour timer is the first thing to check, so the useful outcome is the name, not an abort.",
+      "heartbeat": "2026-11-04T16:04:12+00:00",
+      "heartbeat_note": "grant pulse",
+      "proves": "Driver self-hashes and prints its own sha256. Verdict read as a FIELD, never by substring. Window read out of the certificate, not from my own pulse. Three pairwise-distinct ACK event ids, checked against each other before anything runs. ACK_START written inside the script below the window gate; ACK_STOP is the stage's LAST action, the narrative after it. `GIT_TERMINAL_PROMPT=0` so a credential prompt cannot hang inside someone else's window even though credentials resolve through a gh helper and no prompt is expected. The refspec is written out as `origin main`, never bare - No.765 recorded an accidental bare fetch creating four undeclared refs in this very gitdir.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on stage 4 having landed: the commit e5132934 is the object this stage measures the route input against.",
+      "active_neighbors": "PROSE, never a second declared stream - a declared neighbour owes the same thirteen checks and its own evidence_files, which cannot be produced on its behalf. The neighbour is `skipi-dev-tails.timer`, a USER-scope unit: `systemctl list-timers` in the SYSTEM scope reports 0 timers and would have let me describe it as absent. Every 10 min (OnUnitActiveSec=10min, AccuracySec=30s, Persistent=true); its service runs `/usr/bin/python3 /home/linux/scripts/skipi_dev_tails.py`, described as a read-only collector, and it runs `git fetch` over repositories it finds by walking directories. THREE independent confirmations that it does not touch this gitdir, the last two not mine: (1) my reading - it completed 15:37:25Z -> 15:39:38Z, ExecMainStatus=0, and the shared FETCH_HEAD stayed at 2026-11-02 10:00:37 +04; (2) the coordinator's re-measurement on the NEXT run, 15:47:25Z -> 15:49:44Z, same file unchanged; (3) mine at 15:59:05Z, taken while the service was MID-RUN (started 19:57:25 +04, no exit stamp yet) with the shared file still at 2026-11-02 - a reading inside its window rather than after it. His live figure 15:57:25-15:59:44Z is already in the past by the time this request is built; the run in flight at 15:59:05Z is that one, so the next relevant busy interval is approximately 16:07:25-16:09:44Z (the timer schedules from activation, which is why the NEXT column reads '-' while the service runs). I will stay out of that interval if the granted window allows; the before/after comparison covers an overlap either way, and note WHICH file does that work - the SHARED FETCH_HEAD, because the timer fetches from the main checkout and writes exactly that file, while my own fetch cannot. My two earlier guesses (SSH-only versus an HTTPS remote; its first selection criterion being a dirty worktree) remain unproven and are not load-bearing. Nothing of mine runs outside this stage.",
+      "next_action": "Re-measure the push ROUTE on the fetched values as its own request - that means running the guard's own `verify --repo <fixture> --home crewing --auto-task`, which this stage does NOT do - then push, then the PR. Each its own request.",
+      "owner_window": "NOT required. A fetch changes nothing a person can see: no product file, no UI, no text. The texts and the colour were accepted earlier today and this stage does not reopen them.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "8d4ae8c3ce036e4d82539575758dac2daf3330f1",
+        "ops_porcelain": ""
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/.git/objects",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feat/crewing-898-login-texts-20261104"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-898-20261104/FETCH_HEAD",
+            "path:/home/linux/Developer/skipi-crewing/.git/FETCH_HEAD",
+            "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/main"
+          ]
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [
+            "net:4026531840|tcp|0.0.0.0|443"
+          ],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-fetch"
+          ]
+        }
+      },
+      "resource_identities": {
+        "net:4026531840|tcp|0.0.0.0|443": "Destination identity, measured not inferred. The remote is read from the vehicle: `git remote -v` gives origin = https://github.com/CaptTymur/skipi-crewing.git for both fetch and push, i.e. HTTPS, hence port 443 and not the 22 of the ledger's SSH entry. Namespace `4026531840` is the network namespace INODE: `readlink /proc/self/ns/net` = net:[4026531840]. Written bare, matching the form the existing GitHub-443 entries use, so that my declaration can actually collide with them - my first draft wrote `netns-4026531840`, which the coordinator measured as colliding with nothing at all. The address slot is 0.0.0.0, the schema's 'honest broadest', and deliberately so: github.com resolved to 140.82.121.3 at 15:43Z by `getent ahostsv4`, but GitHub rotates its addresses and a pinned IP the fetch does not reach would be false precisely when it matters, hiding a collision instead of raising one. The DNS lookup was a local resolver query made while building this request; it changes no remote state and is not the stage's action."
+      },
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s5-fetch.sh",
+          "sha256": "dbc393af98bbfbfb73d526243cba49fe60746faf57ae4e656d327272d105713a"
+        }
+      ],
+      "what_this_stage_does_NOT_do": "It does not run skipi-guard and produces no route VERDICT. It records the route INPUT - merge-base and the triple-dot file list - because after a fetch those are already facts on disk and writing them down costs nothing; a verdict needs the guard, and the coordinator placed that in its own request. It does not push, does not create a PR, does not touch src-tauri/Cargo.{toml,lock}, and does not create or push any v* tag.",
+      "why_the_stage_token_is_INTEGRATE": "Stage 4 declared IMPLEMENT because a commit makes the artefact. The tail integrates it, so INTEGRATE is the honest token. Checked rather than assumed that this is legal: the gate's 'invalid stage transition' at stage_gate.py:242 governs the lease ACTION (start/stop/complete/ack-stop), not the ordering of stage NAMES, and INTEGRATE is in the schema's allowed set. The driver's ACK_START document carried a hard-coded \"stage\":\"IMPLEMENT\" from being copied off the stage-4 driver; it now says INTEGRATE, which is the sixth inherited-text defect of this class in a copied driver and the reason check-driver-prose.py exists.",
+      "the_cache_is_ALREADY_fresh_and_this_fetch_is_a_no_op_in_effect": "Measured at 15:49Z by `ls-remote origin refs/heads/main`: live main = f145c6017eaea3804a5429e5aa428b6fb0ece6d9, cached origin/main = the same value, and that is also my commit's parent. So origin/main is expected UNCHANGED, and I say it up front rather than letting the stage read as a repair of a stale ref. This is also precisely what left the stage without a positive control until the coordinator found it - see the entry on that, which is now the load-bearing part of this request. What the fetch buys: (1) ls-remote proves freshness at 15:49Z of a value the hook does NOT read - the hook reads the local refs/remotes/origin/main - so only a fetch makes the ref the hook consults a measured object; (2) the re-measurement was required on fetched values, and only a fetch makes 'fetched values' exist; (3) it is the declared, attributable way to write refs/remotes instead of a bare fetch happening later inside some other stage.",
+      "the_route_input_is_provably_stable_under_main_advancing": "A worry worth closing with a measurement rather than a hope: if main advances between now and the push, does my routed set grow and cost me the route? No. `merge-base --is-ancestor f145c601 <live main>` is TRUE, and my HEAD is a single commit whose parent is f145c601, so merge-base(X, e5132934) = f145c601 for ANY X descending from f145c601 - the triple-dot range stays my four files and the route stays crewing-635-single-user. The one case that breaks it is main being force-pushed onto something that is not a descendant of f145c601, which would move the merge-base and would be visible in the measurement. This is the mirror image of the failure in my notes: there a STALE origin/main sat as an ANCESTOR of the work's base and silently widened the range to 6-8 files, losing the route. Here the cached ref IS the base, so the range is already minimal.",
+      "a_predicate_defect_I_found_in_my_own_rehearsal": "The insurance the coordinator asked for was 'count the refs before and after and treat any change you did not cause as a finding'. My first implementation counted `find \"$GITDIR/refs/remotes\" -type f | wc -l`. Rehearsed against a local bare remote it printed `FINDING: refs/remotes went 1 -> 2` on a fetch that added nothing: `find -type f` sees LOOSE files only, so a ref moving from the packed-refs file to a loose file reads as a new ref. A predicate that cries wolf on re-packing is worse than none, because the finding it exists to report would be indistinguishable from its own noise. Replaced with a NAME SET from `for-each-ref`, comparing membership and reporting ADDED and GONE by name: it does not care whether a ref is packed, and it names the ref instead of implying one. In the real repo both methods happen to agree at 149 (nothing is packed there today) - which is exactly why the fixture, not the repo, is what exposed it.",
+      "my_first_drill_of_the_replacement_was_a_NO_OP_and_I_nearly_banked_it": "Having replaced the predicate I drilled it by rewriting the driver's fetch line to a bare `git fetch origin` with a second branch waiting on the fixture remote, so a ref would arrive during the fetch. It reported nothing, and 'no finding' was the answer I wanted. The reason was not the predicate: my sed pattern was `git fetch origin main` while the real line reads `git -C \"$WT\" fetch origin main`, so the substitution matched nothing and I had re-run the UNMODIFIED script against itself. `diff` of the two drivers was empty - the control that caught it - and a manual bare fetch proved the fixture would indeed have shown the ref. Re-drilled with the correct pattern the predicate fires and names it: `FINDING: remote ref NAMES changed - added [refs/remotes/origin/other] gone []`, while the real explicit refspec on the same fixture stays silent. Both halves measured, which is the only form in which a 'silent' instrument means anything. This is the same genus as the needles in my notes: the drill must be a legal mutation whose whole output I read, and an unmutated subject answers a different question.",
+      "why_evidence_files_holds_the_driver_alone": "Earlier stages pinned the four product files. For a fetch that would be weaker, not stronger: the gate's own live snapshot already re-reads `repo`, `head` and `status_sha256` for the declared repo, and a porcelain-EMPTY worktree in the -uall unit is a statement about EVERY file in the tree, whereas four digests are a statement about four. The driver checks the same emptiness before and after. So the tree is pinned by the gate plus the ref value, and evidence_files carries the one object this review actually rests on - the executable. Its sha256 is also printed by the driver at run time and recorded into both ACK documents.",
+      "a_finding_about_the_coordinator_s_OWN_net_tokens_not_about_this_stage": "While choosing the token form I measured `overlaps()` (inspect_requests.py:47-54) and found a blind spot worth naming, since I am the first writer in this task to declare a `net:` surface. The namespace field is compared by STRING EQUALITY, and only the ADDRESS field gets `is_unspecified` treatment. The ledger already carries one physical namespace under four spellings - `netns-4026531840` (93 tokens), `4026531840` (48+), `[4026531840]` and `net:[4026531840]`. Measured: `netns-4026531840|tcp|0.0.0.0|443` vs `4026531840|tcp|140.82.121.4|443` -> False. Two writers in the SAME netns, one of them honestly declaring the broadest address, do not collide if they spell the namespace differently - so the broad declaration buys nothing against them. I therefore spell it `netns-4026531840`, matching the dominant form, so that my declaration CAN collide with the existing GitHub entry. Naming it here rather than proposing a verifier change: the schema says this verifier is not edited amid live streams, and the same reasoning applies.",
+      "resource_identities_note": "One net resource, declared above. No database, no port binding (this stage LISTENS on nothing - the token is outbound egress and sits in `ports.reads`, because a fetch reads from the remote and changes nothing there; the later push is the write). GIT BYTES yes, and they are the subject: declared by exact path - FETCH_HEAD and refs/remotes/origin/main inside the shared gitdir - rather than as the whole .git, because the gitdir is shared with 85 linked worktrees and claiming all of it would collide with every neighbour over bytes I do not touch.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s5-fetch.sh",
+        "sha256": "dbc393af98bbfbfb73d526243cba49fe60746faf57ae4e656d327272d105713a",
+        "note": "Self-hashing; recomputed at run time and written into ACK_START and ACK_STOP. bash -n clean; check_undefined_funcs clean. 225 lines (was 192: the positive control and its two drilled gates). Exit codes in use: 1,2,3,4,5,7,8,9,10,11,12,13 - 12 is the new positive-control failure."
+      },
+      "expected_post": {
+        "why": "pinned as exit conditions; the driver EXITS 10/11/13 on the differences named in `stop`",
+        "head_and_branch_ref": "BOTH unchanged at e5132934064c8ccf701b0061570971c2af220403",
+        "origin_main": "expected UNCHANGED at f145c6017eaea3804a5429e5aa428b6fb0ece6d9 because the cache is already fresh; recorded before and after either way, and a change is legitimate (it means main moved between 15:49Z and the window) rather than a finding",
+        "remote_ref_name_set": "unchanged, 149 members; ADDED and GONE both empty",
+        "worktree_porcelain": "EMPTY before and after, -uall unit",
+        "canonical_checkout": "0 tracked changes before and after; exit 13 if that moves",
+        "route_input": "merge-base expected f145c601 and the triple-dot range expected to hold exactly the four paths of this slice - MEASURED after the fetch and written to the log, never predicted into the report",
+        "per_worktree_FETCH_HEAD": "THE POSITIVE CONTROL: ABSENT before, EXISTS after. Gated, not noted - exit 12 if it is still absent after a fetch that exited 0, and exit 12 if it pre-existed and its mtime did not move. Its sha256 and first line are recorded",
+        "shared_FETCH_HEAD": "UNCHANGED, both sha256 (d735ef165a4a) and mtime (2026-11-02 10:00:37 +04). This file is the NEIGHBOUR detector, not evidence about me: a fetch from a linked worktree never writes it. A change here means someone else fetched from the main checkout during my window, which is a finding and attributable"
+      },
+      "measured_duration": {
+        "fetch": "about 1 s against GitHub over HTTPS; hard timeout 30 s",
+        "rehearsal_end_to_end": "under 1 s against a local bare remote, four runs",
+        "stage_total_expected": "a few seconds; refuses below 45 s remaining"
+      },
+      "the_positive_control_I_did_not_have_and_the_coordinator_found": "BLOCKING finding of his, and it is the sharper half of his message. I opened my own request by saying the cache is already fresh and the fetch is a no-op in effect. Granted that, NOTHING I was measuring could move: not origin/main, not the ref name set, and not the shared FETCH_HEAD - which my own fetch never writes at all. So 'nothing changed' would have read identically for 'the fetch ran and brought zero' and 'the fetch did not run', and the entire expected result of the stage was a zero with no positive control under it. That is my own rule, applied to me: never trust a zero without a positive control. The per-worktree FETCH_HEAD is the one artefact that separates the two cases, because a fetch rewrites it UNCONDITIONALLY. Proved in a fixture of the same shape rather than reasoned: a zero-result fetch from a linked worktree created it from nothing, and a second zero-result fetch moved its mtime again, while the shared file was never created. In the vehicle it is ABSENT right now, so the control is the transition ABSENT -> EXISTS. It is now a GATE, not a note: exit 12 if the file is absent after a fetch that exited 0, and exit 12 if it pre-existed and its mtime did not move. Both branches drilled with a fetch replaced by `true` - a command that exits 0 and does nothing - and both produced exit 12 with the right message; the substitution was confirmed by diffing the two drivers first, which is the lesson from my own no-op drill earlier in this stage.",
+      "my_fixture_was_the_wrong_SHAPE_which_is_why_four_clean_rehearsals_saw_nothing": "Worth naming separately, because it explains how I rehearsed four times and stayed blind. My fixture was a plain CLONE. The vehicle is a LINKED WORKTREE. A clone has no per-worktree gitdir, so the file at the centre of this finding could not exist there and no amount of rehearsing against it could expose the defect. I had matched the fixture's CONTENT to the subject (base tree, branch name, commit shape) and not its SHAPE. The new fixture adds `git worktree add`, and on it the control run reproduces the real situation exactly: origin/main unchanged, ref name set unchanged, shared FETCH_HEAD untouched, and the per-worktree file the only thing that moves. Same family as the needles in my notes - an instrument has to be aimed at the right object before its resolution means anything.",
+      "the_93_was_mine_and_here_is_what_it_actually_counted": "His B2 is right and my error is worse than a misattribution. My '93 tokens' was `netns-4026531840|tcp|140.82.121.3|22` - a port TWENTY-TWO token. I quoted its count as evidence for which spelling dominates and then applied that to a 443 declaration, where a port-22 token can never collide with me by construction. So the number was not merely attached to the wrong spelling: it was evidence about an object outside my collision set entirely. And my scope could not have told me otherwise - re-measured, the coordinator repo's json+md files contain exactly TWO tokens on 443 in total, so I generalised about 443 from a corpus that holds almost no 443 at all. Re-measured wide (his reports, my scratchpad, both /tmp/claude-* roots): `default` 314, bare `4026531840` 90, `github-https` 18, `netns-4026531840` 4. His counts were 333 / 93 / 4 - the small divergence is scope and moment, mine taken later while these files are actively written, and the conclusion is identical, so it is not worth a round.",
+      "what_the_corrected_token_collides_with_measured_with_his_own_code": "Corrected to the bare `4026531840`, and the consequence measured by importing `overlaps()` itself rather than reimplementing it. The spelling I SUBMITTED collided with nothing whatsoever - all six candidate pairs False, including both existing GitHub-443 entries, which is exactly backwards from the reason I gave for choosing it. The bare form returns True against `4026531840|tcp|140.82.121.4|443` and `...121.5|443` (the real GitHub entries, which use the bare form) and against the 90 bare-broad tokens. It still returns False against the 314 `default` and 18 `github-https` tokens, and I am naming that gap rather than leaving it implied: those are alias NAMES in the namespace slot, not namespace identities, so no spelling of mine can reach them. That is the debt he named in his own ledger, and I am not papering over it by pretending my declaration covers them."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "grant",
+    "note": "Step 3: only event_id, heartbeat and this subtree differ from the reviewed step 1.",
+    "coordinator_instance_read_at": "2026-11-04T16:04:12+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s5.json",
+    "content_file_sha256": "ab145b5e29b279039131543efc9748c0a35420096bdf20af28b811bc090915f2"
+  }
+}

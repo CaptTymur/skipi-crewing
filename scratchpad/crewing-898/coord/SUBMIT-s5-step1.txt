@@ -1,0 +1,22 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/INTEGRATE-fetch-review-only-20261104T155042Z.json
+file_bytes_sha256: f730b1351e607fab21117b9f7f0d2bed7bab4693b03d9e6fc59a283af2e178b9
+canonical_input_sha256: d3a0d0bf3011104750826325b5bfba65a084a631d57d5e72126a3c87e7db2148
+event_id: crewing-898-INTEGRATE-fetch-20261104T155042Z
+heartbeat: 2026-11-04T15:50:42+00:00  mode: review-only
+stage: INTEGRATE   stream: crewing/898-client-slice
+repo: /home/linux/Developer/worktrees/crewing-898-20261104
+head: e5132934064c8ccf701b0061570971c2af220403
+evidence_files: 1
+  35887f05313de710  /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s5-fetch.sh
+surfaces: writes=3 reads=6  (13/13 categories present)
+  W path:/home/linux/Developer/skipi-crewing/.git/FETCH_HEAD
+  W path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/main
+  W path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-fetch
+  R path:/home/linux/Developer/skipi-crewing/.git/objects
+  R path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feat/crewing-898-login-texts-20261104
+  R path:/home/linux/Developer/skipi-contracts
+  R net:netns-4026531840|tcp|0.0.0.0|443
+  R path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json
+  R path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md
+preflight_pins: ready_to_grant=true  blocking=[]  files_checked=1
+inspect --live: CHECKS_PASS_REQUIRES_COORDINATOR  errors=[]  conflicts=[]

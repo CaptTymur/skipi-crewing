@@ -1,0 +1,132 @@
+{
+ "outcome": "Stage 8: PUSH refs/heads/feat/crewing-898-login-texts-20261104 to origin. The first IRREVERSIBLE, EXTERNAL action of this task. One branch created on the remote at e5132934064c8ccf701b0061570971c2af220403. No PR, no merge, no tag, no release.",
+ "new": "Six writes, four of them made by the HOOK on my behalf and declared because they follow from my action. (1) The branch on the REMOTE - the only write outside this machine. (2) refs/remotes/origin/feat/crewing-898-login-texts-20261104 in the shared gitdir: an explicit-refspec push updates the remote-tracking ref, measured in a fixture (refs/remotes 2 -> 3), so the pinned NAME SET is expected to gain EXACTLY ONE name. (3) /tmp/skipi-guard-pre-push-crewing.json, because the hook passes no --json and the default lands there. (4) A temp harness worktree directory under /home/linux/Developer/worktrees, created by mkdtemp and removed in a finally. (5) Its registration under /home/linux/Developer/skipi-crewing/.git/worktrees, so `worktree list` goes 86 -> 87 -> 86. (6) This stage's log subtree. Nothing else.",
+ "preserve": "HEAD and refs/heads/feat/crewing-898-login-texts-20261104 stay at e5132934 (a push moves neither). origin/main stays at f145c601. The worktree stays porcelain-EMPTY. The shared .git/config stays byte-identical - digest pinned before and after - because no -u/--set-upstream is passed and 86 worktrees share that file. The canonical checkout stays at 0 tracked changes. And the remote-ref name set gains exactly one name and loses none.",
+ "stop": "STOP before acting if: the gate does not yield PERMIT_CURRENT as a FIELD; under 180 s remain; the ref-name pin digest differs; the shared .git/config digest differs from 04e1ad8de9c58ecd7e70f36dfe39014374d5130febb2fcbf5d3d24fab1cc10fe; HEAD or the branch ref is not at e5132934; the worktree is not clean; origin/main is not the fetched f145c601; remote ref names drifted from the pin (exit 8, naming what changed); `worktree list` is not 86 lines; any prunable worktree is already registered; any stale .skipi-guard-harness-wt-* directory is already in /home/linux/Developer/worktrees (exit 8 - do not add an action that creates one while an old one is lying around); or the branch ALREADY exists on the remote (exit 7 - this stage declared a creation, not an update). AFTER the action the exits differ in kind: exit 20 means the hook REFUSED and nothing was pushed - a VERDICT, not a driver failure; exit 21 means the push succeeded but the hook's own record contradicts that; exit 13 means the canonical checkout moved. Residue, a changed .git/config, a moved HEAD and an unexpected ref name are FINDINGS, printed and recorded.",
+ "proves": "Driver self-hashes. Gate verdict read as a FIELD. Window from the certificate. Three pairwise-distinct ACK ids. ACK_START below the window gate; ACK_STOP the stage's LAST action - including on exit 21, where the STOP line is printed after ACK_STOP is written. Explicit refspec `refs/heads/feat/crewing-898-login-texts-20261104:refs/heads/feat/crewing-898-login-texts-20261104`, so no push.default, no autoSetupRemote and no configured remote.origin.push can widen what goes (all three measured EMPTY). GIT_TERMINAL_PROMPT=0. No --no-verify. No -u. The hook's own record is parsed BY FIELD.",
+ "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on stage 5 (origin/main = f145c601 is what it fetched) and on stage 6's route verdict - which is an INPUT here, not a permission.",
+ "the_verdict_on_a_push_is_the_HOOKS_not_my_stage_6_measurement": "Stage 6 reproduced the hook's arithmetic read-only and got PASS on crewing-635-single-user. That is not permission to push. The hook takes base and head from its OWN stdin - it is written that way after SKI-INC-2026-07-16, and the deployed copy carries the line `base/head come from stdin, never from the checkout HEAD` - and it re-decides with the harnesses EXECUTING, where stage 6 had them all `not_run`. So stage 6 removed the knowable reasons for a refusal and nothing more. A refusal here is the gate working and is reported as a verdict, with proof that nothing was pushed.",
+ "what_the_hook_does_on_my_behalf_all_of_it_measured": "Read out of bin/skipi-guard, with line numbers, because these are writes I must declare even though they are not my code. The hook passes only --home, --repo, --local-ref, --local-sha, --remote-ref, --remote-sha, and NOT --json; so 853 defaults the record to /tmp/skipi-guard-pre-push-crewing.json. 859 does `mkdtemp(prefix='.skipi-guard-harness-wt-crewing-', dir=repo.parent)`. 865 does `git worktree add --detach` into the SHARED gitdir. 879 sets run_harness=True, so all 19 harness commands EXECUTE - eighteen as `node tests/*.mjs` with cwd in the temp worktree, and exactly one, shared_host_runtime_isolation, as an absolute path into ANOTHER house: `node /home/linux/Developer/skipi-plugins/_host-runtime/harness/isolation-contract.mjs`. 892-894 removes the worktree and rmtree's the directory in a `finally`. 835-836 strips GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE from the environment, so the hook's arithmetic does not depend on mine.",
+ "a_correction_to_the_coordinators_map_and_it_narrows_my_declaration": "The coordinator read 859 as putting the temp worktree in /home/linux/Developer/ - the common parent of every house. For my case that is wrong, and wrongly BROAD: `repo` is the hook's --repo, which the deployed hook sets to `git rev-parse --show-toplevel`, i.e. where the push runs. Pushing from this worktree makes repo.parent = /home/linux/Developer/worktrees. Measured rather than argued: the previous real push left its record on disk and its `repo` field reads /home/linux/Developer/worktrees/.skipi-guard-harness-wt-crewing-lonaaghy. Declaring /home/linux/Developer would have claimed every neighbour's paths by prefix for bytes I never touch.",
+ "a_push_blocker_I_raised_against_myself_and_then_refuted_by_measurement": "The guard's own docstring says the temp directory is a DIRECT sibling of the repo so that `../../skipi-plugins/...` imports in home harnesses resolve as they do from the real checkout. crewing_plugin_isolation_harness.mjs lines 22-23 import exactly that way. From a temp worktree inside /home/linux/Developer/worktrees those resolve to /home/linux/Developer/worktrees/skipi-plugins, which 'should not exist' - and I was ready to declare a refusal risk. Measured instead: /home/linux/Developer/worktrees/skipi-plugins is a SYMLINK to /home/linux/Developer/skipi-plugins, dated 2026-07-03, present for precisely this reason. And the empirical half is stronger than the reasoning: the 2026-11-01 push ran from a worktree and its record shows crewing_plugin_isolation with status pass. Had I reported this unmeasured, the coordinator would have had a false blocker from me.",
+ "there_is_NO_timeout_anywhere_in_the_guard_and_the_figure_that_says_otherwise_is_from_a_fixture": "The word `timeout` occurs ZERO times in bin/skipi-guard - not per harness, not on git calls. The runner is `subprocess.run(command, shell=True, ...)` at 611 with no timeout argument, nineteen times in sequence, and the generic helper at 28 has none either. A `timeout 60 node <h>` figure does exist in the coordinator's own ledger, but it belongs to a FIXTURE script for card 827 (extras-baseline-827.py), not to the guard's pre-push path - and it would be reassuring and false here. Consequence, stated plainly: the worst case is not bounded by the instrument, and it is not bounded by my window either, because once `git push` starts a lease expiry cannot stop it. So the push is deliberately NOT wrapped in `timeout`: killing it mid-flight is exactly what would leave a registered dead worktree in a gitdir shared by 85 working trees. Instead the PID is recorded to a file, so a stop - if a human ever needs one - goes by the recorded PID and not by a pattern, which is the rule in force on this machine. An overrun will be reported as an overrun.",
+ "the_positive_control_and_whose_reading_it_is": "The branch does not exist on the remote - measured now, 0 matching refs - so the control is a transition from NOTHING to a named sha, which is as clean as this family gets. `ls-remote` is taken before and after. It is a NETWORK READ and it is MINE: the coordinator has no network, so the fact of the push is my reading and a REPORT for him. Writing that down so it can never read as though he attested the remote's state. The after-half is measured REGARDLESS of the push's exit code, because a refusal must PROVE that nothing was pushed - that is the whole value of a gate, and asserting it would be weaker than measuring it.",
+ "the_residue_control_is_the_coordinators_and_it_is_the_right_class": "His point, adopted whole: the hook's cleanup sits in a `finally`, so a KILL skips it, and this machine killed four processes today under memory pressure while nineteen sequential node runs are the heaviest thing in this task. If the push dies mid-flight the shared gitdir keeps a registered dead worktree and /home/linux/Developer/worktrees keeps a directory. So three things are counted before and after: `worktree list` lines, prunable entries, and .skipi-guard-harness-wt-* directories - all three measured at 86 / 0 / 0 right now. A non-empty residue is a FINDING, not rubbish to tidy: the repair is `git worktree prune` plus removing the directory, and this driver does NOT do it silently. Same class as the FETCH_HEAD control of stage 5, but about the CLEANUP rather than the action.",
+ "drilled_every_gate_with_a_clean_baseline_as_the_discriminating_control": "Rehearsed against a local bare remote with a linked worktree - the fixture's SHAPE matches the subject, which is the lesson from stage 5 where a plain clone could not expose a per-worktree defect. Control: rc 0, ZERO finding lines, positive control ABSENT -> sha, exactly the one expected remote-tracking ref added, hook record parsed, residue 0. Then each gate, with the expected code printed beside the received one: hook refuses -> rc 20 plus 'confirmed: the branch is still ABSENT on the remote, so the refusal cost nothing'; branch already on the remote -> rc 7; hook leaves a harness directory behind -> the residue FINDING naming the directory; hook record shows a failing harness and a short count -> both FINDINGs; push succeeds while the record contradicts it -> rc 21 with ACK_STOP written FIRST. And the baseline re-run afterwards printed 0 FINDING lines, which is what makes each drill's finding attributable to its drill rather than to the fixture.",
+ "exit_21_exists_because_one_case_must_not_be_a_log_line": "With the real guard a failing harness makes the hook exit non-zero and the push is refused, so 'pushed AND a harness failed' cannot happen. That is exactly why it gets its own exit code: if it ever happens, my model of the guard is wrong and the bytes are already on the remote. A FINDING line in a log could be skimmed past; a non-zero exit cannot. The same applies to the hook's record being absent after a successful push, since the hook writes it by default.",
+ "next_action": "The PR, as its own request, and only if this stage closes clean. A pushed branch is not a merge: the PR is a request for review, and neither my conclusion nor the coordinator's authorises a merge or a release. If this stage exits 20 (refused) the next action is to read the hook's reason, not to retry.",
+ "owner_window": "NOT required for the push itself: it publishes a branch for review and changes nothing a person uses. The texts and the colour were accepted earlier today. Worth stating though, because this is the first action with an effect outside this machine: what becomes visible is a branch on GitHub, not a release and not anything a pilot user can reach.",
+ "active_neighbors": "PROSE, never a second declared stream. `skipi-dev-tails.timer`, user scope, every 10 min, runs `git fetch` over repositories it finds by walking directories; confirmed five times not to touch this gitdir, the strongest reading taken while it was mid-run. Runs measured: 15:37:25-15:39:38Z, 15:47:25-15:49:44Z, 15:57:25-15:59:53Z, each exit 0, shared FETCH_HEAD unmoved at 2026-11-02 10:00:37 +04 throughout; durations 2m13s, 2m19s, 2m28s; firing every 10 minutes from 16:07:25Z. For THIS stage the neighbour is more dangerous than before and the protection is different in kind: a fetch by it would move refs/remotes, and my precondition compares the NAME SET against a pin while origin/main must equal the fetched f145c601 - so interference stops the stage rather than silently changing what gets pushed. But note the honest asymmetry: those checks run BEFORE the push, and the push is unabortable, so a neighbour arriving mid-push cannot be stopped by me. It also cannot change what is pushed, because the refspec names one ref and one sha. I will request a window outside its interval. Nothing of mine runs outside this stage.",
+ "driver": {
+  "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s8-push.sh",
+  "note": "Self-hashing; recomputed at run time into both ACK documents. Its digest is NOT written here - the generator supplies it from disk in the same call that computes evidence_files, so one bundle cannot carry two digests for one path."
+ },
+ "expected_post": {
+  "why": "pinned as exit conditions; the kinds of exit are listed in `stop`",
+  "remote_branch": "CREATED where nothing existed: ls-remote goes from 0 matching refs to exactly one at e5132934064c8ccf701b0061570971c2af220403. This is the positive control and it is my network reading, a REPORT for the coordinator",
+  "remote_tracking_ref": "EXACTLY ONE name added to the pinned set - refs/remotes/origin/feat/crewing-898-login-texts-20261104 - and none gone. Any other addition is a FINDING",
+  "hook_record": "/tmp/skipi-guard-pre-push-crewing.json REWRITTEN by the hook. Its content cannot be pinned by digest - it is the verdict being obtained - so it is pinned by PROPERTIES: status pass, task crewing-635-single-user, 19 harness entries, every one `pass`, failed list empty. The PREVIOUS record is preserved into this stage's logs first, with its digest, so the overwrite destroys no evidence",
+  "worktree_list_lines": "86 before and 86 after (87 transiently, inside the hook); prunable 0; residue dirs 0",
+  "shared_git_config": "byte-identical, digest 04e1ad8de9c58ecd7e70f36dfe39014374d5130febb2fcbf5d3d24fab1cc10fe",
+  "head_and_branch_ref": "BOTH unchanged at e5132934064c8ccf701b0061570971c2af220403",
+  "origin_main": "unchanged at f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "worktree_porcelain": "EMPTY before and after, -uall unit",
+  "canonical_checkout": "0 tracked changes before and after",
+  "push_wall_seconds": "RECORDED, not predicted - the first measurement of the HOOK's duration. Stage 7's local run of the same nineteen is a LOWER bound for it, not a prediction"
+ },
+ "measured_duration": {
+  "stage_7_local_run": "19/19 pass in 15 s - the first measurement of these nineteen; a LOWER bound for the hook",
+  "ops_anchors_14_commands": "16 s (TASKCARD-765:55, series 15/16/18/17) and 35 s (TASKCARD-664:91)",
+  "hook_duration": "UNKNOWN - this stage measures it, and it is a different object from stage 7's local run",
+  "upper_bound": "NONE in the code: no timeout anywhere in bin/skipi-guard",
+  "threshold": "180 s, from the cost of error, which is one-directional here"
+ },
+ "resource_identities": {
+  "net:4026531840|tcp|0.0.0.0|443": "The push is a network WRITE this time, not a read. Remote read from the vehicle: `git remote -v` gives origin = https://github.com/CaptTymur/skipi-crewing.git, HTTPS, hence tcp/443. Namespace 4026531840 is the netns inode from `readlink /proc/self/ns/net`, written bare to match the form the existing GitHub-443 entries use - the coordinator measured that my first spelling, netns-4026531840, collided with nothing at all. Address 0.0.0.0, the schema's honest broadest, because GitHub rotates its addresses and a pinned IP the push does not reach would be false precisely when it matters."
+ },
+ "resource_identities_note": "One net resource, and it sits in `ports.writes` rather than reads because a push changes state on the other side - that is the difference from stages 5 and 6. No database, no port binding. The git bytes are declared by exact path where the name is knowable, and by PARENT where it is not: the hook's temp worktree has a random mkdtemp suffix, so /home/linux/Developer/worktrees and /home/linux/Developer/skipi-crewing/.git/worktrees are declared as parents. That is broader than I would like - /home/linux/Developer/worktrees holds 436 entries including other writers' trees - and it is the narrowest honest form available, because I cannot name a directory whose name does not exist yet. Saying so rather than pretending to a precision I do not have.",
+ "surfaces": {
+  "code": {
+   "reads": [
+    "path:/home/linux/Developer/skipi-crewing/.git/objects",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feat/crewing-898-login-texts-20261104"
+   ],
+   "writes": [
+    "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/remotes/origin/feat/crewing-898-login-texts-20261104",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/remotes/origin/feat/crewing-898-login-texts-20261104",
+    "path:/home/linux/Developer/skipi-crewing/.git/worktrees",
+    "path:/home/linux/Developer/worktrees"
+   ]
+  },
+  "contracts": {
+   "reads": [],
+   "writes": []
+  },
+  "schema": {
+   "reads": [],
+   "writes": []
+  },
+  "generated": {
+   "reads": [],
+   "writes": []
+  },
+  "tests": {
+   "reads": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests",
+    "path:/home/linux/Developer/skipi-plugins/_host-runtime"
+   ],
+   "writes": []
+  },
+  "database": {
+   "reads": [],
+   "writes": []
+  },
+  "ports": {
+   "reads": [],
+   "writes": [
+    "net:4026531840|tcp|0.0.0.0|443"
+   ]
+  },
+  "cache": {
+   "reads": [],
+   "writes": []
+  },
+  "build": {
+   "reads": [],
+   "writes": []
+  },
+  "guard": {
+   "reads": [
+    "path:/home/linux/Developer/skipi-guard/bin/skipi-guard",
+    "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+    "path:/home/linux/Developer/skipi-crewing/.git/hooks/pre-push"
+   ],
+   "writes": [
+    "path:/tmp/skipi-guard-pre-push-crewing.json"
+   ]
+  },
+  "release": {
+   "reads": [],
+   "writes": []
+  },
+  "card": {
+   "reads": [
+    "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+   ],
+   "writes": []
+  },
+  "logs": {
+   "reads": [
+    "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt",
+    "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/PRESERVED-pre-push-crewing-20261101T171219Z.json"
+   ],
+   "writes": [
+    "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-push"
+   ]
+  }
+ },
+ "surfaces_note": "`tests` is NO LONGER empty, and that is the sharpest difference from stage 6: there the harnesses were `not_run` and the guard never opened a harness file, so the category was empty by construction of the instrument. Here run_harness=True and all 19 EXECUTE - eighteen reading `<temp worktree>/tests/*.mjs`, and one executing node inside ANOTHER house, which is why skipi-plugins/_host-runtime is declared. Anything those harnesses write lands in the temp worktree and goes with it. `/tmp/skipi-guard-pre-push-crewing.json` sits under `guard` because the guard writes it, not me. Empty categories mean considered, per the schema.",
+ "the_threshold_is_180_s_justified_from_ABOVE_and_stage_7_now_bounds_it_from_below": "180 s, justified from ABOVE because the quantity has no upper bound in the code: `run_harness_commands` calls `subprocess.run(..., shell=True)` with NO timeout, nineteen times in sequence, so a hung harness hangs the push and no window can bound it.\n\nSTAGE 7 NOW BOUNDS IT FROM BELOW, and that is all it does: it ran the same nineteen LOCALLY and measured 19/19 pass in 15 s wall clock (source: stage-harness/after.txt, a closed record, so the number cannot drift). That is a LOWER bound for the hook - warm page cache, a checkout that is not fresh, and no temp-worktree creation, against the hook's tree created a moment before use. It also came in BELOW all three predictions: my own 20-60 s, and the ops anchors of 16 s for 14 commands (TASKCARD-765:55, series 15/16/18/17) and 35 s for 14 (TASKCARD-664:91). Coming in low is a reason to trust the measurement, not a reason to lower the floor: a measured lower bound says nothing about the tail, and this is the one irreversible stage of the task. 180 s stays, and the cost of error here is one-directional - the push cannot be taken back, while refusing early costs one round.\n\nThe widely repeated '60-90 s' is still not used: it appears in three places as a carried-forward threshold and No.664 overturned it by measurement.",
+ "what_stage_7_removed_and_what_it_did_NOT_grant": "All nineteen passed, including the twelve that had no recorded outcome for this task - among them `crewing_escaping_negative` and `crewing_stack_build_metadata`, the two legs of the stale red-debt premise, now confirmed by EXECUTION rather than by reading. So a red harness will not refuse this push. That removes a KNOWABLE reason for refusal and grants nothing: the hook re-decides on its OWN stdin, in its own fresh detached worktree, with its own base arithmetic from `resolve_push_base`, and three things stage 7 could not reproduce remain - the creation and cleanup of a temp worktree in the SHARED gitdir, the write to /tmp, and `shared_host_runtime_isolation` running from a DIFFERENT tree than the one it ran from locally.",
+ "the_LOCAL_positive_control_he_found_and_I_did_not_declare": "BLOCKING finding of his, and the undeclared write is the smaller half. The push creates /home/linux/Developer/skipi-crewing/.git/logs/refs/remotes/origin/feat/crewing-898-login-texts-20261104 - the reflog of the remote-tracking ref. Verified independently: `core.logAllRefUpdates=true`, the repo is not bare, 149 reflog files already sit under .git/logs/refs/remotes and 51 of them carry the literal `update by push`; neither the ref nor its reflog exists for my branch yet. And `overlaps()` puts that path outside ALL THREE of my other gitdir tokens - `refs/remotes/origin/<branch>`, `.git/worktrees` and `/home/linux/Developer/worktrees` all return False - so it was a write into a gitdir shared by 86 working trees, outside the declared set. Third instance of the genus that already produced the index in stage 3a and the per-worktree FETCH_HEAD in stage 5.\n\nTHE LARGER HALF IS THAT IT IS A CONTROL I DID NOT HAVE. My ref NAME SET proves the ref APPEARED; it cannot say HOW. A ref file can be created by `update-ref` or by a fetch and the name set reads identically. Measured in a fixture rather than argued, a real push writes exactly one line:\n  0000000000000000000000000000000000000000 <new sha> <committer> <unix> +0400\\tupdate by push\nSo the reflog attests three things the name set cannot: creation FROM ZEROS, arrival BY PUSH, and the time. The committer recorded there is whatever the EFFECTIVE `user.*` resolves to, and in THIS repository that is the stub: `--local` sets `Skipi Guard PoC <skipi-guard@example.invalid>` and overrides the `--global` `CaptTymur <tymur.rudov@icloud.com>`, no GIT_COMMITTER_* is set in the environment and this driver sets none. Asked git directly rather than reasoning from scopes: `git var GIT_COMMITTER_IDENT` in the worktree returns `Skipi Guard PoC <skipi-guard@example.invalid>`. So the line this push writes will carry the STUB. My earlier draft asserted the opposite, having read it off the fixture - and the fixture is a `git clone`, which inherits no local config, so git there fell back to the global identity. The form matched the subject perfectly (a real push, a real reflog, a real line) and the one ATTRIBUTE I chose to document was the one where they diverged. Worth adding that history could not have corrected this: across the 149 existing reflogs the stub appears on 203 lines and CaptTymur on 96, but among `update by push` lines specifically it is 66 stub against 70 CaptTymur - my wrong version was the MAJORITY there. Frequency over history does not predict a value determined by a mutable SETTING; the discriminator is the setting, and `git var` is how to ask it. None of the four sub-predicates tests the committer, and none should - the control is about creation-by-push, not about identity.\n\nAND IT IS LOCAL, which is why it matters more than its size. `ls-remote` is my network reading and the coordinator's REPORT; the reflog he reads himself. This is the single artefact of the stage that moves part of the proof of a push out of my report and into his own measurement - on the one irreversible action of the task, that is the difference between being believed and being checked.\n\nGated, not noted. Before: the reflog must be ABSENT (exit 7) - a leftover would make the 'nothing -> exists' control vacuous, and that is drilled. After, measured regardless of rc: four sub-predicates - exists, `update by push`, from-zeros, to-COMMIT - and if the push exited 0 while any of them fails, it is a CONTRADICTION carrying exit 21, because then the ref arrived by something other than my push. Drilled with a push replaced by `true`: the FINDING names all four and the exit is 21."
+}

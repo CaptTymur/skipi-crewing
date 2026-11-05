@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-3d-ACKSTOP-20261104T143831Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T14:38:31+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "5bb21c34dc300ea8dda549f747804453e74121731ee554503e7b5eb5fb6e7bbc",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-3d/after.txt",
+      "sha256": "aebc83b3fbee9ba914a3a030707d4b0628cb5c62af274797d4f445af8c9ecf71",
+      "content": "driver_sha256=5bb21c34dc300ea8dda549f747804453e74121731ee554503e7b5eb5fb6e7bbc\ndist_mode=664\nharness_mode=664\nrust_mode=664\nrust_pre=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nrust_post=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nrust_post_expected=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nworktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nworktree_branch=feat/crewing-898-login-texts-20261104\ndist_pre=016e6141e83476e93b9609ef8f2891afa87edc228c1d082f1fef524904a6e384\ndist_post=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\ndist_post_expected=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\nharness_pre=7264bd55cab733869e39f2792a0d1fa223363e2384e65f8fe67cbf7c67e088c8\nharness_post=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\nharness_post_expected=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\ncargo_ran_in_window=no\ngen_schemas_exists=no\nsrc_tauri_target_exists=no\nworktree_changed_files=3\n M dist/index.html\n M src-tauri/src/native_lifecycle.rs\n M tests/crewing635_public_settings_harness.mjs\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":184,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "Only ONE of the route's 19 harnesses was run. Nothing here says the guard route passes, nothing was pushed, no commit was made, and no stand was built. The Rust suite was NOT run in this window: its 248/0 is evidence of a dry run on a COPY under umask 0022, and under the machine's default umask 0002 that same suite is 233/15 for a pre-existing reason filed as No.922. The subject of THIS stage is the refusal line's COLOUR, not its wording: the colour and its legibility are NOT owner-accepted by this run - acceptance is live and separate. And the fix is DESKTOP ONLY: the mobile path (m-login-error, class mobile-status warn -> color var(--warn)) stays at 2.79:1 in the light theme, so nothing here supports a claim that legibility is fixed, only that the DESKTOP refusal line is. Nothing here may be read as permission to push or release."
+}

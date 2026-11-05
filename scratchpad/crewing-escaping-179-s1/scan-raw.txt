@@ -1,0 +1,708 @@
+ФАЙЛ dist/index.html: строк 18726 (единица счёта: СТРОКИ)
+
+=== КЛАСС (a) inline-обработчики on*=: строк 360 ===
+    из них с конкатенацией (кандидаты на данные): 131; константных: 229
+  983	const	<div class="mod-tab active" id="mt-crew_flow" onclick="showView('crew_flow')" title="Incoming candidate queue">
+  986	const	<div class="mod-tab" id="mt-compliance" onclick="showView('compliance')" title="Reusable compliance profiles">
+  990	const	<div class="mod-tab" id="mt-seafarers" onclick="showView('seafarers')" title="Local seafarer database">
+  996	const	<div class="mb-vault" id="mb-vault" onclick="openSettings('vaults')" title="Switch vault"><span>📁</span><span class="mb-vault-name" id="mb-vault-name"
+  997	const	<div class="mb-gear" onclick="openSettings()" title="Settings">⚙</div>
+  1009	const	<div id="skipi-settings-overlay" onclick="if(event.target===this)closeSettings()"><div id="settings-root"></div></div>
+  1667	const	+ '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:
+  1758	concat	+ '<button class="connect-close" onclick="closeConnectDialog()" aria-label="'+escapeAttr(tr('connect.close'))+'">×</button>'
+  1762	const	+ '<button class="connect-tab" id="connect-tab-token" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.tab_token'))+'</button>'
+  1763	const	+ '<button class="connect-tab" id="connect-tab-qr" onclick="connectShowTab(\'qr\')">'+escapeHtml(tr('connect.tab_qr'))+'</button>'
+  1771	const	+ '<button class="connect-ghost" onclick="connectClearToken()">'+escapeHtml(tr('connect.clear'))+'</button>'
+  1772	const	+ '<button class="connect-primary" id="connect-submit" onclick="connectSubmitToken()">'+escapeHtml(tr('connect.submit'))+'</button>'
+  1782	const	+ '<button class="connect-primary" onclick="connectShowTab(\'token\')">'+escapeHtml(tr('connect.enter_manually'))+'</button>'
+  2446	const	return '<select id="i-lang" onchange="setUiLang(this.value)">'
+  2660	concat	+   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(id)+'\')">'
+  2671	concat	+   '<button type="button" class="cd-button cd-placeholder" id="'+id+'-btn" onclick="cdToggle(\''+id+'\')">'
+  3098	concat	h += '<button type="button" class="'+(i<=appFeedbackRating?'on':'')+'" onclick="setFeedbackRating('+i+')" aria-label="'+i+'">★</button>';
+  3114	const	'<div id="app-feedback-overlay" class="settings-overlay" onclick="if(event.target===this)postponeFeedback()">'
+  3116	const	+ '<div class="settings-close" onclick="postponeFeedback()" title="Close">×</div>'
+  3121	const	+ '<div class="skipi-feedback-actions"><button class="ghost" onclick="postponeFeedback()">'+feedbackEsc(tr('feedback.later'))+'</button><button id="ap
+  3353	const	+ '<button class="ghost" onclick="openTeamOnboarding(\'start\')">Back</button>'
+  3354	const	+ '<button onclick="teamOnboardingOpenConnection()">Open token settings</button>'
+  3359	const	+ '<div class="team-onboarding-id"><code>'+escapeHtml(userId)+'</code><button class="ghost" onclick="copyMyTeamUserId()">Copy</button></div>'
+  3366	const	+ '<button class="ghost" onclick="openTeamOnboarding(\'start\')">Back</button>'
+  3367	const	+ '<button class="ghost" onclick="teamOnboardingOpenConnection()">I have a token</button>'
+  3368	const	+ '<button onclick="teamOnboardingOpenAccess()">Open access settings</button>'
+  3372	const	+ '<button class="team-onboarding-choice" onclick="openTeamOnboarding(\'owner\')">'
+  3376	const	+ '<button class="team-onboarding-choice" onclick="openTeamOnboarding(\'member\')">'
+  3382	const	+ '<button class="ghost" onclick="closeTeamOnboarding(true)">Skip for now</button>'
+  3386	const	'<div class="settings-overlay" onclick="if(event.target===this)closeTeamOnboarding(false)">'
+  3390	const	+ '<button class="ghost" onclick="closeTeamOnboarding(false)" style="padding:5px 10px;font-size:12px;">Close</button>'
+  3433	const	+ '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="refreshTeamMembers(true)" title="Refresh">↻</button><
+  3437	const	+ '<div class="tree-item" style="padding-left:16px;" onclick="var el=document.getElementById(\'team-access-section\');if(el)el.scrollIntoView({block:\
+  3438	const	+ '<div class="tree-item" style="padding-left:16px;" onclick="openTeamOnboarding(\'start\')"><span>?</span><div class="ti-title"><div>Setup guide</div
+  3439	const	+ '<div class="tree-item" style="padding-left:16px;" onclick="openSettings(\'connection\')"><span>🔌</span><div class="ti-title"><div>Company token</di
+  3543	concat	: '<button class="ghost" onclick="removeTeamMember(\''+escapeAttr(m.user_id)+'\')" style="padding:4px 10px;font-size:11px;">Remove</button>';
+  3559	const	+ '<button class="ghost" onclick="copyMyTeamUserId()" style="padding:8px 12px;">Copy</button>'
+  3562	concat	+ '<div style="display:flex;align-items:flex-end;"><button onclick="claimOwnerAccess()" '+(hasConnection?'':'disabled')+'>Claim owner access</button><
+  3569	concat	+ '<div style="display:flex;align-items:flex-end;"><button onclick="addTeamMember()" '+(hasConnection && canManageTeam?'':'disabled')+'>Add member</bu
+  3575	const	+ '<button class="ghost" onclick="refreshTeamMembers(true)" style="padding:5px 12px;font-size:12px;">Refresh</button>'
+  3581	const	+ '<button class="ghost" onclick="copyIssuedTeamToken()" style="padding:8px 12px;">Copy</button>'
+  3582	const	+ '<button class="ghost" onclick="state.lastTeamMemberToken=null;renderTeamMain();" style="padding:8px 12px;">Hide</button></div>'
+  3600	const	var html = '<span class="tt-pill ai" data-team-target="ai" onclick="setTeamChatTarget(\'ai\')">🤖 AI Assistant</span>';
+  3602	const	html += '<span class="tt-pill" data-team-target="team" onclick="setTeamChatTarget(\'team\')">👥 Команда</span>';
+  3606	concat	html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(target)+'\')">'+teamPresenceHtml(m)
+  3610	const	html += '<span class="tt-pill" data-team-target="team" onclick="setTeamChatTarget(\'team\')">👥 Все</span>';
+  3637	const	+ '<span class="team-head-actions">'+teamConnectionStatusHtml()+'<button class="ghost" onclick="openTeamOnboarding(\'start\')" style="padding:3px 8px;
+  3642	const	+ '<input id="team-chat-display-name" type="text" value="'+escapeAttr(currentName)+'" placeholder="Ваше имя" oninput="state.settings=state.settings||{
+  3646	const	+ '<button class="team-scroll-bottom" id="team-chat-bottom-btn" onclick="scrollTeamChatToBottom(true)" title="В конец чата" aria-label="В конец чата">
+  3654	const	+ '<div class="team-pending-reply" id="team-chat-pending-reply"><span class="label">↩</span><span class="nick" id="team-chat-pending-reply-nick"></spa
+  3657	const	+ '<button class="team-attach-btn" onclick="teamChatPollOnce(false,true)" title="Refresh">↻</button>'
+  3658	const	+ '<button class="team-attach-btn" id="team-chat-sound-btn" onclick="toggleTeamChatSound(event)" title="Звук уведомлений">🔔</button>'
+  3659	const	+ '<button class="team-attach-btn" onclick="createVacancyDraftFromTeamText()" title="Create vacancy draft from text">＋</button>'
+  3660	const	+ '<textarea id="team-chat-input" placeholder="Вопрос AI Assistant (видно всей команде)..." oninput="state.teamChat.draftText=this.value" onkeydown="t
+  3661	const	+ '<button class="btn btn-accent btn-sm" id="team-chat-send-btn" onclick="sendTeamChatMessage()" title="Send">▶</button>'
+  3904	concat	+ '<button type="button" onclick="removeTeamChatAttachment('+i+')" title="Remove">&times;</button>'
+  3942	concat	parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')" title="'+esca
+  4026	concat	html += '<div class="'+cls+'" oncontextmenu="_onTeamChatMsgContextMenu(event,\''+msgIdAttr+'\')">'
+  4510	const	+ '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderInboxThreadsTree()" title="Refresh">↻</button><
+  4558	concat	html += '<div class="tree-item'+(active?' active':'')+'" onclick="openThread(\''+escapeAttr(t.application_id)+'\')">';
+  4608	const	+ '<button onclick="sendThreadReply()">Send 🔒</button>'
+  4716	const	var sortHtml = '<select id="vac-sort" onchange="state.sortBy=this.value;renderVacanciesTreeBody();">'
+  4722	const	+ '<button onclick="startNewVacancy()" style="padding:4px 10px;font-size:11px;" title="Add a new vacancy">'+tr('common.new')+'</button>'
+  4753	const	tree.innerHTML = '<div class="tree-empty">'+tr('vacancy.empty')+'<br><br><button onclick="startNewVacancy()">'+tr('common.new')+'</button></div>';
+  4764	concat	html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openVacancyById(\''+escapeAttr(v.id)+'\')">';
+  4833	const	+ '<span class="actions"><button onclick="showView(\'new_profile\')" style="padding:4px 10px;font-size:11px;">'+tr('common.new')+'</button></span>'
+  4836	const	+ '<input type="checkbox" id="cp-include-archived" '+(state.includeArchivedProfiles?'checked':'')+' onchange="state.includeArchivedProfiles=this.check
+  4860	const	tree.innerHTML = '<div class="tree-empty">Профилей пока нет.<br><br><button onclick="showView(\'new_profile\')">'+tr('common.new')+'</button></div>';
+  4867	concat	html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openComplianceProfileById(\''+escapeAttr(p.id)+'\')">';
+  4893	const	+ '</div><br><button onclick="showView(\'new_profile\')">+ Новый профиль</button></div>';
+  4938	const	+ '<button class="ghost" onclick="showView(\'edit_profile\')">Edit</button>'
+  4941	concat	? '<button onclick="restoreComplianceProfile(\''+escapeAttr(p.id)+'\')">Restore</button>'
+  4942	concat	: '<button class="ghost" onclick="archiveComplianceProfile(\''+escapeAttr(p.id)+'\')">Archive</button>')
+  4984	concat	+ ' onclick="publishComplianceProfile(\''+escapeAttr(p.id)+'\','+(published ? 'false' : 'true')+')">'
+  5063	const	+ '<div class="row"><div><label>Label</label><input type="text" class="x-label" value="'+escapeAttr(x.label||'')+'" '+(readonly?'disabled':'')+' oninp
+  5070	concat	+ (readonly?'':'<div style="display:flex;justify-content:flex-end;"><button class="ghost" onclick="profileRemoveExtra('+i+')" style="padding:5px 10px;
+  5147	const	+ (readonly?'':'<button class="ghost" onclick="profileAddExtra()" style="margin:4px 0 16px;">+ Add requirement</button>')
+  5149	const	+ '<button class="ghost" onclick="showView(\'compliance\')">Cancel</button>'
+  5151	concat	? '<button onclick="restoreComplianceProfile(\''+escapeAttr(profile.id)+'\')">Restore</button>'
+  5152	concat	: '<button onclick="saveComplianceProfile('+(editing?'\''+escapeAttr(profile.id)+'\'':'null')+')">Save</button>')
+  5348	const	+ ((blocked && !pending) ? '' : '<button class="mobile-secondary" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect"'+dis+' o
+  5352	const	+ ((blocked && !pending) ? '' : ' <button class="ghost" id="legacy-mailbox-disconnect" data-qa="settings.mailbox.legacy-disconnect" style="padding:5px
+  5690	const	var select = '<select data-qa="crew-flow-profile-select" onchange="crewFlowSelectProfile(this.value)"'
+  6319	const	+ '<div style="padding:6px 0 2px;"><button data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()" class="ghost" style="padding:4px 10px;font-siz
+  6337	concat	+ ' onkeydown="crewFlowRowKeydown(event, \'' + escapeJsString(item.intake_id) + '\')"'
+  6338	concat	+ ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+  6346	const	+   '<details class="cf-brk" onclick="event.stopPropagation()"><summary>' + escapeHtml(crewFlowTr('fit_breakdown')) + '</summary>'
+  6455	const	+ '<button data-qa="crew-flow-address-copy" onclick="crewFlowCopyAddress()" class="ghost" style="padding:4px 10px;font-size:11px;">'
+  6526	const	+ (mode === 'live' ? '<button class="mobile-secondary" data-qa="crew-flow-refresh" onclick="crewFlowRefreshQueue()">' + escapeHtml(crewFlowTr('refresh
+  6527	const	+ '<button class="mobile-secondary" data-qa="crew-flow-open-pilot" onclick="crewFlowOpenPilot()">' + escapeHtml(tr('nav.intake_pilot')) + '</button>'
+  6539	concat	+ ' onclick="crewFlowOpenCandidate(\'' + escapeJsString(item.intake_id) + '\')">'
+  6616	concat	+ ' onclick="' + onclick + '" style="padding:6px 12px;font-size:12px;' + (primary && !cls ? 'background:var(--accent);color:#fff;border:none;border-ra
+  7194	concat	return '<button data-qa="track1-action-'+escapeAttr(a.id)+'" onclick="event.stopPropagation();track1CandidateAction(\''+escapeAttr(a.id)+'\', \'cf-dem
+  7307	const	+ '<span class="actions"><button id="crew-flow-panel-refresh" data-qa="crew-flow-panel-refresh" onclick="crewFlowRefreshFromPanel()"'
+  7310	const	+ '<div class="panel-search"><input type="text" id="crew-flow-search" placeholder="' + escapeAttr(tr('common.search')) + '" oninput="state.crewFlowSea
+  7348	concat	html += '<div class="tree-item ti-stack '+(active?'active':'')+'" data-qa="crew-flow-signal-row" onclick="openCrewFlowSignal(\''+escapeAttr(row.id)+'\
+  7432	concat	+     '<button onclick="crewFlowAddSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-
+  7433	concat	+     '<button class="ghost" onclick="crewFlowIgnoreSignal(\''+escapeAttr(row.id)+'\')" style="padding:6px 12px;font-size:12px;">Ignore</button>'
+  7630	const	+ '<div class="pilot-actions"><button data-qa="pilot-copy" onclick="pilotCopyAlias()">'+escapeHtml(secret.copied ? pilotT('copied') : pilotT('copy'))+
+  7639	concat	if (a.state !== 'revoked') buttons += '<button onclick="pilotAliasAction(\'crewing_intake_alias_rotate\',\''+escapeJsString(a.id)+'\')">'+escapeHtml(p
+  7640	concat	if (a.state === 'active') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_pause\',\''+escapeJsString(a.id)+'\')">'+
+  7641	concat	if (a.state === 'paused') buttons += '<button class="ghost" onclick="pilotAliasAction(\'crewing_intake_alias_resume\',\''+escapeJsString(a.id)+'\')">'
+  7642	concat	if (a.state !== 'revoked') buttons += '<button class="ghost" style="color:var(--err);" onclick="pilotAliasAction(\'crewing_intake_alias_revoke\',\''+e
+  7654	const	return '<input type="file" id="pilot-file" style="display:none" onchange="pilotSelectFile(this)" accept=".pdf,.doc,.docx,.rtf,.txt,.odt,application/pd
+  7655	concat	+ '<div class="pilot-actions"><button class="ghost" onclick="document.getElementById(\'pilot-file\').click()" '+(p.uploadPending?'disabled':'')+'>'+es
+  7656	concat	+ (a && !r ? '<button data-qa="pilot-upload" onclick="pilotSubmitUpload()" '+(p.uploadPending?'disabled':'')+'>'+escapeHtml(p.uploadPending ? pilotT('
+  7672	concat	+ '<div class="pilot-actions"><button class="ghost" data-qa="pilot-open-card" onclick="pilotOpenCard(\''+escapeJsString(item.intake_id)+'\')">'+escape
+  7677	concat	return rows+'<div class="pilot-pagination" data-qa="pilot-pagination"><button class="ghost" onclick="pilotLoadQueue('+Math.max(0,q.offset-q.limit)+')"
+  7691	const	main.innerHTML = '<div class="pilot-shell" data-qa="pilot-unconfigured"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+esca
+  7695	const	main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-pilot-view"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p
+  7697	concat	+ '<div class="pilot-form-row"><label>'+escapeHtml(pilotT('label'))+'<input id="pilot-alias-label" maxlength="120" value="'+escapeAttr(p.aliasDraft)+'
+  7699	const	+ '<section class="pilot-card"><div class="pilot-card-head"><div><h2>'+escapeHtml(pilotT('queue'))+'</h2><div class="pilot-note">'+escapeHtml(pilotT('
+  8624	concat	return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>
+  8646	const	+ (correcting ? '<div class="pilot-status" data-qa="pilot-correcting">'+escapeHtml(cardT('correcting'))+': <strong>'+escapeHtml(f.field)+'</strong> <b
+  8647	const	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('field'))+'<input id="pilot-fact-field" maxlength="120" value="'+escapeAttr(f.field)+'" '+(co
+  8648	const	+ '<label>'+escapeHtml(cardT('source_object'))+'<select id="pilot-fact-source" onchange="state.intakePilot.detail.form.source_object=this.value"><opti
+  8649	const	+ '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('value'))+'<textarea id="pilot-fact-value" maxlength="4096" rows="2" 
+  8650	const	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('page_optional'))+'<input id="pilot-fact-page" inputmode="numeric" maxlength="9" value="'+esc
+  8651	const	+ '<label>'+escapeHtml(cardT('span_optional'))+'<input id="pilot-fact-span" maxlength="64" value="'+escapeAttr(f.span || '')+'" oninput="state.intakeP
+  8652	concat	+ '<button data-qa="pilot-fact-submit" onclick="pilotFactSubmit()" '+(d.pending?'disabled':'')+'>'+escapeHtml(correcting ? cardT('correct_fact') : car
+  8801	concat	? '<button class="ghost" data-qa="pilot-withdraw" onclick="pilotShortlistWithdraw('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('short
+  8804	concat	: '<button data-qa="pilot-confirm" onclick="pilotShortlistConfirm('+jsPair+')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('shortlist_add'))+'</b
+  8886	const	if (a.outcome === 'unknown') extra = '<div data-qa="pilot-attempt-unknown">'+escapeHtml(cardT('unknown_outcome'))+' <button class="ghost" data-qa="pil
+  9099	const	+ '<div class="pilot-actions"><button class="ghost" data-qa="pilot-letter-open-saved" onclick="pilotLetterOpenSaved()">'+escapeHtml(cardT('letter_open
+  9109	concat	+ '<div class="pilot-actions"><button data-qa="pilot-letter-open" onclick="pilotLetterDownload()"'+((d.letterLoading || web) ? ' disabled' : '')+'>'+e
+  9138	concat	? '<button class="ghost" data-qa="pilot-attachment-download" data-ordinal="'+escapeAttr(key)+'" onclick="pilotAttachmentDownload('+String(ordinal)+')"
+  9139	concat	+ ((saved && saved.path) ? '<button class="ghost" data-qa="pilot-attachment-open-saved" onclick="pilotAttachmentOpenSaved('+String(ordinal)+')">'+esca
+  9272	concat	+ '<button class="ghost" data-qa="pilot-contact-add" onclick="pilotContactStart(\'contact:email\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('
+  9273	concat	+ '<button class="ghost" data-qa="pilot-contact-add-phone" onclick="pilotContactStart(\'contact:phone\')" '+(d.pending?'disabled':'')+'>'+escapeHtml(c
+  9502	const	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('draft_to'))+'<input id="pilot-draft-contact" data-qa="pilot-draft-contact-input" maxlength="
+  9503	concat	+ '<button data-qa="pilot-draft-contact-save" onclick="pilotDraftContactSave()" '+(d.pending?'disabled':'')+'>'+escapeHtml(cardT('draft_contact_save')
+  9515	const	? '<button data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_share'))+'</button>'
+  9516	concat	: '<button data-qa="pilot-draft-open-client" onclick="pilotDraftOpenClient()"'+(dr.pending ? ' disabled' : '')+'>'+escapeHtml(cardT('draft_open_client
+  9517	const	+ '<button class="ghost" data-qa="pilot-draft-copy" onclick="pilotDraftCopy()">'+escapeHtml(cardT('draft_copy'))+'</button>');
+  9540	const	+ '<button class="ghost" data-qa="pilot-draft-close" onclick="pilotDraftClose()">'+escapeHtml(cardT('draft_close'))+'</button></div>'
+  9542	const	+ (options ? '<div class="pilot-form-row"><label>'+escapeHtml(cardT('draft_profile'))+'<select data-qa="pilot-draft-profile" onchange="pilotDraftProfi
+  9543	const	+ '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('draft_subject'))+'<input data-qa="pilot-draft-subject" maxlength="20
+  9544	const	+ '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('draft_body'))+'<textarea data-qa="pilot-draft-body" rows="8" maxleng
+  9892	concat	: '<button data-qa="pilot-fit-confirm" onclick="pilotShortlistConfirm(' + jsPair + ')"' + ((d && d.pending) ? ' disabled' : '') + '>' + escapeHtml(car
+  9948	const	+ '<div class="pilot-hero">'+pilotCardIdentityHtml()+'<div class="pilot-actions"><button class="ghost" data-qa="pilot-card-refresh" onclick="pilotCard
+  9966	concat	+ '<section class="pilot-card" data-qa="pilot-section-ranks"><div class="pilot-card-head"><h2>'+escapeHtml(cardT('section_ranks'))+'</h2><button data-
+  10329	concat	? '<button data-qa="profile-shortlist-email" onclick="profileShortlistEmail(' + js + ')">' + escapeHtml(profileShortlistT('ps_email')) + '</button>'
+  10338	concat	? '<button data-qa="profile-shortlist-phone" onclick="profileShortlistCopyPhone(' + js + ')">' + escapeHtml(profileShortlistT('ps_phone')) + '</button
+  10377	concat	? '<button class="ghost" data-qa="profile-shortlist-release" onclick="profileShortlistRelease(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' + 
+  10378	concat	: '<button class="ghost" data-qa="profile-shortlist-hold-action" onclick="profileShortlistHold(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' +
+  10379	concat	+ '<button class="ghost" data-qa="profile-shortlist-remove" onclick="profileShortlistRemove(' + js + ')"' + (st.pending ? ' disabled' : '') + '>' + es
+  10720	concat	+ '<button class="ghost" data-qa="profile-letter-unpick" onclick="profileLetterUnpick(' + js + ')">'
+  10731	concat	+ ' onclick="profileLetterPick(' + js + ',' + String(ordinal) + ')"'
+  10778	const	+ ' oninput="profileLetterSetTo(this.value)" style="min-width:260px">'
+  10788	const	+ ' oninput="profileLetterSetBody(this.value)">' + escapeHtml(composed.body) + '</textarea>'
+  10825	concat	+ '<button data-qa="profile-letter-prepare" onclick="profileLetterPrepare()"' + (composed.ready ? '' : ' disabled') + '>'
+  10827	const	+ '<button class="ghost" data-qa="profile-letter-edit" onclick="profileLetterEditToggle()">'
+  10964	const	+ '<button onclick="showView(\'new_mailing\')" style="padding:4px 10px;font-size:11px;" title="Publish a CV mailing request">'+tr('common.new')+'</but
+  10967	const	+ '<div class="panel-search"><input type="text" id="mailing-search" placeholder="'+tr('common.search')+'" oninput="state.mailingSearch=this.value.toLo
+  10995	const	tree.innerHTML = '<div class="tree-empty">'+tr('mailing.empty')+'<br><br><button onclick="showView(\'new_mailing\')">'+tr('common.new')+'</button></di
+  11008	concat	html += '<div class="tree-item'+(isActive?' active':'')+'" onclick="openMailingRequestById(\''+escapeAttr(r.id)+'\')">';
+  11047	concat	? '<button style="'+actBtn+'" onclick="closeMailingRequest(\''+escapeAttr(r.id)+'\')">Close</button>'
+  11048	concat	: '<button style="'+actBtn+'" onclick="reopenMailingRequest(\''+escapeAttr(r.id)+'\')">Reopen</button>';
+  11049	concat	actions += ' <button style="'+dangerBtn+'" onclick="deleteMailingRequest(\''+escapeAttr(r.id)+'\')">Delete</button>';
+  11086	const	+ '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="showView(\'mailings\')">Cancel</button><button onclick="
+  11162	const	+ '<span class="actions"><button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderSeafarersTree({force:true})" title="Refresh">↻<
+  11164	const	+ '<div class="panel-search"><input type="text" id="seafarer-search" placeholder="Search name, rank, citizenship, ID..." value="'+escapeAttr(state.sea
+  11330	concat	var html = '<select class="'+(extraClass || '')+'" onchange="setSeafarerFilter(\''+key+'\',this.value)">';
+  11374	const	+ '<div class="sf-filter-footer"><span id="seafarer-filter-count"></span><button class="ghost" onclick="resetSeafarerFilters()">Reset</button></div>';
+  11391	const	? '<div class="tree-empty">No seafarers match the current filters.<br><br><button class="ghost" onclick="resetSeafarerFilters()">Reset filters</button
+  11402	concat	html += '<div class="tree-item'+(active?' active':'')+'" onclick="openSeafarerById(\''+escapeAttr(s.id)+'\')">';
+  11467	concat	+ '<button onclick="pingSavedSeafarer(\''+escapeAttr(s.id)+'\')" title="Send availability ping through Skipi server">Ping availability</button>'
+  11468	concat	+ '<button class="ghost" onclick="refreshSavedSeafarerReplies(\''+escapeAttr(s.id)+'\')" title="Fetch latest replies from this seafarer">Refresh repli
+  11469	concat	+ '<button class="ghost" onclick="openSavedSeafarerFolder(\''+escapeAttr(s.id)+'\')">Open folder</button>'
+  11478	concat	+ '<div style="display:flex;justify-content:flex-end;"><button onclick="saveSeafarerMeta(\''+escapeAttr(s.id)+'\')">Save notes</button></div>'
+  11500	concat	+ (d.file_path ? '<button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(escap
+  11627	const	+ '<button onclick="openAddDocument()" style="padding:4px 10px;font-size:11px;" title="Add a custom document">＋ Add</button>'
+  11628	const	+ '<button class="ghost" style="padding:4px 10px;font-size:11px;" onclick="renderDocumentsTree()" title="Refresh">↻</button>'
+  11631	const	+ '<div class="panel-search"><input type="text" id="docs-search" placeholder="'+tr('common.search')+'" oninput="state.docsSearch=this.value.toLowerCas
+  11652	const	+ '<br><br><button onclick="seedDemo()" style="font-size:12px;padding:7px 14px;">Seed demo (License + MLC)</button>'
+  11681	const	+ '<div class="tree-folder-header" onclick="toggleFolder(this)">'
+  11691	concat	html += '<div class="tree-item'+(active?' active':'')+'" onclick="openDocumentById(\''+escapeAttr(d.id)+'\')">'
+  11766	const	+ '<div class="row full"><div><label>Title</label><input type="text" id="doc-name" value="'+escapeAttr(d.name)+'" onchange="autoSaveDoc()"></div></div
+  11767	const	+ '<div class="row"><div><label>Issuer / authority</label><input type="text" id="doc-issuer" value="'+escapeAttr(d.issuer||'')+'" placeholder="e.g. Ma
+  11768	const	+ '<div><label>Certificate / document number</label><input type="text" id="doc-cert" value="'+escapeAttr(d.cert_number||'')+'" onchange="autoSaveDoc()
+  11769	const	+ '<div class="row"><div><label>Issue date</label><input type="date" id="doc-issue" value="'+escapeAttr(d.issue_date||'')+'" onchange="autoSaveDoc()">
+  11770	const	+ '<div><label>Valid to</label><input type="date" id="doc-valid" value="'+escapeAttr(d.valid_to||'')+'" onchange="autoSaveDoc()"></div></div>'
+  11771	const	+ '<div class="row full"><div class="checkbox-row"><input type="checkbox" id="doc-has-expiry"'+(d.has_expiry?' checked':'')+' onchange="autoSaveDoc()"
+  11772	const	+ '<div class="row full"><div><label>Notes</label><textarea id="doc-notes" placeholder="Internal notes — not sent to seafarers" onchange="autoSaveDoc(
+  11782	concat	+ '<button onclick="openDoc(\''+escapeAttr(d.id)+'\')">Open</button>'
+  11783	concat	+ '<button class="ghost" onclick="attachFile(\''+escapeAttr(d.id)+'\')">Replace...</button>'
+  11784	const	+ '<button class="ghost" onclick="sendDocStub()" title="Coming soon">Send ✉</button>'
+  11789	concat	+ '<div class="file-drop" id="file-drop-zone" onclick="attachFile(\''+escapeAttr(d.id)+'\')" style="border:2px dashed var(--border);border-radius:6px;
+  11796	concat	+ '<button class="ghost" onclick="useDemoSample(\''+escapeAttr(d.template_id)+'\')">Use sample PDF</button>'
+  11803	concat	+ '<button class="ghost" style="color:var(--err);" onclick="deleteDoc(\''+escapeAttr(d.id)+'\')">Delete document</button></div>');
+  11970	const	'<div class="settings-overlay" onclick="if(event.target===this)closeAddDocument()">'
+  11972	const	+ '<div class="settings-close" onclick="closeAddDocument()">×</div>'
+  11984	const	+ '<button class="ghost" onclick="pickDocFile()">Browse...</button></div></div>'
+  11989	const	+ '<button class="ghost" onclick="closeAddDocument()">Cancel</button>'
+  11990	const	+ '<button onclick="submitAddDocument()">Add</button>'
+  12272	concat	? '<button style="'+actBtn+'" onclick="closeVacancy(\''+escapeAttr(v.id)+'\')" title="Stop accepting new applications. Existing chats stay open.">✕ Cl
+  12273	concat	: '<button style="'+actBtn+'" onclick="reopenVacancy(\''+escapeAttr(v.id)+'\')" title="Re-activate this vacancy on the public board.">↻ Reopen</button
+  12274	concat	statusActions += ' <button style="'+actBtn+'" onclick="editVacancy(\''+escapeAttr(v.id)+'\')" title="Edit this vacancy. Existing applications and chat
+  12275	concat	statusActions += ' <button style="'+actBtn+'" onclick="copyVacancyAsNew(\''+escapeAttr(v.id)+'\')" title="Create a new draft from this vacancy.">⧉ Cop
+  12276	concat	statusActions += ' <button style="'+dangerBtn+'" onclick="deleteVacancy(\''+escapeAttr(v.id)+'\')" title="Hard-delete vacancy + all applications + mes
+  12558	concat	html += '<div id="app-card-'+escapeAttr(a.id)+'" class="vac-row app-card" style="display:block;padding:12px 14px;cursor:pointer;" onclick="toggleAppli
+  12580	const	html += '<div id="appdetails-'+escapeAttr(a.id)+'" class="app-details" style="display:none;" onclick="event.stopPropagation()">';
+  12584	const	html += '<div id="appthread-'+escapeAttr(a.id)+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);" onclick="e
+  12632	concat	html += '<div id="app-card-'+escapeAttr(a.id)+'" class="mobile-app-card" onclick="toggleApplicationChat(\''+escapeAttr(a.id)+'\',\''+escapeAttr(sUid||
+  12647	const	html += '<div id="appdetails-'+escapeAttr(a.id)+'" class="app-details mobile-app-details" style="display:none;" onclick="event.stopPropagation()">';
+  12650	const	html += '<div id="appthread-'+escapeAttr(a.id)+'" class="mobile-app-thread" style="display:none;" onclick="event.stopPropagation()"></div>';
+  12831	concat	+    '<button onclick="event.stopPropagation();saveRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;background:var(--accent
+  12832	concat	+    '<button class="ghost" onclick="event.stopPropagation();ignoreRankedCandidate(\''+escapeAttr(applicationId)+'\')" style="padding:5px 12px;font-si
+  12844	concat	+ '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" style="padding:5px 12px;background:var(--accen
+  12849	concat	+ '<button onclick="event.stopPropagation();checkApplicationAgainstProfiles(\''+escapeAttr(appId)+'\')" class="ghost" style="padding:5px 12px;font-siz
+  12991	concat	html +=   '<button onclick="event.stopPropagation();openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_file
+  13151	concat	msgsHtml += '<textarea id="app-compose-'+applicationId+'" rows="1" placeholder="Type a message" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){
+  13152	concat	msgsHtml += '<button class="btn-send" onclick="sendApplicationReply(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerUserId||'')+'\')" title="
+  13157	concat	+      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="closeApplicationChat(\''+escapeAttr(applicationId)+'\')">Back to candi
+  13158	concat	+      '<button class="ghost" style="padding:3px 10px;font-size:11px;" onclick="requestDocs(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(seafarerU
+  13309	concat	+        (isZip ? '<button onclick="openDocumentsBundle(\''+escapeAttr(applicationId)+'\',\''+escapeAttr(att.id)+'\',\''+escapeAttr(counterpart||'')+'
+  13310	concat	+        '<button onclick="openAttachmentInApp(\''+escapeAttr(applicationId)+'\',{id:\''+escapeAttr(att.id)+'\',original_filename:\''+escapeAttr(fname
+  13350	concat	? '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;pad
+  13351	concat	: '<button onclick="openLatestAttachmentFromSender(\''+escapeAttr(m.application_id)+'\',\''+escapeAttr(m.from_user_id)+'\')" style="margin-top:7px;pad
+  13369	concat	? '<button onclick="openDocumentsBundle(\''+m.application_id+'\',\''+bundle.id+'\',\''+bCounterpart+'\',\''+escapeAttr(bundle.filename||'documents.zip
+  13394	concat	? '<button onclick="openAttachmentInApp(\''+escapeAttr(m.application_id)+'\',{id:\''+escapeAttr(info.id)+'\',original_filename:\''+escapeAttr(fname)+'
+  13807	concat	html +=   '<div onclick="toggleBundleCategory(\''+escapeAttr(cat)+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;
+  13816	concat	html += '<div onclick="selectBundleDoc(\''+escapeAttr(d.id)+'\')" '
+  13898	concat	html += '<button onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(openPath)+'\'})" '
+  13901	concat	html += '<button onclick="enableBundlePreview(\''+escapeAttr(d.id)+'\')" '
+  14147	const	help.innerHTML = 'Нет активных профилей. <a href="#" onclick="showView(\'new_profile\');return false;" style="color:var(--accent);">Создать новый проф
+  14219	const	+ '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ghost" onclick="cancelVacancyForm()">Cancel</button><button onclick="sub
+  14966	concat	+ '" onclick="openSettings(\''+id+'\')">'
+  15020	concat	+ '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Переклю
+  15021	concat	+ ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Убрать из списка">Забыть</butto
+  15029	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Создать именованную папку</div><div class="setting-desc">Выберите род
+  15030	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Открыть существующую папку</div><div class="setting-desc">Выберите уж
+  15031	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сбросить к стандартной</div><div class="setting-desc">Использовать ст
+  15050	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте д
+  15063	const	+ '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button>'
+  15064	const	+ '<button type="button" class="ghost" onclick="startTrialAccess()" style="padding:5px 10px;font-size:11px;">30-дневный триал</button>'
+  15075	const	'<div class="setting-row" data-qa="settings-team-access-open"><div class="setting-info"><div class="setting-label">'+escapeHtml(tr('team.access_title'
+  15080	const	'<div class="setting-row"><div class="setting-info"><div class="setting-label">Посмотреть демонстрацию</div><div class="setting-desc">Пример с готовым
+  15094	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Проверить обновления</div><div class="setting-desc">Спросить сервер, 
+  15095	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Обратная связь</div><div class="setting-desc">Оценка и комментарий дл
+  15103	const	'<div class="settings-overlay" onclick="if(event.target===this)closeSettings()">'
+  15105	const	+ '<div class="settings-close" onclick="closeSettings()" title="Close">×</div>'
+  15109	const	+ '<button class="ghost" onclick="closeSettings()">Cancel</button>'
+  15110	const	+ '<button onclick="saveSettings()">Save</button>'
+  15127	concat	return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+  15210	const	+ '<button type="button" class="ghost" onclick="activateCompanyToken()" style="padding:5px 10px;font-size:11px;">Проверить</button></div>')
+  15232	concat	+ '<div class="setting-control"><button class="ghost" style="padding:5px 12px;font-size:12px;" onclick="switchToVault(\''+escapeAttr(pp)+'\')">Switch<
+  15233	concat	+ ' <button class="ghost" style="padding:5px 8px;font-size:12px;" onclick="forgetVault(\''+escapeAttr(pp)+'\')" title="Remove from list">Forget</butto
+  15245	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Создать именованную папку</div><div class="setting-desc">Выберите род
+  15246	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Открыть существующую папку</div><div class="setting-desc">Выберите уж
+  15248	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Сбросить к стандартной</div><div class="setting-desc">Использовать ст
+  15255	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Подключить новое устройство</div><div class="setting-desc">Откройте п
+  15279	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Trial / token</div><div class="setting-desc">Uses the existing trial-
+  15290	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Check updates</div><div class="setting-desc">Manual update checks sta
+  15291	const	+ '<div class="setting-row"><div class="setting-info"><div class="setting-label">Feedback</div><div class="setting-desc">Send feedback to Skipi.</div>
+  15297	const	'<div class="settings-overlay" onclick="if(event.target===this)closeSettings()">'
+  15299	const	+ '<div class="settings-close" onclick="closeSettings()" title="Close">×</div>'
+  15303	const	+ '<button class="ghost" onclick="closeSettings()">Cancel</button>'
+  15304	const	+ '<button onclick="saveSettings()">Save</button>'
+  15569	const	+ '<button onclick="doInstallUpdate()">Install now</button>'
+  15570	const	+ '<button onclick="openDebFolder()">Open download folder</button>'
+  15571	const	+ '<span class="ub-close" onclick="hideUpdateBanner()" title="Dismiss">×</span>'
+  15952	concat	+ '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+esca
+  15983	const	+ '<button class="apps-btn" type="button" style="margin-top:14px" onclick="appsOpenManage()">Plugin settings</button></div>';
+  16009	concat	+ '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+t.view+'\')">'
+  16023	const	+ '<input id="apps-search-input" data-qa="apps-search-input" type="text" autocomplete="off" spellcheck="false" placeholder="Find a plugin…" value="'+e
+  16025	const	+ '<button class="apps-gear-btn" type="button" data-qa="plugins-settings-open" title="Plugin settings" onclick="appsOpenManage()">⚙</button>'
+  16041	concat	return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+escapeHtml(p.id)+'\')">'
+  16049	const	+ '<button class="apps-back" type="button" onclick="appsBackToLauncher()">‹ Apps</button>'
+  16063	concat	else if (st==='installed') actions = '<button class="apps-btn" onclick="appsOpen(\''+id+'\')">Open</button><button class="apps-btn secondary" onclick=
+  16064	concat	else if (st==='disabled') actions = '<button class="apps-btn" onclick="appsEnable(\''+id+'\')">Enable</button>';
+  16065	concat	else actions = '<button class="apps-btn" onclick="appsInstall(\''+id+'\')">Install</button>';
+  16067	const	+ '<button class="apps-back" onclick="appsBackToManage()">‹ Plugin settings</button>'
+  16082	const	+ '<button class="apps-btn secondary" onclick="pluginCloseHost()">Close</button></div>'
+  16296	const	+ (__demoMode ? '<div class="mobile-demo-banner"><span class="mdb-text">'+escapeHtml(tr('demo.banner'))+'</span><button class="mdb-exit" onclick="exit
+  16299	concat	+ '<button class="mobile-top-home'+(navView === 'crew_flow' ? ' active' : '')+'" onclick="mobileShow(\'crew_flow\')" title="'+escapeAttr(mobileTr('hom
+  16303	concat	+ (showBack ? '<button class="mobile-icon-btn" onclick="mobileBack()" title="'+escapeAttr(mobileTr('back'))+'">‹</button>' : '')
+  16304	concat	+ (canRefresh ? '<button class="mobile-icon-btn" onclick="mobileRefreshCurrent()" title="'+escapeAttr(mobileTr('refresh'))+'">↻</button>' : '')
+  16305	concat	+ '<button class="mobile-icon-btn" onclick="mobileOpenSettingsHome()" title="'+escapeAttr(mobileTr('nav.settings'))+'">⚙</button>'
+  16350	concat	return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><spa
+  16463	const	+ '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'owner\')">'
+  16467	const	+ '<button class="mobile-role-choice" onclick="mobileChooseWorkRole(\'member\')">'
+  16474	const	+ '<button class="mobile-secondary" onclick="openConnectDialog({context:\'profile\'})" style="width:100%;">Открыть существующий профиль</button>'
+  16478	const	+ '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">'+escapeHtml(mobileTr('open_demo'))+'</button>'
+  16491	const	+ '<div class="mobile-public-id"><code id="mobile-team-user-id">'+escapeHtml(userId)+'</code><button class="mobile-secondary" onclick="copyMyTeamUserI
+  16494	const	+ '<button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('back'))+'</button>'
+  16495	const	+ '<button class="mobile-primary" onclick="mobileShow(\'connection\')">'+escapeHtml(mobileTr('i_have_token'))+'</button>'
+  16515	const	+ '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileChangeWorkRole()">'+escapeHtml(mobileTr('chang
+  16523	const	+ '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileShow(\'member_join\')">'+escapeHtml(mobileTr('
+  16541	const	+ '<button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button>'
+  16542	const	+ '<button class="mobile-primary" onclick="mobileValidateConnection()">'+escapeHtml(mobileTr('validate'))+'</button>'
+  16543	const	+ '<button class="mobile-secondary" onclick="mobileStartTrialAccess()">Start trial</button>'
+  16548	const	+ '<button class="mobile-secondary" onclick="enterDemoMode()" style="width:100%;">Загрузить демонстрацию</button>'
+  16629	concat	html += '<button class="ios-row" onclick="mobileOpenSettings(\''+it.id+'\')">'
+  16650	const	return '<button class="ios-back" onclick="mobileBackToSettingsList()">‹ Настройки</button>'
+  16661	const	+ '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr(
+  16663	const	+ '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save
+  16692	const	+ '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
+  16693	const	+ '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
+  16724	const	+ '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+esca
+  16729	const	+ '<select onchange="mobileSetLanguage(this.value)">'+opts+'</select></div></div>'
+  16754	const	+ '<div class="mobile-actions" style="margin-top:4px;"><button class="mobile-primary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save
+  16771	const	+ '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">'+escapeHtml(mobileTr(
+  16772	const	+ '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileSaveConnection(true)">'+escapeHtml(mobileTr('save'))+'</button><button 
+  16802	const	+ '<button class="mobile-primary" onclick="openConnectDialog({context:\'device\'})">Подключить новое устройство</button>'
+  16803	const	+ '<button class="mobile-secondary" onclick="openConnectDialog({context:\'device\'})">Сканировать QR с другого устройства</button>'
+  16820	const	+ '<div class="mobile-segmented" style="min-width:148px;"><button class="'+(theme==='light'?'active':'')+'" onclick="mobileSetTheme(\'light\')">'+esca
+  16821	const	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('language'))+'</label><select onchange="mobileSetLanguage(this.
+  16832	const	+ '<div class="mobile-setting-row"><div class="mobile-muted"><strong style="display:block;color:var(--text);margin-bottom:3px;">Trial / token</strong>
+  17003	const	+ '<button class="mobile-primary" onclick="mobileNewDraft()">'+escapeHtml(mobileTr('new'))+'</button>'
+  17025	const	host.innerHTML = '<div class="mobile-card"><div class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</div><div class="mobile-muted" styl
+  17034	const	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_vacancies'))+'<br><br><button class="mobile-primary" onclick="mobileNewDraft()">
+  17040	concat	return '<button class="mobile-list-item" onclick="mobileOpenVacancy(\''+escapeAttr(v.id)+'\')">'
+  17076	const	+ '<button class="mobile-secondary" onclick="mobileEditVacancy()">'+escapeHtml(mobileTr('edit'))+'</button>'
+  17077	const	+ '<button class="mobile-secondary" onclick="mobileCopyVacancy()">'+escapeHtml(mobileTr('copy'))+'</button>'
+  17079	const	? '<button class="mobile-danger" onclick="mobileCloseVacancy()">'+escapeHtml(mobileTr('close'))+'</button>'
+  17080	const	: '<button class="mobile-primary" onclick="mobileReopenVacancy()">'+escapeHtml(mobileTr('reopen'))+'</button>')
+  17084	const	+ '<button class="mobile-secondary" onclick="mobileRefreshApplications()">'+escapeHtml(mobileTr('refresh'))+'</button></div>'
+  17176	const	+ '<div class="mobile-actions" style="margin-top:10px;"><button class="mobile-secondary" onclick="mobileParseDraftText()">Parse text</button></div>'
+  17193	const	+ '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileBack()">Cancel</button><button class="mobile-primary" onclick="mobileSu
+  17279	const	+ '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('mailings'))+'</span><button class="mobile-primary" oncli
+  17282	const	+ '<div class="mobile-search"><input id="mobile-mailing-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.mailingSear
+  17318	const	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_mailings'))+'<br><br><button class="mobile-primary" onclick="mobileNewMailing()"
+  17323	concat	return '<button class="mobile-list-item" onclick="mobileOpenMailing(\''+escapeAttr(r.id)+'\')">'
+  17359	const	? '<button class="mobile-danger" onclick="mobileCloseMailing()">'+escapeHtml(mobileTr('close'))+'</button>'
+  17360	const	: '<button class="mobile-primary" onclick="mobileReopenMailing()">'+escapeHtml(mobileTr('reopen'))+'</button>')
+  17361	const	+ '<button class="mobile-danger" onclick="mobileDeleteMailing()">'+escapeHtml(mobileTr('delete'))+'</button>'
+  17381	const	+ '<div class="mobile-actions"><button class="mobile-secondary" onclick="mobileBack()">'+escapeHtml(mobileTr('cancel'))+'</button><button class="mobil
+  17454	const	+ '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('compliance'))+'</span><button class="mobile-primary" onc
+  17486	const	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_profiles'))+'<br><br><button class="mobile-primary" onclick="mobileNewCompliance
+  17491	concat	return '<button class="mobile-list-item" onclick="mobileOpenComplianceProfile(\''+escapeAttr(p.id)+'\')">'
+  17517	const	+ '<button class="mobile-secondary" onclick="mobileEditComplianceProfile()">'+escapeHtml(mobileTr('edit'))+'</button>'
+  17519	const	? '<button class="mobile-primary" onclick="mobileRestoreComplianceProfile()">'+escapeHtml(mobileTr('restore'))+'</button>'
+  17520	const	: '<button class="mobile-danger" onclick="mobileArchiveComplianceProfile()">'+escapeHtml(mobileTr('archive'))+'</button>')
+  17557	const	+ '<div class="mobile-actions" style="margin-top:12px;"><button class="mobile-secondary" onclick="mobileBack()">'+escapeHtml(mobileTr('cancel'))+'</bu
+  17641	concat	html += '<button class="mobile-list-item" data-qa="mobile-crew-flow-row" onclick="mobileOpenCrewFlowSignal(\''+escapeAttr(row.id)+'\')">'
+  17691	concat	+   '<button class="mobile-secondary" onclick="mobileCrewFlowIgnore(\''+escapeAttr(row.id)+'\')">Ignore</button>'
+  17692	concat	+   '<button class="mobile-primary" onclick="mobileCrewFlowAdd(\''+escapeAttr(row.id)+'\')">Add to Seafarers DB</button>'
+  17712	const	+ '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('seafarers'))+'</span><button class="mobile-secondary" on
+  17715	const	+ '<div class="mobile-search"><input id="mobile-seafarer-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.seafarerSe
+  17757	concat	return '<button class="mobile-list-item" onclick="mobileOpenSeafarer(\''+escapeAttr(s.id)+'\')">'
+  17781	concat	+ (d.file_path ? '<div class="mobile-actions" style="margin-top:8px;"><button class="mobile-secondary" onclick="invoke(\'open_path_with_default\',{pat
+  17814	const	+ '<div class="mobile-actions"><button class="mobile-primary" onclick="mobileSaveSeafarerMeta()">'+escapeHtml(mobileTr('save'))+'</button></div>'
+  17818	const	+ '<button class="mobile-secondary" onclick="mobilePingSavedSeafarer()">Ping</button>'
+  17819	const	+ '<button class="mobile-secondary" onclick="mobileRefreshSavedSeafarerReplies()">'+escapeHtml(mobileTr('refresh'))+'</button>'
+  17820	concat	+ (s.docs_dir ? '<button class="mobile-secondary" onclick="invoke(\'open_path_with_default\',{path:\''+escapeAttr(escapeJsString(s.docs_dir))+'\'})">F
+  17882	const	+ '<div class="mobile-toolbar"><span class="mobile-status ok">'+escapeHtml(mobileModuleLabel('documents'))+'</span><button class="mobile-secondary" on
+  17885	const	+ '<div class="mobile-search"><input id="mobile-doc-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.docsSearch || '
+  17926	concat	return '<button class="mobile-list-item" onclick="mobileOpenDocument(\''+escapeAttr(d.id)+'\')">'
+  17963	const	+ (d.original_filename ? '<button class="mobile-primary" onclick="mobileOpenDocFile()">'+escapeHtml(mobileTr('open'))+'</button>' : '')
+  17964	concat	+ (d.template_id ? '<button class="mobile-secondary" onclick="mobileUseDemoSample(\''+escapeAttr(d.template_id)+'\')">Sample PDF</button>' : '')
+  17997	const	+ '<button class="mobile-secondary" onclick="mobileDraftFromTeamText()">Draft from chat</button>'
+  17999	const	+ '<div class="mobile-row full" style="margin-top:10px;margin-bottom:0;"><div class="mobile-field"><label>Your name</label><input id="team-chat-displa
+  18005	const	+ '<button class="team-scroll-bottom" id="team-chat-bottom-btn" onclick="scrollTeamChatToBottom(true)" title="Bottom">↓</button>'
+  18009	const	+ '<button class="team-attach-btn" onclick="teamChatPollOnce(false,true)" title="Refresh">↻</button>'
+  18010	const	+ '<textarea id="team-chat-input" placeholder="Message AI Assistant or team..." oninput="state.teamChat.draftText=this.value" onkeydown="teamChatKeyDo
+  18011	const	+ '<button class="btn btn-accent btn-sm" id="team-chat-send-btn" onclick="sendTeamChatMessage()" title="Send">▶</button>'
+  18175	const	+ '<button id="trial-connect-btn" onclick="trialGoConnect()"'
+  18183	const	+ '<button id="trial-license-btn" onclick="trialActivateLicense()"'
+  18555	concat	menu.innerHTML = '<div class="item" onclick="_chooseTeamChatReplyTo(\''+escapeAttr(msgId)+'\')">↩ Ответить</div>';
+
+=== КЛАСС (b) атрибуты конкатенацией: строк 184 ===
+  1767	attr-concat	+ '<input id="connect-token-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+escapeAttr(tr('connect.token_
+  2448	attr-concat	return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+o[1]+'</option>';
+  2564	attr-concat	return '<option value="'+escapeAttr(val)+'"'+(val === (selectedValue || '') ? ' selected' : '')+'>'+escapeHtml(val)+'</option>';
+  2572	attr-concat	return value == null ? '' : ' value="'+escapeAttr(value)+'"';
+  2587	attr-concat	return '<option value="'+escapeAttr(label)+'">'+escapeHtml(label+nativeLabel)+'</option>';
+  2660	attr-concat	+   '<input type="checkbox" data-cd-group="'+escapeAttr(id)+'" value="'+escapeAttr(label)+'" onchange="cdUpdateLabel(\''+escapeAttr(id)+'\')">'
+  2703	attr-concat	document.querySelectorAll('input[data-cd-group="'+id+'"]:checked')
+  2714	attr-concat	document.querySelectorAll('input[data-cd-group="'+id+'"]').forEach(function(cb){
+  3120	attr-concat	+ '<div class="field"><label>'+feedbackEsc(tr('feedback.comment_label'))+'</label><textarea id="app-feedback-comment" rows="5" maxlength="4000" placeh
+  3490	attr-concat	return '<span class="team-presence" title="'+escapeAttr(p.title)+'">'
+  3561	attr-concat	+ '<div class="row"><div><label>Your name</label><input id="team-display-name" type="text" value="'+escapeAttr(s.user_display_name || s.company_name |
+  3606	attr-concat	html += '<span class="tt-pill" data-team-target="'+escapeAttr(target)+'" onclick="setTeamChatTarget(\''+escapeAttr(target)+'\')">'+teamPresenceHtml(m)
+  3642	attr-concat	+ '<input id="team-chat-display-name" type="text" value="'+escapeAttr(currentName)+'" placeholder="Ваше имя" oninput="state.settings=state.settings||{
+  3899	attr-concat	+ '<img src="'+escapeAttr(url)+'" alt="">'
+  3901	attr-concat	+ '<div class="att-name" title="'+escapeAttr(att.filename || 'screenshot')+'">'+escapeHtml(att.filename || 'screenshot')+'</div>'
+  3942	attr-concat	parts.push('<button type="button" class="team-msg-attachment" onclick="openTeamChatImage(\''+escapeJsString(messageId || '')+'\','+i+')" title="'+esca
+  3943	attr-concat	+ '<img src="'+escapeAttr(url)+'" alt="'+escapeAttr(filename)+'">'
+  4717	attr-concat	+ sortOptions.map(function(o){return '<option value="'+o[0]+'"'+(state.sortBy===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')
+  4773	attr-concat	if (newCount>0) html += '<span class="new-dot" title="'+newCount+' new"></span>';
+  5040	attr-concat	+ '<input type="checkbox" data-cp-cert="1" value="'+escapeAttr(c.id)+'" '+(selectedMap[c.id]?'checked':'')+' '+(readonly?'disabled':'')+'>'
+  5062	attr-concat	return '<div class="card" data-extra-row="'+i+'" style="background:var(--panel2);padding:12px;margin-bottom:8px;">'
+  5063	attr-concat	+ '<div class="row"><div><label>Label</label><input type="text" class="x-label" value="'+escapeAttr(x.label||'')+'" '+(readonly?'disabled':'')+' oninp
+  5064	attr-concat	+ '<div><label>ID</label><input type="text" class="x-id" value="'+escapeAttr(x.id||'')+'" '+(readonly?'disabled':'')+' placeholder="snake_case"></div>
+  5066	attr-concat	+ ['visa','training','endorsement','test','equipment','other'].map(function(c){ return '<option value="'+c+'" '+((x.category||'other')===c?'selected':
+  5068	attr-concat	+ '<div><label>Weight</label><input type="number" class="x-weight" min="1" max="10" value="'+escapeAttr(String(x.weight||1))+'" '+(readonly?'disabled'
+  5124	attr-concat	return '<option value="'+escapeAttr(label)+'" '+(label === value ? 'selected' : '')+'>'+escapeHtml(label)+'</option>';
+  5137	attr-concat	+ '<div class="row full"><div><label>Name*</label><input type="text" id="cp-name" maxlength="200" value="'+escapeAttr(profile&&profile.name||'')+'" '+
+  5138	attr-concat	+ '<div class="row full"><div><label>Rank</label><input type="text" id="cp-rank" maxlength="64" value="'+escapeAttr(profile&&profile.rank||'')+'" '+(r
+  5686	attr-concat	return '<option value="' + escapeAttr(p.id) + '"' + (p.id === selected ? ' selected' : '') + '>'
+  5848	attr-concat	pctHtml = '<span class="cf-pct" data-qa="crew-flow-row-pct" data-pct="' + share.pct + '">'
+  5857	attr-concat	return '<div data-qa="crew-flow-row-fit" data-fit="' + escapeAttr(share.reason) + '" class="cf-fitwrap cf-fit-' + cls + '">'
+  5889	attr-concat	return '<span class="badge" data-qa="crew-flow-row-match" data-match="' + escapeAttr(kind) + '"'
+  5902	attr-concat	var profileExtra = ' data-profile="' + escapeAttr(profileId) + '"';
+  5912	attr-concat	profileExtra + ' data-applicability="' + escapeAttr(String(fit.answer)) + '"');
+  5934	attr-concat	+ ' data-applicability="' + escapeAttr(String(fit.answer)) + '"'
+  5935	attr-concat	+ (fit.reason ? ' data-applicability-reason="' + escapeAttr(String(fit.reason)) + '"' : '')
+  5963	attr-concat	+ ' data-met="' + row.met + '"'
+  5964	attr-concat	+ ' data-missing="' + row.missing + '"'
+  5965	attr-concat	+ ' data-unconfirmed="' + row.unconfirmed + '"'
+  5966	attr-concat	+ (typeof row.total === 'number' && isFinite(row.total) ? ' data-total="' + row.total + '"' : '')
+  5968	attr-concat	+ (fit.stated ? ' data-applicability="' + escapeAttr(String(fit.answer)) + '"' : '')
+  5969	attr-concat	+ (fit.reason ? ' data-applicability-reason="' + escapeAttr(String(fit.reason)) + '"' : '');
+  6194	attr-concat	html += '<span data-qa="crew-flow-row-name" data-name="' + escapeAttr(st.kind) + '">'
+  6251	attr-concat	+ '" data-qa="crew-flow-row-review" data-review="' + escapeAttr(String(read.action)) + '">'
+  6335	attr-concat	return '<div class="tree-item ti-stack ' + (selected === item.intake_id ? 'active' : '') + '" data-qa="crew-flow-row" data-intake="' + escapeAttr(item
+  6417	attr-concat	return '<div data-qa="cf-node-' + n + '" style="box-sizing:border-box;padding:8px;display:flex;'
+  6538	attr-concat	return '<button class="mobile-list-item cf-row" data-qa="crew-flow-row" data-intake="' + escapeAttr(item.intake_id) + '"'
+  6614	attr-concat	return '<button class="' + (cls ? cls : (primary ? '' : 'ghost')) + '" data-qa="crew-flow-action-' + qa + '"'
+  6640	attr-concat	+ (hintKey ? '<div class="sub" data-qa="crew-flow-' + (hintKey === 'email_missing' ? 'email-hint' : (hintKey === 'email_not_usable' ? 'email-not-usabl
+  7194	attr-concat	return '<button data-qa="track1-action-'+escapeAttr(a.id)+'" onclick="event.stopPropagation();track1CandidateAction(\''+escapeAttr(a.id)+'\', \'cf-dem
+  7310	attr-concat	+ '<div class="panel-search"><input type="text" id="crew-flow-search" placeholder="' + escapeAttr(tr('common.search')) + '" oninput="state.crewFlowSea
+  7697	attr-concat	+ '<div class="pilot-form-row"><label>'+escapeHtml(pilotT('label'))+'<input id="pilot-alias-label" maxlength="120" value="'+escapeAttr(p.aliasDraft)+'
+  8041	attr-concat	return '<details class="cf-brk" data-qa="pilot-rank-unread" data-where="'+escapeAttr(String(where))+'" data-count="'+escapeAttr(String(rows.length))+'
+  8611	attr-concat	return '<div class="pilot-fact-version'+(isCurrent?' current':'')+'" data-qa="pilot-fact-version" data-version="'+escapeAttr(String(v.version))+'">'
+  8624	attr-concat	return '<div class="pilot-fact-field" data-qa="pilot-fact-field" data-field="'+escapeAttr(String(item.field))+'"><div class="pilot-fact-head"><strong>
+  8642	attr-concat	return '<option value="'+escapeAttr(String(o.id))+'" '+(f.source_object === o.id ? 'selected' : '')
+  8647	attr-concat	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('field'))+'<input id="pilot-fact-field" maxlength="120" value="'+escapeAttr(f.field)+'" '+(co
+  8650	attr-concat	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('page_optional'))+'<input id="pilot-fact-page" inputmode="numeric" maxlength="9" value="'+esc
+  8651	attr-concat	+ '<label>'+escapeHtml(cardT('span_optional'))+'<input id="pilot-fact-span" maxlength="64" value="'+escapeAttr(f.span || '')+'" oninput="state.intakeP
+  8760	attr-concat	return '<div class="pilot-rank-list" data-qa="pilot-rank-'+key+'"><strong>'+escapeHtml(cardT('list_'+key))+'</strong>'+rows.map(function(r){
+  8761	attr-concat	return '<div class="pilot-rank-reason" data-group="'+escapeAttr(key)+'" data-requirement="'+escapeAttr(String(r.requirement == null ? '' : r.requireme
+  8773	attr-concat	? '<span data-qa="pilot-rank-applicability" data-applicability="'+escapeAttr(String(fit.answer))
+  8774	attr-concat	+ (fit.reason ? '" data-applicability-reason="'+escapeAttr(String(fit.reason)) : '')+'">'
+  8779	attr-concat	? '<span data-qa="pilot-rank-origin" data-origin="'+escapeAttr(cardResponseOrigin())+'">'+escapeHtml(originName)+'</span>'
+  8805	attr-concat	return '<div class="pilot-rank-row" data-qa="pilot-rank-row" data-profile="'+escapeAttr(String(rank.profile_id))+'" data-version="'+escapeAttr(String(
+  8849	attr-concat	return '<details class="cf-brk" data-qa="pilot-withheld" data-where="'+escapeAttr(String(where))+'" data-count="'+escapeAttr(String(rows.length))+'">'
+  8855	attr-concat	return '<div class="pilot-note" data-qa="pilot-withheld-row" data-profile="'+escapeAttr(row.profile_id)+'" data-applicability="'+escapeAttr(String(row
+  8862	attr-concat	return '<div class="pilot-history-row" data-qa="pilot-history-row" data-id="'+escapeAttr(String(row.id))+'"><div class="pilot-queue-meta"><span class=
+  8887	attr-concat	return '<div class="pilot-status '+cls+'" data-qa="pilot-attempt" data-outcome="'+escapeAttr(a.outcome)+'" data-op="'+escapeAttr(a.op)+'"><strong>'+es
+  9092	attr-concat	return '<div class="pilot-note" data-qa="'+qa+'">'+escapeHtml(cardT(key))+': '+escapeHtml(value || cardT('letter_header_missing'))+'</div>';
+  9138	attr-concat	? '<button class="ghost" data-qa="pilot-attachment-download" data-ordinal="'+escapeAttr(key)+'" onclick="pilotAttachmentDownload('+String(ordinal)+')"
+  9141	attr-concat	return '<div class="pilot-rank-row" data-qa="pilot-attachment" data-ordinal="'+escapeAttr(key)+'" title="'+escapeAttr(name || cardT('attach_no_name'))
+  9246	attr-concat	return '<div class="pilot-note" data-qa="'+qa+'">'+escapeHtml(cardT(key))+': '+escapeHtml(cardSafeText(value))+' <span class="pilot-note">('+escapeHtm
+  9498	attr-concat	return '<option value="'+escapeAttr(id)+'"'+(id === dr.profileId ? ' selected' : '')+'>'+escapeHtml(String(profiles[id].name || id))+'</option>';
+  9502	attr-concat	+ '<div class="pilot-form-row"><label>'+escapeHtml(cardT('draft_to'))+'<input id="pilot-draft-contact" data-qa="pilot-draft-contact-input" maxlength="
+  9512	attr-concat	? '<a class="ghost" data-qa="pilot-draft-mailto" href="'+escapeAttr('mailto:'+checkedTo+'?subject='+encodeURIComponent(dr.subject)+'&body='+encodeURIC
+  9534	attr-concat	? '<div class="pilot-status error" data-qa="pilot-draft-rank-warning" data-applicability="'+escapeAttr(String(draftFit.answer))+'">'
+  9543	attr-concat	+ '<div class="pilot-form-row"><label style="flex:2 1 320px;">'+escapeHtml(cardT('draft_subject'))+'<input data-qa="pilot-draft-subject" maxlength="20
+  9713	attr-concat	return '<div class="cf-resp-cell" data-qa="pilot-response-' + key + '"'
+  9714	attr-concat	+ (precision ? ' data-precision="' + escapeAttr(String(precision)) + '"' : '') + '>'
+  9808	attr-concat	return '<div class="cf-ident" data-qa="pilot-card-identity" data-name="' + escapeAttr(st.kind) + '">'
+  9834	attr-concat	? '<div class="cf-fitcard-pct" data-qa="pilot-fit-pct" data-pct="' + share.pct + '">' + share.pct + '%</div>'
+  9869	attr-concat	? '<div class="cf-fitcard-sub" data-qa="pilot-fit-applicability" data-applicability="' + escapeAttr(String(fit.answer))
+  9870	attr-concat	+ (fit.reason ? '" data-applicability-reason="' + escapeAttr(String(fit.reason)) : '') + '">'
+  9874	attr-concat	? '<div class="cf-fitcard-sub" data-qa="pilot-fit-origin" data-origin="' + escapeAttr(cardResponseOrigin()) + '">'
+  9895	attr-concat	+ ' data-qa="pilot-fit-card" data-profile="' + escapeAttr(String(rank && rank.profile_id))
+  9896	attr-concat	+ '" data-fit="' + escapeAttr(share.reason) + '">'
+  9945	attr-concat	main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'">'
+  10276	attr-concat	return '<span class="ps-cell" data-qa="profile-shortlist-' + key + '" data-state="' + (has ? 'have' : 'missing') + '">'
+  10305	attr-concat	parts.push('<span class="ps-cell" data-qa="profile-shortlist-attachments" data-attachments="' + att + '">'
+  10330	attr-concat	: '<button data-qa="profile-shortlist-email" disabled data-state="' + emailDark + '">' + escapeHtml(profileShortlistT(emailDark)) + '</button>';
+  10368	attr-concat	return '<div class="ps-row" data-qa="profile-shortlist-row" data-intake="' + escapeAttr(intakeId) + '" data-hold="' + (onHold ? 'true' : 'false') + '"
+  10718	attr-concat	return '<span class="tag ok" data-qa="profile-letter-chosen" data-ordinal="' + escapeAttr(String(ordinal)) + '">'
+  10727	attr-concat	return '<span class="pilot-note" data-qa="profile-letter-blocked" data-ordinal="' + escapeAttr(String(ordinal)) + '">'
+  10730	attr-concat	return '<button class="ghost" data-qa="profile-letter-pick" data-ordinal="' + escapeAttr(String(ordinal)) + '"'
+  10736	attr-concat	? '<div class="pilot-status error" data-qa="profile-letter-pick-error" data-intake="' + escapeAttr(id) + '">'
+  10739	attr-concat	return '<div class="ps-row" data-qa="profile-letter-pick-row" data-intake="' + escapeAttr(id) + '">'
+  10741	attr-concat	+ '<span class="ps-cell" data-qa="profile-letter-seatime" data-intake="' + escapeAttr(id) + '" data-state="' + escapeAttr(sea.state) + '">'
+  10777	attr-concat	+ '<input type="text" data-qa="profile-letter-to" value="' + escapeAttr(composed.to) + '"'
+  10794	attr-concat	return '<span class="tag" data-qa="profile-letter-file" data-intake="' + escapeAttr(a.id) + '">'
+  10803	attr-concat	return '<span data-qa="profile-letter-excluded-item" data-intake="' + escapeAttr(e.id) + '" data-reason="'
+  10967	attr-concat	+ '<div class="panel-search"><input type="text" id="mailing-search" placeholder="'+tr('common.search')+'" oninput="state.mailingSearch=this.value.toLo
+  11063	attr-concat	+ '<div class="row"><div><label>Rank</label><input value="'+escapeAttr(r.rank||'')+'" disabled></div><div><label>Vessel type</label><input value="'+es
+  11064	attr-concat	+ '<div class="row"><div><label>Minimum experience</label><input value="'+escapeAttr(r.min_experience_years?String(r.min_experience_years)+' years':'—
+  11065	attr-concat	+ '<div class="row full"><div><label>Required languages</label><input value="'+escapeAttr((r.languages||[]).join(', ')||'—')+'" disabled></div></div>'
+  11164	attr-concat	+ '<div class="panel-search"><input type="text" id="seafarer-search" placeholder="Search name, rank, citizenship, ID..." value="'+escapeAttr(state.sea
+  11335	attr-concat	html += '<option value="'+escapeAttr(val)+'"'+(value===val?' selected':'')+'>'+escapeHtml(label)+'</option>';
+  11474	attr-concat	+ ['prospect','ex_crew','active','standby','not_available','blacklist'].map(function(v){return '<option value="'+v+'"'+(s.status===v?' selected':'')+'
+  11631	attr-concat	+ '<div class="panel-search"><input type="text" id="docs-search" placeholder="'+tr('common.search')+'" oninput="state.docsSearch=this.value.toLowerCas
+  11766	attr-concat	+ '<div class="row full"><div><label>Title</label><input type="text" id="doc-name" value="'+escapeAttr(d.name)+'" onchange="autoSaveDoc()"></div></div
+  11767	attr-concat	+ '<div class="row"><div><label>Issuer / authority</label><input type="text" id="doc-issuer" value="'+escapeAttr(d.issuer||'')+'" placeholder="e.g. Ma
+  11768	attr-concat	+ '<div><label>Certificate / document number</label><input type="text" id="doc-cert" value="'+escapeAttr(d.cert_number||'')+'" onchange="autoSaveDoc()
+  11769	attr-concat	+ '<div class="row"><div><label>Issue date</label><input type="date" id="doc-issue" value="'+escapeAttr(d.issue_date||'')+'" onchange="autoSaveDoc()">
+  11770	attr-concat	+ '<div><label>Valid to</label><input type="date" id="doc-valid" value="'+escapeAttr(d.valid_to||'')+'" onchange="autoSaveDoc()"></div></div>'
+  11815	attr-concat	el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
+  11822	attr-concat	el.innerHTML = '<iframe src="'+burl+'" style="width:100%;height:70vh;border:none;"></iframe>';
+  11980	attr-concat	+ DOC_TYPES.map(function(t){return '<option value="'+t[0]+'">'+escapeHtml(t[1])+'</option>';}).join('')
+  12398	attr-concat	certOptions += '<option value="'+escapeAttr(cid)+'"'+sel+'>'+escapeHtml(certLabelById(cid))+'</option>';
+  12408	attr-concat	return '<option value="'+o[0]+'"'+(sortVal===o[0]?' selected':'')+'>'+o[1]+'</option>';
+  12425	attr-concat	+       '<input type="number" id="cf-mir" min="0" max="600" value="'+escapeAttr(monthsVal)+'" style="width:70px;padding:4px 6px;font-size:12px;">'
+  12778	attr-concat	+   '<div style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeAttr(cid)+'">'+escapeHtml(certLabelById(
+  13558	attr-concat	body = '<iframe src="'+escapeAttr(fileUri)+'" style="width:100%;height:100%;border:none;background:#fff;"></iframe>';
+  13561	attr-concat	+   '<img src="'+escapeAttr(fileUri)+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'
+  13821	attr-concat	+   '<span style="width:8px;height:8px;border-radius:50%;background:'+st.color+';flex-shrink:0;" title="'+escapeAttr(st.label)+'"></span>'
+  13933	attr-concat	html += '<iframe src="'+escapeAttr(fileUri)+'" style="width:100%;height:65vh;border:1px solid var(--border);border-radius:6px;background:#fff;"></ifra
+  13935	attr-concat	html += '<div style="text-align:center;padding:14px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);"><img src="'+escapeAttr
+  14137	attr-concat	return '<option value="'+escapeAttr(p.id)+'">'+escapeHtml(p.name)+' ('+profileMandatoryCount(p)+' reqs, '+profileExtrasCount(p)+' extras)</option>';
+  14188	attr-concat	.map(function(c){return '<option value="'+escapeAttr(c)+'">';}).join('')
+  14483	attr-concat	return '<div class="skipi-settings__row"'+(layout ? ' data-layout="'+ctx.escapeAttr(layout)+'"' : '')+'>'
+  14502	attr-concat	+ ' id="'+ctx.escapeAttr(id)+'" value="'+ctx.escapeAttr(value == null ? '' : String(value))+'"'
+  14503	attr-concat	+ ' placeholder="'+ctx.escapeAttr(placeholder || '')+'" autocomplete="off" spellcheck="false">';
+  14656	attr-concat	+ ' value="'+ctx.escapeAttr(email)+'" placeholder="hr@company.com" autocomplete="email">'
+  14934	attr-concat	return '<input type="'+(type||'text')+'" id="'+id+'" value="'+escapeAttr(value||'')+'"'
+  14935	attr-concat	+ (placeholder ? ' placeholder="'+escapeAttr(placeholder)+'"' : '')
+  14941	attr-concat	+ (placeholder ? ' placeholder="'+escapeAttr(placeholder)+'"' : '')
+  14950	attr-concat	return '<option value="'+escapeAttr(o[0])+'"'
+  15127	attr-concat	return '<div class="settings-nav-item'+active(id)+'" data-qa="'+qa+'" title="'+escapeAttr(sub || label)+'" onclick="openSettings(\''+id+'\')">'
+  15141	attr-concat	return '<div class="settings-main-header" data-qa="'+qa+'"><div><h3>'+escapeHtml(title)+'</h3>'
+  15145	attr-concat	var grp = function(rows, qa){ return '<div class="settings-group"'+(qa?' data-qa="'+qa+'"':'')+'>'+rows+'</div>'; };
+  15147	attr-concat	var nestedTitle = function(t, qa){ return '<div class="section-title"'+(qa?' data-qa="'+qa+'"':'')+'>'+escapeHtml(t)+'</div>'; };
+  15150	attr-concat	return '<div class="settings-preview-card"'+(qa?' data-qa="'+qa+'"':'')+'><strong>'+escapeHtml(title)+'</strong><span>'+escapeHtml(desc)+'</span></div
+  15153	attr-concat	return '<div class="settings-preview-grid"'+(qa?' data-qa="'+qa+'"':'')+'>'+cards.join('')+'</div>';
+  15951	attr-concat	return '<div class="apps-launch-tile-wrap" data-qa="plugin-tile-'+escapeHtml(p.id)+'">'
+  15952	attr-concat	+ '<button class="apps-launch-tile" type="button" data-qa="plugin-open-'+escapeHtml(p.id)+'" title="'+escapeHtml(p.name)+'" onclick="appsOpen(\''+esca
+  16009	attr-concat	+ '<button class="apps-launch-tile" type="button" '+t.qa+' title="'+escapeHtml(mobileModuleLabel(t.view))+'" onclick="mobileShow(\''+t.view+'\')">'
+  16023	attr-concat	+ '<input id="apps-search-input" data-qa="apps-search-input" type="text" autocomplete="off" spellcheck="false" placeholder="Find a plugin…" value="'+e
+  16041	attr-concat	return '<div class="apps-tile" data-qa="plugin-settings-'+escapeHtml(p.id)+'" onclick="appsOpenDetail(\''+escapeHtml(p.id)+'\')">'
+  16299	attr-concat	+ '<button class="mobile-top-home'+(navView === 'crew_flow' ? ' active' : '')+'" onclick="mobileShow(\'crew_flow\')" title="'+escapeAttr(mobileTr('hom
+  16303	attr-concat	+ (showBack ? '<button class="mobile-icon-btn" onclick="mobileBack()" title="'+escapeAttr(mobileTr('back'))+'">‹</button>' : '')
+  16304	attr-concat	+ (canRefresh ? '<button class="mobile-icon-btn" onclick="mobileRefreshCurrent()" title="'+escapeAttr(mobileTr('refresh'))+'">↻</button>' : '')
+  16305	attr-concat	+ '<button class="mobile-icon-btn" onclick="mobileOpenSettingsHome()" title="'+escapeAttr(mobileTr('nav.settings'))+'">⚙</button>'
+  16349	attr-concat	var qa = MOBILE_RAIL_QA[view] ? ' data-qa="'+MOBILE_RAIL_QA[view]+'"' : '';
+  16350	attr-concat	return '<button class="mobile-nav-btn '+(active===view?'active':'')+'" data-mview="'+escapeAttr(view)+'"'+qa+' onclick="mobileShow(\''+view+'\')"><spa
+  16535	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" va
+  16536	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" 
+  16537	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" va
+  16538	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="t
+  16539	attr-concat	+ (isSettings ? '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('reply_to'))+'</label><input id="m-reply" type="e
+  16660	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>Название организации</label><input id="m-company" type="text" value="'+escapeAttr(s.c
+  16718	attr-concat	return '<option value="'+escapeAttr(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+escapeHtml(o[1])+'</option>';
+  16753	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>Email для ответов</label><input id="m-reply" type="email" value="'+escapeAttr(s.reply
+  16767	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_display_name'))+'</label><input id="m-company" type="t
+  16768	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('server_url'))+'</label><input id="m-server-url" type="text" va
+  16769	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('company_token'))+'</label><input id="m-token" type="password" 
+  16770	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>'+escapeHtml(mobileTr('crewing_id'))+'</label><input id="m-crewing-id" type="text" va
+  16814	attr-concat	return '<option value="'+escapeAttr(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+escapeHtml(o[1])+'</option>';
+  17180	attr-concat	+ '<div class="mobile-row full" style="margin-top:10px;"><div class="mobile-field"><label>Title*</label><input id="m-title" type="text" value="'+escap
+  17183	attr-concat	+ '<div class="mobile-row"><div class="mobile-field"><label>IMO*</label><input id="m-imo" type="text" inputmode="numeric" maxlength="7" value="'+escap
+  17184	attr-concat	+ '<div class="mobile-field"><label>Vessel name</label><input id="m-vname" type="text" value="'+escapeAttr(seed.vessel_name || '')+'"></div></div>'
+  17185	attr-concat	+ '<div class="mobile-row"><div class="mobile-field"><label>Join date</label><input id="m-jdate" type="date" value="'+escapeAttr(seed.join_date || '')
+  17186	attr-concat	+ '<div class="mobile-field"><label>Contract months</label><input id="m-months" type="number" min="1" max="12" value="'+escapeAttr(seed.contract_month
+  17187	attr-concat	+ '<div class="mobile-row"><div class="mobile-field"><label>Salary min</label><input id="m-smin" type="number" min="0" value="'+escapeAttr(seed.salary
+  17188	attr-concat	+ '<div class="mobile-field"><label>Salary max</label><input id="m-smax" type="number" min="0" value="'+escapeAttr(seed.salary_max || '')+'"></div></d
+  17190	attr-concat	+ '<div class="mobile-field"><label>Client</label><input id="m-client" type="text" value="'+escapeAttr(seed.client_name || '')+'"></div></div>'
+  17282	attr-concat	+ '<div class="mobile-search"><input id="mobile-mailing-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.mailingSear
+  17377	attr-concat	+ '<div class="mobile-row"><div class="mobile-field"><label>Reply-to</label><input id="m-mr-reply" type="email" value="'+escapeAttr((state.settings &&
+  17542	attr-concat	return '<label><input type="checkbox" data-mcp-cert="1" value="'+escapeAttr(c.id)+'" '+(selectedMap[c.id] ? 'checked' : '')+'>'
+  17552	attr-concat	+ '<div class="mobile-row full"><div class="mobile-field"><label>Name*</label><input id="m-cp-name" type="text" value="'+escapeAttr(p && p.name || '')
+  17715	attr-concat	+ '<div class="mobile-search"><input id="mobile-seafarer-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.seafarerSe
+  17811	attr-concat	+ '<div class="mobile-row"><div class="mobile-field"><label>Status</label><select id="m-sf-status">'+['prospect','ex_crew','active','standby','not_ava
+  17885	attr-concat	+ '<div class="mobile-search"><input id="mobile-doc-search" placeholder="'+escapeAttr(mobileTr('search'))+'" value="'+escapeAttr(state.docsSearch || '
+  17999	attr-concat	+ '<div class="mobile-row full" style="margin-top:10px;margin-bottom:0;"><div class="mobile-field"><label>Your name</label><input id="team-chat-displa
+  18120	attr-concat	return '<a href="mailto:'+TRIAL_CONTACT_EMAIL+'" style="color:inherit;font-weight:700;">'+TRIAL_CONTACT_EMAIL+'</a>'
+  18121	attr-concat	+ ' или <a href="'+TRIAL_CONTACT_WA_URL+'" target="_blank" rel="noreferrer" style="color:inherit;font-weight:700;">'
+
+=== КЛАСС (c) innerHTML/outerHTML/insertAdjacentHTML: строк 148 ===
+  1222	sink	mountEl.innerHTML = ''; mountEl.appendChild(iframe);
+  1625	sink	ov.innerHTML =
+  1666	sink	b.innerHTML = escapeHtml(tr('demo.banner')) + ' '
+  1756	sink	ov.innerHTML =
+  3107	sink	if (host) host.outerHTML = feedbackStarsHtml();
+  3123	sink	document.getElementById('modal-host').innerHTML = html;
+  3337	sink	document.getElementById('modal-host').innerHTML = '';
+  3385	sink	document.getElementById('modal-host').innerHTML =
+  3431	sink	lp.innerHTML =
+  3632	sink	document.getElementById('main').innerHTML =
+  3890	sink	host.innerHTML = '';
+  3907	sink	host.innerHTML = html;
+  4002	sink	stream.innerHTML = '<div class="team-empty">Командный чат готов. Можно написать AI Assistant или всей команде.</div>';
+  4032	sink	stream.innerHTML = html;
+  4508	sink	lp.innerHTML =
+  4546	sink	tree.innerHTML = '<div class="tree-empty">No conversations yet.<br><br>'
+  4564	sink	tree.innerHTML = html;
+  4575	sink	document.getElementById('main').innerHTML =
+  4597	sink	document.getElementById('main').innerHTML =
+  4621	sink	if (host) host.innerHTML = '<div style="color:var(--err);text-align:center;">Failed to load: '+escapeHtml(''+e)+'</div>';
+  4636	sink	host.innerHTML = '<div style="text-align:center;color:var(--text2);font-size:12px;padding:40px 20px;">No messages yet.<br><br>'
+  4654	sink	host.innerHTML = html;
+  4719	sink	lp.innerHTML =
+  4739	sink	document.getElementById('panel-tree').innerHTML =
+  4753	sink	tree.innerHTML = '<div class="tree-empty">'+tr('vacancy.empty')+'<br><br><button onclick="startNewVacancy()">'+tr('common.new')+'</button></div>';
+  4776	sink	tree.innerHTML = html;
+  4831	sink	lp.innerHTML =
+  4848	sink	document.getElementById('panel-tree').innerHTML =
+  4860	sink	tree.innerHTML = '<div class="tree-empty">Профилей пока нет.<br><br><button onclick="showView(\'new_profile\')">'+tr('common.new')+'</button></div>';
+  4874	sink	tree.innerHTML = html;
+  4886	sink	m.innerHTML = '<h1>Профиль соответствия</h1>'
+  4934	sink	m.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
+  5061	sink	host.innerHTML = extras.map(function(x, i){
+  5134	sink	m.innerHTML = '<h1>'+title+'</h1>'
+  5301	sink	if (node) node.innerHTML = legacyMailboxRowInnerHtml(shapes[i]);
+  7300	sink	lp.innerHTML =
+  7320	sink	tree.innerHTML = crewFlowLiveTreeHtml(crewMode);
+  7335	sink	tree.innerHTML = '<div class="tree-empty">'+escapeHtml(crewFlowTr('empty_demo'))+'</div>';
+  7358	sink	tree.innerHTML = html;
+  7399	sink	main.innerHTML = crewFlowLiveMainHtml(crewMode);
+  7404	sink	main.innerHTML = '<h1>Crew Flow</h1><div class="empty-state" data-qa="crew-flow-empty"><strong>'+escapeHtml(crewFlowTr('empty_title'))+'</strong><div 
+  7409	sink	main.innerHTML =
+  7687	sink	main.innerHTML = '<div class="pilot-shell" data-qa="pilot-demo-refusal"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+esca
+  7691	sink	main.innerHTML = '<div class="pilot-shell" data-qa="pilot-unconfigured"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p>'+esca
+  7695	sink	main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-pilot-view"><div class="pilot-hero"><div><h1>'+escapeHtml(pilotT('title'))+'</h1><p
+  9945	sink	main.innerHTML = '<div class="pilot-shell" data-qa="crewing-intake-card-view" data-intake="'+escapeAttr(d.intakeId)+'">'
+  10104	sink	if (host) { host.innerHTML = profileShortlistHostHtml(); return; }
+  10961	sink	lp.innerHTML =
+  10978	sink	document.getElementById('panel-tree').innerHTML =
+  10995	sink	tree.innerHTML = '<div class="tree-empty">'+tr('mailing.empty')+'<br><br><button onclick="showView(\'new_mailing\')">'+tr('common.new')+'</button></di
+  11015	sink	tree.innerHTML = html;
+  11019	sink	document.getElementById('main').innerHTML =
+  11050	sink	m.innerHTML =
+  11072	sink	m.innerHTML = '<h1>'+tr('mailing.new_title')+'</h1><div class="sub">Published to <code>skipi.app</code>. Seafarer apps use it to add your agency email
+  11160	sink	lp.innerHTML =
+  11179	sink	document.getElementById('panel-tree').innerHTML =
+  11366	sink	host.innerHTML =
+  11390	sink	tree.innerHTML = allRows.length
+  11414	sink	tree.innerHTML = html;
+  11418	sink	document.getElementById('main').innerHTML =
+  11462	sink	m.innerHTML =
+  11624	sink	lp.innerHTML =
+  11636	sink	document.getElementById('panel-tree').innerHTML =
+  11650	sink	tree.innerHTML = '<div class="tree-empty">'+(search?'No matches.':'No documents yet.<br><br>'
+  11699	sink	tree.innerHTML = html;
+  11724	sink	document.getElementById('main').innerHTML =
+  11805	sink	document.getElementById('main').innerHTML = html;
+  11815	sink	el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';
+  11822	sink	el.innerHTML = '<iframe src="'+burl+'" style="width:100%;height:70vh;border:none;"></iframe>';
+  11824	sink	el.innerHTML = '<span style="color:var(--text2);padding:20px;">Preview not available for '+escapeHtml(mime)+'. Use Open to view in default app.</span>
+  11828	sink	if (pe) pe.innerHTML = '<span style="color:var(--err);padding:12px;">Preview failed: '+escapeHtml(''+e)+'</span>';
+  11992	sink	document.getElementById('modal-host').innerHTML = html;
+  11996	sink	document.getElementById('modal-host').innerHTML = '';
+  12031	sink	document.getElementById('main').innerHTML =
+  12118	sink	card.innerHTML = '<div style="white-space:pre-wrap;font-size:13px;line-height:1.5;margin-bottom:14px;">'+safe+'</div>'
+  12309	sink	m.innerHTML = head + sub + engagement + details
+  12324	sink	document.getElementById('apps-list').innerHTML =
+  12348	sink	if (listEl) listEl.innerHTML =
+  12485	sink	host.outerHTML = renderComplianceFilterBar(v);
+  12504	sink	host.outerHTML = renderComplianceFilterBar(v);
+  12548	sink	list.innerHTML = '<div class="empty"><div class="icon">✉</div><div>No applications yet.</div></div>';
+  12588	sink	list.innerHTML = html;
+  12618	sink	list.innerHTML = '<div class="mobile-empty mobile-apps-empty"><div class="mobile-empty-icon">✉</div><div>'+escapeHtml(mobileTr('no_applications'))+'</
+  12654	sink	list.innerHTML = html;
+  12863	sink	host.outerHTML = renderProfileRankingPanel(app);
+  12994	sink	host.innerHTML = html;
+  13017	sink	meta.innerHTML = preview.text
+  13120	sink	host.innerHTML = '<div class="chat-empty">Loading…</div>';
+  13132	sink	host.innerHTML = '<div class="chat-empty" style="color:var(--err);">Failed to load: '+e+'</div>';
+  13161	sink	host.innerHTML = msgsHtml;
+  13571	sink	modal.innerHTML = ''
+  13608	sink	card.innerHTML = ''
+  13756	sink	modal.innerHTML = ''
+  13827	sink	host.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px;">Bundle is empty.</div>';
+  13869	sink	host.innerHTML = '<div style="text-align:center;color:var(--text2);font-size:13px;padding:40px;">Select a document on the left.</div>';
+  13948	sink	host.innerHTML = html;
+  13997	sink	box.insertAdjacentHTML('beforeend', renderMessageBubble(
+  14064	sink	msgsBox.innerHTML = renderApplicationMessages(msgs)
+  14095	sink	box.insertAdjacentHTML('beforeend', renderMessageBubble(
+  14147	sink	help.innerHTML = 'Нет активных профилей. <a href="#" onclick="showView(\'new_profile\');return false;" style="color:var(--accent);">Создать новый проф
+  14160	sink	select.innerHTML = '<option value="">Profiles unavailable</option>';
+  14165	sink	select.innerHTML = complianceProfileOptionsHtml();
+  14179	sink	m.innerHTML = '<h1>'+(isEdit?'Edit vacancy':tr('vacancy.new_title'))+'</h1><div class="sub">Posted to <code>skipi.app</code> jobs board. Visible to se
+  14222	sink	if (sub) sub.innerHTML = titleHint;
+  14409	sink	try { document.getElementById('modal-host').innerHTML = ''; } catch(_){}
+  15114	sink	document.getElementById('modal-host').innerHTML = html;
+  15308	sink	document.getElementById('modal-host').innerHTML = html;
+  15573	sink	document.getElementById('update-banner-host').innerHTML = html;
+  15579	sink	document.getElementById('update-banner-host').innerHTML = '';
+  15746	sink	container.innerHTML =
+  15921	sink	if (appsState.screen==='detail' && appsState.pluginId) { host.innerHTML = appsDetailHtml(appsState.pluginId); return; }
+  15922	sink	if (appsState.screen==='host' && appsState.pluginId) { host.innerHTML = appsHostHtml(appsState.pluginId); pluginMountCurrent(); return; }
+  15923	sink	if (appsState.screen==='manage') { host.innerHTML = appsManageHtml(); return; }
+  15924	sink	host.innerHTML = appsLauncherHtml();
+  15945	sink	if (el) el.innerHTML = appsLauncherBodyHtml();
+  16035	sink	if (el) el.innerHTML = appsLauncherBodyHtml();
+  16105	sink	if (!rt) { c.innerHTML = '<div class="apps-muted">Plugin runtime is unavailable.</div>'; return; }
+  16112	sink	c.innerHTML = '<div class="apps-muted">Plugin failed closed: '+escapeHtml((res && (res.stage || res.reason)) || 'mount')+'</div>';
+  16117	sink	c.innerHTML = '<div class="apps-muted">Plugin failed to mount: '+escapeHtml(''+e)+'</div>';
+  16294	sink	root.innerHTML =
+  16430	sink	if (main) main.innerHTML = html;
+  17019	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('loading_vacancies'))+'</div>';
+  17025	sink	host.innerHTML = '<div class="mobile-card"><div class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</div><div class="mobile-muted" styl
+  17034	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_vacancies'))+'<br><br><button class="mobile-primary" onclick="mobileNewDraft()">
+  17037	sink	host.innerHTML = rows.map(function(v){
+  17107	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('loading_applications'))+'</div>';
+  17118	sink	host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('applications_failed'))+'</span><div class="mobile-m
+  17295	sink	host.innerHTML = '<div class="mobile-empty">Loading...</div>';
+  17300	sink	host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</span><div class="mobile-muted" st
+  17318	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_mailings'))+'<br><br><button class="mobile-primary" onclick="mobileNewMailing()"
+  17321	sink	host.innerHTML = rows.map(function(r){
+  17469	sink	host.innerHTML = '<div class="mobile-empty">Loading...</div>';
+  17474	sink	host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</span><div class="mobile-muted" st
+  17486	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_profiles'))+'<br><br><button class="mobile-primary" onclick="mobileNewCompliance
+  17489	sink	host.innerHTML = rows.map(function(p){
+  17620	sink	host.innerHTML = crewFlowActionsHtml(pilotState.detail.intakeId) + host.innerHTML;
+  17729	sink	host.innerHTML = '<div class="mobile-empty">Loading...</div>';
+  17735	sink	host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</span><div class="mobile-muted" st
+  17751	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_seafarers'))+'</div>';
+  17754	sink	host.innerHTML = rows.map(function(s){
+  17898	sink	host.innerHTML = '<div class="mobile-empty">Loading...</div>';
+  17903	sink	host.innerHTML = '<div class="mobile-card"><span class="mobile-status warn">'+escapeHtml(mobileTr('load_failed'))+'</span><div class="mobile-muted" st
+  17914	sink	host.innerHTML = '<div class="mobile-empty">'+escapeHtml(mobileTr('no_documents'))+'</div>';
+  17920	sink	host.innerHTML = order.map(function(cat){
+  18135	sink	div.innerHTML = 'Бесплатный доступ заканчивается через ' + trialDaysLeft()
+  18186	sink	el.innerHTML = head
+  18555	sink	menu.innerHTML = '<div class="item" onclick="_chooseTeamChatReplyTo(\''+escapeAttr(msgId)+'\')">↩ Ответить</div>';
+  18647	sink	modal.innerHTML = '<div class="title"></div><div class="body"></div><div class="actions">'
+
+=== КЛАСС (e) document.write/eval/new Function/setTimeout(строка): строк 0 ===
+
+=== КЛАСС (f) URL-схемы javascript:/data:: строк 4 ===
+  263	scheme	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23e6e8ec' d='M6 
+  3819	scheme	return 'data:' + teamChatNormalizeImageMime(att.mime_type) + ';base64,' + att.data_b64;
+  3876	scheme	preview_url: 'data:' + mime + ';base64,' + dataB64
+  11815	scheme	el.innerHTML = '<img src="data:'+mime+';base64,'+b64+'" style="max-width:100%;max-height:70vh;object-fit:contain;">';

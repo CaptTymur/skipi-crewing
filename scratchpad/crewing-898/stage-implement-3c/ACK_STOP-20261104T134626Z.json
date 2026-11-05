@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-3c-ACKSTOP-20261104T134626Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T13:46:27+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "829d7ea6b745f6e907a586a925829380754631f0680270fc9459d494902ed4f8",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-3c/after.txt",
+      "sha256": "c53245d4be83b21ae21a0cac2a2914676ce2c59e421bdf6c4c8d181227af6d1d",
+      "content": "driver_sha256=829d7ea6b745f6e907a586a925829380754631f0680270fc9459d494902ed4f8\nregister=B\ndist_mode=664\nharness_mode=664\nrust_mode=664\nrust_pre=5a9d96910d0a2dd24c4171630f4a9c29479a249d055401a29e97e4d0c15cfa6b\nrust_post=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nrust_post_expected=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\nworktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nworktree_branch=feat/crewing-898-login-texts-20261104\ndist_pre=b0fd21cd074c5210430eb67410e211cc1a14ad1161e435a276dda6c17efd9cd5\ndist_post=016e6141e83476e93b9609ef8f2891afa87edc228c1d082f1fef524904a6e384\ndist_post_expected=016e6141e83476e93b9609ef8f2891afa87edc228c1d082f1fef524904a6e384\nharness_pre=9686b596fc24622d9f77217c50bc50fc84a74f6b29bfff7c52ed8d7b0e821a08\nharness_post=7264bd55cab733869e39f2792a0d1fa223363e2384e65f8fe67cbf7c67e088c8\nharness_post_expected=7264bd55cab733869e39f2792a0d1fa223363e2384e65f8fe67cbf7c67e088c8\ncargo_ran_in_window=no\ngen_schemas_exists=no\nsrc_tauri_target_exists=no\nworktree_changed_files=3\n M dist/index.html\n M src-tauri/src/native_lifecycle.rs\n M tests/crewing635_public_settings_harness.mjs\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":180,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "Only ONE of the route's 19 harnesses was run. Nothing here says the guard route passes, nothing was pushed, no commit was made, and no stand was built. The Rust suite was NOT run in this window: its 248/0 is evidence of a dry run on a COPY under umask 0022, and under the machine's default umask 0002 that same suite is 233/15 for a pre-existing reason filed as No.922. The new texts are NOT owner-accepted by this run either - acceptance is live and separate, and nothing here may be read as permission to push or release."
+}

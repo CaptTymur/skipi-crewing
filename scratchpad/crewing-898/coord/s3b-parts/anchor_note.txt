@@ -1,0 +1,1 @@
+    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'

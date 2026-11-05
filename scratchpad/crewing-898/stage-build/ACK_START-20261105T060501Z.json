@@ -1,0 +1,10 @@
+{
+  "document": "ACK_START",
+  "ack_start_event_id": "crewing-898-VERIFY_BUILD-release-ACKSTART-20261105T060501Z",
+  "observed_at": "2026-11-05T06:05:01+00:00",
+  "stage": "VERIFY_BUILD",
+  "stream_id": "crewing/898-client-slice",
+  "writer": "crewing-writer@skipi-crewing-17",
+  "driver_sha256": "ca1b9179ecb6cee958943f15d485ccfbbd1724d6b4e51f16e78ab2cfbe3d0fef",
+  "window_seconds_remaining_at_start": 179
+}

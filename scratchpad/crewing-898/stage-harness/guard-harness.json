@@ -1,0 +1,247 @@
+{
+  "schema_version": "skipi-guard.v1",
+  "home": "crewing",
+  "task": "crewing-635-single-user",
+  "task_source": "auto",
+  "task_rule": "crewing \u2116635 single-user native account and private store (owner1482, 2026-10-21)",
+  "effective_tasks": [
+    "crewing-635-single-user"
+  ],
+  "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+  "base": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "head": "e5132934064c8ccf701b0061570971c2af220403",
+  "sha": "e513293",
+  "changed_files": [
+    "dist/index.html",
+    "src-tauri/src/native_lifecycle.rs",
+    "src-tauri/src/native_local_joint_tests.rs",
+    "tests/crewing635_public_settings_harness.mjs"
+  ],
+  "protected_paths_touched": [],
+  "release_paths_touched": [],
+  "cargo_dependency_touches": [],
+  "release_changes": false,
+  "unpinned_version_moves": [],
+  "allowed_file_patterns": [
+    "dist/index.html",
+    "src-tauri/Cargo.lock",
+    "src-tauri/Cargo.toml",
+    "src-tauri/src/crewing_intake.rs",
+    "src-tauri/src/db.rs",
+    "src-tauri/src/lib.rs",
+    "src-tauri/src/messaging.rs",
+    "src-tauri/src/native_account.rs",
+    "src-tauri/src/native_binding.rs",
+    "src-tauri/src/native_database.rs",
+    "src-tauri/src/native_database_probe.rs",
+    "src-tauri/src/native_fresh.rs",
+    "src-tauri/src/native_keys.rs",
+    "src-tauri/src/native_lifecycle.rs",
+    "src-tauri/src/native_local_commit.rs",
+    "src-tauri/src/native_local_joint_tests.rs",
+    "src-tauri/src/native_profile.rs",
+    "src-tauri/src/native_session_record.rs",
+    "src-tauri/src/private_json.rs",
+    "src-tauri/src/private_store.rs",
+    "tests/crewing635_public_settings_harness.mjs",
+    "tests/crewing_c3b1_pilot_harness.mjs",
+    "tests/crewing_c3b2_candidate_harness.mjs",
+    "tests/crewing_compliance_manual_flow_harness.mjs",
+    "tests/crewing_crew_flow_demo_harness.mjs",
+    "tests/crewing_mailbox_contract_harness.mjs",
+    "tests/crewing_presence_contract_harness.mjs",
+    "tests/crewing_theme_default_harness.mjs",
+    "tests/fixtures/crewing_public_settings.mjs",
+    "tests/trial_activate_unconnected_harness.mjs",
+    "tests/trial_gate_wired_harness.mjs"
+  ],
+  "exact_file_set_missing": [],
+  "exact_file_set_unexpected": [],
+  "scope_violations": [],
+  "scope_checks": [
+    {
+      "task": "crewing-635-single-user",
+      "files": [
+        "dist/index.html",
+        "src-tauri/src/native_lifecycle.rs",
+        "src-tauri/src/native_local_joint_tests.rs",
+        "tests/crewing635_public_settings_harness.mjs"
+      ],
+      "allowed_file_patterns": [
+        "dist/index.html",
+        "src-tauri/Cargo.lock",
+        "src-tauri/Cargo.toml",
+        "src-tauri/src/crewing_intake.rs",
+        "src-tauri/src/db.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/messaging.rs",
+        "src-tauri/src/native_account.rs",
+        "src-tauri/src/native_binding.rs",
+        "src-tauri/src/native_database.rs",
+        "src-tauri/src/native_database_probe.rs",
+        "src-tauri/src/native_fresh.rs",
+        "src-tauri/src/native_keys.rs",
+        "src-tauri/src/native_lifecycle.rs",
+        "src-tauri/src/native_local_commit.rs",
+        "src-tauri/src/native_local_joint_tests.rs",
+        "src-tauri/src/native_profile.rs",
+        "src-tauri/src/native_session_record.rs",
+        "src-tauri/src/private_json.rs",
+        "src-tauri/src/private_store.rs",
+        "tests/crewing635_public_settings_harness.mjs",
+        "tests/crewing_c3b1_pilot_harness.mjs",
+        "tests/crewing_c3b2_candidate_harness.mjs",
+        "tests/crewing_compliance_manual_flow_harness.mjs",
+        "tests/crewing_crew_flow_demo_harness.mjs",
+        "tests/crewing_mailbox_contract_harness.mjs",
+        "tests/crewing_presence_contract_harness.mjs",
+        "tests/crewing_theme_default_harness.mjs",
+        "tests/fixtures/crewing_public_settings.mjs",
+        "tests/trial_activate_unconnected_harness.mjs",
+        "tests/trial_gate_wired_harness.mjs"
+      ],
+      "scope_violations": []
+    }
+  ],
+  "additive_task_checks": [],
+  "tests": [
+    {
+      "name": "crewing_plugin_isolation",
+      "command": "node tests/crewing_plugin_isolation_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 host theme adapter reports light on fresh launch\n  \u2713 theme check mounts through the sandbox runtime\n  \u2713 bridge init reached the frame\n  \u2713 bridge init carries theme:'light' on fresh launch \u2014 runtime dark fallbacks never fire\n  \u2713 explicitly saved dark still propagates over the bridge\n  \u2713 host adapter respects saved dark\n\nALL GREEN: 153 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "name": "shared_host_runtime_isolation",
+      "command": "node /home/linux/Developer/skipi-plugins/_host-runtime/harness/isolation-contract.mjs",
+      "status": "pass",
+      "summary": "# integrity is fail-closed\n  \u2713 integrity failure is fail-closed (stage:integrity, no mount)\n\n# feature flag is a kill switch\n  \u2713 disabled runtime returns stage:flag\n  \u2713 disabled runtime created NO frame (boot untouched)\n\nALL GREEN: 27 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_presence_contract",
+      "command": "node tests/crewing_presence_contract_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 635 real UI en/mobile/demo real fallback flag=1/storage: actual caller produced a nonempty screen\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/storage: no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/paid: actual caller produced a nonempty screen\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/paid: no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM\n  \u2713 635 real UI en/mobile/demo: renderer visits preserve internal credential, tenant and profile\n  \u2713 635 real UI en/mobile/demo: no mutation, activation, trial issuance or real network attempt\n\ncrewing_presence_contract_harness: GREEN (1161 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_crew_flow_demo",
+      "command": "node tests/crewing_crew_flow_demo_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 No.720/B7c: a FAILED list renders \u00abcould not be retrieved\u00bb, never \u00abnone\u00bb \u2014 the failure path writes an empty list too, so without this the screen would tell a tenant who HAS an address that none was issued\n  \u2713 No.720/D1: a reveal answer with `reason` OMITTED renders the live container byte-identically to one with `reason: null` \u2014 fixture-omits-the-key=true, null-render-carries-the-address=true, byte-equal=true. The last two are both required: two empty slices would compare equal and prove nothing, so the calibration is inside the assert and not beside it\n  \u2713 No.720/P1: the slice METHOD bites \u2014 moving the marker just OUTSIDE the container flips it to false while a substring search answers true in both cases, which is why the container is sliced by depth and not searched for\n  \u2713 No.720/P2: over the ancestor chain body \u2192 .app \u2192 #main exactly ONE rule hides, and it is the mobile-shell rule \u2014 the declared mechanism of B5, not a defect; a SECOND hider over the chain would be one\n  \u2713 No.720/P2: the cascade METHOD bites \u2014 adding one hider over #main takes the count from one to two, so the assert above is a measurement and not a tautology\n  \u2713 No.720/P2 CALIBRATION: and the scan is not blind-positive \u2014 a chain nothing hides returns zero\n\ncrewing_crew_flow_demo_harness: GREEN (596 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_build_provenance",
+      "command": "node tests/build_provenance_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 command returns a short SHA\n  \u2713 command is registered in Tauri handler\n# visible UI provenance\n  \u2713 UI loads build info through Tauri\n  \u2713 demo mode passes get_build_info through to real Tauri invoke\n  \u2713 UI has version+SHA label helper\n  \u2713 UI exposes a stable app-build-sha QA hook\nALL GREEN: 12 provenance checks passed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_theme_default",
+      "command": "node tests/crewing_theme_default_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 restart with saved light -> light\n\n# runtime: desktop settings Save applies + persists\n  \u2713 desktop Save persists interface.theme='dark' via save_settings\n  \u2713 desktop Save applies dark immediately (no restart)\n  \u2713 restart after desktop dark Save -> dark\n\ncrewing_theme_default_harness: GREEN (38 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_csp_inline_handlers",
+      "command": "node tests/csp_inline_handlers_harness.mjs",
+      "status": "pass",
+      "summary": "OK: tauri.conf csp is null \u2014 inline handlers safe\nOK: dist has meta CSP but no script-src/default-src restriction",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_mailbox_contract",
+      "command": "node tests/crewing_mailbox_contract_harness.mjs",
+      "status": "pass",
+      "summary": "\n# the invalidation EFFECT at the mobile fallback site (R1: token != effect)\n  \u2713 K2.1-29/site2: opening the phone settings asks the server for the status\n  \u2713 K2.1-29/site2: with nothing connected the phone row offers no control\n  \u2713 K2.1-29/site2: every phone open asks again \u2014 the effect, not the token\n  \u2713 K2.1-29/site2: and the phone row follows the new answer without a restart\n\ncrewing_mailbox_contract_harness: GREEN (72 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_escaping_negative",
+      "command": "node tests/crewing_escaping_negative_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 escapeJsString \u0441\u043d\u043e\u0432\u0430 \u0442\u0435\u0440\u044f\u0435\u0442 0 \u043d\u0430 String(s||\"\") \u2192 \u043a\u0440\u0430\u0441\u0438\u0442 \u00abescapeJsString \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u0442 0 \u0438 \u043f\u0443\u0441\u0442\u0443\u044e \u0441\u0442\u0440\u043e\u043a\u0443 (F4: String(s||\"\") \u0438\u0445 \u0442\u0435\u0440\u044f\u0435\u0442)\u00bb\n\n# \u043c\u0435\u0442\u0430: \u0445\u0430\u0440\u043d\u0435\u0441\u0441 \u043d\u0435\u043b\u044c\u0437\u044f \u0432\u044b\u0445\u043e\u043b\u043e\u0441\u0442\u0438\u0442\u044c \u043d\u0435\u0437\u0430\u043c\u0435\u0442\u043d\u043e\n  \u2713 \u043f\u0440\u043e\u0432\u0435\u0440\u043e\u043a 36 (\u043c\u0438\u043d\u0438\u043c\u0443\u043c 36)\n  \u2713 \u0434\u0440\u0438\u043b\u043b\u043e\u0432 41 (\u043c\u0438\u043d\u0438\u043c\u0443\u043c 39)\n  \u2713 \u0441\u043e\u0441\u0442\u0430\u0432 \u043f\u0440\u043e\u0432\u0435\u0440\u043e\u043a \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0438\u043b\u0441\u044f (36 \u0437\u0430\u0444\u0438\u043a\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0445 \u0438\u043c\u0451\u043d)\n\nALL GREEN: 80 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_compliance_manual_flow",
+      "command": "node tests/crewing_compliance_manual_flow_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 No.880/S1-4: a signed-in account sees no \u00abnot connected\u00bb refusal\n  \u2713 No.880/S1-4: account_session=none publishes nothing\n  \u2713 No.880/S1-4: account_session=locked publishes nothing\n  \u2713 No.880/S1-4: account_session=expired publishes nothing\n  \u2713 No.880/S1-4: account_session=signed_out publishes nothing\n  \u2713 No.880/S1-4: every refusal is said out loud, not swallowed \u2014 got 4 notices\n\ncrewing_compliance_manual_flow_harness: GREEN (23 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_mail_cv_intake_demo",
+      "command": "node tests/crewing_mail_cv_intake_demo_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 the retired function is not defined at runtime either: mailCandidateEnrichmentForMessage\n  \u2713 the retired function is not defined at runtime either: refreshMail\n  \u2713 the retired function is not defined at runtime either: openMailMessage\n  \u2713 the retired function is not defined at runtime either: openMailCompose\n  \u2713 Track 1 panel stays default-off outside demo mode\n  \u2713 loading the script starts no mailbox traffic\n\ncrewing_mail_cv_intake_demo_harness: GREEN (31 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_settings5_preview_gated",
+      "command": "node tests/settings5_preview_gated_harness.mjs",
+      "status": "pass",
+      "summary": "\u2713 SETTINGS5_FLAG_KEY = 'skipi_crewing_settings5' defined\n  \u2713 settingsFiveShellEnabled() reads flag as === \"1\" (defaults off when unset)\n  \u2713 renderSettingsModal gates the five-shell behind settingsFiveShellEnabled()\n  \u2713 mobile settings gates the five-shell behind settingsFiveShellEnabled()\n  \u2713 app never enables the preview flag (no setItem('skipi_crewing_settings5', '1'))\n  \u2713 the \"does not implement billing\" placeholder sits inside the flag-gated five-shell\nOK: crewing Settings v1.1 preview stays dev-flagged and hidden from real users.",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_trial_gate_wired",
+      "command": "node tests/trial_gate_wired_harness.mjs",
+      "status": "pass",
+      "summary": "OK: blocked overlay present\nOK: warning banner present\nOK: contact email info@tymur.org\nOK: contact phone +357 97 617 412\nOK: TRIAL_DAYS constant\nOK: TRIAL_WARNING_FROM_DAY constant\nOK: sign-in path out of the blocked overlay\nOK: runtime trial gate \u2014 active overrides, expired blocks, unblocking is sign-in",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_trial_activate_unconnected",
+      "command": "node tests/trial_activate_unconnected_harness.mjs",
+      "status": "pass",
+      "summary": "OK: no identity \u2014 overlay blocks, asks nothing, offers sign-in\nOK: with identity \u2014 same overlay, no token path, sign-in only\nOK: the overlay routes out to the account sign-in, not to a connection screen\n\nALL PASS: an expired right blocks the app and the only way out is signing in (No.105 preserved).",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_stack_build_metadata",
+      "command": "node tests/stack_build_metadata_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 native build metadata includes Stack ID\n  \u2713 native build metadata includes source identifier\n  \u2713 native build metadata includes honest verification status\n  \u2713 Cargo package version is 0.4.139\n  \u2713 Cargo lock root package version is 0.4.139\n  \u2713 Tauri component version is 0.4.139\n  \u2713 desktop app identity is preserved\nALL GREEN: 20 Stack build-metadata checks passed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_stack_verification_negative_control",
+      "command": "node tests/stack_verification_negative_control_harness.mjs",
+      "status": "pass",
+      "summary": "\u2713 fail-closed stackVerificationState helper exists\n# Stack v1 Stage 4 negative control\n  \u2713 forged future manifest fields cannot produce verified\n  \u2713 unsealed/unimplemented verification remains unavailable\n  \u2713 explicit mismatch remains visible\n  \u2713 missing evidence remains unavailable\nNEGATIVE CONTROL PASS: 5 fail-closed checks passed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_c3b1_pilot",
+      "command": "node tests/crewing_c3b1_pilot_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 No.880/en: the refusal no longer routes into a settings section that was deleted\n  \u2713 No.880/ru: the refusal screen actually renders (control for the negatives below)\n  \u2713 No.880/ru: the refusal names no token, Server URL or Crewing ID \u2014 found nothing\n  \u2713 No.880/ru: the refusal offers the one sign-in action the entry fork owns\n  \u2713 No.880/ru: the refusal no longer routes into a settings section that was deleted\n  \u2713 duplicate create clicks dispatch exactly one write\n\ncrewing_c3b1_pilot_harness: GREEN (92 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_c3b2_candidate",
+      "command": "node tests/crewing_c3b2_candidate_harness.mjs",
+      "status": "pass",
+      "summary": "  S4b-WORD KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S4b: two words for one state back on the same screen\n  M17 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 mobile view treated as a stale context (pilotContextStillCurrent desktop-only)\n  M18 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 pilot renders into the hidden desktop #main under the mobile shell\n  M19 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 Escape ignores the mobile card view\n  S7-PCT KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S7: a figure on a profile the rank does not reach (the stand printed 0%)\n  S7-COUNTS KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S7: \u00ab\u041d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e: 1 \u00b7 \u041d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u043e: 0\u00bb beside a comparison nobody made\n\ncrewing_c3b2_candidate_harness: GREEN (1843 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing635_public_settings",
+      "command": "node tests/crewing635_public_settings_harness.mjs",
+      "status": "pass",
+      "summary": "PASS every resolved invoke key is the camelCase of a parameter of its command :: sites_with_args=121 keys=226 mismatches=[]\nPASS mutation negative in memory: synthetic foo_bar/foo_bar reddens, fooBar/foo_bar stays green :: red=[\"1:demo_cmd:foo_bar (parameters: foo_bar)\"] green=[]\nPASS control: both containers present and ordered \u2014 doors at 139120, form at 140420\nPASS No.894: the caption carries its own id so its PLACE can be asserted \u2014 ec-demo-note\nPASS No.894: the caption sits INSIDE the doors container and hides with the door it describes \u2014 note 140249 between 139120 and 140420\nPASS control: on markup with the caption AFTER the form the same predicate is FALSE, so it discriminates position\nPASS No.894: the caption still renders from the key entry.demo_note, not from a literal\n{\"passed\":184,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}",
+      "exit_code": 0
+    }
+  ],
+  "override_present": false,
+  "auto_bootstrap_override": false,
+  "comparison": "triple-dot",
+  "status": "pass",
+  "errors": []
+}

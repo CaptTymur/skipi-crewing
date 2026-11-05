@@ -1,0 +1,10 @@
+{
+  "document": "ACK_START",
+  "ack_start_event_id": "crewing-898-IMPLEMENT-fresh-START-20261104T085127Z",
+  "observed_at": "2026-11-04T08:52:16+00:00",
+  "stage": "IMPLEMENT",
+  "stream_id": "crewing/898-client-slice",
+  "writer": "crewing-writer@skipi-crewing-17",
+  "driver_sha256": "ab50ce7881cdd066ebb739f8f9b87cf9bd9bcbfcda63b6d35e198498532ad892",
+  "window_seconds_remaining_at_start": 250
+}

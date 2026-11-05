@@ -1,0 +1,8 @@
+{
+  "verdict": "CHECKS_PASS_REQUIRES_COORDINATOR",
+  "input_sha256": "756d22deb0b62f49ccd4decca94fa668588d6ea27e367a24c9c738ab4d9b7f82",
+  "errors": [],
+  "conflicts": [],
+  "live_git_checked": true,
+  "scope": "declared surfaces only; no stage permission issued"
+}

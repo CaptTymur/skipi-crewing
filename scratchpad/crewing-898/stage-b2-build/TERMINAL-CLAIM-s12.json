@@ -1,0 +1,6 @@
+{
+  "observed_at": "2026-11-05T07:37:02Z",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "evidence": "B2-build: cargo exited 0 in 36s and the DEBUG binary exists (289267848 bytes, sha b930bdbc8ab2d9959aba478c3aa8e3868657cb912a365c8fe54cfca2b2b46845). The driver then REFUSED it at exit 12 claiming the baked origin was absent. That refusal was WRONG and the fault is my probe, not the build: I matched with an anchored pattern (strings | grep -c '^http://127.0.0.1:19168$'), and Rust packs that literal adjacent to others in .rodata so it never forms a standalone strings line. Unanchored, the origin IS present (1 occurrence), and the dev machinery confirms a genuine debug build: direct_loopback_qa 1 and dev_origin_config 3 against 0 and 0 in the release binary. My positive control (assistant.skipi.app, UNANCHORED) proved strings works but could never prove an ANCHORED match could succeed - it validated the tool, not the predicate. Nothing protected moved: release binary 1488c7004c14ea60 byte-identical, dist/Cargo.toml/Cargo.lock at their pins, worktree clean, canonical checkout 0 tracked changes. The artefact is correct and usable; the gate that judged it was not. The stage's single-use control (debug binary absent -> exists) is now SPENT, so a clean re-run cannot re-establish it. No stand was raised and no frame taken."
+}

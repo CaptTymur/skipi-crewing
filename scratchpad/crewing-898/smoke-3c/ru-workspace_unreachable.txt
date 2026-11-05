@@ -1,0 +1,7 @@
+case      : workspace_unreachable
+language  : ru
+produced  : step two dropped the connection -> transport_unreachable
+text      : Аккаунт приняли, но до рабочего места Крюинга не дошли — вход не завершён. Проверьте сеть и попробуйте снова.
+          POST /api/app/login mode=unreachable
+          04/Nov/2026 18:12:30 "POST /api/app/login HTTP/1.1" 200 -
+          POST /api/app/crewing/bootstrap mode=unreachable

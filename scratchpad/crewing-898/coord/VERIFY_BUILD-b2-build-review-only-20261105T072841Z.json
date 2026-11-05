@@ -1,0 +1,184 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-VERIFY_BUILD-b2-build-20261105T072841Z",
+      "stage": "VERIFY_BUILD",
+      "outcome": "Stage 12 (B2-build): build the DEBUG binary of e5132934 with the loopback dev origin http://127.0.0.1:19168 baked in at COMPILE time, because S2 cannot be shown on any release build and no debug binary of this candidate exists anywhere. This stage produces a binary and nothing else: no stand is raised, no frame is taken, nobody is shown anything.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "Two writes. (1) /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target - the debug profile tree, gitignored, currently holding only the release profile from stage 10. `target/debug/skipi-crewing` MUST NOT exist beforehand: 'absent -> exists' is this stage's positive control and the driver refuses if it is already there. (2) /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-b2-build - ACK_START, the cargo stdout and stderr, after.txt, and the four-key terminal claim. The shared cargo registry is declared as a write because a build may populate it; measured on stage 10 the count did not move (521 -> 521) and the declared write was never exercised, but an undeclared write that does happen is the worse error.",
+      "preserve": "The RELEASE binary 1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73 is part A's published subject and its frames are already recorded; its digest is taken before and compared after, and a change is exit 13. dist, Cargo.toml and Cargo.lock likewise pinned both sides - `--locked` makes cargo REFUSE rather than rewrite Cargo.lock, which is release-sensitive in this house. HEAD stays at e5132934 and the worktree stays porcelain-empty. smoke-release-a/, smoke-3d/ and smoke-3c/ are not touched and not read: this stage has no frames in it.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP before acting if: the gate does not yield PERMIT_CURRENT as a FIELD; the window remainder is above the 300 s ceiling or below the 30 s floor; HEAD is not e5132934 or the worktree is dirty; dist, Cargo.toml, Cargo.lock or the RELEASE binary does not match its pin; `target/debug/skipi-crewing` already exists; less than 30 GB free; cargo does not run. STOP after the build if: cargo exits non-zero (returned as a finding, never repaired inside this stage); cargo reports success but the binary is absent; the probe's positive control fails; the baked origin is NOT in the binary; or any of dist / Cargo.toml / Cargo.lock / the release binary moved.",
+      "heartbeat": "2026-11-05T07:28:41+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "That a DEBUG binary of e5132934 exists with the loopback dev origin compiled into it, that the compile-time variable actually reached rustc (measured in the bytes, with a positive control), and that producing it disturbed neither the release binary nor any release-sensitive file. It proves nothing about S2: no stand, no frame, no text. That is the next stage.",
+      "depends": "The candidate worktree at e5132934, porcelain-empty. dist pinned at 96b6bd50...fdf3fa, Cargo.toml and Cargo.lock at their pins. The release binary present and unchanged - it is read as a pin, not as an input. The shared cargo registry holding every crate of the locked graph, since `--offline` means cargo must find them locally or fail loudly.",
+      "active_neighbors": "PROSE, never a second declared stream. The Seafarer stream was at stage 3 (commit) when this was written and holds messaging.rs, its own target, the shared cargo registry, .package-cache, the shared skipi-public gitdir and card No.935. The one genuinely shared resource here is the cargo registry and `.package-cache`: this build takes the package-cache lock while it resolves, so if that stream runs cargo at the same moment one of us waits on the other - a wait, not a corruption, and `--offline` keeps the wait short. Disk is the other shared quantity: 101 GB free, floor 30, and the release profile of this same graph cost 1.5 G.",
+      "next_action": "Stage B2-smoke: raise the stand on this debug binary with the preserved stub and take S2 in RU and EN. The manager's instruction, recorded here so it is not lost between stages: the stub needs TWO changes and both are declared in THAT stage's post-image, not slipped in now - (1) a mode in which the FIRST step fails, since `/api/app/login` today always answers 200 and no such mode exists; (2) an error body keyed `error`, because the client parses `ErrorResponse { error: String }` while the stub sends `{\"code\": ...}`. And S2 is to be shot TWICE, with a well-formed body and a malformed one, showing that the text is one while the path is two - without that, `upstream_unavailable` arrives either way and the mechanism substitution would pass unnoticed a second time. I am not editing the stub in this stage: changing an instrument before the request that presents it means editing what I will later put forward as evidence.",
+      "owner_window": "NOT required. This stage shows nobody anything - it produces a binary on disk. `shown_to_owner=no` is explicit so that the existence of a debug artefact can never later be read as the acceptance having happened.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file_at_read": "9f53296fb9b326cb8a6dc22722fb6ae37d5e9b944dc362dfcfe4ba6034d9e45f",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": false,
+        "ops_head": "38ec4a1babb9a6de64e4f805b23abb86e72decc2",
+        "card_porcelain": " M handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md\n",
+        "card_porcelain_note": "status of THIS CARD only. The whole ops tree is the manager's working area and moves on his keystrokes; a stream field that does that cannot survive a step-3 re-filing. The volatile tree reading is in `submission`."
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/build.rs"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target"
+          ]
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [
+            "path:/home/linux/.cargo/registry/cache"
+          ],
+          "writes": [
+            "path:/home/linux/.cargo/registry/src",
+            "path:/home/linux/.cargo/.package-cache"
+          ]
+        },
+        "build": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/tauri.conf.json",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target"
+          ]
+        },
+        "guard": {
+          "reads": [],
+          "writes": []
+        },
+        "release": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock"
+          ],
+          "writes": []
+        },
+        "card": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-b2-build"
+          ]
+        },
+        "logs": {
+          "reads": [],
+          "writes": []
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s12-b2-build.sh",
+          "sha256": "9e8364eeb51801396765749a215db8652285bf167cda798b77ae96b5f39447fe"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml",
+          "sha256": "1ab676f1989ac284d9d9a4d2e119211dd157165c321545d41e2834b4ca0b9304"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock",
+          "sha256": "f593e42c088f22539abda76819e77ec39e13a27b58f5132cc93aac5b0c1367df"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing",
+          "sha256": "1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73"
+        }
+      ],
+      "the_control_this_stage_exists_for_is_the_mirror_of_part_A": "In part A I measured three dev markers at ZERO in the release binary, with `assistant.skipi.app` = 1 as the positive control proving the probe could see. Here the SAME probe must answer the OTHER way: the baked `http://127.0.0.1:19168` MUST be present. A debug build whose variable never reached rustc still points at production - cargo would report success, the binary would exist, and the B2 stand would then fail against a closed port in a way that reads like a product defect rather than like a build mistake. That is the most likely way this stage produces a wrong artefact while looking right, so it is the one gate stated explicitly, with the production origin kept as the control that the probe is not simply blind.",
+      "why_the_origin_must_be_baked_and_in_exactly_this_shape": "`option_env!(\"SKIPI_CREWING_DEV_ACCOUNT_ORIGIN\")` (native_account.rs:382) reads the COMPILER's environment, so the value cannot be handed to the running app - the same border that made part A's four-state smoke impossible, here used from the other side. `dev_origin_config` (:394) accepts ONLY a loopback origin, and its own test enumerates the refusals: a non-loopback host, a path, a query, embedded credentials, another scheme, and a bare host:port without a scheme. So `http://127.0.0.1:19168` is the only admissible shape. The port sits below the kernel's ephemeral range (32768-60999 measured here, reserved list empty), so the kernel never hands it out, and it was measured free before this driver was written. Note for the stand that follows: `dev_origin_config` replaces ONLY the account origin - `company_origins` stays PRIMARY_API/RU_API, so the stub's bootstrap reply must still carry a `server_url` inside those two trusted origins or it fails as `invalid_response`.",
+      "why_B2_is_two_stages_and_not_one": "Measured: `target/debug/skipi-crewing` is absent in this worktree and nowhere under /home/linux/Developer; the debug copy that produced smoke-3d was never preserved. So B2 is a build PLUS a stand. One stage would outrun its window and close by drain, which the release build already demonstrated; splitting it keeps the stand inside a window the way part A was. It also means the stand stage can be reviewed against a binary that already exists and is pinned, rather than against one the same stage promises to make.",
+      "mutates": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target",
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-b2-build",
+        "path:/home/linux/.cargo/registry/src",
+        "path:/home/linux/.cargo/.package-cache"
+      ],
+      "expected_post": "`target/debug/skipi-crewing` exists and contains the string `http://127.0.0.1:19168`. stage-b2-build/ holds ACK_START, build.out, build.err, after.txt and TERMINAL-CLAIM-s12.json. The release binary, dist, Cargo.toml and Cargo.lock are byte-identical to before. The canonical checkout's tracked-change count is unmoved. HEAD remains e5132934, the worktree remains porcelain-empty. No stand exists, no frame exists, nothing is pushed, and no acceptance exists.",
+      "measured_duration": {
+        "this_build": "UNKNOWN. The anchor is the RELEASE build of this same graph: 101 s, measured in stage 10. A debug build is a DIFFERENT object - different profile, different codegen, no optimisation but more output - so that number is an anchor and not a prediction, and this request does not promise the stage fits a window.",
+        "floor": "30 s, meaning only 'complete the preconditions and write ACK_START under the lease'. Everything after is drain territory by design, exactly as in stage 10 - unlike part A, whose 90 s floor was set from a rehearsal because that stage genuinely fits.",
+        "why_no_rehearsal_this_time": "Part A's rehearsal was worth a window because its risk was behavioural - would the binary launch, would the form open. Here the action is a single cargo invocation whose failure modes are loud and whose cost is the build itself; rehearsing it would mean performing the stage twice, and the first performance would spend the positive control ('absent -> exists') that the real one needs."
+      },
+      "resource_identities_note": "No network, no port, no display: this stage runs one cargo invocation offline. The loopback port 19168 appears only as a STRING compiled into the binary - nothing binds or connects to it here. It is bound in the stand stage that follows, and declared there.",
+      "surfaces_note": "The release binary is declared a READ under `generated` and appears in no writes list: it is this stage's pin, compared before and after, and must not change. Cargo.toml and Cargo.lock appear under both `build` (what cargo consumes) and `release` (what the house protects) - same kind, same path, so overlaps() flattens them and the duplication costs nothing while making the release-sensitivity visible where a reviewer looks for it.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s12-b2-build.sh",
+        "note": "Self-hashing into ACK_START. bash -n clean; check_undefined_funcs clean (called_but_not_defined empty); check-driver-prose clean. `$?` is read in exactly one place and on the line immediately after the command it belongs to - the defect the coordinator found in the part-A driver, where `if ! run_once …; then rc=$?` always read 0 because `!` inverts the status.",
+        "sha256": "9e8364eeb51801396765749a215db8652285bf167cda798b77ae96b5f39447fe"
+      }
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-05T07:28:41+00:00",
+    "card_read_at": "2026-11-05T07:28:41+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "ops_tree_porcelain_at_build": " M AGENTS.md\n M BACKLOG.md\n M DECISIONS.md\n M PROJECT_STATE.md\n M docs/CANON-station-metrology-v1.md\n M handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md\n M handoffs/TASKCARD-2026-11-04-crewing-930-session-activation.md\n?? artifacts/git-morning/summary-20261105T055624Z.json\n?? handoffs/HANDOFF-2026-11-05-settings-929-four-edits.md\n?? handoffs/TASKCARD-2026-11-05-seafarer-935-identity-derive-dedup.md\n",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s12.json",
+    "content_file_sha256": "13d2c3f0fe53dab4282f060649cf4fed72501965a404430565db3fd57ed68f33"
+  }
+}

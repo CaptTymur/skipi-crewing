@@ -1,0 +1,118 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_instance_read_at": "2026-11-04T05:24:14+00:00",
+  "coordinator_instance_source": "reports/coordination-state.json; CONFIRM against the coordinator's live word before sending",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-PREP-gencheck-20261104T052414Z",
+      "stage": "PREP",
+      "outcome": "SET PER STAGE before sending - this generator does not invent it",
+      "repo": "/home/linux/Developer/skipi-crewing",
+      "head": "0223bbd3148d695b3c226fd70c2c6196acf28334",
+      "status_sha256": "d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796",
+      "status_sha256_uall": "4c17568c07e6c15ae2d1d46a0da5367793e50fc8f5bbd1285eabe32ce4ccb227",
+      "untracked_full_list_uall": "?? scratchpad/crewing-898/WORKLOG.md\n?? scratchpad/crewing-898/coord/MESSAGE-START-review01.txt\n?? scratchpad/crewing-898/coord/PREP-formtest-20261104T051406Z.json\n?? scratchpad/crewing-898/coord/START-review01-20261102T185353Z.json\n?? scratchpad/crewing-898/coord/build-request.py\n?? scratchpad/crewing-898/f12/index.html\n?? scratchpad/crewing-898/f12/lib.rs\n?? scratchpad/crewing-898/f12/native_account.rs\n?? scratchpad/crewing-898/f12/native_fresh.rs\n?? scratchpad/crewing-898/f12/native_lifecycle.rs\n?? scratchpad/crewing-898/f12/native_local_commit.rs\n?? scratchpad/crewing-898/guard-route-setA.txt\n?? scratchpad/crewing-898/guardfix/\n?? scratchpad/crewing-escaping-179-s1/handlers-classified.txt\n?? scratchpad/crewing-escaping-179-s1/raw-retrace.txt\n?? scratchpad/crewing-escaping-179-s1/scan-raw.txt\n?? scratchpad/crewing-escaping-179-s1/sites-with-source.txt\n?? scratchpad/session-close-20261027T180207458960Z/RESUME.md\n?? scratchpad/session-close-20261027T180207458960Z/STATE.json\n",
+      "new": "SET PER STAGE",
+      "preserve": "SET PER STAGE",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "SET PER STAGE",
+      "heartbeat": "2026-11-04T05:24:14+00:00",
+      "card_provenance": {
+        "cited_by": "FIELD NAME plus the digest read; never by line number - this card moved three times on 2026-11-04",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_worktree_read_now": "2fb0b6dddbbd708003a988bc29f06a3887caa3bfde3b319c3686739013caed2a",
+        "sha256_at_ops_head": "2fb0b6dddbbd708003a988bc29f06a3887caa3bfde3b319c3686739013caed2a",
+        "revisions_agree": true,
+        "ops_head": "ca7f4467348dace201bc005511525abb53a683fe",
+        "ops_porcelain": ""
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read BY OBJECT; the checkout is not moved. The guard hook routes merge-base(origin/main)..head for a new branch, so a stale cache widens the range - fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/src-tauri/src",
+            "path:/home/linux/Developer/skipi-crewing/dist/index.html"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/tests"
+          ],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+            "path:/home/linux/Developer/skipi-guard/bin/skipi-guard"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+            "path:/home/linux/Developer/skipi-ops/BACKLOG.md",
+            "path:/home/linux/Developer/skipi-ops/DECISIONS.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-prep-gencheck"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [],
+      "next_action": "SET PER STAGE",
+      "owner_window": "UI texts require a live owner acceptance (CANON-ui-v1, No.930); the stand serves the TEXT, not a branch proof."
+    }
+  ]
+}

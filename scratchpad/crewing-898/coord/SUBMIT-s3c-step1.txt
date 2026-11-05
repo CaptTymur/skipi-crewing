@@ -1,0 +1,15 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/IMPLEMENT-3c-twostep-review-only-20261104T132231Z.json
+file_bytes_sha256: 67622914cc0ddd9be265ffba35df381d2cb59c9dc457ac23cd5e2b13e898b80c
+event_id: crewing-898-IMPLEMENT-3c-twostep-20261104T132231Z
+heartbeat: 2026-11-04T13:22:31+00:00  mode: review-only
+stage: IMPLEMENT   stream: crewing/898-client-slice
+repo: /home/linux/Developer/worktrees/crewing-898-20261104
+evidence_files: 3
+  b0fd21cd074c5210  /home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html
+  9686b596fc24622d  /home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs
+  5a9d96910d0a2dd2  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs
+expected_post: 3 files
+  016e6141e83476e9  /home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html
+  e611fae5478234a3  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs
+  7264bd55cab73386  /home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs
+surfaces: writes=4 reads=3

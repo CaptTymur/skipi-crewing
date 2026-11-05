@@ -1,0 +1,7 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/START-review01-20261102T185353Z.json
+canonical_input_sha256: 7b258baa59d1884f0335e218ad74a98620fc324af326f20dc2991263163447e0
+file_bytes_sha256: b2dd3d7228e2bf8a72b8ecc81911e6a5e45823f6d05ba9e463f9379824d80856
+event_id: crewing-898-START-review01-20261102T185353Z
+heartbeat: 2026-11-02T18:53:53+00:00 (REVIEW-ONLY, step 1 of two)
+repo HEAD: 0223bbd3148d695b3c226fd70c2c6196acf28334   live main: f145c6017eaea3804a5429e5aa428b6fb0ece6d9
+status_sha256 (-unormal, the compared unit): d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796

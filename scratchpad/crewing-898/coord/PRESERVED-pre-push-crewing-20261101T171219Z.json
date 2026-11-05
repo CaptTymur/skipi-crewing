@@ -1,0 +1,116 @@
+{
+  "schema_version": "skipi-guard.v1",
+  "home": "crewing",
+  "task": "crewing-c3b2",
+  "task_source": "auto",
+  "task_rule": "crewing C3b2 candidate facts and decisions routing (owner619, 2026-09-22)",
+  "effective_tasks": [
+    "crewing-c3b2"
+  ],
+  "repo": "/home/linux/Developer/worktrees/.skipi-guard-harness-wt-crewing-lonaaghy",
+  "base": "0cf73ef1c494ed22cfc211622a0833f0fa756f74",
+  "head": "d58a4a22ac99080e89f6aabc5562000e66d84165",
+  "sha": "d58a4a2",
+  "changed_files": [
+    ".github/workflows/skipi-guard.yml",
+    "tests/crewing_c3b2_candidate_harness.mjs"
+  ],
+  "protected_paths_touched": [],
+  "release_paths_touched": [],
+  "cargo_dependency_touches": [],
+  "release_changes": false,
+  "unpinned_version_moves": [],
+  "allowed_file_patterns": [
+    "dist/index.html",
+    "src-tauri/src/crewing_intake.rs",
+    "src-tauri/src/lib.rs",
+    "tests/crewing_c3b2_candidate_harness.mjs",
+    "docs/crewing-pilot-c3b2/WORKLOG.md",
+    ".github/workflows/skipi-guard.yml"
+  ],
+  "exact_file_set_missing": [],
+  "exact_file_set_unexpected": [],
+  "scope_violations": [],
+  "scope_checks": [
+    {
+      "task": "crewing-c3b2",
+      "files": [
+        ".github/workflows/skipi-guard.yml",
+        "tests/crewing_c3b2_candidate_harness.mjs"
+      ],
+      "allowed_file_patterns": [
+        "dist/index.html",
+        "src-tauri/src/crewing_intake.rs",
+        "src-tauri/src/lib.rs",
+        "tests/crewing_c3b2_candidate_harness.mjs",
+        "docs/crewing-pilot-c3b2/WORKLOG.md",
+        ".github/workflows/skipi-guard.yml"
+      ],
+      "scope_violations": []
+    }
+  ],
+  "additive_task_checks": [],
+  "tests": [
+    {
+      "name": "crewing_plugin_isolation",
+      "command": "node tests/crewing_plugin_isolation_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 host theme adapter reports light on fresh launch\n  \u2713 theme check mounts through the sandbox runtime\n  \u2713 bridge init reached the frame\n  \u2713 bridge init carries theme:'light' on fresh launch \u2014 runtime dark fallbacks never fire\n  \u2713 explicitly saved dark still propagates over the bridge\n  \u2713 host adapter respects saved dark\n\nALL GREEN: 153 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "name": "shared_host_runtime_isolation",
+      "command": "node /home/linux/Developer/skipi-plugins/_host-runtime/harness/isolation-contract.mjs",
+      "status": "pass",
+      "summary": "# integrity is fail-closed\n  \u2713 integrity failure is fail-closed (stage:integrity, no mount)\n\n# feature flag is a kill switch\n  \u2713 disabled runtime returns stage:flag\n  \u2713 disabled runtime created NO frame (boot untouched)\n\nALL GREEN: 27 passed, 0 failed",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_presence_contract",
+      "command": "node tests/crewing_presence_contract_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 635 real UI en/mobile/demo real fallback flag=1/storage: actual caller produced a nonempty screen\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/storage: no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/paid: actual caller produced a nonempty screen\n  \u2713 635 real UI en/mobile/demo real fallback flag=1/paid: no manual Company/license credential, Server URL, Crewing ID, Validate, trial-token control or internal secret in DOM\n  \u2713 635 real UI en/mobile/demo: renderer visits preserve internal credential, tenant and profile\n  \u2713 635 real UI en/mobile/demo: no mutation, activation, trial issuance or real network attempt\n\ncrewing_presence_contract_harness: GREEN (1161 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_crew_flow_demo",
+      "command": "node tests/crewing_crew_flow_demo_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 No.720/B7c: a FAILED list renders \u00abcould not be retrieved\u00bb, never \u00abnone\u00bb \u2014 the failure path writes an empty list too, so without this the screen would tell a tenant who HAS an address that none was issued\n  \u2713 No.720/D1: a reveal answer with `reason` OMITTED renders the live container byte-identically to one with `reason: null` \u2014 fixture-omits-the-key=true, null-render-carries-the-address=true, byte-equal=true. The last two are both required: two empty slices would compare equal and prove nothing, so the calibration is inside the assert and not beside it\n  \u2713 No.720/P1: the slice METHOD bites \u2014 moving the marker just OUTSIDE the container flips it to false while a substring search answers true in both cases, which is why the container is sliced by depth and not searched for\n  \u2713 No.720/P2: over the ancestor chain body \u2192 .app \u2192 #main exactly ONE rule hides, and it is the mobile-shell rule \u2014 the declared mechanism of B5, not a defect; a SECOND hider over the chain would be one\n  \u2713 No.720/P2: the cascade METHOD bites \u2014 adding one hider over #main takes the count from one to two, so the assert above is a measurement and not a tautology\n  \u2713 No.720/P2 CALIBRATION: and the scan is not blind-positive \u2014 a chain nothing hides returns zero\n\ncrewing_crew_flow_demo_harness: GREEN (596 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_c3b1_pilot",
+      "command": "node tests/crewing_c3b1_pilot_harness.mjs",
+      "status": "pass",
+      "summary": "  \u2713 No.880/en: the refusal no longer routes into a settings section that was deleted\n  \u2713 No.880/ru: the refusal screen actually renders (control for the negatives below)\n  \u2713 No.880/ru: the refusal names no token, Server URL or Crewing ID \u2014 found nothing\n  \u2713 No.880/ru: the refusal offers the one sign-in action the entry fork owns\n  \u2713 No.880/ru: the refusal no longer routes into a settings section that was deleted\n  \u2713 duplicate create clicks dispatch exactly one write\n\ncrewing_c3b1_pilot_harness: GREEN (92 passed, 0 failed)",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_csp_inline_handlers",
+      "command": "node tests/csp_inline_handlers_harness.mjs",
+      "status": "pass",
+      "summary": "OK: tauri.conf csp is null \u2014 inline handlers safe\nOK: dist has meta CSP but no script-src/default-src restriction",
+      "exit_code": 0
+    },
+    {
+      "name": "crewing_c3b2_candidate",
+      "command": "node tests/crewing_c3b2_candidate_harness.mjs",
+      "status": "pass",
+      "summary": "  S4b-WORD KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S4b: two words for one state back on the same screen\n  M17 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 mobile view treated as a stale context (pilotContextStillCurrent desktop-only)\n  M18 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 pilot renders into the hidden desktop #main under the mobile shell\n  M19 KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 Escape ignores the mobile card view\n  S7-PCT KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S7: a figure on a profile the rank does not reach (the stand printed 0%)\n  S7-COUNTS KILLED clean=true mutantRed=true kind=assertion restore=true \u2014 No.637/S7: \u00ab\u041d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u043e: 1 \u00b7 \u041d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u043e: 0\u00bb beside a comparison nobody made\n\ncrewing_c3b2_candidate_harness: GREEN (1843 passed, 0 failed)",
+      "exit_code": 0
+    }
+  ],
+  "override_present": false,
+  "auto_bootstrap_override": false,
+  "comparison": "triple-dot",
+  "status": "pass",
+  "errors": [],
+  "push_ref": {
+    "local_ref": "refs/heads/feature/crewing-635-single-user-20261030",
+    "local_sha": "d58a4a22ac99080e89f6aabc5562000e66d84165",
+    "remote_ref": "refs/heads/feature/crewing-635-single-user-20261030",
+    "remote_sha": "0cf73ef1c494ed22cfc211622a0833f0fa756f74",
+    "base_mode": "remote-sha"
+  }
+}

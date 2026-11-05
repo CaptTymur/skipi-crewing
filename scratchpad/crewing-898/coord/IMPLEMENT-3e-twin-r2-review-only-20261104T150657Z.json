@@ -1,0 +1,212 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-IMPLEMENT-3e-twin-r2-20261104T150657Z",
+      "stage": "IMPLEMENT",
+      "outcome": "Sub-stage 3e: pin the side of the migration_required fork that nothing asserts. One Rust test added beside the house's own; no product behaviour changes.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+      "status_sha256": "b521a2c065b70a18b961e821739a861a46a3c4edc10fe5ac90bf6f3d7064df7e",
+      "status_sha256_uall": "b521a2c065b70a18b961e821739a861a46a3c4edc10fe5ac90bf6f3d7064df7e",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 3 line(s):\n M dist/index.html\n M src-tauri/src/native_lifecycle.rs\n M tests/crewing635_public_settings_harness.mjs",
+      "new": "`native898_experiment4_migration_required_is_reachable_only_by_the_non_fresh_policy` in native_local_joint_tests.rs, beside native635_880_f11_production_policy_on_clean_install_reaches_fresh. Together they pin BOTH sides of the fork instead of one.",
+      "preserve": "Three of the four files are pinned EQUAL on both sides - dist, the JS harness and native_lifecycle.rs - so 'untouched' is asserted, not assumed; a stray write fails at exit 11. No cargo runs in the window.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP if: any of four PRE digests differs; porcelain is not the three-file state 3d left; any POST differs from its pin; the JS harness is not exactly 184/0/0.",
+      "heartbeat": "2026-11-04T15:06:57+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "Driver self-hashes; three distinct ACK ids pairwise; window read from the certificate; PRE and POST for all four files; harness summary parsed; node rc and stderr size checked; canonical tracked-count compared with its own exit.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+      "active_neighbors": "PROSE, not a second stream. Nothing of mine runs outside this stage.",
+      "next_action": "Commit, git fetch origin main, RE-MEASURE the push route on the fetched values, push, PR. Separately and OUTSIDE this slice: the pilot-blocking finding that a successful login never activates the session - PublicationPolicy::FoundationModel is cfg(test), so authorizes() is false in every production build. The manager has taken that to the owner; it is a design decision, not an edit, and explicitly not mine to make.",
+      "owner_window": "NOT required: this stage adds a test and changes nothing a person can see. The four login texts were ACCEPTED by the owner earlier today; the colour was accepted with them.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "738affe222bb5131070b6bc8b3a25d4c07cb0ab6",
+        "ops_porcelain": " M BACKLOG.md\n M DECISIONS.md\n M handoffs/HANDOFF-2026-10-22-skipi-feed-ack-buttons.md\n?? handoffs/TASKCARD-2026-11-04-crewing-930-session-activation.md\n?? handoffs/TASKCARD-2026-11-04-fleet-926-explain-better-button.md\n?? handoffs/TASKCARD-2026-11-04-seafarer-924-remove-local-storage.md\n?? handoffs/TASKCARD-2026-11-04-settings-929-storage-opt-out.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_local_joint_tests.rs"
+          ]
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-3e"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_local_joint_tests.rs",
+          "sha256": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+          "sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+          "sha256": "78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f"
+        },
+        {
+          "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs",
+          "sha256": "e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48"
+        }
+      ],
+      "why": "Experiment (4) answered the manager's question: migration_required is unreachable in the shipped product, but the branch is LIVE and one caller away. start_login takes the policy as a PARAMETER; the single production caller (lib.rs:838) always passes for_interactive_login() = FreshNativeContext. Demonstrated, not argued: same clean install, only the policy differs, result Err(\"migration_required\"), with controls on create=false and nothing allocated. Today nothing asserts that side, so a change to for_interactive_login() or a second caller would bring the refusal alive in the product with no test going red.",
+      "rust_dry_run_evidence_not_an_in_window_check": {
+        "where": "a COPY outside the vehicle, CARGO_TARGET_DIR outside both repos, OUTSIDE any window",
+        "result": "249 passed / 0 failed UNDER umask 0022 (248 before this test)",
+        "under_default_umask_0002": "234 passed / 15 failed - the 15 are pre-existing and umask-caused, filed as No.922",
+        "byte_identity": "the patch output is byte-identical to the file the experiment ran against, sha256 ecdd480d3df4eeafb15fc7060a81e62cb88234da0c631417e02a77bb222b81b3 - so the stage writes exactly the bytes that were proven, not a retyped equivalent",
+        "js_harness_unchanged": "184, because the twin is a Rust test and touches no JS surface"
+      },
+      "guard_route_remeasured": "Adding a FOURTH file changes the routed set, and routes are exclusive, so this was measured rather than assumed - with the guard's OWN verify against a throwaway fixture, not my reimplementation: PASS, crewing-635-single-user, 4 changed files, protected 0, release no, 19 harness commands. The route holds.",
+      "expected_post": {
+        "why": "pinned as an exit condition; the driver EXITS 11 on any difference",
+        "vehicle_porcelain_becomes": [
+          " M dist/index.html",
+          " M src-tauri/src/native_lifecycle.rs",
+          " M src-tauri/src/native_local_joint_tests.rs",
+          " M tests/crewing635_public_settings_harness.mjs"
+        ],
+        "files": [
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_local_joint_tests.rs",
+            "sha256": "ecdd480d3df4eeafb15fc7060a81e62cb88234da0c631417e02a77bb222b81b3",
+            "mode": "664"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+            "sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa",
+            "mode": "664",
+            "note": "UNCHANGED - pinned equal both sides"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+            "sha256": "78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f",
+            "mode": "664",
+            "note": "UNCHANGED - pinned equal both sides"
+          },
+          {
+            "path": "/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src/native_lifecycle.rs",
+            "sha256": "e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48",
+            "mode": "664",
+            "note": "UNCHANGED - pinned equal both sides"
+          }
+        ],
+        "harness": "exactly 184 passed / 0 failed / 0 setup_errors (unchanged by this stage)"
+      },
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s3e.sh",
+        "sha256": "c2a71157411b653278476270fe1acc0ee61c6d94c5a43a7f28884497bf33757d",
+        "patch_scripts": [
+          {
+            "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s3e-twin.py",
+            "sha256": "9511c4ac73ef3779b7f868fe1388095cdc802870c255ee7ecd9d493104af34a2",
+            "note": "refuses if the twin is already present, if the SIBLING test is absent (the pair would pin nothing), or if the twin does not land exactly once"
+          },
+          {
+            "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/twin-test.rs",
+            "sha256": "70975705d73bf61719113cd8cac8a90a4edec54a372c84a127cef83e52ebac7b",
+            "note": "the proven bytes, extracted from the copy the experiment ran on"
+          }
+        ],
+        "exit_codes": "as 3d; exit 11 also fires if any of the three untouched files changes"
+      },
+      "measured_duration": {
+        "patch": "under 1 s",
+        "harness": "~0.55 s",
+        "no_cargo": "none runs",
+        "stage_total_expected": "a few seconds; refuses below 30 s remaining"
+      },
+      "resource_identities_note": "Empty by fact: no network, database, port, host resource, or git byte.",
+      "prose_defects_fixed_and_MECHANISED": "The coordinator found three more inherited texts - the usage line still named run-s3d.sh, a `say` announced DIST_POST when dist is pinned EQUAL on both sides and the subject is the joint tests, and 'all three PRE digests' where the code compares four. Sixth instance of the class today. Fixing a seventh by hand is not a fix, so the predicate is now mechanical: coord/check-driver-prose.py, sha256 264663b7b418cd5bc9ef1f6be4a9556fe7d5c38ca0a1f7c3d90bd712e92995a5, three checks - usage-names-self, count-agrees, subject-announced (the subject is the file whose PRE pin DIFFERS from its POST pin). Positive control: it found all three defects unaided. Negative control: it passes 3c and 3d. Known gap, stated rather than hidden: subject-announced matches one phrasing of the say, so 3c's differently-worded line is skipped silently.",
+      "mutates_field": "The coordinator asked whether to fill or remove `mutates`, noting it empty here and carrying four tokens in 3c/3d. Measured: the key is ABSENT from all three bundles and build-request.py never emits it - zero occurrences. So there is nothing to fill or remove. My own first check reported '[] EMPTY' because my formatter treated the absent value as falsy; the second check with an explicit default showed <KEY ABSENT>. The written paths live in surfaces.*.writes, which is what the gate reads.",
+      "tail_is_NOT_covered_by_this_grant": "Stated because next_action lists it. This grant covers ONLY the write to native_local_joint_tests.rs and the log directory. Commit, fetch, push and PR are each their own request with their own PRE/POST; a coordinator's conclusion authorises neither merge nor release, and push is an outward action on a shared remote. The push request must carry a route RE-MEASURED AFTER the fetch, not today's: 'cache fresh, N files in range' is true as of the measurement and has slipped twice. The driver contains nine git invocations and all nine are READS (rev-parse, status) - no add, commit, push or fetch."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-04T15:06:57+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s3e.json",
+    "content_file_sha256": "45302cf4799394cb27b66085885a2a30da8d48a6b1cc875e3442e8aa529f0301"
+  }
+}

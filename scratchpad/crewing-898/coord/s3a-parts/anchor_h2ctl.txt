@@ -1,0 +1,1 @@
+  ok(/"bad_email":\s*"bad_email"/.test(mapForKeys),'control: the map block really parsed — a known pairing is present');

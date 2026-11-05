@@ -1,0 +1,4 @@
+  for(const v of values){
+    const both=(html.match(new RegExp('"settings\\.crewing\\.login\\.'+v+'"','g'))||[]).length;
+    ok(both>=2,'No.898: the text '+v+' exists in BOTH dictionaries — found '+both);
+  }

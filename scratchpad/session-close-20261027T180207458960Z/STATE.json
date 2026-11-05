@@ -1,0 +1,116 @@
+{
+  "observed_at": "2026-10-27T18:02:07.458960+00:00",
+  "state": "STOP_BY_OWNER",
+  "authority": "Owner requested end of work today and saving current state.",
+  "scope": "Local closeout only; product task remains paused, not completed.",
+  "checkouts": [
+    {
+      "cwd": "/home/linux/Developer/skipi-crewing",
+      "head": "779e1db1423384cb71ef180d41b334e84698d316",
+      "branch": "chore/stack-freeze-v0.4.136",
+      "status": " M AGENTS.md\n",
+      "status_sha256": "95e77ce681435f2dddc5e5b2181787bbe0f1738c7406f8924a5f06620965a0cb",
+      "changed_and_untracked_files": [
+        {
+          "path": "AGENTS.md",
+          "bytes": 5906,
+          "sha256": "4de0a4c5f95466639231e79b110e5226c34acee3634b88c3d925953ba353ca9a"
+        }
+      ],
+      "status_after_closeout": " M AGENTS.md\n?? scratchpad/session-close-20261027T180207458960Z/RESUME.md\n?? scratchpad/session-close-20261027T180207458960Z/STATE.json\n"
+    },
+    {
+      "cwd": "/home/linux/Developer/worktrees/crewing-635-single-user-20261019",
+      "head": "b31b32135a3ade327664f7ff1598dd5ff7a79f55",
+      "branch": "feature/crewing-635-single-user-20261019",
+      "status": "?? scratchpad/crewing-635-single-user/visible-01a148e9/PREP.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/PR_BODY.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/SERVER-DEPENDENCIES.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/WORKLOG.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/build-03-supervisor.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/build-03-worker.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-progress.json\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-supervisor.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-worker.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/owner-04-launcher.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/pre-push-guard.json\n?? scratchpad/crewing-635-single-user/visible-01a148e9/source-pins.json\n",
+      "status_sha256": "71dd6fdc85d9475f083ddee40e0d2d42a67f9adeb3ed0d0714e3d5ccecc18c04",
+      "changed_and_untracked_files": [
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/PREP.md",
+          "bytes": 7308,
+          "sha256": "01b7bc8bbedf589cb235304fa345abadcb40f30401fa4bec406e7a14bd95129a"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/PR_BODY.md",
+          "bytes": 1155,
+          "sha256": "1deb19a5f10da31539dc058edf93d57fd397b2dae12eb3eac25b6e67ba517bbd"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/SERVER-DEPENDENCIES.md",
+          "bytes": 6288,
+          "sha256": "fcce4034c399b5a5080fb2465797e3ed2551bc537ab78b22d7b0e35c6de1df68"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/WORKLOG.md",
+          "bytes": 3601,
+          "sha256": "e5249ef65d7d6c54d960708b278d4b11edb3c6cae444c3c2740543716e04ce32"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/build-03-supervisor.py",
+          "bytes": 6308,
+          "sha256": "96d47f10e381cbf5c0def2ea63a64f364c0c6bd59b1e170634232e26a2749d9f"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/build-03-worker.py",
+          "bytes": 2757,
+          "sha256": "66b56724b214129a67274e54d8a33c8214ebc9877a92784bd0e13d2499853f9f"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-progress.json",
+          "bytes": 707,
+          "sha256": "b31074cb767ba1ce83d2b5f01b2f4fd5a467563ca2f980dddd0a423936eb2b0e"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-supervisor.py",
+          "bytes": 6332,
+          "sha256": "55d2018e8a168ba8fc793b8052e509942b4a0d03467eb4e5281fe17e6325e428"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-worker.py",
+          "bytes": 4215,
+          "sha256": "18d99303d5b4c191b256aadeee3b976ccb7051489292c8432744433d4e7c4060"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/owner-04-launcher.py",
+          "bytes": 3600,
+          "sha256": "28f5cbde5edc99f0f0c41c18d1a8d00461901b39ba60031bdb9fa54a41380ccf"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/pre-push-guard.json",
+          "bytes": 5476,
+          "sha256": "9841d7199255f2dff43b465405c5ba7d4b9fd2b87c4c7fe10a2a936f5b6d27f1"
+        },
+        {
+          "path": "scratchpad/crewing-635-single-user/visible-01a148e9/source-pins.json",
+          "bytes": 1789,
+          "sha256": "da710b6e7a75619cdf2e742a9eea1e8323c059becafa7b7a3dccbf4d3b0a8010"
+        }
+      ],
+      "status_after_closeout": "?? scratchpad/crewing-635-single-user/visible-01a148e9/PREP.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/PR_BODY.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/SERVER-DEPENDENCIES.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/WORKLOG.md\n?? scratchpad/crewing-635-single-user/visible-01a148e9/build-03-supervisor.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/build-03-worker.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-progress.json\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-supervisor.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/commit-push-worker.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/owner-04-launcher.py\n?? scratchpad/crewing-635-single-user/visible-01a148e9/pre-push-guard.json\n?? scratchpad/crewing-635-single-user/visible-01a148e9/source-pins.json\n"
+    }
+  ],
+  "owned_background_operations": [],
+  "queued_operations": [],
+  "limits": [
+    "No product edits, tests, builds, commit, push, network, service or host shutdown in this closeout.",
+    "Other sessions and processes were not audited or stopped.",
+    "No fresh coordinator END certificate obtained; no lease release or product acceptance claimed.",
+    "Guard pre-push and PR CI not run; task closure not claimed.",
+    "No remote readback: local tracking information only."
+  ],
+  "historical_context": "Prior Crewing closeout records task 635 HOLD/READONLY and Fresh02/EmailStr PREP; not revalidated as current implementation status.",
+  "resume": [
+    "Wait for explicit owner resume; no automatic continuation.",
+    "Read this snapshot, current absolute AGENTS files and current task/handoff.",
+    "Preserve existing WIP and recheck both HEAD/status/content hashes.",
+    "Before any product writing/testing obtain current assignment and fresh stage-specific coordinator certificate/PERMIT_CURRENT.",
+    "Task completion still requires authorized commit/push and guard pre-push plus PR guard CI."
+  ],
+  "snapshot_scope": "Checkout state before creation of closeout files; closeout files are recorded separately to avoid self-referential hashes.",
+  "closeout_files": [
+    "scratchpad/session-close-20261027T180207458960Z/STATE.json",
+    "scratchpad/session-close-20261027T180207458960Z/RESUME.md"
+  ],
+  "verification": "Original HEAD/status and changed/untracked content hashes match; only the two listed closeout files were added."
+}

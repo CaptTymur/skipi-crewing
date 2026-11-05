@@ -1,0 +1,147 @@
+{
+  "outcome": "Sub-stage 3a of No.898: the three instrument debts, and NOTHING ELSE. This sub-stage touches NO PRODUCT BYTE - it exists separately precisely so that instrument repair and product change cannot be confused in one diff (the manager's ruling on my recommendation; a mixed diff would be cheap today and set an expensive precedent). Debt 1: the quote-blind brace matcher in the H1 block is replaced by this same file's `balancedEnd`, which takes a quote character and skips string literals. Debt 2: the H2 parse controls gain an ASSERT that the map is FLAT - the condition under which they are sufficient - so the condition fails loudly instead of living in prose. Debt 3: the driver's success label said `worktree clean at base` while the predicate no longer checks cleanliness; it now names the real check. DRY-RUN: 151 -> 152 passed / 0 failed / 0 setup_errors.",
+  "new": "One replaced expression and one added assert in the harness; one corrected log label in the driver. No new product behaviour, no new text, no Rust change.",
+  "preserve": "**dist/index.html IS NOT CHANGED IN THIS SUB-STAGE**, and that is asserted rather than promised: its PRE digest is f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8, the driver pins DIST_POST to the SAME value, and the patch script re-reads dist after writing and REFUSES (code 6) if it moved. So 'the three debts are paid without touching the product' is checkable by bytes, not by a list of promises - which is what the coordinator asked for, now true of the file it can be true of. The vehicle stays on feat/crewing-898-login-texts-20261104 at base f145c601 with exactly the two declared modified files. src-tauri/ READ ONLY. Cargo.toml and Cargo.lock untouched. The F12 and Fresh work already in the tree is not disturbed. The canonical checkout's TRACKED content is preserved, unit `git status --porcelain=v1 --untracked-files=no`, counted before AND after in the same run. No commit, no push, no tag, no git byte of any kind.",
+  "stop": "STOP and report if: the harness is not at its pinned PRE digest; either anchor matches other than exactly once; dist moves by a single byte; the harness does not reach 152 passed / 0 failed / 0 setup_errors; or live main moves off f145c601. No pre-push-ref, push, tags or workflow_dispatch (standing STOP, RISKS No.293b). No commit. While any stream holds a window I stop processes by RECORDED PID, never by pattern; this stage starts no background process.",
+  "proves": "THE REFACTOR PROOF IS A SET COMPARISON, NOT A COUNT. I captured the sorted set of assert NAMES before and after and compared both directions with `comm`: LOST = 0 (nothing silently disappeared), GAINED = exactly 1, and that one is named in advance - 'control: the map is FLAT, which is the condition under which the parse controls above are sufficient'. A matching COUNT would have been compatible with one assert vanishing while another appeared; the set comparison is not. Baseline name-set digest 420103882a8a61666ef94b786fcb13790b466e3252d667506d78636dfc5fa9b7. AND THE MATCHER REPLACEMENT IS SHOWN EQUIVALENT ON TODAY'S INPUT: the old IIFE and the new `balancedEnd` both return end index 217871 on the live dist, so debt 1 removes a latent silent-drift path WITHOUT changing the current answer. Both arms of the new flat-map predicate were exercised before installing it: a flat map is not flagged, a map with a nested object is. Driver evidence as before: self-hash first, three distinct ids, PRE/POST digests against expected_post, canonical tracked lines before and after, harness log; the post-patch count is measured and the driver EXITS 12 on anything but 152/0/0 and on a missing summary. This stage proves NOTHING about the other 18 harnesses of the route, nothing about the route, and nothing about the stand.",
+  "expected_post": {
+    "why": "Pinned as an exit condition. Note dist's POST EQUALS its PRE on purpose: that is how 'instrument-only' is enforced rather than asserted in prose.",
+    "files": [
+      {
+        "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+        "sha256_pre": "f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8",
+        "sha256_post": "f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8",
+        "note": "UNCHANGED - this sub-stage must not touch a product byte"
+      },
+      {
+        "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+        "sha256_pre": "88a8f62fd735b178cccbee7f72a69b9835d6c0d3a57bb799a29a832beebba93a",
+        "sha256_post": "1bdd368bb51728e1924ada37f4ebe66bd6324d48befe895e4d87d002906a2ab7"
+      }
+    ]
+  },
+  "driver": {
+    "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s3a-debts.sh",
+    "sha256": "6cffb0dbef281f0bff1f29e762e991380d28a4c988602870d839b0a6e6f3dc1b",
+    "patch_script": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s3a-debts.py",
+      "sha256": "a17192c36d320ff8e22062d5113820467383d1c1a94e615b82c800f5c627ce44",
+      "note": "Also refuses AFTER writing if dist moved - the instrument-only guarantee lives in the script."
+    },
+    "debt_3_fixed_here": "The stale label is in the DRIVER, not the harness, so it is fixed in this file: `preconditions: worktree clean at base` becomes `vehicle porcelain equals the declared two-file PRE state`. Zero occurrences of the old wording remain. It was my own instance of 'a right value under a wrong name' - I edited a predicate without re-reading the sentence beside it.",
+    "parts_versioned": "Previous driver bytes kept under coord/f12-parts-versions/ so the diff is byte-checkable."
+  },
+  "measured_duration": {
+    "harness_run": "0.53 / 0.54 / 0.53 s over three runs of the FINAL 152-assert harness - the one this sub-stage installs. Object named: the patched mirror mirror-s6-debts. Unchanged from the 151-assert version, which is expected: debt 2 adds one assert and debt 1 replaces an expression, neither changing the three walks that dominate the cost. The Rust sources are byte-identical between mirror and vehicle, sha256 310e0556a606a662b8923d0761a74e5dc033a7ada184be23253e57ee03cef239 with the order named (LC_ALL=C sort over *.rs), so the figure carries to the vehicle.",
+    "patch_apply": "under 1 s - two text substitutions in one file.",
+    "stage_total_expected": "a few seconds; the driver refuses below a 30 s remainder."
+  },
+  "resource_identities_note": "Empty by fact: no network, database, port, host resource, and no git byte.",
+  "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md cited by FIELD NAME plus the digest read: 8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103 at ops 9b0b4baf3299a8c20a0bb43ab184d4519670e778. The manager approved the 3a/3b split in writing; he said he will record it in the card at its next revision, so until that commit the SPLIT is his word and not yet a card requirement - stated so rather than cited as governing. Builds on sub-stage 2, STAGE_COMPLETE 08:52:31Z, whose POST digests are this stage's PRE pins.",
+  "active_neighbors": "PROSE, not a second declared stream. The server writer on server/903 is blocked by the coordinator on a secret-handling finding (a token reached curl's argv, and /proc/<pid>/cmdline is world-readable), so he is outside any window. This stage writes no git byte. Lease counts are a property of the moment; I quote none.",
+  "next_action": "Sub-stage 3b: No.894, the two steps after login - dist plus its own assert.",
+  "owner_window": "Nothing owner-visible: no text and no behaviour changes here. The two string pairs from F12 and Fresh remain pending the owner's live acceptance (CANON-ui-v1, No.930).",
+  "surfaces": {
+    "code": {
+      "reads": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src",
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+      ],
+      "writes": []
+    },
+    "contracts": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-contracts"
+      ],
+      "writes": []
+    },
+    "schema": {
+      "reads": [],
+      "writes": []
+    },
+    "generated": {
+      "reads": [],
+      "writes": []
+    },
+    "tests": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs"
+      ]
+    },
+    "database": {
+      "reads": [],
+      "writes": []
+    },
+    "ports": {
+      "reads": [],
+      "writes": []
+    },
+    "cache": {
+      "reads": [],
+      "writes": []
+    },
+    "build": {
+      "reads": [],
+      "writes": []
+    },
+    "guard": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+      ],
+      "writes": []
+    },
+    "release": {
+      "reads": [],
+      "writes": []
+    },
+    "card": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+      ],
+      "writes": []
+    },
+    "logs": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-debts"
+      ]
+    }
+  },
+  "refactor_oracle": {
+    "why": "The coordinator's ask: pin BOTH sets so 'the repair broke nothing' is a PREDICATE a reviewer recomputes, not a claim they accept. A matching COUNT would pass if one assert vanished while another appeared; a matching SET will not.",
+    "method": "Run the harness, take the PASS lines, strip the ' :: …' payload so only the assert NAME remains, sort. Compare both directions with `comm`: LOST must be empty, GAINED must be exactly the one name declared below.",
+    "before": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/s3a-parts/names-before.txt",
+      "sha256": "420103882a8a61666ef94b786fcb13790b466e3252d667506d78636dfc5fa9b7",
+      "names": 151
+    },
+    "after": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/s3a-parts/names-after.txt",
+      "sha256": "110023a7746f1a98c67be6df23d6aa617e7a6241ef7658a1db5861c0b7cf8a74",
+      "names": 152
+    },
+    "lost": [],
+    "gained_exactly": [
+      "control: the map is FLAT, which is the condition under which the parse controls above are sufficient"
+    ],
+    "matcher_equivalence": "Debt 1 is shown equivalent on today's input: the old IIFE and the new balancedEnd both return end index 217871 on the vehicle's dist (sha256 f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8). So it removes a latent silent-drift path WITHOUT changing the current answer - which is why the name set can be unchanged by it at all.",
+    "balanced_end_was_already_there": "balancedEnd is defined at line 258 of the same harness, 297 lines BEFORE line 555 where I wrote a counter from scratch - the coordinator measured that. It is an argument for the debt being low-risk (the fix is a call to an existing function) and, honestly, an argument about me: I wrote a quote-blind counter next to a quote-aware helper in the same file.",
+    "matcher_index_reproducible": {
+      "the_coordinator_could_not_reproduce_it": "He derived 217870 twice - a measurement and a reading of balancedEnd's `return depth===0 ? j-1 : -1` - and asked me to either name the producing command or say it was a transcription slip. IT IS NOT A SLIP: the probe really returns 217871, and it is now reproducible rather than reported.",
+      "command": "node /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/probe-matcher-index.mjs <vehicle>/dist/index.html <vehicle>/tests/crewing635_public_settings_harness.mjs",
+      "probe_path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/probe-matcher-index.mjs",
+      "probe_sha256": "41293191232efaa163128938754dd974914b354d58ad43fb071cea65de2e6987",
+      "three_independent_derivations_all_217871": [
+        "the OLD IIFE, verbatim, on the vehicle dist -> 217871",
+        "balancedEnd EXTRACTED from the harness's own bytes (not retyped) -> 217871",
+        "the character AT the index is '}' - and char[217870] is a SPACE, char[217872] is ';'; context 217860..217875 is '\\u0438\\u0430\\u043b\"\\n  }\\n  };\\n  '"
+      ],
+      "his_reading_is_right_about_the_SEMANTICS": "balancedEnd does return the index OF the closing brace, not the position after it - my measurement confirms that, since html[217871] === '}'. We agree on the semantics and differed only on the value.",
+      "both_start_conventions_agree": "Starting the counter AT the opening brace with d=0 and starting AFTER it with d=1 both yield 217871, so the difference is not a start-index convention.",
+      "what_this_points_at": "My earlier statement - 'no dist state I hold produces 217870, so it is either a different input or an off-by-one in the reimplementation' - was true and complete about MY states, and could not contain the answer: the answer was a third thing neither of us named, the SAME value in a DIFFERENT unit. Worth recording as the limit of an enumeration: listing every candidate I had was honest and still could not reach a cause that lived outside the list.",
+      "UNIT": "UTF-16 code units (JavaScript string index)",
+      "why_the_unit_is_not_pedantry": "RESOLVED, and both numbers were right: the coordinator's 217870 is in PYTHON CODE POINTS, mine is in UTF-16 CODE UNITS. I verified his explanation myself rather than accept it - in Python the brace sits at 217870, in JS at 217871 with a space at 217870, and encoding the prefix up to the Python index gives exactly 217871 UTF-16 units. The cause is one astral character before the dictionary anchor: U+1F4C1 FILE FOLDER at Python code point 89215, which JS counts as TWO units. MINE IS THE NUMBER THAT BEARS ON THE PREDICATE, because the harness runs in node and the assert is about a JS string index - his was a correct measurement of a different unit. REFINEMENT I measured on top of his finding: the offset is POSITION-DEPENDENT, not a constant +1. The file holds 55 astral characters in total but only ONE before this anchor, so the JS-Python gap is +1 at this position and grows to +55 by end of file - the whole-file lengths differ by exactly 55 (JS 1091026 vs Python 1090971), which confirms it. A reader probing a LATER position with a Python tool would see a different offset again, so naming the unit matters more than the single number does."
+    }
+  }
+}

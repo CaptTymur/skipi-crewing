@@ -1,0 +1,134 @@
+{
+ "outcome": "Stage 10: build the RELEASE binary of the candidate e5132934 in the vehicle's own gitignored target, so the owner's acceptance can happen on a RUNNING artefact instead of on frames. No bundle, no release publication, no push, no merge, no show.",
+ "new": "Two writes. (1) /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target - created from nothing, holding the whole cold build; it is gitignored (verified: `.gitignore` line 1 is `src-tauri/target/`, and every path INSIDE it matches, though the bare directory name without the trailing slash does NOT - my first probe was aimed at the latter and returned 'not matched'). (2) This stage's log subtree. Nothing else: no bundle is produced, and the house's own 27 G target is not written to.",
+ "preserve": "HEAD and the branch ref stay at e5132934. The worktree stays porcelain-EMPTY - possible because target/ is ignored, so a build leaves no tracked or untracked trace. `dist/index.html`, `Cargo.toml` and `Cargo.lock` stay BYTE-IDENTICAL: their digests are pinned before and after, and Cargo.lock in particular is release-sensitive in this house, which is why `--locked` is passed so cargo REFUSES rather than updating it. The canonical checkout stays at 0 tracked changes.",
+ "stop": "STOP before acting if: the gate does not yield PERMIT_CURRENT as a FIELD; under 240 s remain; cargo or rustc do not RUN; HEAD or the branch ref is not e5132934; the worktree is not clean; dist/index.html is not 96b6bd50…fdf3fa (then the frames are not of what would be built); Cargo.toml or Cargo.lock differ from their pins; the release binary already exists (exit 8 - the control is nothing->exists); or under 30 GB are free (exit 9, and NOTHING is cleaned - what to remove is the manager's decision, returned as a line). AFTER: exit 20 if cargo fails - and the failure is NOT repaired here and the profile is NOT swapped, both being the manager's call rather than a mid-stage improvisation; exit 21 if cargo exits 0 while no binary exists; exit 22 if the binary exists but an input or the tree moved; exit 13 if the canonical checkout moved.",
+ "why_RELEASE_and_the_managers_reasoning_is_stronger_than_mine": "I offered the choice with a recommendation; his reasoning corrects a weaker version of mine and is recorded because it is the better argument. `dist` is embedded from the SAME bytes in both profiles, and the texts and the contrast the owner judges live in `dist` - so the SUBJECT of the acceptance does not depend on the profile at all, only the native half does. RELEASE therefore deletes the frames' standing caveat ('release untested') WITHOUT changing what the acceptance measures: a strict option with no cost in substance, the price being only a cold build's time. And his third point inverts my own counter-argument: if RELEASE ever diverges from DEBUG, that is a finding to obtain BEFORE the acceptance rather than something hidden by picking the profile that matches the pictures - exact agreement with what was expected proves almost nothing while feeling like proof.",
+ "what_I_can_and_cannot_verify_about_the_embedded_dist": "This replaces the manager's STOP as he wrote it, by his own instruction, because his version named a measurement that does not exist. THE INPUT is verifiable with certainty: `tauri.conf.json` declares `build.frontendDist = ../dist`, so the build reads that directory, and the driver pins dist/index.html to 96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa both BEFORE and AFTER, since a build must not rewrite its own input. THE OUTPUT is NOT verifiable by inspecting the binary, and that is measured rather than assumed.\n\nHow it was measured, including the part where I was briefly fooled: I searched the existing 2026-09-30 release binary for one of the NEW texts and got 0, which agreed with expectation ('an old binary has no new strings') and would have been banked. The POSITIVE CONTROL destroyed it - a string that MUST be there, `Войдите в аккаунт Skipi`, also returned 0, proving the instrument blind rather than the binary old. Then I measured HOW blind: `strings` finds `<!DOCTYPE html` (5 hits) and `<title>` (4) but NOT `mobile-status`, NOT `loginRefusalText`, NOT `data-theme`, and ZERO Cyrillic anywhere - the 1,131,783-byte document is stored compressed. And no asset manifest with a digest is left under target/release/build/*/out (checked: that tree holds dependency codegen like named_entities.rs and bindgen.rs, nothing about frontend assets).\n\nSo the honest chain is: input proven by digest, output provable only by RUNNING the thing - which is the smoke stage, agreed as the next one.",
+ "no_network_and_offline_is_what_makes_that_TRUE": "`ports` is empty, and `--offline` is what earns it rather than hope. The shared registry cache holds 814 .crate files against 595 packages in the lock - but 814 >= 595 is a COUNT, not a composition, and it does not prove the right VERSIONS are present. I am not inferring from it. `--offline` makes cargo answer the question itself: if anything is missing it fails loudly, and that failure is returned as a finding rather than repaired by reaching for the network mid-stage. The registry cache is declared as a READ.",
+ "the_window_floor_is_not_a_promise_of_finishing": "240 s, which is nearly the whole window, and the reason is unusual: a cold release build of 595 packages will almost certainly OUTLAST any 300 s lease, and no floor can promise otherwise. So the floor does not mean 'enough time to finish' - it means 'start only at the BEGINNING of a window', so that an overrun is unambiguously an overrun rather than a near-miss. Per the standing rule the command is NOT interrupted on expiry: it is carried to the end and the stage closes with ack-stop from DRAIN_REQUIRED. Killing a build mid-flight would leave a partial target and there is no safe boundary inside it. The wall clock is recorded, and `overran_window=yes|no` goes into the record as a fact rather than an apology.",
+ "the_positive_control_is_available_here_unlike_stage_9": "Stage 9 had to switch to a content-based control because stage 5's success had SPENT the 'absent -> exists' transition on FETCH_HEAD. Here the transition is available and unused: the vehicle carries no `src-tauri/target` at all, so the control is nothing -> a binary, with its digest, size and nanosecond mtime recorded. A second, independent half: the new binary must DIFFER from the 2026-09-30 house artefact, because two different commits cannot produce identical bytes - and that old digest is read LIVE rather than pinned as a constant, since a pinned prefix the script never compares would be a constant asserting something unchecked.",
+ "release_sensitive_files_are_guarded_by_a_flag_AND_a_check": "`Cargo.lock` and `Cargo.toml` are release-sensitive in this house and out of scope for a non-release task - they are exactly what blocked an earlier push. `--locked` makes cargo REFUSE rather than rewrite the lock, and that is a flag, i.e. a promise. So both digests are also compared after the build, and a change is a FINDING plus exit 22, not a note. The same treatment for dist/index.html: a build must not rewrite its own input.",
+ "a_blind_spot_in_check_undefined_funcs_reported_and_worked_around": "My first draft used `command -v cargo`, and the checker reported `command` as an undefined function: it reads a shell BUILTIN at statement start as a call. Isolated with minimal cases: `command -v ls` is flagged as `command`, `type -p ls` as `type`, while `export X=1` and `eval \"f\"` stay clean - so it is builtins MISSING FROM ITS ALLOWLIST, not builtins in general. Second instance of this family after the lowercase `case` patterns. I changed my side because a noisy reviewer instrument costs him a round, and the replacement is a better check anyway: `cargo --version` proves the toolchain RUNS rather than that a file sits on PATH. The blind spot goes to him separately rather than being papered over.\n\nHE CLOSED IT, and the class was wider than my two cases: running the family turned up `hash`, `jobs`, `ulimit` and `umask` as well - six builtins - and none could have been filtered out via PATH, because a builtin is not a file, which is precisely why the gap was invisible. The cause he names is the same one behind a stale schema: a list enumerating the members of a known set, maintained by hand beside that set. He replaced the selection with the full bash builtin list, and the decisive calibration is that a genuinely undefined call is STILL caught - all four of my drivers (7, 8, 9, 10) now read clean.",
+ "proves": "Driver self-hashes. Gate verdict read as a FIELD. Window from the certificate. Three pairwise-distinct ACK ids. ACK_START below the window gate; ACK_STOP the stage's LAST action, including before the exit-22 line. One source for the command: the same array runs it and is echoed into after.txt. Build PID recorded to a file so a stop, if ever needed, goes by PID and not by pattern. Both halves of every pinned pair measured before the record is written. No timeout, deliberately, with the reason in the header.",
+ "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on the commit e5132934 existing and on dist/index.html still carrying the bytes the 3d frames were taken against. Commissioned by the manager (skipi-ops-28) after he measured that the owner's acceptance was waiting on a build rather than on the owner.",
+ "next_action": "A SMOKE stage immediately after this one, agreed with the manager: raise the RELEASE binary on Xephyr with the preserved loopback stub and drive the four refusal states in RU and EN. His constraint on it, recorded here so it cannot be lost between stages: the NEW frames must NOT replace or cancel smoke-3d/. Any state that diverges from those frames is a FINDING that travels to the owner, not something overwritten by a fresh snapshot; the DEBUG frames stay in place with their digests as evidence of that run. After the smoke: the owner's live acceptance, which is his gate - frames, digests and my report do not substitute for it. Then, and only then, the merge question.",
+ "owner_window": "NOT required for the build itself: it produces a binary and shows nobody anything. `shown_to_owner=no` is written into the record explicitly, so that the existence of a release artefact cannot later be read as the acceptance having happened.",
+ "active_neighbors": "PROSE, never a second declared stream. The plugins stream (card No.936) was sequenced after my irreversible stage and has been released by the manager; it creates a SIBLING subdirectory and does not touch `_host-runtime` bytes, and it does not touch this house's build tree. `skipi-dev-tails.timer` fetches every 10 min and has been confirmed five times not to touch this gitdir; for this stage an overlap is harmless - the build reads the working tree and writes only into gitignored target/ and my log subtree. The one shared resource worth naming is the DISK: four target directories on this machine hold 27-42 G each, and this build adds another cold target. The floor of 30 GB free is checked before starting, and 108 GB were free at request time.",
+ "mutates": [
+  "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target",
+  "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-build",
+  "path:/home/linux/.cargo/registry/src",
+  "path:/home/linux/.cargo/.package-cache"
+ ],
+ "expected_post": {
+  "why": "pinned as exit conditions; the kinds of exit are listed in `stop`",
+  "release_binary": "CREATED where nothing existed: /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing. Its digest, size and nanosecond mtime are recorded, and it must DIFFER from the 2026-09-30 house artefact",
+  "dist_cargo_toml_cargo_lock": "ALL THREE byte-identical before and after; a change is a FINDING plus exit 22",
+  "worktree_porcelain": "EMPTY before and after - target/ is gitignored, so the build leaves no trace in git",
+  "head_and_branch_ref": "BOTH unchanged at e5132934064c8ccf701b0061570971c2af220403",
+  "canonical_checkout": "0 tracked changes before and after, both halves in the record",
+  "disk": "recorded before and after; the build's target size recorded",
+  "wall_clock": "RECORDED, not predicted - the first measurement of a cold release build of this house",
+  "overran_window": "recorded as yes|no; an overrun is expected and is not a failure",
+  "shown_to_owner": "no. merged=no. released=no"
+ },
+ "measured_duration": {
+  "this_build": "UNKNOWN - never measured here; a cold release build of 595 packages",
+  "the_only_anchors_I_have": "cold `cargo check --lib` in this house was ~252 units in ~22.5 s, and an incremental check 1 unit in 0.80-2.72 s. Neither is a release BUILD of the full dependency graph, so neither is this object - they are the only numbers that exist and they are a floor, not an estimate",
+  "upper_bound": "NONE in anything I can read; and the lease cannot bound it either",
+  "floor": "240 s, meaning 'start at the beginning of a window', not 'enough time to finish'",
+  "the_disk_threshold_now_has_an_object": "His anchor, and he expected the opposite. He went to check whether 30 GB was too THIN, since 27 G in the main checkout looked threatening, and measured the composition: of those 27 G, `debug` is 6.8 G, `release` 5.2 G, plus four android-target directories and a 778 M bundle. `cargo build --release` runs no bundler, so the comparable object is about 5.2 G. The 30 GB floor is therefore roughly fivefold headroom against 108 GB free (115,021,447,168 bytes) - generous rather than thin, and now attached to an object instead of a feeling."
+ },
+ "resource_identities": {},
+ "resource_identities_note": "No network resource: `--offline` makes that a property of the invocation rather than a hope, and the registry cache is declared as a READ. No database, no port binding. The release-sensitive paths are READS pinned by digest, not writes.",
+ "surfaces": {
+  "code": {
+   "reads": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src",
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/build.rs"
+   ],
+   "writes": []
+  },
+  "contracts": {
+   "reads": [],
+   "writes": []
+  },
+  "schema": {
+   "reads": [],
+   "writes": []
+  },
+  "generated": {
+   "reads": [],
+   "writes": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target"
+   ]
+  },
+  "tests": {
+   "reads": [],
+   "writes": []
+  },
+  "database": {
+   "reads": [],
+   "writes": []
+  },
+  "ports": {
+   "reads": [],
+   "writes": []
+  },
+  "cache": {
+   "reads": [
+    "path:/home/linux/.cargo/registry/cache"
+   ],
+   "writes": [
+    "path:/home/linux/.cargo/registry/src",
+    "path:/home/linux/.cargo/.package-cache"
+   ]
+  },
+  "build": {
+   "reads": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml",
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock",
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/tauri.conf.json",
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist",
+    "path:/home/linux/Developer/skipi-crewing/src-tauri/target/release/skipi-crewing"
+   ],
+   "writes": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target"
+   ]
+  },
+  "guard": {
+   "reads": [],
+   "writes": []
+  },
+  "release": {
+   "reads": [
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml",
+    "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock"
+   ],
+   "writes": []
+  },
+  "card": {
+   "reads": [
+    "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+   ],
+   "writes": []
+  },
+  "logs": {
+   "reads": [],
+   "writes": [
+    "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-build"
+   ]
+  }
+ },
+ "surfaces_note": "`release` carries Cargo.toml and Cargo.lock as READS and no writes, and that is the point: this stage must not write them, which `--locked` enforces and the after-digests verify. The same two paths also appear under `build` because that is what they are to cargo - the category is presentation and `overlaps()` flattens them anyway. `generated` and `build` both name target/ as a write; one token would do, and both are there because the directory is simultaneously build output and generated content. The old house binary is a READ (the differs-control). `ports` empty by invocation, `guard` empty because no hook runs here.",
+ "driver": {
+  "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s10-build.sh",
+  "note": "Self-hashing; recomputed at run time into both ACK documents. Its digest is NOT written here - the generator supplies it from disk in the same call that computes evidence_files. bash -n clean; check_undefined_funcs clean; check-driver-prose clean on all three predicates. This field was MISSING from my first draft of this stage and present in all fourteen earlier content files - the coordinator caught it, and the consequence was concrete rather than cosmetic: his review-document generator reads driver_sha256 from streams[0].driver and would have recorded null for 'objects measured at issuance', while the driver itself was identified only by the CONVENTION that evidence_files[0] is it."
+ },
+ "the_build_WRITES_into_the_shared_cargo_registry": "His blocking finding, and the fourth instance of one genus on this stream after the index in 3a, the per-worktree FETCH_HEAD in 5 and the reflog in 8. A cold build EXTRACTS `.crate` archives into `~/.cargo/registry/src/`, which is a WRITE into a directory shared by every writer on this machine - I had declared the registry read-only. Measured: the lock names 595 packages while `registry/src` holds fewer unpacked (he counted 478, I count 521 package-version directories at depth 2; the methods differ and the conclusion does not, since both are below 595), so extractions will happen. Now declared as `cache.writes` and in `mutates`.\n\nSECOND HALF, which was absent from my request entirely: `~/.cargo/.package-cache` exists (an empty file dated 2026-04-07) and is cargo's GLOBAL lock on the registry. Two simultaneous builds on this machine serialise on it, and that serialisation is invisible to the gate while the registry is undeclared. Today there is no contention - 0 of 2 leases and `pgrep -x cargo` returns nothing - but the declaration IS the artefact, which is the same argument he used to require the `worktrees/` container from me.",
+ "the_twelve_missing_crates_are_NOT_a_predicted_failure": "His reasoning, kept because it stopped a wrong claim before I could make it. Of the packages not unpacked, 105 have their archive in the cache and 12 have no archive at all - and those 12 are `js-sys`, five `wasm-bindgen*`, `web-sys`, `wasip2`, `wit-bindgen`, `libredox`, `webpki-root-certs` and `skipi-crewing-0.4.139` itself. That is wasm and redox targets plus my own path package. **A Cargo.lock lists the UNION over all targets while a build compiles the graph for ONE**, and cfg conditions are not in the lock - so 'twelve missing therefore the build fails' would be a statement about the wrong population, and it is not derivable from the lock at all. Only cargo knows, which is exactly what `--offline` forces it to say out loud. So this confirms the choice of `--offline` rather than contradicting it.",
+ "renew_IS_available_and_drain_is_still_right_for_a_different_reason": "Correcting my own premise, which he measured as wrong. I implied drain was forced; renew would in fact pass all three of its checks here - `src-tauri/target` is gitignored (`check-ignore` rc 0) and absent, so `git status` does not move and stays the sha of EMPTY output (e3b0c442…); HEAD does not move; and this stage writes none of its own four pins, since it GATES dist/index.html, Cargo.toml and Cargo.lock before and after. His rule 'renew is unavailable to a stage that writes its own pins' simply does not apply to this stage.\n\nDrain remains the choice, on ARITHMETIC rather than on impossibility: renew buys at most one more 300 s window, and a build plausibly running tens of minutes would need 2-8 consecutive renews, each carrying a fresh event, his live inspect and a review MID-BUILD through a human-speed channel. A chain of eight renews is more fragile than one honest drain. The closure sequence is pinned in advance because it cost him four refusals yesterday: `reference --lease-id … --instance …` first, because expiry raises the revision and the certificate held at start stops being current, then `ack-stop --certificate <that file> --evidence <this stage's ACK_STOP> --action-event <its id>`. He verified across all 265 lines that this driver never re-reads the certificate after the start gate, so a revision change cannot affect the run.",
+ "a_gate_gap_I_found_in_myself_mirroring_his": "After he reported that his `preflight_window` read a pulse from the FUTURE as maximum freshness and advised `grant`, I tested my own window arithmetic with three synthetic certificates rather than assuming mine was sound. An EXPIRED certificate (-623 s remaining) refuses correctly via the floor. But one claiming 86,377 s WOULD HAVE STARTED: the protocol computes expiry as min(now+300, heartbeat+max), so any remainder above 300 s is impossible from a legitimate grant - it means clock skew or a fabricated document - and nothing in my gate looked upward. A bound checked on one side only is half a check. Added WINDOW_CEILING=300 with a named refusal, and re-tested all three: expired refuses on the floor, 257 s starts, 86,377 s refuses above the ceiling. His finding and mine are the same defect pointing in opposite directions, and his positive control with a future timestamp is what made either visible.",
+ "the_floor_refused_its_own_stage_and_the_refusal_was_right": "The grant came with ~252 s at issuance and my driver refused the start at 200 s against a floor of 240 - the gate did exactly what it was built to do, nothing was written, no ACK_START exists, so the stage never began. But the FLOOR was wrong in kind, and that is measured rather than felt.\n\nARITHMETIC: expiry 06:01:44Z; his issuance 05:57:31Z (253 s left); certificate written 05:57:37Z (247 s); my launch 05:58:24Z (200 s). Delivery plus one turn of mine consumed 47 s. With a floor of 240 against the 300 s ceiling, the ENTIRE budget for pulse age + his chain + delivery + my turn is 60 s - so 240 was unreachable through a human-speed channel by construction, and no amount of hurrying fixes it.\n\nWHAT THE FLOOR ACTUALLY GUARDED: the precondition block - toolchain check, two rev-parses, porcelain, three digests, disk, canonical count - measures 60 MILLISECONDS. A 240 s floor stood in front of 60 ms of work.\n\nSO THE FLOOR IS NOW 30 s, with a different meaning: it covers the only thing that MUST happen inside the window, namely completing the preconditions and writing ACK_START so the stage legitimately started under the lease. Everything after that is drain territory BY DESIGN, because the build outlasts any lease - which is precisely why a large floor bought nothing while making the stage impossible to begin. The ceiling stays at 300: that one checks a number supplied from outside, and it has a real job."
+}

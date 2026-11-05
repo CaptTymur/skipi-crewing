@@ -1,0 +1,12 @@
+hook_status="pass"
+hook_task="crewing-635-single-user"
+hook_repo="/home/linux/Developer/worktrees/.skipi-guard-harness-wt-crewing-8_sir8nr"
+hook_base="f145c6017eaea3804a5429e5aa428b6fb0ece6d9"
+hook_head="e5132934064c8ccf701b0061570971c2af220403"
+hook_comparison="triple-dot"
+hook_errors=[]
+hook_push_ref={"local_ref": "refs/heads/feat/crewing-898-login-texts-20261104", "local_sha": "e5132934064c8ccf701b0061570971c2af220403", "remote_ref": "refs/heads/feat/crewing-898-login-texts-20261104", "remote_sha": "0000000000000000000000000000000000000000", "base_mode": "merge-base-origin-main"}
+harness_total=19
+harness_status_counts={"pass": 19}
+harness_failed=[]
+harness_names=["crewing_plugin_isolation", "shared_host_runtime_isolation", "crewing_presence_contract", "crewing_crew_flow_demo", "crewing_build_provenance", "crewing_theme_default", "crewing_csp_inline_handlers", "crewing_mailbox_contract", "crewing_escaping_negative", "crewing_compliance_manual_flow", "crewing_mail_cv_intake_demo", "crewing_settings5_preview_gated", "crewing_trial_gate_wired", "crewing_trial_activate_unconnected", "crewing_stack_build_metadata", "crewing_stack_verification_negative_control", "crewing_c3b1_pilot", "crewing_c3b2_candidate", "crewing635_public_settings"]

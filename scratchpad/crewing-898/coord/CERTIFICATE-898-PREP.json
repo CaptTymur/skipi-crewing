@@ -1,0 +1,10 @@
+{
+  "verdict": "PARALLEL_STAGE_ALLOWED",
+  "lease_id": "636fda70a1ca48bda79c7137d250958e",
+  "input_sha256": "4c438b31a48923f0b4ddbe7c0df6fc2cad45ca112bff79b5997087fe47402117",
+  "stage": "PREP",
+  "epoch": 48,
+  "revision": 1,
+  "instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "expires_at": "2026-11-04T07:31:19+00:00"
+}

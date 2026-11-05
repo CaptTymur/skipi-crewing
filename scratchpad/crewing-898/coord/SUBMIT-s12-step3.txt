@@ -1,0 +1,9 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/VERIFY_BUILD-b2-grant-20261105T073303Z.json
+file_bytes_sha256: 1f03621d1d976695023a8ff83a8590a73d388f692d693a8daa03d54ec7e90eb3
+event_id: crewing-898-VERIFY_BUILD-b2-20261105T073303Z
+heartbeat: 2026-11-05T07:33:03+00:00  mode: grant
+reviewed step 1: VERIFY_BUILD-b2-build-review-only-20261105T072841Z.json (canonical 26c47a38…)
+preflight_step3: ready_to_grant=true  forbidden_changes=[]
+preflight_pins: ready_to_grant=true  blocking=[]
+inspect --live: CHECKS_PASS_REQUIRES_COORDINATOR  errors=[]
+driver 9e8364eeb5180139 (unchanged from the reviewed step 1)

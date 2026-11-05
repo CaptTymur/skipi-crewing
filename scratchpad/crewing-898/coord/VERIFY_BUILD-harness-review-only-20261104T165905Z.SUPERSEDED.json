@@ -1,0 +1,196 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "coordinator_epoch": 48,
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-VERIFY_BUILD-harness-20261104T165905Z",
+      "stage": "VERIFY_BUILD",
+      "outcome": "Stage 7, inserted BEFORE the push: execute the route's 19 harness commands locally with the guard's own runner, on the pushed bytes, to learn whether they pass. No network, nothing irreversible, no push, no PR. The push becomes stage 8.",
+      "repo": "/home/linux/Developer/worktrees/crewing-898-20261104",
+      "head": "e5132934064c8ccf701b0061570971c2af220403",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status_sha256_uall_command": "sha256 of the raw bytes of: git -C <repo> status --porcelain=v1 --untracked-files=all  (trailing newline included)",
+      "untracked": "No exclusion applies: the declared repo is not the checkout my artefacts live in, so this is the raw --untracked-files=all output, 0 line(s) (empty).",
+      "new": "One log subtree, /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-harness, holding the guard's machine-readable result (`guard-harness.json`), its stdout and stderr, `parsed.txt` (the fields read BY NAME, plus a line per harness), `after.txt` and the two ACK documents. Nothing outside it - unless a harness writes into the worktree, which is declared as a possible write and controlled below.",
+      "preserve": "HEAD and refs/heads/feat/crewing-898-login-texts-20261104 stay at e5132934; origin/main stays at the fetched f145c601; `git worktree list` stays at 86 lines; the canonical checkout stays at 0 tracked changes. The worktree SHOULD stay porcelain-EMPTY, and if it does not that is a FINDING that this driver deliberately does NOT repair - see below.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP if: the gate does not yield PERMIT_CURRENT as a FIELD; under 120 s remain; the ref-name pin digest differs; HEAD or the branch ref is not at e5132934; the worktree is NOT clean BEFORE the run (the after-check only means something if the before-state was empty); origin/main is not the fetched f145c601; `worktree list` is not 86 lines; `guard-harness.json` already exists; the guard exits 2 or more (exit 10, an INSTRUMENT failure, not a verdict); the JSON is absent or empty; or ANY harness still reads `not_run` (exit 11 - the positive control). After the run: exit 22 if the worktree is dirty, exit 23 if at least one harness failed - that is a VERDICT and the product of the stage, not a driver failure - and exit 13 if the canonical checkout moved.",
+      "heartbeat": "2026-11-04T16:59:05+00:00",
+      "heartbeat_note": "review-only pulse; do not compute a window from it",
+      "proves": "Driver self-hashes. Gate verdict read as a FIELD. Window from the certificate. Three pairwise-distinct ACK ids. ACK_START below the window gate; ACK_STOP the stage's LAST action, including before the exit-22 and exit-23 lines. The guard's JSON parsed BY FIELD NAME into parsed.txt, never by substring of the printed summary. `--run-harness` present and its effect then CHECKED rather than trusted. Rehearsed against a stubbed instrument - running the real nineteen outside a window would BE the action - with a clean baseline re-run afterwards printing 0 finding lines, which is what makes each drill's finding attributable to its drill.",
+      "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md. Depends on stage 5 (origin/main = f145c601) and stage 6 (the route, and the all-not_run baseline this stage's positive control rests on).",
+      "active_neighbors": "PROSE, never a second declared stream. `skipi-dev-tails.timer`, user scope, every 10 min, runs `git fetch` over repositories found by walking directories; confirmed five times not to touch this gitdir, the strongest reading taken while it was mid-run (15:37:25-15:39:38Z, 15:47:25-15:49:44Z, 15:57:25-15:59:53Z, each exit 0, shared FETCH_HEAD unmoved at 2026-11-02 10:00:37 +04). For THIS stage an overlap is harmless in a way it was not for the fetch: the run reads the working tree and writes only into my log subtree, and a neighbour's fetch moves refs, not files. The precondition still requires origin/main to equal the fetched f145c601, so interference stops the stage rather than changing the base the harnesses see. Nothing of mine runs outside this stage.",
+      "next_action": "If every harness passes: the push, as stage 8, its own request. If any fails: read it, and the push does not happen - the failure is the answer this stage was for. If the worktree ends dirty: that decision first, since the push precondition requires a clean tree.",
+      "owner_window": "NOT required. A local test run changes nothing a person can see, publishes nothing and touches no product file.",
+      "card_provenance": {
+        "cited_by": "field name plus the digest read; never by line number",
+        "path": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "sha256_file": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "sha256_at_ops_head": "8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103",
+        "revisions_agree": true,
+        "ops_head": "8d4ae8c3ce036e4d82539575758dac2daf3330f1",
+        "ops_porcelain": " M BACKLOG.md\n M DECISIONS.md\n M RISKS.md\n M handoffs/TASKCARD-2026-11-04-seafarer-924-remove-local-storage.md\n"
+      },
+      "baseline_provenance": {
+        "live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cached_origin_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "cache_is_fresh": true,
+        "note": "Live main is read by object; the checkout is not moved. The hook routes merge-base(origin/main)..head for a new branch, so fetch origin main before the first push and re-measure the route then."
+      },
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri",
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/presence-manifest.json",
+            "path:/home/linux/Developer/skipi-crewing/.git/objects"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests",
+            "path:/home/linux/Developer/skipi-plugins/_host-runtime"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/worktrees/crewing-898-20261104"
+          ]
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/bin/skipi-guard",
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt"
+          ],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-harness"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s7-harness.sh",
+          "sha256": "f255f6728b1be75ca75235f726e60ae8ad8389c0c0957daccbf54de2ad0415bc"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/refnames-s6.txt",
+          "sha256": "de27f05ff072f1fd4476e3810186653a254e9c015575312b2f43efcd11d42297"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-plugins/_host-runtime/dist/RUNTIME_VERSION",
+          "sha256": "022f85f4c6990ee9074c8323a5af07f1ef241ffa1f2a9d180e7df18bbf40b0d1"
+        },
+        {
+          "path": "/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+          "sha256": "80905d0c4d11a2ab6825f11cae23518016656d08a78ba014bc890f7e2bd6ffba"
+        }
+      ],
+      "why_this_stage_exists_and_it_is_not_the_reason_it_was_offered": "The coordinator offered `verify --run-harness` as a way to MEASURE the hook's duration, and left the choice to me. I am taking it for a dearer reason: whether the nineteen PASS. Counted, not assumed - the 2026-11-01 push executed SEVEN commands (route crewing-c3b2); my route declares NINETEEN; and of those I have executed exactly ONE in this task (my own, 184 asserts green). So TWELVE would run for the first time at the moment of an irreversible action. He then verified that list independently against every guard record on disk and it matched name for name: seven have a recorded outcome, all `pass` on 2026-11-01; twelve have no recorded outcome anywhere.\n\nMY FIRST REASON WAS STALE AND HE MEASURED WHICH PART. I argued from owner-authorised RED harness debt. Two of three legs are now gone: No.879 `stack_build_metadata` pinned 0.4.136 against a 0.4.138 house, and on my pushed bytes AND on origin/main those four asserts pin 0.4.139 while the house declares 0.4.139 in tauri.conf.json, Cargo.toml and Cargo.lock - cured by No.882/PR #76; and No.878's ghost harness `crewing_escaping_negative` exists on my sha and on origin/main - cured by PR #77. On the third, the manager's own canon (PROJECT_STATE No.876, 29.10) says presence 130 and c3b2 1 are NOT baseline red - green on base and on main - and that a BRANCH turns them red; the 2026-11-01 record shows `crewing_presence_contract` passing on d58a4a22, an ancestor of my head.\n\nSo the conclusion stands and the REASON is replaced, with his wording because it is stronger than mine: not 'one of the twelve is surely red in the house', but 'twelve have no recorded outcome for THIS task, and the only redness the canon records was caused by a BRANCH rather than by the house' - which is precisely the class my four-file change could reproduce. The local run therefore checks MY CHANGE, not the state of the house, and that is worth more than what I first claimed it was for.",
+      "the_positive_control_is_unusually_clean_here": "Stage 6 established, on this exact base and route, that all nineteen commands read `not_run` when the flag is absent. So the proof that `--run-harness` took effect is that NONE of them still says `not_run`. Without it, 'no failures' would read identically for 'they all passed' and 'none of them ran' - the same shape as the fetch stage, where 'nothing changed' would have read identically for 'the fetch ran and brought zero' and 'the fetch never ran'. It is a gate (exit 11), not a note, and it was drilled: a stubbed instrument leaving sixteen at not_run produced exit 11 naming all sixteen.",
+      "what_the_number_is_and_is_NOT": "A LOWER bound on the hook's duration, and the coordinator's caveat is carried as mine: the page cache is warm here and this checkout is not fresh, while the hook creates its tree a moment before use. So a local 25 s does not promise a 25 s hook. A local FAILURE, however, does promise a refused push - which is the asymmetry that makes this stage worth a round. It will also be the first measurement of this 19-command route that anyone has: nobody has ever timed it, and bin/skipi-guard contains no perf_counter, time.time, monotonic, elapsed, duration or datetime.now, so the skipi-guard.v1 JSON cannot carry timing BY CONSTRUCTION and every duration must come from an external bracket.",
+      "why_running_them_in_THIS_worktree_is_the_faithful_choice": "The hook runs the harnesses in a fresh detached worktree that mkdtemp places DIRECTLY INSIDE /home/linux/Developer/worktrees. This worktree is itself a direct child of that directory, so `../../skipi-plugins/...` from tests/ resolves through the SAME symlink (/home/linux/Developer/worktrees/skipi-plugins -> /home/linux/Developer/skipi-plugins, dated 2026-07-03) as it will from the hook's temp tree. The FORM matches and not merely the content - which is the lesson from stage 5, where a plain-clone fixture could not expose a per-worktree defect. It also creates NO new entry in the shared gitdir, unlike `git worktree add`, so it is strictly less invasive than the thing it predicts. What it does NOT reproduce: a fresh checkout's cold cache, and the hook's own base arithmetic from stdin.",
+      "two_of_the_nineteen_leave_this_worktree_not_one": "The coordinator's correction, taken: my first count said one because my instrument read COMMAND LINES, and a command line does not show what the file it runs imports - the same shape as every other instrument error of mine today, where the tool was right and the object was wrong. `shared_host_runtime_isolation` leaves by its command (an absolute path into skipi-plugins). `crewing_plugin_isolation` leaves by its IMPORTS - two from ../../skipi-plugins/_host-runtime/harness/{fake-dom,isolation-contract}.mjs - plus a read of an absolute .../dist/RUNTIME_VERSION. Declared by REALPATH (/home/linux/Developer/skipi-plugins/_host-runtime) and not by the symlink spelling, for his reason: `overlaps()` compares path tokens by string equality or parenthood, and a symlink spelling is neither equal to the real path nor its parent, so declaring through the symlink would not collide with a neighbour who declared the real path. The symlink spelling belongs in notes, which is where it is. And his limit is carried too: that list comes from literal call sites, so it is a LOWER bound, not a complete one.",
+      "no_harness_opens_a_socket_spawns_a_process_or_writes_a_file_measured_with_three_false_positives": "Measured so that `ports` could be declared empty honestly rather than hopefully, over the 19 files resolved from the authoritative command strings. Result: no real network call, no process spawn, no file-write API (no writeFileSync, mkdirSync, rmSync, unlinkSync, appendFileSync or createWriteStream anywhere in the nineteen). Three greps matched and all three were FALSE POSITIVES, resolved by reading the context rather than trusting the hit: `crewing_crew_flow_demo` matches `fetch(` inside an assertion that the product does NOT call fetch; `crewing_trial_gate_wired` and `crewing_trial_activate_unconnected` each define a STUB `async fetch(...)` the test injects as a fake; and the `spawn` match in `crewing_c3b2_candidate` is a quoted phrase inside an assertion message about a Seafarer defect. Same lower-bound caveat as the coordinator's: literal call sites only, so a path or host built from variables is invisible to this measurement. The practical consequence is that the dirty-worktree risk is low - and the control stays anyway, because 'low' is not 'measured to be zero'.",
+      "a_dirty_worktree_would_be_reported_and_NOT_repaired": "Nineteen test programs run with cwd in this tree. If any writes, the tree is dirty and the push's own precondition refuses. The driver prints the porcelain list and exits 22 WITHOUT repairing it, for two reasons: a silent cleanup would hide WHICH command did it, and restoring another program's output is a decision rather than a step. Drilled: a stub that touches a file in the tree produced exit 22, the FINDING naming `?? harness-leftover.tmp`, and the file was still present afterwards - the control proving the driver did not quietly tidy up.",
+      "the_verdict_is_the_product_so_a_failure_is_not_a_driver_failure": "`verify` returns 0 if status is pass and 1 otherwise (820), so rc 1 means at least one harness failed and rc 2+ means the instrument broke. The driver keeps them apart and, on rc 1, prints the failing names AND the tail of each failing harness's own summary before exiting 23. Drilled: a stub failing crewing635_public_settings produced exit 23 with `AssertionError: expected 185 got 184` quoted from the record. Exit 23 is the stage succeeding at its job - it is the answer I came for - and the push stage then does not happen until the red is understood.",
+      "an_error_of_mine_in_preparing_this": "My first sweep for network calls GUESSED harness filenames from harness NAMES (crewing_trial_gate_wired -> crewing_trial_gate_wired_harness.mjs) and reported five files MISSING. The name and the path are different objects and they differ for SEVEN of the nineteen - the real command is `node tests/trial_gate_wired_harness.mjs`. Nothing was lost because the missing-file lines were loud, but a quieter version of that mistake would have reported 'no network calls' from a sweep that never opened five of the files. Redone from the authoritative command strings in stage 6's own record: 19 of 19 resolved. The coordinator hit the identical error in his own sweep and named it himself - so it is a trap of the object, not of one reader, and the rule is to take the path from the record rather than rebuild it from the name.",
+      "driver": {
+        "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s7-harness.sh",
+        "sha256": "f255f6728b1be75ca75235f726e60ae8ad8389c0c0957daccbf54de2ad0415bc",
+        "note": "Self-hashing; recomputed at run time and written into both ACK documents. bash -n clean; check_undefined_funcs clean; check-driver-prose.py clean on all three predicates. 345 lines. Exit codes: 1,2,3,4,5,6,7,8,9,10,11,13,14,22,23 - 6 is the external runtime pin, 11 the positive control (now including the accounting check), 14 the premise (route and count), 22 a dirty worktree, 23 a harness verdict."
+      },
+      "expected_post": {
+        "why": "pinned as exit conditions; the kinds of exit are listed in `stop`",
+        "guard_harness_json": "CREATED where nothing existed. Content NOT pinnable by digest - it is the verdict being obtained - so pinned by PROPERTIES: parses, schema_version skipi-guard.v1, 19 harness entries, and every field read by NAME",
+        "harness_statuses": "ZERO at `not_run`, AND passed + failed == 19, so the control cannot pass on an empty or short list. The pass/fail split is the stage's PRODUCT, measured not predicted",
+        "wall_seconds": "RECORDED - the first measurement of this 19-command route; a LOWER bound for the hook",
+        "head_and_branch_ref": "BOTH unchanged at e5132934064c8ccf701b0061570971c2af220403",
+        "origin_main": "unchanged at f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+        "worktree_porcelain": "EMPTY before; expected EMPTY after (no harness uses a file-write API), and a dirty tree is reported and NOT repaired",
+        "worktree_list_lines": "86 before and after - this stage creates no worktree, unlike the hook it predicts",
+        "canonical_checkout": "0 tracked changes before and after",
+        "external_runtime_input": "UNCHANGED at sha256 022f85f4c6990ee9074c8323a5af07f1ef241ffa1f2a9d180e7df18bbf40b0d1, read before AND after. The before-read is a STOP (exit 6); a change during the run is a FINDING, because any plugin-harness result would then have been measured against a moving input",
+        "route_and_count": "CONDITIONS, not reports: route crewing-635-single-user and exactly 19 commands, each a STOP at exit 14"
+      },
+      "measured_duration": {
+        "this_route_locally": "UNKNOWN - this stage measures it, and the number is its RESULT",
+        "anchors_and_whose_they_are": "From ops TASKCARDs, NOT from the coordinator - I wrongly credited him with a '14 commands took 15-35 s' anchor and he searched his own reports, STATE and INBOX and it is in none of them. The real sources: TASKCARD-2026-10-16-crewing-765 line 55, 'push rc=0 за 16 с (ряд маршрута 15/16/18/17)' with 14 commands pass on route k2-modules; and TASKCARD-2026-10-05-crewing-664 line 91, 'прошлый push с 14 харнессами занял 35 секунд wall clock' with that same card then measuring 10 s for a 4-harness route. His own recorded ranges are about a different object entirely (stand/emulator steps, delivery plus run), and node harnesses are not that object",
+        "subset_of_my_19": "six separately measured at 44/135/46/207/381/12091 ms = 12.9 s, one dominating at 12.1 s",
+        "my_own_harness": "crewing635_public_settings, 0.53-0.55 s at 184 asserts",
+        "the_60_90_s_figure": "NOT used: it appears in three places as a carried-forward threshold and No.664 overturned it by measurement. It is not an observation"
+      },
+      "resource_identities_note": "NO network resource, and that is MEASURED rather than assumed - see the entry on the three false positives. `verify` itself computes the diff with local git and reads the config from disk; the nineteen harnesses make no real network call, spawn nothing and write no file. No database, no port binding, no release artefact. So `ports` is empty, with the honest limit that the measurement covers literal call sites only.",
+      "surfaces_note": "`tests.writes` carries the WHOLE worktree, and that needs saying rather than hiding: nineteen test programs run with cwd there and I cannot PROVE in advance that none writes, so the honest declaration is the container they run in, with the porcelain check as the control and exit 22 as the consequence. The measurement says none of them uses a file-write API, which makes it unlikely, not impossible. `tests.reads` names /home/linux/Developer/skipi-plugins/_host-runtime by REALPATH because two of the nineteen reach into that house. `code.reads` lists the product paths the harnesses actually open - dist, src-tauri, presence-manifest.json - plus the shared object store that `verify` reads to compute the diff. `ports` is empty by measurement, not by hope. Empty categories mean considered, per the schema. The external /home/linux/Developer/skipi-plugins/_host-runtime/dist/RUNTIME_VERSION is declared inside the already-declared `tests.reads` entry for /home/linux/Developer/skipi-plugins/_host-runtime, which is its parent by realpath, and is additionally PINNED in evidence_files - the declaration says the stage reads it, the pin says which bytes.",
+      "the_threshold_is_a_protocol_floor_not_a_prediction": "His structural point, accepted: a stage whose POINT is to measure a duration must not take its window threshold from a prediction, or the prediction starts guarding the measurement meant to replace it. So 120 s here is not an expected duration - it is sized by the COST OF ERROR, which is unusually symmetric and small in both directions. Starting too late costs a lease in DRAIN_REQUIRED plus a re-run: the action is local, reversible, safely interruptible, creates no entry in the shared gitdir and leaves no /tmp record, so an overrun damages nothing. Refusing too early costs one round. With both costs cheap, the floor is set where a run of the only magnitudes anyone has recorded would finish, while admitting those magnitudes are about other routes. And the floor cannot bias the result: the wall clock is recorded whatever it turns out to be, including if it exceeds the floor. Contrast stage 8, where the cost of error is one-directional - the push cannot be taken back - and 180 s is justified from above.",
+      "the_main_checkout_is_36_commits_BEHIND_and_that_makes_ghost_measurements": "Worth recording because it would mislead anyone measuring the house from the obvious place. `crewing_escaping_negative` does NOT exist at the main checkout's HEAD (0223bbd3), which is 36 commits behind origin/main with 0 ahead - so any check of 'does this harness exist in the house' taken from the main checkout still reports a ghost that was cured by PR #77. It exists on my pushed bytes and on origin/main, which are the objects that matter. This is the same trap as reading `head` from stage 6's record and getting the literal string 'HEAD': the field pins the object only in `sha`, and only to seven characters. The push's own record will be better - pre_push_ref passes head=local_sha (876), so it carries the full sha itself.",
+      "the_surface_was_measured_twice_independently_and_agrees": "He measured the same surface with his own instruments and we agree, including on the false positives: zero file-write APIs across the nineteen; zero imports of node:child_process/http/https/net/tls/dgram/dns; his seven `exec(` matches were `RegExp.prototype.exec`, not child_process.exec - his instrument caught a method NAME; the `fetch` matches are stubs and assertions about the ABSENCE of network (`globalThis.fetch = async (...args) => { fetchCalls.push(args) }` with an assert that fetchCalls stays empty, plus `async fetch()` methods on stub objects in the two trial harnesses); and `/tmp/skipi-crewing-vault`, `/tmp/skipi-demo-a1-documents` are fixture strings inside stubbed command responses, not writes. Both of us carry the same limit: literal call sites only, so a path or host assembled from variables is invisible, and the list is a LOWER bound.",
+      "the_outcome_of_this_stage_is_an_INPUT_to_stage_8_not_permission_to_push": "Stated plainly because he asked for it plainly, and because it is the same shape as stage 6's verdict: all nineteen passing here removes a knowable reason for a refusal and grants nothing. The hook re-decides on its own stdin, in its own fresh worktree, with its own base arithmetic. A green run here is evidence; the push's verdict is the hook's; and neither my conclusion nor the coordinator's authorises a merge or a release.",
+      "the_external_input_no_gate_can_see_and_it_is_now_pinned": "The one input to this stage that lies outside my control and outside any git tree anyone checks. `crewing_plugin_isolation` reads /home/linux/Developer/skipi-plugins/_host-runtime/dist/RUNTIME_VERSION by ABSOLUTE path at its line 28 and compares it with constants hardcoded at 29-30 (`1.0.1` and `edd0ba5f8b21f05fcf55485b13b1dafc963173b2d2aa79e261611297283c307a`). The pin turns a shift into a REFUSAL BEFORE the action instead of a redness AFTER it. That is its whole purpose, and the risk is INSURANCE rather than expectation - see the measurement below, which says a shift today is measurably absent, not merely unlikely.\\n\\nTHE PRECISE DESCRIPTION, which is the coordinator's correction to his own first wording and sharper than mine: this is not 'an artefact outside any repository'. It is an artefact with a VERSIONED SOURCE and an UNRECORDED DELIVERY. Verified independently: /home/linux/Developer/skipi-host-runtime is a git house on branch `main` with a clean tree whose dist/RUNTIME_VERSION was last touched on 2026-07-01 (d623819 'chore: publish host runtime'), with 0 unpushed commits; /home/linux/Developer/skipi-plugins is NOT a git repository (`fatal: not a git repository`, with a `_host-runtime.pre-vcs.20260702T114123+0400` sibling) and holds the delivered copy. So history and diff DO exist - at the source; what is missing is the link between the source and what the hook actually reads. The source path belongs beside the pin precisely so a reader can compare the two.\\n\\nNO DEFERRED BUMP EXISTS, measured rather than assumed - and this matters because an unmoving copy could have hidden a bump already sitting in the source awaiting delivery. Source and delivered copy are byte-identical (both sha256 022f85f4c6990ee9074c8323a5af07f1ef241ffa1f2a9d180e7df18bbf40b0d1, `cmp` identical), and `diff -rq` across both whole dist/ trees reports nothing. The reported owner session in the settings-module house does not touch this surface: its card, handoffs/TASKCARD-2026-11-04-settings-929-storage-opt-out.md (sha256 548a08defbf62d908cae57b865cc9e8c532519f4b146cb759c15cc3b7f75789a), mentions `_host-runtime`, `RUNTIME_VERSION` and `skipi-plugins` ZERO times and writes only dist/skipi-settings.*. I am stating it this way deliberately: a risk must not read larger in the record than it measured, or the next reader goes hunting for a race that never happened. My earlier draft said a rebuild between the grant and the run was 'live, not theoretical' - that was his first framing and mine, and the measurement retired it.\\n\\nNARROWING THE BLAST RADIUS, because the narrower statement is the more useful one. He named four asserts (116, 117, 135, 136). Measured by which reference the LIVE value rather than the constants: exactly ONE does - line 117, 'shared RUNTIME_VERSION matches embedded runtime hash'. Lines 116, 135 and 136 compare the hardcoded constants against MY dist/index.html and module exports, so on a rebuild both of their sides stay old and they stay GREEN. That makes the single tripwire more dangerous rather than less: one red assert worded that way reads exactly like my dist change having broken the plugin contract. `shared_host_runtime_isolation` is separately exposed because it EXECUTES code from that directory. My own filter nearly hid this: grepping for the live identifier while excluding `EXPECTED_RUNTIME_VERSION` dropped line 117, because that line contains BOTH - the exclusion matched the target.\\n\\nMechanically: pinned in evidence_files, so a shift becomes `candidate content drift` on the live inspect; and the driver reads it BEFORE (exit 6 on any difference) and AFTER (a FINDING if it moved during the run), so the record carries the value the run actually ran against.",
+      "the_premise_is_now_a_CONDITION_and_I_reproduced_the_defect_first": "His blocking finding, and I reproduced it before fixing it rather than taking it on faith. A stubbed result carrying ZERO tests made my positive control pass VACUOUSLY - it printed 'positive control PASSED (0 passed of 0)', emitted only a FINDING for the count, never compared the route at all, and exited 0 announcing 'all 0 harness commands pass'. A route resolving to another task would therefore have produced a GREEN stage that measured the wrong set, which is the single thing this stage exists to prevent. My control distinguished 'they ran' from 'they did not run' and could not distinguish 'NINETEEN ran' from 'others ran'.\\n\\nThree changes, all STOPs and all placed BEFORE the control: the route must equal crewing-635-single-user (exit 14), the count must equal 19 (exit 14), and the control now requires passed + failed == 19 so it cannot be satisfied by an empty or short list (exit 11). Drilled: empty list -> 14 on the route; wrong route with all nineteen present -> 14; eighteen commands -> 14; a status that is neither pass nor fail -> 11 accounting 18 of 19. The premise is deterministic on this set and so the condition costs nothing: the 635 rule holds all four of my paths in `when_all_files_in`, and `harness_commands['crewing-635-single-user']` is exactly 19 - I measured both in the config rather than taking them from the earlier run.",
+      "two_contradictions_in_my_own_driver_that_I_found_after_his_three": "He caught that the driver's threshold comment still credited him with an anchor the request had already corrected - two documents of one stage disagreeing about authorship. Looking for more of that class in the same file, I found two: the header still argued the stage from the STALE red-debt premise that the request replaces, and the runtime `say` line still printed 'expectation 20-60s', the very prediction the threshold is no longer taken from. Both fixed. The rule I am taking from it is that a correction has to be applied to EVERY document of the stage, not to the one being reviewed - the driver is pinned evidence, not a comment.",
+      "head_is_now_a_sha_in_the_record": "`--head HEAD` became `--head \"$COMMIT\"`. The value is identical - the driver already refuses unless HEAD equals e5132934 - but the guard copies the literal into its record, which is why stage 6's record carries `head: \"HEAD\"` and why a reader resolved that against the MAIN checkout's HEAD (0223bbd3, 36 commits behind) and concluded two of my files were missing. The push's own record will carry a full sha by itself, since pre_push_ref passes head=local_sha (876); this stage now matches that.",
+      "four_limits_of_his_that_I_am_carrying_not_arguing": "(1) `run_harness_commands` calls `subprocess.run(..., shell=True, cwd=repo, capture_output=True)` with NO timeout, so this stage's duration has no upper bound IN THE CODE - a hung harness hangs it, the window expires with a live process, and the resolution is the drain path. This is also the deeper reason a predicted threshold was never the right instrument here: the quantity has no ceiling to predict. (2) `capture_output` holds the output of all nineteen in memory while only an 8-line tail reaches `summary`; this machine killed four processes under memory pressure today, so the risk is not zero and is named. (3) `cwd=repo` is why declaring the WHOLE worktree in `tests.writes` is the right fail-safe even though I measured zero file-write APIs - a write measurement is a lower bound, and the worktree is mine so the breadth costs no neighbour anything. (4) The canonical-checkout control is a COUNT at `--untracked-files=no`, so it is blind to a substitution (one file reverted while another is changed leaves the count equal) and to a new untracked file there. It is a secondary control and its blind spot belongs next to it.",
+      "no_neighbour_holds_this_window": "His measurement, carried as his: the No.898 tail is the only writing stream, the Seafarer stream is waiting for it to finish, and the settings card is in another house and does not touch this surface. On my side the recurring neighbour remains `skipi-dev-tails.timer`, which fetches and has been confirmed five times not to touch this gitdir - and for this stage an overlap is harmless anyway, since the run reads the working tree and writes only into my log subtree."
+    }
+  ],
+  "submission": {
+    "version": "v1",
+    "mode": "review-only",
+    "note": "Step 1 of two: read the content without spending a window.",
+    "coordinator_instance_read_at": "2026-11-04T16:59:05+00:00",
+    "coordinator_instance_source": "reports/coordination-state.json; confirm against the coordinator's live word",
+    "content_file": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/content-s7-harness.json",
+    "content_file_sha256": "2fc38ee2418fb0c1035d7ce28dbf947ce1890c7a0ace336890ed1c4981999baf"
+  }
+}

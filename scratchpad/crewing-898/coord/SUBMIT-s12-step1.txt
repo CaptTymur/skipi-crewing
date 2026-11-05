@@ -1,0 +1,29 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/VERIFY_BUILD-b2-build-review-only-20261105T072841Z.json
+file_bytes_sha256: b69c9373998b54533598dcc9f56faaeab71133c3eae2975c4dfe46b903262b16
+canonical_input_sha256: 26c47a3885e58a9a8d7010fb2b70307fae0d01d71f7532cb411fad4604b91917
+event_id: crewing-898-VERIFY_BUILD-b2-build-20261105T072841Z
+heartbeat: 2026-11-05T07:28:41+00:00  mode: review-only
+stage: VERIFY_BUILD   stream: crewing/898-client-slice
+repo: /home/linux/Developer/worktrees/crewing-898-20261104
+head: e5132934064c8ccf701b0061570971c2af220403
+evidence_files: 5
+  9e8364eeb5180139  /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s12-b2-build.sh
+  96b6bd5000f95715  /home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html
+  1ab676f1989ac284  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml
+  f593e42c088f2253  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock
+  1488c7004c14ea60  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing
+surfaces: writes=4 reads=8  (13/13 categories present)
+  W path:/home/linux/.cargo/.package-cache
+  W path:/home/linux/.cargo/registry/src
+  W path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-b2-build
+  W path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target
+  R path:/home/linux/.cargo/registry/cache
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/dist
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.lock
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/Cargo.toml
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/build.rs
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/tauri.conf.json
+preflight_pins: ready_to_grant=true  blocking=[]  unrecognised_sha_names=[]
+inspect --live: CHECKS_PASS_REQUIRES_COORDINATOR  errors=[]  conflicts=[]

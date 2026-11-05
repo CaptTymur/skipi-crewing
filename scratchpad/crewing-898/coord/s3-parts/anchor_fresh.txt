@@ -1,0 +1,4 @@
+    // Отказ аллокатора обязан иметь ТЕКСТ: иначе человек увидит «отказ по
+    // неизвестной причине» вместо называемой причины (канон UI).
+    ok(/"fresh_namespace_unavailable":\s*"fresh_unavailable"/.test(html),
+       'No.880/№793: the allocator refusal code maps to a named text, not to refused_unspecified');

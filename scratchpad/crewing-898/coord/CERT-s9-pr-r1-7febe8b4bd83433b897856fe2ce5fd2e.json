@@ -1,0 +1,11 @@
+{
+  "verdict": "GRANT_CERTIFICATE",
+  "instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "epoch": 48,
+  "revision": 1,
+  "input_sha256": "49df5970febb05fd509b4f2f78c18aea9b25d750ed78f74ad72502c824a7768b",
+  "stage": "INTEGRATE",
+  "lease_id": "7febe8b4bd83433b897856fe2ce5fd2e",
+  "expires_at": "2026-11-04T18:07:11+00:00",
+  "verdict_note": "This field is informational: the gate does not read it. The only authority is `stage_gate.py check --certificate <this file>` returning PERMIT_CURRENT. A drain reference is produced by `reference` and is a different document with a different right - it permits verifying completion, never writing."
+}

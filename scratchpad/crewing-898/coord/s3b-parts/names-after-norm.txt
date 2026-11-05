@@ -1,0 +1,124 @@
+PASS account login invoked
+PASS account-login seam present in dist/index.html
+PASS actual pubkey command retained
+PASS an active session without an entitlement expiry reads free
+PASS argument objects that are a bare identifier stay an explicit UNRESOLVED list (≤N)
+PASS caller context sent explicitly
+PASS control: a live command is found by the same predicate
+PASS control: both containers present and ordered — doors at N, form at N
+PASS control: both dictionary regions are locatable — SETTINGS_INN at N, ru at N
+PASS control: both regions are substantial — en N B, ru N B
+PASS control: both sides measured — reachable codes=N mapped=N
+PASS control: nativeAccountLogin is present in dist
+PASS control: no derived phase name is also a known refusal code — []
+PASS control: one level ABOVE the horizon the walk leaves the login path and admits unmapped codes — ["external_url_refused","external_url_unavailable","external_url_unsupported","no_mail_client"]
+PASS control: on markup with the caption AFTER the form the same predicate is FALSE, so it discriminates position
+PASS control: the commit module is among the parsed Rust sources
+PASS control: the cut keeps code after a stripped item
+PASS control: the cut KEEPS the #[cfg(not(test))] branch — the arm the first version destroyed
+PASS control: the cut removes a #[cfg(test)] BLOCK inside a function
+PASS control: the cut removes a module gated by the COMPOUND cfg(all(test, …)) form
+PASS control: the derived key list is non-empty — N keys, measured and not a maintained constant
+PASS control: the derived list holds known-required keys, so it is a list and not a fragment
+PASS control: the en region holds the ENGLISH text of a known key and the ru region does not
+PASS control: the map block really parsed — a known pairing is present
+PASS control: the map is FLAT, which is the condition under which the parse controls above are sufficient
+PASS control: the phase vocabulary is derived and non-empty — N names
+PASS control: the population is SATURATED at the horizon — depth N already finds all of them, extra at N: []
+PASS control: the ru region holds the RUSSIAN text of a known key and the en region does not
+PASS control: the same predicate finds a key that DOES exist (storage_error), so the two absences above are measured
+PASS control: the walk is not trivially empty — functions reached=N
+PASS dynamic command names stay an explicit UNRESOLVED list of N (invoke(command, Object.assign(pilotExpected(…)…))
+PASS entitlement_expired shows its own text, not a generic one
+PASS every literal invoke names an existing #[tauri::command]
+PASS every login text key is defined
+PASS every resolved invoke key is the camelCase of a parameter of its command
+PASS every tauri::generate_handler![] entry is a parsed definition
+PASS exactly one native_account_login dispatched
+PASS failure preserves owner/caller state
+PASS invalid response preserves submitted owner fields
+PASS JS parser: every `invoke(` occurrence became one classified call site
+PASS late native save response rejected
+PASS late response changes neither active context nor caller
+PASS live UI state contains no submitted secret
+PASS login carries no bearerToken key at all
+PASS login carries no company identifier
+PASS login carries the current connection context under the camelCase key Tauri N expects
+PASS login carries the typed email and password
+PASS login sends no saved credential
+PASS login sends the ORIGINAL caller context
+PASS malformed or secret-bearing result rejected
+PASS mutation negative in memory: synthetic foo_bar/foo_bar reddens, fooBar/foo_bar stays green
+PASS native failure propagated
+PASS native payload frozen before await
+PASS no manual company-token activation dispatched
+PASS No.N: a cfg(test)-only code stays OUT of the population by compiler semantics, not by exemption
+PASS No.N: a code assembled as a STRUCT FIELD enters the population (native_fresh.rs)
+PASS No.N: a code in the SECOND ARM of a ternary enters the population (lib.rs:N)
+PASS no native credential enters live UI state
+PASS No.N: connection_change_requires_login stays OUT — zero occurrences in dist, born behind save_settings, not the login command
+PASS No.N: connection_change_requires_validation stays OUT — zero occurrences in dist, born behind save_settings, not the login command
+PASS No.N: every map target resolves to a real text key — dangling []
+PASS No.N: external_url_refused stays OUT — its consumer discards the code and shows the address verbatim
+PASS No.N: external_url_unavailable stays OUT — its consumer discards the code and shows the address verbatim
+PASS No.N: external_url_unsupported stays OUT — its consumer discards the code and shows the address verbatim
+PASS No.N/FN: every login refusal code within the MEASURED horizon (N call-name hops, saturated at N, contaminated at N) has its own text — textless []
+PASS No.N: loginRefusalText has its definition plus exactly three call sites — found N
+PASS No.N: no manual company-token activation is dispatched any more
+PASS No.N/№N: the production fresh branch allocates a real native-owned context
+PASS No.N/№N: the production fresh branch is no longer a refusal stub
+PASS No.N: nothing in the UI invokes the retired command
+PASS No.N: retired command has no #[tauri::command] definition
+PASS No.N: retired command is not registered in generate_handler!
+PASS No.N: the allocator refusal key workspace_not_created has a text in both dictionaries
+PASS No.N: the caption carries its own id so its PLACE can be asserted — ec-demo-note
+PASS No.N: the caption sits INSIDE the doors container and hides with the door it describes — note N between N and N
+PASS No.N: the caption still renders from the key entry.demo_note, not from a literal
+PASS No.N: the live allocator refusal code is mapped at all — target workspace_not_created
+PASS No.N: the refusal-text consumer is fed by exactly ONE command — ["native_account_login"]
+PASS No.N: the retired key fresh_unavailable is ABSENT from both dictionaries
+PASS No.N: the test-only code fresh_context_unavailable is ABSENT from the map — dead data; it is unreachable in a product build by cfg
+PASS No.N: the text bad_email exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text binding_missing exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text connection_expired exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text entitlement_expired exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text entitlement_missing exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text entitlement_revoked exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text exchange_failed exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text invalid_credentials exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text local_damaged exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text migration_required exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text ownership_conflict exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text refused_unspecified exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text restart_needed exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text scope_denied exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text settings_changed exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text storage_cleanup_unconfirmed exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text storage_error exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text tenant_mismatch exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text too_many_attempts exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text transport_unreachable exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text unsupported_platform exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text upstream_unavailable exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N: the text workspace_not_created exists ONCE IN EACH dictionary — en=N ru=N
+PASS No.N/п.N: a refusal is said out loud, not swallowed (canon UI)
+PASS No.N/п.N: the client does not re-implement the host allowlist
+PASS No.N/п.N: the external-url helper is found in dist (control for the assertions below)
+PASS No.N/п.N: the helper dispatches open_external_url with the url argument
+PASS No.N/п.N: the invoke-site parser sees that call too (so the command-exists pin covers it)
+PASS no #[tauri::command(rename_all=…)] in the house — the predicate assumes the Tauri N default (camelCase)
+PASS old/missing context denied
+PASS old/missing context refuses before native dispatch
+PASS one real core dispatch
+PASS pubkey request carries context and leaves credential/tenant/base selection native
+PASS public identity preserved
+PASS public native result returned intact
+PASS resolver positive control: save_settings{newSettings} and an Object.assign(pilotExpected(…)) site resolve to their keys
+PASS Rust parser: every #[tauri::command] attribute yields one parsed definition
+PASS same object receives complete public owner fields
+PASS same submitted object loses all former private fields
+PASS the in-flight call keeps the context it was dispatched with, not the newer one
+PASS the login form declares both inputs
+PASS the refresh carries no arguments at all, so no saved credential can ride in one
+PASS the refreshed public state carries no private credential
+PASS the refresh reads the public projection

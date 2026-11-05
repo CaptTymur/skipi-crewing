@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-4-ACKSTOP-20261104T153257Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T15:32:58+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "825b62b4daca4489d90cbd72f477e3ad7961c2075293087457c631abfcfc3714",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-commit/after.txt",
+      "sha256": "d03f7a42b45a82c971857e4a4680f5d354aacc0d80fbcc6dfeb9f51feef95055",
+      "content": "driver_sha256=825b62b4daca4489d90cbd72f477e3ad7961c2075293087457c631abfcfc3714\nbranch=feat/crewing-898-login-texts-20261104\nref_before=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nref_after=e5132934064c8ccf701b0061570971c2af220403\ncommit=e5132934064c8ccf701b0061570971c2af220403\nparent=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\ncommit_message_sha256=29a779c1e934e3bf5b831d7acdae5a6615160bab5cc3cca230f283fe19b3f4fe\nrange_files=4\nrange_file=dist/index.html\nrange_file=src-tauri/src/native_lifecycle.rs\nrange_file=src-tauri/src/native_local_joint_tests.rs\nrange_file=tests/crewing635_public_settings_harness.mjs\nworktree_status_after=[]\ndist=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa\nharness=78b44acfe17777b6795bf51fe191fc79c4a58cd573d05676252d603628cf805f\nlifecycle=e611fae5478234a34415d18452c738612828a38a575d417d5777f9b0f041af48\njoint=ecdd480d3df4eeafb15fc7060a81e62cb88234da0c631417e02a77bb222b81b3\norigin_main_before=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\norigin_main_after=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\npushed=no\nfetched=no\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":184,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "A LOCAL commit only. Nothing was pushed and nothing was fetched - the origin/main cache is recorded before and after and is unchanged. The guard does not look at a local commit: only pushed refs are gated, so this run says NOTHING about whether the push will pass. The push route must be measured AFTER a fetch, on the fetched values, and today's measurement does not carry. Only one of the route's 19 harnesses ran. The Rust suite was not run here: 249/0 under umask 0022 is dry-run evidence, and under the machine default 0002 the same suite is 234/15 for the pre-existing reason filed as No.922."
+}

@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-note-ACKSTOP-20261104T093311Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T09:34:58+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "029c50b2291b6c78f26ad2f46e033a5d9389e5e2e9aeb0a8b54b4f438d954fb5",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-note/after.txt",
+      "sha256": "cb11751b5ecfbae9d1915d626659c0e1c973a26c062a988811ebebf038418376",
+      "content": "driver_sha256=029c50b2291b6c78f26ad2f46e033a5d9389e5e2e9aeb0a8b54b4f438d954fb5\ndist_mode=664\nharness_mode=664\nworktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nworktree_branch=feat/crewing-898-login-texts-20261104\ndist_pre=f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8\ndist_post=b0fd21cd074c5210430eb67410e211cc1a14ad1161e435a276dda6c17efd9cd5\ndist_post_expected=b0fd21cd074c5210430eb67410e211cc1a14ad1161e435a276dda6c17efd9cd5\nharness_pre=1bdd368bb51728e1924ada37f4ebe66bd6324d48befe895e4d87d002906a2ab7\nharness_post=9686b596fc24622d9f77217c50bc50fc84a74f6b29bfff7c52ed8d7b0e821a08\nharness_post_expected=9686b596fc24622d9f77217c50bc50fc84a74f6b29bfff7c52ed8d7b0e821a08\nworktree_changed_files=2\n M dist/index.html\n M tests/crewing635_public_settings_harness.mjs\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":157,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "Only ONE of the route's 19 harnesses was run. Nothing here says the guard route passes, nothing was pushed, no commit was made, no stand was built, and the Fresh keys were deliberately not touched - they are the next sub-stage."
+}

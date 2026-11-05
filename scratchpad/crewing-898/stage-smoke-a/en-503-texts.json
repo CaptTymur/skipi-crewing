@@ -1,0 +1,23 @@
+{
+  "lang": "en",
+  "dist_sha256": "96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa",
+  "states": {
+    "S1": {
+      "code": "transport_unreachable",
+      "text": "No connection to the server. Check your network and try again."
+    },
+    "S2": {
+      "code": "upstream_unavailable",
+      "text": "The server is unavailable. This is on our side — try later."
+    },
+    "S3": {
+      "code": "workspace_unreachable",
+      "text": "Account accepted, but we didn't reach your Crewing workspace — sign-in did not complete. Check your network and try again."
+    },
+    "S4": {
+      "code": "workspace_unavailable",
+      "text": "Account accepted, but your Crewing workspace refused the request — sign-in did not complete. This is on our side, try later."
+    }
+  },
+  "identical_to_ru": []
+}

@@ -1,0 +1,13 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-INTEGRATE-push-ACKSTOP-20261104T173621Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T17:36:41+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "5173bebde5f37854e613c394b3f425b65aaa30bb10ac5c4030cb97ccab0cec0e",
+  "evidence": {
+    "after_state_path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-push/after.txt",
+    "after_state_sha256": "0b811609e5034d7e34d577dd86b72a9308ce9061ae9bd1066527d377f97edbb5"
+  }
+}

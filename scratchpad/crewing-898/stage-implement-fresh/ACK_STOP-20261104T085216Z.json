@@ -1,0 +1,17 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-IMPLEMENT-fresh-ACKSTOP-20261104T085127Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T08:52:17+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "ab50ce7881cdd066ebb739f8f9b87cf9bd9bcbfcda63b6d35e198498532ad892",
+  "evidence": [
+    {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-fresh/after.txt",
+      "sha256": "62c97130c56622f4318cfa7085acedcb81ce72effb292142642d6ac07e0659c8",
+      "content": "driver_sha256=ab50ce7881cdd066ebb739f8f9b87cf9bd9bcbfcda63b6d35e198498532ad892\nworktree_head=f145c6017eaea3804a5429e5aa428b6fb0ece6d9\nworktree_branch=feat/crewing-898-login-texts-20261104\ndist_pre=9f1bd2f9467463246c6d30fc33ae463ff70177dda4118db531edc8e088f1496a\ndist_post=f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8\ndist_post_expected=f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8\nharness_pre=bcab85b6fbb859dbf009c8042978380bd5c9a082327fa4bfce02f63ed10dbc0a\nharness_post=88a8f62fd735b178cccbee7f72a69b9835d6c0d3a57bb799a29a832beebba93a\nharness_post_expected=88a8f62fd735b178cccbee7f72a69b9835d6c0d3a57bb799a29a832beebba93a\nworktree_changed_files=2\n M dist/index.html\n M tests/crewing635_public_settings_harness.mjs\ncanonical_tracked_lines_before=0\ncanonical_tracked_lines_after=0\ncanonical_head=0223bbd3148d695b3c226fd70c2c6196acf28334\nharness_summary={\"passed\":151,\"failed\":0,\"setup_errors\":0,\"coverage\":\"actual shipped invoke/pubkey/stored-validation callers; synthetic native transport, no network/profile/DB; native persistence tested separately\"}\n"
+    }
+  ],
+  "what_this_run_does_NOT_establish": "Only ONE of the route's 19 harnesses was run. Nothing here says the guard route passes, nothing was pushed, no commit was made, no stand was built, and the Fresh keys were deliberately not touched - they are the next sub-stage."
+}

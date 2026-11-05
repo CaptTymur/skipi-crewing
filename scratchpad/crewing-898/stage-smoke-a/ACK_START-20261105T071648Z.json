@@ -1,0 +1,5 @@
+{"stage":"s11-smoke-a","driver_sha256":"84cc396d7a6cabe9326f9b30bba31f9a5fcf7780a574bc7469c3355a13379bdb","tool_sha256":"89da3a2f8b6c6f42984c11a0c6af9350a4beb74994e89aff8f9393f2b65876e1",
+ "binary_sha256":"1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73","dist_sha256":"96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa","commit":"e5132934064c8ccf701b0061570971c2af220403",
+ "display":":9","owner_display_untouched":":1","window_left_s":143,
+ "prediction_run3":"S1 transport_unreachable, NOT S2 - a refused CONNECT fails send() before response_json() can mint upstream_unavailable",
+ "started_at":"2026-11-05T07:16:48Z"}

@@ -1,0 +1,29 @@
+path: /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/VERIFY_BUILD-smoke-a-review-only-20261105T070750Z.json
+file_bytes_sha256: 4255cae5dc8c7367c04eb726b07a2a7350583773048a63dd69d99cda21f24353
+canonical_input_sha256: 659b35dad233fa35e47a6b7ebadafc562b7d1172c963e7528d852ab966c1968e
+event_id: crewing-898-VERIFY_BUILD-smoke-a-20261105T070750Z
+heartbeat: 2026-11-05T07:07:50+00:00  mode: review-only
+stage: VERIFY_BUILD   stream: crewing/898-client-slice
+repo: /home/linux/Developer/worktrees/crewing-898-20261104
+head: e5132934064c8ccf701b0061570971c2af220403
+evidence_files: 4
+  84cc396d7a6cabe9  /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s11-smoke-a.sh
+  89da3a2f8b6c6f42  /home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/smoke-tool.py
+  1488c7004c14ea60  /home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing
+  96b6bd5000f95715  /home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html
+surfaces: writes=5 reads=7  (13/13 categories present)
+  W hostresource:/tmp/.X11-unix/X9
+  W net:4026531840|tcp|127.0.0.1|19166
+  W net:4026531840|tcp|127.0.0.1|19167
+  W path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-release-a
+  W path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-smoke-a
+  R net:4026531840|tcp|127.0.0.1|19165
+  R path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/smoke-tool.py
+  R path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-3c
+  R path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/smoke-3d
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src
+  R path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/target/release/skipi-crewing
+preflight_pins: ready_to_grant=true  blocking=[]  unrecognised_sha_names=[]
+inspect --live: CHECKS_PASS_REQUIRES_COORDINATOR  errors=[]  conflicts=[]
+reviewed predecessor preserved: run-s11-smoke-a.sh.reviewed-645d794a

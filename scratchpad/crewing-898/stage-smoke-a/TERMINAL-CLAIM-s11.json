@@ -1,0 +1,6 @@
+{
+  "observed_at": "2026-11-05T07:17:25Z",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "evidence": "Stage 11 part A complete, driver rc 0. Three runs on Xephyr :9, 12 files in smoke-release-a/ (9 frames + 3 app logs). All four controls passed: S1 boxes 13px vs the 31px two-line calibration; EN and RU refusal frames differ (373px vs 367px); 503-on-CONNECT produced the SAME box as a refused connection (373x13), confirming the prediction S1 not S2; all 18 files of smoke-3c/ and smoke-3d/ byte-identical before and after. Every run's app log shows the loopback proxy intercepting https://assistant.skipi.app/ and neither typed credential appears in any published log. No Xephyr or app process remains; canonical checkout tracked-change count 0 -> 0."
+}

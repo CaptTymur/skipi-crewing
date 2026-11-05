@@ -1,0 +1,69 @@
+stage=s12-b2-build
+driver_sha256=9e8364eeb51801396765749a215db8652285bf167cda798b77ae96b5f39447fe
+certificate=CERT-r1-80c6f6c79ae14347ada48448bf91cb60
+canonical_input_sha256=1a7e5b49d998bb34e8aaf771522a263ea29ee6b412366cab6cdfbb6b8be64235
+commit=e5132934064c8ccf701b0061570971c2af220403
+profile=debug  offline=yes  locked=yes
+dev_origin_baked=http://127.0.0.1:19168
+build_rc=0
+build_wall_seconds=36
+anchor_release_build_seconds=101
+anchor_note=a DIFFERENT object (profile changes codegen); an anchor, never a prediction
+debug_binary_before=ABSENT
+debug_binary_after=EXISTS
+debug_binary_sha256=b930bdbc8ab2d9959aba478c3aa8e3868657cb912a365c8fe54cfca2b2b46845
+debug_binary_bytes=289267848
+debug_binary_mtime=1793864219.905428436
+debug_binary_file=ELF 64-bit LSB pie executable, x86-64, version 1
+
+driver_verdict=FALSE STOP, exit 12
+driver_verdict_cause=the probe, not the build
+probe_as_written=strings -a BIN | grep -c '^http://127.0.0.1:19168$'   -> 0
+probe_unanchored=strings -a BIN | grep -c '127.0.0.1:19168'             -> 1
+probe_raw_bytes=grep -c -a -F 'http://127.0.0.1:19168' BIN              -> 1
+calibration_that_settles_it=the POSITIVE CONTROL rewritten with the SUBJECT's method also returns 0: strings -a BIN | grep -c '^https://assistant.skipi.app$' -> 0, while unanchored -> 2. The control attested a weaker predicate than the one deciding, so it could not catch this defect and never could have.
+corrected_predicate=grep -c -a -F for BOTH halves, raw bytes, one method; independent of strings packing, its length threshold and encoding
+driver_NOT_edited=a closed stage's driver is pinned evidence; the corrected predicate travels into the next driver and this record, not backwards
+
+dev_machinery_debug_vs_release=http://127.0.0.1:19168 1/0 ; direct_loopback_qa 1/0 ; dev_origin_config 3/0 ; assistant.skipi.app 2/1
+dev_machinery_meaning=cfg(debug_assertions) compiled in, so the profile is what it claims and the variable reached rustc
+
+release_binary_sha256_before=1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73
+release_binary_sha256_after=1488c7004c14ea6027b7ef84218bc49cf78828c67d036130cb8166af58a0ff73
+release_binary_note=part A's published subject; the digest comparison is the ONLY real protection - the read-declaration is decorative because generated.writes on target is its PARENT and overlaps() matches path: by parenthood
+dist_sha_before=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa
+dist_sha_after=96b6bd5000f957155569b342a236c17b51e244a8291475cf82260d1980fdf3fa
+cargo_toml_sha_after=1ab676f1989ac284d9d9a4d2e119211dd157165c321545d41e2834b4ca0b9304
+cargo_lock_sha_after=f593e42c088f22539abda76819e77ec39e13a27b58f5132cc93aac5b0c1367df
+locked_had_to_refuse=no
+
+target_bytes_before=1592119528
+target_bytes_after=5957890186
+disk_avail_gb_before=101
+disk_avail_gb_after=97
+registry_added_by_this_build=0
+registry_src_unpacked_dirs=521
+registry_cache_crate_files=814
+registry_added_by_this_build_src=0
+registry_note=BOTH figures are right and they count DIFFERENT populations: 521 unpacked package
+ directories under registry/src/<hash>/, 814 downloaded .crate archives under registry/cache/<hash>/
+ (each verified two ways: ls and find). My driver measured `cache`, the coordinator measured `src`.
+ CORRECTION OF MY OWN CLAIM: I wrote here and told him that 521 "matches nothing measurable" and
+ probably originated in my own earlier summary. Both halves were wrong - it is his own repeated
+ measurement of registry/src. I committed the very fault I was diagnosing: an attribution with no
+ source. And the deeper slip is the diagnosis itself - when two numbers about "the registry"
+ disagreed, the first hypothesis should have been WHICH OBJECT, not WHOSE ERROR.
+ The substantive fact is independent of the choice: this build added 0 to src AND 0 to cache, so the
+ declared registry write went unexercised for the third stage running.
+
+worktree_porcelain_entries=0
+canonical_tracked_lines_before=0
+canonical_tracked_lines_after=0
+closed_evidence_files=31
+single_use_control_state=SPENT - "debug binary absent -> exists" was consumed by this run, and consumed under a FALSE stop. Deleting and rebuilding would manufacture the transition rather than observe it.
+stand_raised=no
+frame_taken=no
+shown_to_owner=no
+merged=no
+released=no
+next=B2-smoke pins this binary by digest; the stub gains a first-step-5xx mode and an error body keyed 'error'; S2 is shot twice (well-formed and malformed body) so the text is one and the path is two

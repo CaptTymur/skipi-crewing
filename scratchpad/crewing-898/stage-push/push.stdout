@@ -1,0 +1,32 @@
+Skipi Guard skipi-guard.v1: PASS
+home/task: crewing / crewing-635-single-user
+repo: /home/linux/Developer/worktrees/.skipi-guard-harness-wt-crewing-8_sir8nr
+range: f145c6017eaea3804a5429e5aa428b6fb0ece6d9 -> e5132934064c8ccf701b0061570971c2af220403 (triple-dot)
+sha: e513293
+changed files: 4
+  - dist/index.html
+  - src-tauri/src/native_lifecycle.rs
+  - src-tauri/src/native_local_joint_tests.rs
+  - tests/crewing635_public_settings_harness.mjs
+protected touches: 0
+release changes: no
+harness commands: 19
+  - crewing_plugin_isolation: pass :: node tests/crewing_plugin_isolation_harness.mjs
+  - shared_host_runtime_isolation: pass :: node /home/linux/Developer/skipi-plugins/_host-runtime/harness/isolation-contract.mjs
+  - crewing_presence_contract: pass :: node tests/crewing_presence_contract_harness.mjs
+  - crewing_crew_flow_demo: pass :: node tests/crewing_crew_flow_demo_harness.mjs
+  - crewing_build_provenance: pass :: node tests/build_provenance_harness.mjs
+  - crewing_theme_default: pass :: node tests/crewing_theme_default_harness.mjs
+  - crewing_csp_inline_handlers: pass :: node tests/csp_inline_handlers_harness.mjs
+  - crewing_mailbox_contract: pass :: node tests/crewing_mailbox_contract_harness.mjs
+  - crewing_escaping_negative: pass :: node tests/crewing_escaping_negative_harness.mjs
+  - crewing_compliance_manual_flow: pass :: node tests/crewing_compliance_manual_flow_harness.mjs
+  - crewing_mail_cv_intake_demo: pass :: node tests/crewing_mail_cv_intake_demo_harness.mjs
+  - crewing_settings5_preview_gated: pass :: node tests/settings5_preview_gated_harness.mjs
+  - crewing_trial_gate_wired: pass :: node tests/trial_gate_wired_harness.mjs
+  - crewing_trial_activate_unconnected: pass :: node tests/trial_activate_unconnected_harness.mjs
+  - crewing_stack_build_metadata: pass :: node tests/stack_build_metadata_harness.mjs
+  - crewing_stack_verification_negative_control: pass :: node tests/stack_verification_negative_control_harness.mjs
+  - crewing_c3b1_pilot: pass :: node tests/crewing_c3b1_pilot_harness.mjs
+  - crewing_c3b2_candidate: pass :: node tests/crewing_c3b2_candidate_harness.mjs
+  - crewing635_public_settings: pass :: node tests/crewing635_public_settings_harness.mjs

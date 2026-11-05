@@ -1,0 +1,11 @@
+{
+  "document": "ACK_START",
+  "ack_start_event_id": "crewing-898-PREP-vehicle-20261104T072619Z",
+  "observed_at": "2026-11-04T07:29:32+00:00",
+  "stage": "PREP",
+  "stream_id": "crewing/898-client-slice",
+  "writer": "crewing-writer@skipi-crewing-17",
+  "window_seconds_remaining_at_start": 106,
+  "worktrees_before": 85,
+  "single_mutation": "git worktree add -b <branch> <path> <sha>"
+}

@@ -1,0 +1,107 @@
+{
+  "coordinator_instance": "/session/skipi-parallel-coordinator-8e-93cd82/card-902b-20261102-epoch48",
+  "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-10-30-crewing-880-entry-login-no-connection-tab.md",
+  "pilot_card_note": "The coordinator's state records pilot_card = the Seafarer's 904 release card. No.898 has no card of its own yet (the manager will send it); the nearest governing artefact is the No.880 card, whose writer lines of 2026-11-01 carry F12/F13. Named here as the basis, not as a claim that it is the pilot card.",
+  "inventory_complete": true,
+  "heartbeat_max_seconds": 300,
+  "requested_stream_id": "crewing/898-client-slice",
+  "streams": [
+    {
+      "stream_id": "crewing/898-client-slice",
+      "writer": "crewing-writer@skipi-crewing-17",
+      "event_id": "crewing-898-START-review01-20261102T185353Z",
+      "stage": "START",
+      "outcome": "Register the stream for No.898 (client slice of Crewing after the No.880 merge) and run a READ-ONLY PREP measurement: (1) where each named refusal text is born on LIVE main and who consumes it, with line numbers; (2) what the LOGIN_PATH text assert covers and what F12 leaves out; (3) whether migration_required is reproducible and by what minimal scenario; (4) the guard route for the expected diff, measured by an idle verify against a throwaway fixture repo in the session scratchpad. NOTHING IS BUILT and no product byte is written in this stage: the build surface is empty, and the only declared writes are my own log directories. Live main is read BY OBJECT (git show/git grep against f145c6017eaea3804a5429e5aa428b6fb0ece6d9), not by checkout, so no ref is moved and no worktree is created. No IMPLEMENT permit is requested until the manager's task card for No.898 arrives.",
+      "repo": "/home/linux/Developer/skipi-crewing",
+      "head": "0223bbd3148d695b3c226fd70c2c6196acf28334",
+      "status_sha256": "d449c9ce0cc17b0ba2b419959a077c288435ff5058f4add88b60bdd6b5074796",
+      "status_sha256_uall": "f0c71808e3c2f03d54b179c88f67dd8b8517760614347c68b0532b1bfde88aa0",
+      "untracked_full_list_uall": "?? scratchpad/crewing-escaping-179-s1/handlers-classified.txt\n?? scratchpad/crewing-escaping-179-s1/raw-retrace.txt\n?? scratchpad/crewing-escaping-179-s1/scan-raw.txt\n?? scratchpad/crewing-escaping-179-s1/sites-with-source.txt\n?? scratchpad/session-close-20261027T180207458960Z/RESUME.md\n?? scratchpad/session-close-20261027T180207458960Z/STATE.json\n",
+      "head_note": "This checkout's HEAD 0223bbd3148d695b3c226fd70c2c6196acf28334 is BEHIND live main f145c6017eaea3804a5429e5aa428b6fb0ece6d9 (merge-base --is-ancestor HEAD live_main = true). I do not move it: the measurement reads live main's objects, which are already present locally, so no fetch and no checkout is needed.",
+      "new": "A new stream only. No new product file, no new test, no new commit, no branch. The products of this stage are measurement reports under my own log directory.",
+      "preserve": "The canonical checkout stays at 0223bbd3148d695b3c226fd70c2c6196acf28334 with porcelain exactly '?? scratchpad/' under --untracked-files=normal. contracts/ and skipi-verify untouched (house rule). The systemd fleet untouched. No ref under refs/remotes/* or refs/heads/* is moved. No worktree is added to the shared .git.",
+      "owner": "crewing-writer@skipi-crewing-17; integration owner = manager (skipi-ops-28)",
+      "stop": "STOP and report instead of acting if: the manager's No.898 card contradicts this measurement's scope; a measurement requires writing a product byte; the guard route turns out to need a config change (that is the route owner's decision, never mine); live main moves during the stage (then the measurement's base is restated, not silently carried). Lifting condition for each: the manager's written answer. I will not run pre-push-ref, will not push, and will not touch src-tauri/Cargo.{toml,lock} (release-sensitive).",
+      "heartbeat": "2026-11-02T18:53:53+00:00",
+      "heartbeat_note": "REVIEW-ONLY heartbeat: this is step 1 of the two-step submission. Do not compute a window from it.",
+      "active_neighbors": "Measured at 2026-11-02T18:53:53+00:00 from reports/coordination-state.json: 0 non-RELEASED leases of 702 (ACTIVE 0). Sessions reported busy by ListAgents at the same moment: skipi-server-ee, skipi-education-f1, skipi-seafarer-80, skipi-parallel-coordinator-8e. The coordinator's current pilot_card belongs to the Seafarer's 904 stream, which is a different house and a different repo; no path of mine overlaps it. This inventory is a READ of the coordinator's own state file plus ListAgents, not a report from the neighbours themselves.",
+      "surfaces": {
+        "code": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/src-tauri/src",
+            "path:/home/linux/Developer/skipi-crewing/dist/index.html"
+          ],
+          "writes": []
+        },
+        "contracts": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-contracts"
+          ],
+          "writes": []
+        },
+        "schema": {
+          "reads": [],
+          "writes": []
+        },
+        "generated": {
+          "reads": [],
+          "writes": []
+        },
+        "tests": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-crewing/tests"
+          ],
+          "writes": []
+        },
+        "database": {
+          "reads": [],
+          "writes": []
+        },
+        "ports": {
+          "reads": [],
+          "writes": []
+        },
+        "cache": {
+          "reads": [],
+          "writes": []
+        },
+        "build": {
+          "reads": [],
+          "writes": []
+        },
+        "guard": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+            "path:/home/linux/Developer/skipi-guard/bin/skipi-guard"
+          ],
+          "writes": []
+        },
+        "release": {
+          "reads": [],
+          "writes": []
+        },
+        "card": {
+          "reads": [
+            "path:/home/linux/Developer/skipi-ops/BACKLOG.md",
+            "path:/home/linux/Developer/skipi-ops/DECISIONS.md",
+            "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-10-30-crewing-880-entry-login-no-connection-tab.md"
+          ],
+          "writes": []
+        },
+        "logs": {
+          "reads": [],
+          "writes": [
+            "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord",
+            "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/ebbd1815-b6d4-4272-b07f-4adc865ecf49/scratchpad"
+          ]
+        }
+      },
+      "resource_identities": {},
+      "evidence_files": [],
+      "next_action": "Finish the four PREP measurements read-only and report numbers to the manager. Then wait for the No.898 card before requesting any write stage.",
+      "owner_window": "No owner-visible result in this stage. No.898 carries UI changes, so a live owner acceptance (CANON-ui-v1, No.930) will be needed for the IMPLEMENT result; the stand is planned but not built here.",
+      "depends": "Reads: skipi-ops BACKLOG No.898/No.894 and DECISIONS entry for audit 0d8c7ebb; the No.880 task card's writer lines of 2026-11-01; skipi-guard's crewing.json route config. Expects nothing from another stream.",
+      "proves": "Every figure in the report is produced by a command whose output is kept; live-main figures are addressed to f145c6017eaea3804a5429e5aa428b6fb0ece6d9. This stage proves NOTHING about harnesses passing and nothing about the stand: no harness is run and no application is launched."
+    }
+  ]
+}

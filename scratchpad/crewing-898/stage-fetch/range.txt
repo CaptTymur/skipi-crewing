@@ -1,0 +1,4 @@
+dist/index.html
+src-tauri/src/native_lifecycle.rs
+src-tauri/src/native_local_joint_tests.rs
+tests/crewing635_public_settings_harness.mjs

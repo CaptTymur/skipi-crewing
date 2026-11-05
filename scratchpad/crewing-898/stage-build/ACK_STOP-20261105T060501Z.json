@@ -1,0 +1,13 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-VERIFY_BUILD-release-ACKSTOP-20261105T060501Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-05T06:06:42+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "ca1b9179ecb6cee958943f15d485ccfbbd1724d6b4e51f16e78ab2cfbe3d0fef",
+  "evidence": {
+    "after_state_path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-build/after.txt",
+    "after_state_sha256": "d12b858b5b612ca4f9dc86bd7bf7c75d5221055531b5098aaa3b27431f8ff976"
+  }
+}

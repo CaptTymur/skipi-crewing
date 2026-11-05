@@ -1,0 +1,138 @@
+{
+  "outcome": "Sub-stage 3b: the half of No.894 that is achievable in dist - the demonstration caption belongs to the Demo door, not to the login form. The `entry.demo_note` paragraph rendered as the overlay's LAST element, outside BOTH `ec-doors` and `ec-login-form` (measured indices before the fix: doors 139119, form 140263, note 141758), so `entryShowLogin(true)` hid the doors, showed the form, and the caption stayed under the form as though it described the login - exactly the owner's reading, reproduced in the markup rather than inferred from the complaint. The caption moves INSIDE `ec-doors`, gains an id so its PLACE can be asserted, and hides with the door it describes. One assert block with five checks, including a discrimination control. DRY-RUN: 152 -> 157 passed / 0 failed / 0 setup_errors.",
+  "new": "One line moved inside the doors container with an `id` added; the old unanchored paragraph removed; one new assert block before the summary. No text wording changes, no Rust change.",
+  "preserve": "The harness IS CHANGED here, by the manager's ruling and the house rule - No.894 changes screen BEHAVIOUR, so its test belongs in the same fix: harness POST is pinned below, not declared unchanged. NOT touched: any refusal text or dictionary key (this sub-stage changes placement, not wording); src-tauri/ (read only); Cargo.toml and Cargo.lock; the F12, Fresh and 3a work already in the tree. The two-step distinction is explicitly NOT here - it is sub-stage 3c and needs Rust. FILE MODES are preserved explicitly, not by luck: the patch reads the target's mode before writing, chmods the temp file to it, and REFUSES AFTER the write if the mode drifted. The canonical checkout's TRACKED content is preserved, unit `--untracked-files=no`, counted before and after in one run. No commit, push, tag, or git byte.",
+  "stop": "STOP and report if: either file is not at its pinned PRE digest; any of the three anchors matches other than exactly once; a file mode drifts; the harness does not reach 157 passed / 0 failed / 0 setup_errors; or live main moves off f145c601. No pre-push-ref, push, tags, workflow_dispatch. No commit. Stop processes by RECORDED PID, never by pattern, while any stream holds a window; this stage starts no background process. AND A WORDING STOP, which is the manager's ruling and mine to honour: the words 'Вход выполнен' / 'Signed in' are NOT to be written anywhere for the bootstrap-failure path, in this sub-stage or 3c, because I measured that nothing is committed on that path and the person is NOT signed in.",
+  "proves": "Driver self-hashes first; three distinct ids; PRE/POST digests against expected_post; canonical tracked lines before and after; the harness log; and the driver now also prints the two file MODES as evidence. The post-patch count is measured: the driver requires passed==157 AND failed==0 AND setup_errors==0, exiting 12 otherwise and on a missing summary. THE MODE DEBT IS EXERCISED, NOT ASSUMED: I ran the patch on a mirror whose dist I had deliberately chmod'd to 644 - the vehicle's files are all 664, so a 664-only test would have proven nothing. The 644 target came out 644 and the 664 harness came out 664. The same patch applied to a second mirror at 664 produced the IDENTICAL POST digests, confirming the content digest is mode-independent. GUARD ROUTE MEASURED, not assumed: an idle verify on a throwaway fixture gives PASS, crewing-635-single-user, 2 changed files, protected touches 0, release changes no, 19 harness commands - and all 19 print not_run, so that certifies route and scope, never the harnesses passing. This stage proves nothing about the other 18 harnesses, nothing about the stand, and nothing about the two-step distinction.",
+  "refactor_oracle": {
+    "why": "Both the SET of normalised assert names and the COUNT are pinned, because they are blind to different things - the coordinator's correction to my earlier rule: a set is blind to MULTIPLICITY (a loop over fewer keys leaves names identical while the count drops), a count is blind to SUBSTITUTION (one assert vanishing as another appears).",
+    "method": "PASS lines, strip ' :: …', then normalise runs of FOUR OR MORE digits to N, then sort -u. Compare both directions with comm.",
+    "a_false_positive_my_own_extraction_produced": "First run of this oracle reported one LOST name: 'both dictionary regions are locatable — SETTINGS_I18N at 184726, ru at 200966' against '… at 184746, ru at 200986'. That is ONE assert whose message interpolates measured indices, and dist moved 20 bytes, so the index moved and my extraction read it as a different name - a false substitution manufactured by the instrument. Fixed by normalising digit runs. NOTE THE REFINEMENT: normalising ALL digits would collapse 'No.894', 'No.898' and 'No.880' into 'No.N' and destroy the names' distinctiveness, so only runs of 4+ digits are normalised - indices are 5-6 digits, task numbers are 3. Verified after the refinement: No.894 names 3, No.898 names 39, No.880 names 11, all still distinguishable.",
+    "before": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/s3b-parts/names-before.txt",
+      "sha256": "669bff28934c81ec5e96cfb40deff503828519ccf2493baef67d089382d8b7ca",
+      "unique_names": 119
+    },
+    "after": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/s3b-parts/names-after.txt",
+      "sha256": "a8a589725da8ffba92da6e6e684be52c16849ec6589f84a5c215fbf14956b897",
+      "unique_names": 124
+    },
+    "count": {
+      "before": 152,
+      "after": 157
+    },
+    "lost": [],
+    "gained_exactly": [
+      "control: both containers present and ordered — doors at N, form at N",
+      "control: on markup with the caption AFTER the form the same predicate is FALSE, so it discriminates position",
+      "No.894: the caption carries its own id so its PLACE can be asserted — ec-demo-note",
+      "No.894: the caption sits INSIDE the doors container and hides with the door it describes — note N between N and N",
+      "No.894: the caption still renders from the key entry.demo_note, not from a literal"
+    ]
+  },
+  "expected_post": {
+    "why": "Pinned as an exit condition; the driver EXITS 11 if either POST differs.",
+    "files": [
+      {
+        "path": "/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html",
+        "sha256_pre": "f9b0758cfa1f5491881dafa12cea386b3fd2646c5fcd73035a06ba19aa531fe8",
+        "sha256_post": "b0fd21cd074c5210430eb67410e211cc1a14ad1161e435a276dda6c17efd9cd5"
+      },
+      {
+        "path": "/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs",
+        "sha256_pre": "1bdd368bb51728e1924ada37f4ebe66bd6324d48befe895e4d87d002906a2ab7",
+        "sha256_post": "9686b596fc24622d9f77217c50bc50fc84a74f6b29bfff7c52ed8d7b0e821a08"
+      }
+    ]
+  },
+  "driver": {
+    "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/run-s3b-note.sh",
+    "sha256": "029c50b2291b6c78f26ad2f46e033a5d9389e5e2e9aeb0a8b54b4f438d954fb5",
+    "patch_script": {
+      "path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/coord/patch-s3b-note.py",
+      "sha256": "2a33be7c084c78f75ee65347d114afd688e7f62e65555317983332f7425fb8cf",
+      "note": "Carries the mode-preserving atomic write and refuses after the write if a mode drifted."
+    },
+    "an_off_by_one_i_caught_before_patching": "My first capture of the summary anchor took the WRONG line: `wc -l` reports 698 newlines while the split list has 699 entries, so my index landed on `if(failed||setup)process.exitCode=1;` instead of the console.log. Inserting there would have run the new asserts AFTER the summary was printed - they would have executed, passed, and NOT been counted, and the driver's WANT_PASSED would have matched a stale 152 while everything looked green. Caught by reading the captured anchor instead of trusting the index, and the anchor is now located by searching for the line's content, not by position.",
+    "gate_arms_exercised": "Window extractor on five certificates; summary parser on four logs (157/0/0 OK, 152/0/0 MISMATCH, failures MISMATCH, no summary NOSUMMARY-exit); three-id predicates on six cases including all three pairwise collisions."
+  },
+  "measured_duration": {
+    "harness_run": "0.53 / 0.54 / 0.53 s over three runs of the final 157-assert harness on the patched mirror mirror-s7-repro. Unchanged from 152 - the three reachability walks dominate and are untouched.",
+    "patch_apply": "under 1 s - one line moved in dist, one block inserted in the harness.",
+    "stage_total_expected": "a few seconds; the driver refuses below a 30 s remainder."
+  },
+  "resource_identities_note": "Empty by fact: no network, database, port, host resource, or git byte.",
+  "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md at digest 8a0f4037f29faf9045bb20f5196d3b932ff5a8cc98ef0d6245402c084c9a5103 @ ops 9b0b4baf3299a8c20a0bb43ab184d4519670e778. The 3a/3b/3c split and the ruling that 'Вход выполнен' is never written are the manager's WORD, confirmed in writing; he said he will record them at the card's next revision, so until that commit they are his word and not yet a governing field. Builds on 3a, STAGE_COMPLETE 09:09:59Z, whose POST digests are this stage's PRE pins.",
+  "active_neighbors": "PROSE, not a second declared stream. The server writer closed No.903 entirely at 09:18:15Z and holds no window. This stage writes no git byte. Lease counts are a property of the moment; I quote none.",
+  "next_action": "Sub-stage 3c: the two-step distinction, which needs Rust (distinct codes for the bootstrap leg) plus two or three wording options for the owner to choose from, and an idle verify of the route BEFORE submission because a Rust path enters the file set. Then the decisive experiment (4).",
+  "owner_window": "This sub-stage changes PLACEMENT, not wording, so it adds nothing to the owner's text acceptance - but it does change what he sees on the entry screen, so it belongs in the same live acceptance (CANON-ui-v1, No.930) as the F12 and Fresh strings. For 3c I will bring two or three wording options rather than one, at the manager's request, and none of them will say the sign-in completed.",
+  "surfaces": {
+    "code": {
+      "reads": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/src-tauri/src"
+      ],
+      "writes": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/dist/index.html"
+      ]
+    },
+    "contracts": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-contracts"
+      ],
+      "writes": []
+    },
+    "schema": {
+      "reads": [],
+      "writes": []
+    },
+    "generated": {
+      "reads": [],
+      "writes": []
+    },
+    "tests": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104/tests/crewing635_public_settings_harness.mjs"
+      ]
+    },
+    "database": {
+      "reads": [],
+      "writes": []
+    },
+    "ports": {
+      "reads": [],
+      "writes": []
+    },
+    "cache": {
+      "reads": [],
+      "writes": []
+    },
+    "build": {
+      "reads": [],
+      "writes": []
+    },
+    "guard": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json"
+      ],
+      "writes": []
+    },
+    "release": {
+      "reads": [],
+      "writes": []
+    },
+    "card": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md"
+      ],
+      "writes": []
+    },
+    "logs": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-implement-note"
+      ]
+    }
+  }
+}

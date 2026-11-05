@@ -1,0 +1,13 @@
+{
+  "document": "ACK_STOP",
+  "ack_stop_event_id": "crewing-898-INTEGRATE-route-ACKSTOP-20261104T162318Z",
+  "ack_stop_writer": "crewing-writer@skipi-crewing-17",
+  "observed_at": "2026-11-04T16:23:19+00:00",
+  "operations_terminated": true,
+  "queued_operations_cancelled": true,
+  "driver_sha256": "03ffa2c1fe94692c8824c36da1ba93413a0e027fdd46f5bbb9dfa5890f23b28c",
+  "evidence": {
+    "after_state_path": "/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-route/after.txt",
+    "after_state_sha256": "040e5ca1c118bda090d1f8ef977163528fe389ab0b3b13cf0fb30e10cb99669a"
+  }
+}

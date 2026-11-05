@@ -1,0 +1,85 @@
+{
+  "outcome": "Create the work vehicle for the WHOLE No.898 slice and NOTHING else (the name carries no sub-stage, because every sub-stage works in this one tree): one linked worktree at /home/linux/Developer/worktrees/crewing-898-20261104 on a new branch feat/crewing-898-login-texts-20261104 based on live main f145c6017eaea3804a5429e5aa428b6fb0ece6d9. No product byte is edited in this stage: no dist, no test, no Rust source, no commit. Why a stage of its own - evidence_files are mandatory for IMPLEMENT and the live inspect recomputes each pin from disk, but two of the three target files (tests/crewing635_public_settings_harness.mjs and tests/fixtures/crewing_public_settings.mjs) DO NOT EXIST in the canonical checkout, which sits 36 commits behind live main; a pin cannot be computed for a file that is not on disk, so the vehicle must exist before the first IMPLEMENT can be submitted at all.",
+  "new": "One new linked worktree directory /home/linux/Developer/worktrees/crewing-898-20261104, one new branch ref feat/crewing-898-login-texts-20261104 at f145c6017eaea3804a5429e5aa428b6fb0ece6d9, and one administrative entry under the SHARED gitdir. No file content is created or changed.",
+  "preserve": "The canonical checkout stays at HEAD 0223bbd3148d695b3c226fd70c2c6196acf28334 with porcelain exactly '?? scratchpad/' under --untracked-files=normal. None of the 85 existing worktrees is touched, moved or pruned - I run no 'git worktree prune' and no 'git worktree remove'. No ref under refs/remotes/* or refs/heads/* other than the one new branch is created or moved; no fetch. contracts/ and skipi-verify are untouched (house rule). The systemd fleet is untouched. src-tauri/Cargo.toml and Cargo.lock are not touched in this slice at all (release-sensitive).",
+  "stop": "STOP and report instead of acting if: the worktree path already exists; 'git worktree add' reports anything other than success; the canonical checkout's HEAD or normal-mode porcelain differs from the pinned values at the moment of the write; live main has moved off f145c6017eaea3804a5429e5aa428b6fb0ece6d9 (then the base is restated, not silently carried); or the shared gitdir shows another writer's lock. I will not run pre-push-ref, will not push, will not create or push tags, and will not run workflow_dispatch (standing STOP, RISKS No.293b). Lifting condition for each: a written answer from the manager.",
+  "proves": "Terminal evidence will be: 'git worktree list' before and after with the count (85 before); 'git -C <worktree> rev-parse HEAD' equal to f145c6017eaea3804a5429e5aa428b6fb0ece6d9; the three target files present on disk in the worktree with their sha256; and the canonical checkout's HEAD plus normal-mode porcelain digest unchanged, measured after the write. This stage proves NOTHING about harnesses passing and nothing about the guard route: no harness is run and no push is attempted.",
+  "depends": "Card /home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md cited by FIELD NAME plus the digest read: d4e0adbd57eecb1fcd1b6d5fa4835c4ee47099f2f26409f5fc80b648851a51d6 at ops commit d6cfe139645061723c8e9f0d679e7cb8763f86fa, governing fields OUTCOME/BASELINE/NEW/PRESERVE/WORK/STOP/DONE. Not cited by line number: this card has had five revisions in one day and four dead digests (95faaeed, b4804b5b, 63392c48, 2fb0b6dd). Expects nothing from another stream.",
+  "active_neighbors": "PROSE, deliberately not a second declared stream - a declared neighbour owes the same thirteen checks and its own evidence_files, which cannot be produced on its behalf. Neighbour: the server writer on stream server/903, running as the second stream by the manager's order; its repository is skipi-server, so no path of mine overlaps it. The ONE point where we could collide is the shared gitdir of this house, declared here as a write (path:/home/linux/Developer/skipi-crewing/.git) rather than left to my care: skipi-guard creates and removes its own temporary worktree there during a push, and a 'git worktree prune' from one process can remove another's administrative entry. Lease counts are a property of the moment, so I do not quote one here - ask the coordinator who holds what.",
+  "next_action": "Sub-stage 1 (IMPLEMENT) in the new worktree: the Fresh codes - a new key with accurate wording for the live fresh_namespace_unavailable; the fresh_context_unavailable entry removed from the map at dist:15002 with no text given to it; the fresh_unavailable key deleted together with both language texts and not reused; and the assert at crewing635_public_settings_harness.mjs:438 rewritten in the SAME commit to follow the KEY instead of one literal pairing. Its pins will be computed from the worktree this stage creates.",
+  "owner_window": "No owner-visible result in this stage. The slice's UI texts require a live owner acceptance of the RU and EN wording (CANON-ui-v1, No.930); the stand serves the TEXT, not a branch proof, and will be declared through a CHANGE before it is used - /home/linux/Developer/candidates is the manager's named collision point with the server stream.",
+  "surfaces": {
+    "code": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-crewing/src-tauri/src",
+        "path:/home/linux/Developer/skipi-crewing/dist/index.html"
+      ],
+      "writes": [
+        "path:/home/linux/Developer/worktrees/crewing-898-20261104"
+      ]
+    },
+    "contracts": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-contracts"
+      ],
+      "writes": []
+    },
+    "schema": {
+      "reads": [],
+      "writes": []
+    },
+    "generated": {
+      "reads": [],
+      "writes": []
+    },
+    "tests": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-crewing/tests"
+      ],
+      "writes": []
+    },
+    "database": {
+      "reads": [],
+      "writes": []
+    },
+    "ports": {
+      "reads": [],
+      "writes": []
+    },
+    "cache": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/skipi-crewing/.git"
+      ]
+    },
+    "build": {
+      "reads": [],
+      "writes": []
+    },
+    "guard": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-guard/configs/homes/crewing.json",
+        "path:/home/linux/Developer/skipi-guard/bin/skipi-guard"
+      ],
+      "writes": []
+    },
+    "release": {
+      "reads": [],
+      "writes": []
+    },
+    "card": {
+      "reads": [
+        "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-04-crewing-898-login-texts.md",
+        "path:/home/linux/Developer/skipi-ops/BACKLOG.md",
+        "path:/home/linux/Developer/skipi-ops/DECISIONS.md"
+      ],
+      "writes": []
+    },
+    "logs": {
+      "reads": [],
+      "writes": [
+        "path:/home/linux/Developer/skipi-crewing/scratchpad/crewing-898/stage-prep-vehicle"
+      ]
+    }
+  }
+}
