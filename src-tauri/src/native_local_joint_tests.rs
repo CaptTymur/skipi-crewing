@@ -13,6 +13,7 @@ mod local_joint {
     }
     #[derive(Debug, PartialEq, Eq)]
     enum JointOutcome {
+        Active,
         Inactive,
         AuthorizedFoundation,
         Blocked { durability: Durability, reason: &'static str, database_closed: bool },
@@ -274,7 +275,8 @@ mod local_joint {
                 drop(key); drop(binding);
                 database.activate_after_confirmed_commit().map_err(|_| "database_unavailable")
             }, || self.close()).map(|outcome| match outcome {
-                CommitOutcome::Ready => JointOutcome::AuthorizedFoundation,
+                CommitOutcome::Ready {authorized:true} => JointOutcome::AuthorizedFoundation,
+                CommitOutcome::Ready {authorized:false} => JointOutcome::Inactive,
                 CommitOutcome::CommittedBlocked {durability,reason,database_closed}
                     => JointOutcome::Blocked {durability,reason,database_closed},
                 CommitOutcome::CommittedPublicationFailed {durability,reason,database_closed}
@@ -296,6 +298,7 @@ mod local_joint {
         fn apply(&self, runtime: &Runtime, proof: VerifiedLogin,
             key_fault: KeyFault, persist_fault: Option<TestFault>) -> Result<JointOutcome, &'static str> {
             self.local_apply(runtime,proof,key_fault,persist_fault).map(|outcome| match outcome {
+                local_commit::LocalOutcome::CommittedActive {..} => JointOutcome::Active,
                 local_commit::LocalOutcome::CommittedInactive {..} => JointOutcome::Inactive,
                 local_commit::LocalOutcome::CommittedBlocked {durability,reason,database_closed,..}
                     => JointOutcome::Blocked {durability,reason,database_closed},
@@ -363,14 +366,15 @@ mod local_joint {
         assert!(proof.attempt.create,
             "the policy the product passes must permit creating a context on a clean install");
         let outcome = fixture.apply(&runtime, proof, KeyFault::None, None);
-        assert_eq!(outcome, Ok(JointOutcome::Inactive),
+        // No.930: та же постановка и тот же предмет — продуктовая политика теперь АВТОРИЗУЕТ.
+        assert_eq!(outcome, Ok(JointOutcome::Active),
             "a clean install signing in with the PRODUCTION policy must reach the fresh local context, not migration_required");
         // И рабочее место действительно выделено, а не объявлено.
         assert!(fixture.references.borrow().is_some(), "fresh local references were actually prepared");
     }
 
     #[test]
-    fn native635_joint_fresh_actual_resources_are_atomically_bound_and_inactive() {
+    fn native635_joint_fresh_actual_resources_are_atomically_bound_and_active() {
         let fixture = JointFixture::new();
         let initial = fixture.base_settings();
         let initial_profile = serde_json::to_value(&initial.profile).unwrap();
@@ -379,7 +383,10 @@ mod local_joint {
         let outcome = fixture.apply(&runtime, proof, KeyFault::None, None).unwrap();
         let saved = fixture.saved();
         fixture.assert_bound_record(&saved);
-        assert_eq!(outcome, JointOutcome::Inactive, "local coherent commit must not grant a private session");
+        // No.930 перенаправил предмет: «локальный связный коммит НЕ даёт приватной сессии» было
+        // свойством ОДНОГО варианта политики, а не инвариантом продукта.
+        assert_eq!(outcome, JointOutcome::Active,
+            "No.930: a local coherent commit grants a private session on a server credit");
         assert_eq!((fixture.prepares.get(),fixture.persists.get(),fixture.activations.get()), (1,1,1));
         assert_eq!(serde_json::to_value(&saved.profile).unwrap(), initial_profile);
         assert_eq!(saved.interface.theme, "dark");
@@ -389,12 +396,18 @@ mod local_joint {
         drop(references);
         let current = runtime.settings.lock().unwrap();
         fixture.assert_bound_record(&current);
-        assert!(!current.native_authorized);
-        assert_eq!(mode(&current,&runtime.origins()),Mode::NativeLocked);
+        // ВЫВЕДЕНО, не угадано: `:377` присваивает флаг из `policy.authorizes(blocked.is_none())`,
+        // а `Ready` строится только при `blocked.is_none()` -> под `ServerCredit` флаг истинен.
+        assert!(current.native_authorized);
+        // `mode()` отдаёт NativeSession ровно при этом флаге.
+        assert_eq!(mode(&current,&runtime.origins()),Mode::NativeSession);
         drop(current);
-        assert!(runtime.denied.load(Ordering::SeqCst));
-        assert!(runtime.ticket(&runtime.context().unwrap()).is_err());
-        assert_ne!(fixture.pointer(),0,"confirmed inactive local DB handle is installed");
+        // `denied` хранит `!policy.authorizes(ready)` -> ложно.
+        assert!(!runtime.denied.load(Ordering::SeqCst));
+        // ПРИТЯЗАНИЕ, не вывод: `ticket` идёт через `private_access`, который ПЕРЕПРОВЕРЯЕТ
+        // сохранённый ответ по часам. Ожидаю Ok, но решает ПРОГОН, не чтение.
+        assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());
+        assert_ne!(fixture.pointer(),0,"confirmed local DB handle is installed");
     }
 
     #[test]
@@ -529,7 +542,7 @@ mod local_joint {
     }
 
     #[test]
-    fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_but_is_inactive() {
+    fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active() {
         let fixture = JointFixture::new();
         let runtime = fixture.runtime(fixture.existing_settings(true));
         fixture.seed_native_session(&runtime);
@@ -548,10 +561,15 @@ mod local_joint {
         assert_eq!(after["entitlement"]["future_grant_meta"],before["entitlement"]["future_grant_meta"]);
         assert_eq!(saved.bearer_token,"skn_joint-next-company-credential");
         assert_eq!(saved.token_expires_at,Some((now()+chrono::Duration::minutes(9)).to_rfc3339()));
-        assert_eq!(outcome,JointOutcome::Inactive,"LocalOnly refresh must revoke prior model authorization");
-        assert_eq!(mode(&runtime.settings.lock().unwrap(),&runtime.origins()),Mode::NativeLocked);
+        // No.930: прежнее утверждение описывало `LocalOnly`, которого продуктовый путь больше не
+        // передаёт. Предмет теста — сохранение привязки и непрозрачных метаданных — не изменился.
+        assert_eq!(outcome,JointOutcome::Active,
+            "No.930: a same-owner refresh keeps the session active on a renewed credit");
+        assert_eq!(mode(&runtime.settings.lock().unwrap(),&runtime.origins()),Mode::NativeSession);
+        // Старый тикет мёртв из-за РОТАЦИИ контекста, а не из-за авторизации — утверждение прежнее.
         assert!(old_ticket.lease().is_err());
-        assert!(runtime.ticket(&runtime.context().unwrap()).is_err());
+        // ПРИТЯЗАНИЕ, как выше: решает прогон.
+        assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());
         assert_eq!(fixture.row(),business_row());
     }
 
@@ -605,8 +623,11 @@ mod local_joint {
             let proof=fixture.proof(&runtime,false);
             let outcome=fixture.legacy_apply(&runtime,proof).unwrap();
             let effects=match outcome {
-                local_commit::LocalOutcome::CommittedInactive {durability:Durability::Confirmed,effects} => effects,
-                other=>panic!("legacy conversion must be coherent and inactive: {other:?}"),
+                // No.930: конверсия легаси идёт тем же продуктовым `commit_local`, поэтому исход
+                // теперь `CommittedActive`. Прежнее сообщение «must be coherent and inactive»
+                // сделал ложным ЭТОТ ЖЕ патч — переписано, а не затёрто.
+                local_commit::LocalOutcome::CommittedActive {durability:Durability::Confirmed,effects} => effects,
+                other=>panic!("legacy conversion must be coherent and active: {other:?}"),
             };
             fixture.assert_legacy_decoys_empty();
             assert!(effects.database_preparation_started);
@@ -643,12 +664,14 @@ mod local_joint {
             assert_eq!(current.vault_path,raw_vault);
             assert_eq!(current.recent_vaults,recent);
             assert_eq!(serde_json::to_value(&current.profile).unwrap(),profile);
-            assert!(!current.native_authorized);
-            assert_eq!(mode(&current,&runtime.origins()),Mode::NativeLocked);
+            // Те же выводы, что в блоке выше: флаг из `authorizes(blocked.is_none())`, mode из флага,
+            // `denied` = `!authorizes(ready)`. Последняя строка — ПРИТЯЗАНИЕ, решает прогон.
+            assert!(current.native_authorized);
+            assert_eq!(mode(&current,&runtime.origins()),Mode::NativeSession);
             drop(current);
             assert_ne!(runtime.context().unwrap(),old_context);
-            assert!(runtime.denied.load(Ordering::SeqCst));
-            assert!(runtime.ticket(&runtime.context().unwrap()).is_err());
+            assert!(!runtime.denied.load(Ordering::SeqCst));
+            assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());
         }
     }
 
@@ -677,5 +700,37 @@ mod local_joint {
         assert_eq!(Some(fixture.row_when_closed()),business_row());
         assert_eq!(fs::read(&key_path).unwrap(),old_key);
         assert_eq!(mode(&runtime.settings.lock().unwrap(),&runtime.origins()),Mode::LegacyConnected);
+    }
+
+    // No.930 RED-first. Утверждает ЦЕЛЬ карточки: успешный вход даёт ДЕЙСТВУЮЩУЮ приватную
+    // сессию. Красен до продуктового варианта политики публикации — и красен ПО ПРОДУКТОВОЙ
+    // причине: оракул наведён на `commit_local` (продуктовый путь; до No.930 он передавал
+    // `PublicationPolicy::LocalOnly`, с No.930 передаёт `ServerCredit`),
+    // а не на `foundation_apply`. Тест через cfg(test)-движок зелен уже сегодня и о продукте
+    // не говорит ничего: `seed_native_session` берёт активность именно оттуда.
+    // Утверждение — о НАБЛЮДАЕМОМ состоянии, а не о варианте `JointOutcome`: продуктовый
+    // `LocalOutcome` активный коммит выразить не умеет (три варианта — Inactive, Blocked,
+    // PublicationFailed), поэтому пин на вариант пришлось бы переписывать вместе с фиксом.
+    #[test]
+    fn native930_joint_successful_login_activates_private_session() {
+        let fixture = JointFixture::new();
+        let runtime = fixture.runtime(fixture.base_settings());
+        // Контроль: до входа сессии нет. Без него зелёный мог бы прийти от предсуществующего
+        // состояния фикстуры, а не от входа.
+        assert_eq!(mode(&runtime.settings.lock().unwrap(), &runtime.origins()), Mode::Unbound,
+            "control: the fixture must start as an unbound install");
+        assert!(runtime.ticket(&runtime.context().unwrap()).is_err(),
+            "control: no private session before the login");
+        let proof = fixture.proof(&runtime, true);
+        fixture.apply(&runtime, proof, KeyFault::None, None).unwrap();
+        assert!(runtime.settings.lock().unwrap().native_authorized,
+            "No.930: a successful login must authorize the native session");
+        assert_eq!(mode(&runtime.settings.lock().unwrap(), &runtime.origins()), Mode::NativeSession,
+            "No.930: the mode after a successful login must be NativeSession, not NativeLocked");
+        assert_eq!(private_access(&runtime.settings.lock().unwrap(), &runtime.origins(),
+            runtime.clock.now()), Ok(()),
+            "No.930: account_session_state reads 'active' only when private_access is Ok");
+        assert!(runtime.ticket(&runtime.context().unwrap()).is_ok(),
+            "No.930: the activated session must be presentable as a ticket");
     }
 }

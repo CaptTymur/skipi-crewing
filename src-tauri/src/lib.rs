@@ -842,6 +842,8 @@ fn native_account_login(
         let outcome = state.runtime.commit_local(proof, plan, target)
             .map_err(|error| error.code)?;
         let local_outcome = match outcome {
+            native_lifecycle::LocalOutcome::CommittedActive { .. } =>
+                "committed_active".to_string(),
             native_lifecycle::LocalOutcome::CommittedInactive { .. } =>
                 "committed_inactive".to_string(),
             native_lifecycle::LocalOutcome::CommittedBlocked { reason, .. } =>

@@ -162,7 +162,11 @@ pub(crate) enum WorkspaceReference { Keep, Fresh { vault_path: String } }
 pub(crate) struct PreparedWorkspace<D> { pub reference: WorkspaceReference, pub database: D }
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum CommitOutcome {
-    Ready,
+    // No.930. `authorized` несёт РЕШЕНИЕ политики. До этого `Ready` был unit-вариантом,
+    // и одно и то же значение проецировалось в два противоположных смысла — продуктовый
+    // путь читал его как «неактивно», тестовый движок как «авторизовано», — что было верно
+    // только потому, что каждый вызывающий знал свою политику. Типам эта связка была невидима.
+    Ready { authorized: bool },
     CommittedPublicationFailed { durability: Durability, reason: &'static str, database_closed: bool },
     CommittedBlocked { durability: Durability, reason: &'static str, database_closed: bool },
 }
@@ -182,12 +186,20 @@ pub(crate) struct LogoutOutcome {
 #[derive(Clone, Copy)]
 enum PublicationPolicy {
     LocalOnly,
+    // No.930. Авторизует публикацию ровно пока устройство держит непротухший
+    // серверный кредит с полным набором COMPANY_SCOPES: `VerifiedLogin` доказывает
+    // все девять условий, а свежесть перепроверяется после I/O (`authorization_no_longer_fresh`).
+    ServerCredit,
     #[cfg(test)]
     FoundationModel,
 }
 impl PublicationPolicy {
     fn authorizes(self, unblocked: bool) -> bool {
-        match self { Self::LocalOnly => false, #[cfg(test)] Self::FoundationModel => unblocked }
+        match self {
+            Self::LocalOnly => false,
+            Self::ServerCredit => unblocked,
+            #[cfg(test)] Self::FoundationModel => unblocked,
+        }
     }
 }
 struct CorePrepared<D> {
@@ -452,7 +464,7 @@ impl Runtime {
                     }
                     return if let Some(reason) = blocked {
                         CommitOutcome::CommittedBlocked { durability, reason, database_closed: closed.unwrap_or(false) }
-                    } else { CommitOutcome::Ready };
+                    } else { CommitOutcome::Ready { authorized: policy.authorizes(ready) } };
                 },
                 Err(prepared) => {
                     drop(state); drop(authority);
@@ -623,8 +635,9 @@ impl Runtime {
         };
         Ok(VerifiedLogin { identity, response, attempt })
     }
-    // Foundation authorization exists only in tests; production exposes the sealed
-    // commit_local entry point, whose policy is always LocalOnly.
+    // Foundation authorization exists only in tests. No.930: the sealed `commit_local`
+    // entry point now passes `ServerCredit`, NOT `LocalOnly` — the previous wording was made
+    // false by this very patch, so it is corrected here rather than left to be read as checked.
     #[cfg(test)]
     pub(crate) fn commit<D>(
         &self, proof: VerifiedLogin,
@@ -682,6 +695,11 @@ impl Runtime {
         let prepared = match prepare(&current, &proposed) { Ok(d) => d, Err(code) => return Err(fail(code, proof)) };
         #[cfg(target_os = "linux")]
         {
+            // No.930. Условие ключуется на ИДЕНТИЧНОСТИ варианта, и это не защита продукта:
+            // состояние `binding.is_none()` в продукте НЕДОСТИЖИМО — единственная продуктовая
+            // точка построения (`native_local_commit.rs`) кладёт `Some(...)` литерально, а
+            // `binding: None` существует один раз, в `#[cfg(test)] commit<D>`. Фраза «LocalOnly
+            // требует привязку» описывает тестовый путь, а не инвариант продукта.
             if matches!(policy,PublicationPolicy::LocalOnly) && prepared.binding.is_none() {
                 return Err(fail("native_binding_missing",proof));
             }
@@ -940,7 +958,7 @@ mod runtime_tests {
     }
     fn connected(f: &Fixture) -> (Arc<Runtime>, Arc<ManualClock>) {
         let (rt, clock) = f.runtime(f.settings(true));
-        assert_eq!(f.apply(&rt, proof(&rt, &Fake::default()), None, None, false).unwrap(), CommitOutcome::Ready);
+        assert_eq!(f.apply(&rt, proof(&rt, &Fake::default()), None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
         (rt, clock)
     }
 
@@ -955,7 +973,7 @@ mod runtime_tests {
         let obsolete = rt.context().unwrap();
         if stale {
             let refresh = rt.refresh(&Fake::default(), &obsolete).unwrap();
-            assert_eq!(f.apply(&rt, refresh, None, None, false).unwrap(), CommitOutcome::Ready);
+            assert_eq!(f.apply(&rt, refresh, None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
         }
         let parent = rt.context().unwrap();
         let expected = if stale { obsolete } else { parent.clone() };
@@ -1028,7 +1046,7 @@ mod runtime_tests {
             assert_eq!(logout.unwrap_err(), "settings_changed");
             assert!(before_logout_write.is_none());
             assert!(remote_calls.is_empty());
-            assert_eq!(commit.unwrap(), CommitOutcome::Ready);
+            assert_eq!(commit.unwrap(), CommitOutcome::Ready { authorized: true });
             assert_eq!(persisted.get(), 1);
             assert_eq!(activated.get(), 1);
             assert!(rt.ticket(&rt.context().unwrap()).is_ok());
@@ -1200,7 +1218,7 @@ mod runtime_tests {
         }));
         let result = result.expect("postrename authority-only poison must return a committed publication failure");
         let outcome = result.expect("a committed file must never be reported as a precommit error");
-        assert!(!matches!(outcome, CommitOutcome::Ready));
+        assert!(!matches!(outcome, CommitOutcome::Ready { .. }));
         assert_ne!(f.bytes(), old_bytes);
         assert_eq!(f.saved().bearer_token, "skn_synthetic-poison-next-credential");
         let current = rt.settings.lock().expect("only authority was poisoned");
@@ -1547,7 +1565,7 @@ mod runtime_tests {
         let f=Fixture::new(); let (rt, _)=f.runtime(f.settings(true)); let old=f.bytes();
         let mut old_fd=fs::File::open(&f.path).unwrap();
         let old_identity=(old_fd.metadata().unwrap().dev(),old_fd.metadata().unwrap().ino());
-        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready);
+        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready { authorized: true });
         old_fd.seek(SeekFrom::Start(0)).unwrap();let mut retained=Vec::new();old_fd.read_to_end(&mut retained).unwrap();
         assert_eq!(retained,old,"atomic Settings replacement must not rewrite retained old inode");
         let after=fs::metadata(&f.path).unwrap();
@@ -1564,7 +1582,7 @@ mod runtime_tests {
         fs::set_permissions(&f.path,fs::Permissions::from_mode(0o644)).unwrap();
         let old_fd=fs::File::open(&f.path).unwrap();let old_metadata=old_fd.metadata().unwrap();
         assert_eq!(old_metadata.mode() & 0o7777,0o644);
-        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready);
+        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready { authorized: true });
         let new_metadata=fs::metadata(&f.path).unwrap();
         assert_eq!(new_metadata.mode() & 0o7777,0o600,"new private Settings must replace old public mode");
         assert_ne!((new_metadata.dev(),new_metadata.ino()),(old_metadata.dev(),old_metadata.ino()));
@@ -1638,7 +1656,7 @@ mod runtime_tests {
     #[test]
     fn native635_nativepersist_missing_final_target_control_creates_private_file_only() {
         let f=Fixture::new();let (rt,_)=f.runtime(f.settings(true));fs::remove_file(&f.path).unwrap();
-        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready);
+        assert_eq!(native_commit_using_settings_adapter(&f,&rt).unwrap(),CommitOutcome::Ready { authorized: true });
         let loaded=Settings::load_from(&f.path);assert!(loaded.native_account.is_some());assert!(!loaded.load_uncertain);
         assert_eq!(fs::metadata(&f.path).unwrap().permissions().mode() & 0o7777,0o600);
         assert_eq!(fs::read_dir(&f.root).unwrap().count(),2);
@@ -1695,7 +1713,7 @@ mod runtime_tests {
         let old_context = rt.context().unwrap(); let old_ticket = rt.ticket(&old_context).unwrap();
         let fake = Fake::default(); let verified = proof(&rt, &fake);
         assert_eq!(fake.calls.borrow().as_slice(), ["login", "bootstrap:synthetic-company:false"]);
-        assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready);
+        assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
         let state = rt.settings.lock().unwrap();
         assert!(state.native_authorized); assert_eq!(state.vault_path, f.vault);
         assert_eq!(state.profile.legal_name, "Synthetic preserved profile"); assert_eq!(state.interface.theme, "dark");
@@ -1755,7 +1773,7 @@ mod runtime_tests {
     fn native635_runtime_default_vault_keep_and_legacy_vault_switch_rejection() {
         let f = Fixture::new(); let mut s = f.settings(true); s.vault_path.clear();
         let (rt, _) = f.runtime(s);
-        assert_eq!(f.apply(&rt, proof(&rt, &Fake::default()), None, None, false).unwrap(), CommitOutcome::Ready);
+        assert_eq!(f.apply(&rt, proof(&rt, &Fake::default()), None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
         assert!(rt.settings.lock().unwrap().vault_path.is_empty()); assert!(f.saved().vault_path.is_empty());
         let g = Fixture::new(); let (legacy, _) = g.runtime(g.settings(true)); let old = g.bytes();
         let error = legacy.commit(proof(&legacy, &Fake::default()), |_, _| Ok(PreparedWorkspace {
@@ -1791,7 +1809,7 @@ mod runtime_tests {
             let pending = rt.start_login(&rt.context().unwrap(), policy).unwrap();
             let verified = rt.authenticate(&fake, "synthetic", "synthetic", pending).unwrap();
             assert_eq!(fake.calls.borrow()[1], format!("bootstrap:none:{}", explicit));
-            assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready);
+            assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
             assert_eq!(f.saved().vault_path, f.vault);
         }
     }
@@ -1824,7 +1842,7 @@ mod runtime_tests {
         let mut fake = Fake::default(); fake.reply.connection.expires_at = (clock.now() + chrono::Duration::minutes(10)).to_rfc3339();
         let refreshed = rt.refresh(&fake, &context).unwrap();
         assert_eq!(fake.calls.borrow().as_slice(), ["bootstrap:synthetic-company:false"]);
-        assert_eq!(f.apply(&rt, refreshed, None, None, false).unwrap(), CommitOutcome::Ready);
+        assert_eq!(f.apply(&rt, refreshed, None, None, false).unwrap(), CommitOutcome::Ready { authorized: true });
         assert_ne!(rt.context().unwrap(), context); assert!(!connection_context_matches(&old_snapshot, &context));
         assert!(ticket.lease().is_err()); assert!(rt.ticket(&rt.context().unwrap()).is_ok());
     }

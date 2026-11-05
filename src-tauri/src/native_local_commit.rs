@@ -32,6 +32,8 @@ impl Default for Effects {
 pub(crate) struct LocalError { pub code: &'static str, pub effects: Effects }
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum LocalOutcome {
+    // No.930. Прежде продуктовый тип исхода не умел выразить АКТИВНЫЙ коммит вовсе.
+    CommittedActive { durability: Durability, effects: Effects },
     CommittedInactive { durability: Durability, effects: Effects },
     CommittedBlocked { durability: Durability, reason: &'static str, database_closed: bool, effects: Effects },
     CommittedPublicationFailed { durability: Durability, reason: &'static str, database_closed: bool, effects: Effects },
@@ -236,7 +238,7 @@ impl Runtime {
         -> Result<LocalOutcome,LocalError> {
         let effects=RefCell::new(Effects::default());
         let allow_fresh=proof.attempt.create;
-        let result=self.commit_core(proof,PublicationPolicy::LocalOnly,
+        let result=self.commit_core(proof,PublicationPolicy::ServerCredit,
             |current,proposed| plan.prepare(current,proposed,allow_fresh,&effects),
             |proposed| {
                 plan.count_persist();
@@ -274,7 +276,11 @@ impl Runtime {
         let publication_ok=!matches!(outcome,CommitOutcome::CommittedPublicationFailed {..});
         if let SettingsEffect::Committed {published,..}=&mut effects.settings { *published=publication_ok; }
         Ok(match outcome {
-            CommitOutcome::Ready => LocalOutcome::CommittedInactive {durability:Durability::Confirmed,effects},
+            // No.930. Проекция выводится из ДАННЫХ, а не из знания вызывающего о политике.
+            CommitOutcome::Ready {authorized:true} =>
+                LocalOutcome::CommittedActive {durability:Durability::Confirmed,effects},
+            CommitOutcome::Ready {authorized:false} =>
+                LocalOutcome::CommittedInactive {durability:Durability::Confirmed,effects},
             CommitOutcome::CommittedBlocked {durability,reason,database_closed} =>
                 LocalOutcome::CommittedBlocked {durability,reason,database_closed,effects},
             CommitOutcome::CommittedPublicationFailed {durability,reason,database_closed} =>
