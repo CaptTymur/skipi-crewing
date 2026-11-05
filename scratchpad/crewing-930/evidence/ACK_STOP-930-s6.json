@@ -1,0 +1,24 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s6-ackstop-20261105T145156Z-7653adfd",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T14:51:56.543503+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s6.json",
+  "after_state_sha256": "6f142ff04aeed3e701f48b7addfbb560689e37f3f124552e12cb9bdc49de6046",
+  "commit": "eb609c63778888f100e591f6c30c090fd2da85c7",
+  "all_four_blobs_match_certified": true,
+  "evidence_files_verified": 85,
+  "survivors_by_ppid": [
+   {
+    "pid": "1026654",
+    "ppid": "1022875",
+    "comm": "git",
+    "mine_by_ppid": false
+   }
+  ],
+  "queued_operations_note": "очередей не ставил; cargo не вызывался; push НЕ делался"
+ }
+}

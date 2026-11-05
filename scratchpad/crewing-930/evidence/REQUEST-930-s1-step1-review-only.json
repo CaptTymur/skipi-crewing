@@ -1,0 +1,210 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "review-only",
+  "note": "шаг 1: читаете содержание, окно гранта не тратится; шаг 3 подам со свежим пульсом по вашему слову"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "783ba7cddd0dcaae49c2d6706433d44b13b5f657b2dd6d2c87326020f4a79d20",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s1-IMPLEMENT-20261105T124601Z",
+   "stage": "IMPLEMENT",
+   "outcome": "RED-тест «успешный вход даёт действующую приватную сессию» лежит в /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs на продуктовом пути commit_local, байт-в-байт равный объявленному пост-образу. Стадия ТОЛЬКО пишет: ни одного вызова cargo, первая типизация — отдельной стадией VERIFY_BUILD.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "Новое рабочее дерево /home/linux/Developer/worktrees/crewing-930-20261105 на ветке feature/crewing-930-red-active-session от ЖИВОГО main f145c6017eaea3804a5429e5aa428b6fb0ece6d9 (ls-remote 11:51Z), плюс один #[test] native930_joint_successful_login_activates_private_session (31 строка) в конце модуля local_joint. Работа НЕ ведётся в объявленном чекауте: он отстаёт от main на 36 коммитов (merge-base 0223bbd) — это №938 на этом доме, и замер в нём был бы замером устаревшего дерева.",
+   "preserve": "Ни одна существующая строка файла не меняется: вставка идёт перед закрывающей скобкой модуля, удалений 0. Три существующих утверждения, пинящих ПРОТИВОПОЛОЖНОЕ (:366 «PRODUCTION policy ... reach the fresh local context», :382 «local coherent commit must not grant a private session», :551 «LocalOnly refresh must revoke prior model authorization») остаются ДОСЛОВНО как есть — они верны ДЛЯ LocalOnly; их перенаведение на вариант политики — предмет будущей стадии фикса, не этой. Отказные пути №898, PR #80, ветка chore/crewing-898-record-20261105 и её три локальных коммита не затрагиваются.",
+   "owner": "Слово владельца «А» от 04.11 19:00:41 покрывает доделку №930 (карточка ops-20261104-022); отдельного GO на шаг не требуется и не запрашивается. Живая приёмка владельца относится к UI-результату, а не к этой стадии. Живых запросов к боевому серверу стадия не делает — по Крюингу слово владельца не дано.",
+   "stop": "СТОП и строка менеджеру, если: (1) потребуется новое присвоение native_authorized=true где-либо кроме native_lifecycle.rs:396; (2) потребуется снять #[cfg(test)] с FoundationModel; (3) потребуется ослабить любую из девяти проверок BootstrapResponse::validate ради зелёного; (4) вердикт гейта окажется не PERMIT_CURRENT — драйвер отказывает до первого действия; (5) sha базового файла в новом дереве не совпадёт с пином a070d241…; (6) пост-образ не совпадёт с 50774e79…. Пункты (4)-(6) выражены кодом драйвера, не обещанием. Правок contracts/ и skipi-verify стадия не делает. Push — ОТДЕЛЬНАЯ стадия, этой заявкой не покрыт.",
+   "heartbeat": "2026-11-05T12:46:01.406837+00:00",
+   "surfaces": {
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-crewing",
+      "path:/home/linux/Developer/worktrees/crewing-898-20261104"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105",
+      "path:/home/linux/Developer/skipi-crewing/.git"
+     ]
+    },
+    "tests": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/base-f145c601-native_local_joint_tests.rs"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ]
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105",
+    "path:/home/linux/Developer/skipi-crewing/.git",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+   ],
+   "mutates_note": "path:/home/linux/Developer/skipi-crewing/.git — административные байты worktree (.git/worktrees/<имя>); объявлено честно широко, потому что git решает сам, что там тронуть. .git этого дома — свой каталог, common-dir свой (замер координатора 12:31Z), с gitdir Моряка (skipi-public/.git) не пересекается. Все три токена mutates покрыты surfaces.*.writes — см. mutates_coverage.",
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105": "code.writes",
+    "path:/home/linux/Developer/skipi-crewing/.git": "code.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes"
+   },
+   "depends": [
+    "сертификат гранта от координатора epoch 49 (единственный вызов гейта — check, принимается только PERMIT_CURRENT)",
+    "живой main f145c601 — подтверждён git ls-remote origin refs/heads/main в 11:51Z",
+    "пин базового файла a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d (git show f145c601:…)",
+    "UNKNOWN и НЕ блокирует эту стадию: прод-форма ответа боевого сервера (№956). RED-тест её не касается — он о локальной активации, а не о проводе."
+   ],
+   "proves": [
+    "RED-тест существует, лежит на продуктовом пути commit_local и равен объявленному пост-образу побайтово.",
+    "НЕ доказывает, что тест компилируется: cargo в этой стадии не вызывается (build.writes пуст). Первая типизация — стадия VERIFY_BUILD; ошибка компиляции там — ОЖИДАЕМЫЙ возможный исход, объявленный заранее, а не находка.",
+    "НЕ доказывает, что тест красен: краснота — утверждение о ПРОГОНЕ, а прогона нет."
+   ],
+   "active_neighbors": "seafarer/380-remote-mount-fix, дом /home/linux/Developer/skipi-seafarer, писатель skipi-seafarer-5b — другое дерево, общий gitdir skipi-public/.git у него, у меня свой; пересечений поверхностей с моими тремя write-токенами нет. Плагины и MCP-коннектор вне пары (карточка пилота). Своих фоновых процессов и очередей не держу: стадия синхронная. Соседа прозой, не вторым элементом streams — его evidence_files за него предъявить нельзя.",
+   "resource_identities": {
+    "note": "токенов net: и db: в заявке нет — ни одного порта, ни одной базы стадия не трогает"
+   },
+   "next_action": "Ожидаю ваш ответ по шагу 1 (review-only). По вашему слову подаю шаг 3 со СВЕЖИМ пульсом, изменив только event_id/heartbeat/submission. После гранта первая строка драйвера — stage_gate.py check; ACK_START пишется НИЖЕ ворот; ACK_STOP — последнее действие стадии, доклад ПОСЛЕ него. Следующая заявка — VERIFY_BUILD: cargo-прогон нового теста (RED-доказательство) и зонд компилятора dead_code на Runtime::refresh; umask назову в обоих прогонах.",
+   "owner_window": "не требуется для этой стадии (см. owner)",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s1.sh",
+     "sha256": "47bbd9cafa2b4b33a9f334a257006d21f3395198695903402ac930863fc51847"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/snippet-930-red-test.rs",
+     "sha256": "19d8712a0d78bfcffb52e97746b7ba51802d4ede208fc6506ed8e8eb246b7269"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/base-f145c601-native_local_joint_tests.rs",
+     "sha256": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/expected-post-native_local_joint_tests.rs",
+     "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/SPLIT-930-two-piles.md",
+     "sha256": "05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "files": [
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "sha256_post": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+      "bytes_post": 45462,
+      "lines_post": 712,
+      "sha256_base_at_read": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d",
+      "read_at": "2026-11-05T12:44:49.990893+00:00"
+     }
+    ],
+    "worktree_created": "/home/linux/Developer/worktrees/crewing-930-20261105",
+    "worktree_head_post": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+    "branch_created": "feature/crewing-930-red-active-session",
+    "provenance": "пост-образ посчитан ДО гранта и ПРОВЕРЕН репетицией на выбрасываемой копии в сессионном скрэтчпаде: тот же код вставки дал ровно 50774e79…, и повторный прогон отказал по идемпотентности. Ни одна заявленная поверхность репетицией не тронута."
+   }
+  }
+ ],
+ "my_hex_measurements": {
+  "note": "Правило 4 вашего письма: ваш предполёт читает содержимое только .sh/.py/.bash (строка 179), поэтому по .md/.json мой замер вашу проверку ЗАМЕНЯЕТ, а не дублирует. Команда — sha256sum, единица — сырые байты файла целиком.",
+  "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md": {
+   "sha256": "783ba7cddd0dcaae49c2d6706433d44b13b5f657b2dd6d2c87326020f4a79d20",
+   "bytes": 3482,
+   "matches_your_value": true,
+   "provenance": "файл НЕ отслеживается git в skipi-ops (status '?? handoffs/TASKCARD-2026-11-05-pilot-two-streams.md') — коммитнутой копии нет, пин держится только на байтах на диске"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/SPLIT-930-two-piles.md": {
+   "sha256": "05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3",
+   "bytes": 15774,
+   "note": "мой разбор двух куч; лежит в СЕССИОННОМ скрэтчпаде (/tmp чистится при загрузке) — перенос в WORKLOG дома идёт отдельной стадией записи"
+  }
+ },
+ "notes": [
+  "BASELINE сверен с диском моей рукой: HEAD 435b7650462cb838cd2267d16b8975390a9912be, статус 19 строк, отпечаток fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68 — совпал с вашим замером. Единицу воспроизвёл: обрезанная форма даёт 79da14e1b640bdbb48d08e11045f325c8a0b7e45072999e5462bd83a00372e7b, то есть другое число о том же дереве; объявлено НЕобрезанное.",
+  "ОБЪЯВЛЕННЫЙ head НЕ является базой работы, и это намеренно: 435b7650 — чекаут, который вы измерили, а работа идёт в новом дереве от f145c601. Оба числа названы, чтобы 435b7650 нельзя было прочесть как базу.",
+  "Стадия НЕ вызывает cargo ни разу: build.writes и cache.writes пусты. Поэтому umask здесь — вход только для режимов создаваемых файлов, объявлен 0022 и выставлен в драйвере. В стадии VERIFY_BUILD назову umask прогона отдельно: сьюта красна под 0o002 и зелена под 0o022, и любой зелёный без названного числа непрочитываем.",
+  "Один вызов гейта — check по сертификату, только PERMIT_CURRENT; start/complete/stop/ack-stop ваши. О событиях сообщаю документами: ACK_START (ниже ворот), AFTER_STAGE, ACK_STOP (последним действием)."
+ ]
+}

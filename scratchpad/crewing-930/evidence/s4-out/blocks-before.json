@@ -1,0 +1,61 @@
+{
+ "unit": "from the `#[test]` line through the line with the closing brace, NO trailing newline",
+ "cutter_control": {
+  "blocks": 13,
+  "raw_test_attrs": 13
+ },
+ "blocks": {
+  "native635_880_f11_production_policy_on_clean_install_reaches_fresh": {
+   "sha256": "cd33b9ac1eb3f9d7379fb6d510b4e97c0ee61ce901234a9fc55e2a2410702d3e",
+   "bytes": 1681
+  },
+  "native635_joint_fresh_actual_resources_are_atomically_bound_and_inactive": {
+   "sha256": "bba7899d4fc1f7418ba04327f190695ae1481fcb65d4b11e52dc3eebf1ec3526",
+   "bytes": 1609
+  },
+  "native635_joint_old_native_record_refuses_before_any_preparation_or_persist": {
+   "sha256": "95b93f60d5eda10e1ab71ed4cbdba4496b5f8455115836b8a3a2b344e9de5428",
+   "bytes": 917
+  },
+  "native635_joint_wrong_actual_prepared_key_owner_or_reference_is_precommit": {
+   "sha256": "90c0cdc7e5ccc39214a837eb987cc00ed24d21e91d5381da1536c050f1335b51",
+   "bytes": 1040
+  },
+  "native635_joint_actual_key_raw_or_inode_change_before_persist_is_refused": {
+   "sha256": "3d90de1a15cf076dadfdbd4ea39e9910aa58bc1c9aba67163302687c41015860",
+   "bytes": 1093
+  },
+  "native635_joint_postrename_key_change_keeps_new_matching_record_blocked": {
+   "sha256": "03153c1a492b0673c7c569580b66bbab54c936793d756dfd51745daaae704e76",
+   "bytes": 1504
+  },
+  "native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row": {
+   "sha256": "dd4c027bee6ec79c784761e1f77033a6c1fd272d17a0a83e98784a83dc958a45",
+   "bytes": 1068
+  },
+  "native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked": {
+   "sha256": "e5983dd4928841d46dc49698c99b9efc3e151e2b4a4533b44216efb551b65b75",
+   "bytes": 1526
+  },
+  "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_but_is_inactive": {
+   "sha256": "6a14e10ef8486db3708b030d9d8db6047e68fa387b1aa3c17fcd63cf9b61712e",
+   "bytes": 1840
+  },
+  "native635_joint_fresh_file_sync_error_reports_actual_artifacts_phase_and_cleanup": {
+   "sha256": "2a8a21753fb1468df105a769bc3762bce90ce77c012168bc1bc4e40c1644602e",
+   "bytes": 2194
+  },
+  "native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key": {
+   "sha256": "5f4328fc95424238f5e6dfc220e46d4fa139aa82ff830356c135a897ad3e2e9f",
+   "bytes": 4199
+  },
+  "native635_joint_legacy_without_live_handle_refuses_without_inference_or_creation": {
+   "sha256": "5e285cafd9f364a891e8830322be42d5518e82457fd5ccd378c0ab23907d019c",
+   "bytes": 1614
+  },
+  "native930_joint_successful_login_activates_private_session": {
+   "sha256": "2c84acfbdac5852daaa1d724d54a458280068d966d5f4ffea249f68fce85627b",
+   "bytes": 1561
+  }
+ }
+}

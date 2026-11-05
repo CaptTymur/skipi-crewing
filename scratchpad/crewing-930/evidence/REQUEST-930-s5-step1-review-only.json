@@ -1,0 +1,164 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "review-only",
+  "note": "шаг 1: стадия сохранения; пост-образ объявлен манифестом поимённо, проверка ЧТЕНИЕМ"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s5-FINALIZE_END-20261105T143011Z",
+   "stage": "FINALIZE_END",
+   "outcome": "СОХРАНЕНИЕ ДОКАЗАТЕЛЬНОЙ БАЗЫ. Доказательства четырёх стадий слайса A лежат в сессионном скрэтчпаде, то есть в /tmp: **70 файлов, 912829 Б**. /tmp чистится при загрузке. Код в дереве выживет, провенанс — нет: при перезагрузке осталась бы правка, у которой исчезло основание (чем доказано, что оракул не тронут, что блоки менялись только объявленно, что отрицательный контроль кусал, что зелёный проверен логом). Стадия копирует всё это в дерево, где оно переживёт перезагрузку, и ПРОВЕРЯЕТ ЧТЕНИЕМ.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "Каталог /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence с 70 файлами плюс копия манифеста. Пост-образ объявлен ПОЛНОСТЬЮ: манифест несёт sha и байты каждого файла; манифест sha 56ef65deea184eaaf13ef3b5b532896824a4411b486e84a8fff6d4f16acbdcde.",
+   "preserve": "Исходники НЕ трогаются: ни одного .rs в поверхностях записи. Четыре правленых файла слайса A остаются как есть (`9b7d54f7…`, `d9d54d13…`, `4f76ed41…`, `9a64aaea…`), WORKLOG `9e562425…` не перезаписывается — копия идёт в НОВЫЙ подкаталог `evidence/`. Сессионный скрэтчпад читается, не меняется.",
+   "verification_method": "ПРОВЕРКА ЧТЕНИЕМ, не кодом возврата — требование менеджера, и сегодня код возврата обманывал дважды (`rc 0` у cargo при нуле прогнанных тестов; `rc` конвейера вместо `rc` команды). Поэтому: (1) до копирования каждый ИСТОЧНИК сверяется с манифестом — защита от дрейфа между расчётом манифеста и грантом; (2) после копирования хешируются ПРОЧИТАННЫЕ байты назначения; (3) затем НЕЗАВИСИМЫЙ обход назначения сверяет всё ещё раз. Репетиция защиты от дрейфа прогнана (`check-only`, ничего не пишет): «70 files, no drift».",
+   "owner": "слово «А» 04.11 покрывает доделку; внешних действий стадия не делает",
+   "stop": "СТОП: (1) вердикт не PERMIT_CURRENT; (2) бюджет < 20 с после резерва 60 с; (3) writer не разрешён; (4) ЛЮБОЙ источник разошёлся с манифестом — отказ до копирования (rc 4); (5) любая копия читается иначе, чем объявлено (rc 5). cargo не вызывается; `hostresource:` не нужен; .rs не правится.",
+   "heartbeat": "2026-11-05T14:30:11.838059+00:00",
+   "surfaces": {
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+     ]
+    },
+    "code": {
+     "reads": [],
+     "writes": []
+    },
+    "tests": {
+     "reads": [],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence": "logs.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.reads/writes (мои же лицевые документы)"
+   },
+   "residue_declared": "Лицевые документы САМОЙ стадии сохранения (ACK_START/AFTER_STAGE/ACK_STOP стадии 5 и отчёт копирования) в манифест не входят ПО ПОСТРОЕНИЮ: они создаются после его расчёта, и их суммы до гранта не существуют. Их пути и суммы назову в передаче; у координатора они есть в своих записях. Доказательная база стадий 1-4, включая драйверы и приборы, покрыта.",
+   "depends": [
+    "сертификат epoch 49",
+    "манифест, посчитанный ДО гранта"
+   ],
+   "proves": [
+    "70 файлов лежат в дереве и читаются побайтово равными объявленному",
+    "НЕ доказывает: что они закоммичены — коммит и push отдельные стадии, этой не покрыты"
+   ],
+   "active_neighbors": "seafarer/380 между стадиями; общих объектов с этой стадией нет — cargo не вызывается, реестр не трогается",
+   "resource_identities": {
+    "note": "net:/db: нет"
+   },
+   "next_action": "шаг 3 со свежим пульсом по вашему слову. После закрытия — передача: слайс B начинается с ЧТЕНИЯ (замер потребителей `ticket`/`PrivateTicket`), а не с правки.",
+   "owner_window": "не требуется",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s5.sh",
+     "sha256": "8af7640cb615a60490586dd23381969fdabbe3cf47628d55f055ebbb22f15863"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/preserve-evidence.py",
+     "sha256": "966bb3fbe68952355e907628a3ba424cc065a967e03e94aa33207060e58207de"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/MANIFEST-slice-A-evidence.json",
+     "sha256": "56ef65deea184eaaf13ef3b5b532896824a4411b486e84a8fff6d4f16acbdcde"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "destination": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence",
+    "file_count": 70,
+    "total_bytes": 912829,
+    "per_file_sha256": "объявлены в манифесте (evidence_files)",
+    "manifest_copy_sha256": "56ef65deea184eaaf13ef3b5b532896824a4411b486e84a8fff6d4f16acbdcde"
+   }
+  }
+ ],
+ "notes": [
+  "ПОПРАВКА К МОИМ ЖЕ ЧИСЛАМ: я называл «45 файлов, 1,1 МБ». Обход манифеста даёт 70 файлов и 912829 Б (0,87 МиБ). 45 было `find -maxdepth 1`, 1,1 МБ — `du` (занятые блоки). Четвёртый случай за день одного класса: число взято предикатом, отвечающим на другой вопрос; на этот раз поймал инструмент сразу.",
+  "манифест пересчитан после создания драйвера и прибора, чтобы они в него ВОШЛИ: первый расчёт их не содержал, потому что их тогда не существовало",
+  "одно число живёт в одном месте (манифест), как мы договорились в прошлой заявке"
+ ]
+}

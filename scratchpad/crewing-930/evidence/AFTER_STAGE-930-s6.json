@@ -1,0 +1,60 @@
+{
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-s6-afterstage-20261105T145156Z-125158ab",
+ "observed_at": "2026-11-05T14:51:56.543503+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "commit": {
+  "commit": "eb609c63778888f100e591f6c30c090fd2da85c7",
+  "files_in_commit": [
+   "src-tauri/src/lib.rs",
+   "src-tauri/src/native_lifecycle.rs",
+   "src-tauri/src/native_local_commit.rs",
+   "src-tauri/src/native_local_joint_tests.rs"
+  ],
+  "file_count": 4,
+  "blob_verification_by_reading": {
+   "native_lifecycle.rs": {
+    "sha256_in_commit": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+    "matches_certified": true
+   },
+   "native_local_commit.rs": {
+    "sha256_in_commit": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+    "matches_certified": true
+   },
+   "native_local_joint_tests.rs": {
+    "sha256_in_commit": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+    "matches_certified": true
+   },
+   "lib.rs": {
+    "sha256_in_commit": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3",
+    "matches_certified": true
+   }
+  },
+  "all_four_match": true,
+  "worktree_clean_for_sources": true,
+  "method": "байты объектов из коммита прочитаны через git show и хешированы; код возврата git как доказательство не использован"
+ },
+ "evidence_copy": {
+  "method": "манифест построен ОБХОДОМ в момент копирования, не списком, составленным заранее",
+  "file_count": 85,
+  "total_bytes": 1073294,
+  "copied": 85,
+  "verified_by_reading": 85,
+  "mismatches": []
+ },
+ "survivors_by_ppid": [
+  {
+   "pid": "1026654",
+   "ppid": "1022875",
+   "comm": "git",
+   "mine_by_ppid": false
+  }
+ ],
+ "umask_declared": "0022",
+ "threat_rows_closed": {
+  "reboot": "закрыта копией в дерево",
+  "worktree_removal": "закрыта КОММИТОМ (объекты в общем gitdir)",
+  "machine_loss": "НЕ закрыта — push отдельная стадия и слово владельца"
+ }
+}

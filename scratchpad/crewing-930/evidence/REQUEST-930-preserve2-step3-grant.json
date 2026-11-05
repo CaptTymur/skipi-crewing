@@ -1,0 +1,207 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "grant",
+  "note": "шаг 3: свежий пульс; содержание дословно как в отревьюированном шаге 1"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "4a36998479b07bf6e084860de8e43da9cf7a42774fb9c449c0023a524186f146",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-preserve2-FINALIZE_END-grant-20261105T160804Z",
+   "stage": "FINALIZE_END",
+   "outcome": "СОХРАНЕНИЕ ПРИРОСТА по назначению менеджера: `LIVE-PROBE-ANALYSIS.md`, `ACK_STOP` и `AFTER_STAGE` зонда — на долговечный диск, к остальной базе в /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence. Сетевых действий НЕТ: разрешение владельца израсходовано 15:54:19Z, curl не вызывается.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "Прирост в /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence: до стадии там 86 файлов; обход источника в момент копирования даёт нижнюю границу 96 файлов на 2026-11-05T16:01:59Z. Манифест перезаписывается обходом.",
+   "preserve": "Коммит `eb609c63` и четыре файла слайса A не трогаются — в поверхностях записи нет ни одного .rs и ни одного пути `.git`. Существующая база не удаляется: копирование идёт поверх, и каждый файл проверяется ЧТЕНИЕМ после записи.",
+   "counts_with_time_and_predicate": {
+    "measured_at": "2026-11-05T16:01:59Z",
+    "source_recursive_files": 96,
+    "source_total_bytes": 1141227,
+    "destination_files_before": 86,
+    "predicate": "rglob('*'), только файлы; байты — сумма st_size, то есть как `du -sb`, не занятые блоки",
+    "note": "счёт источника растёт, пока я работаю; объявленное — НИЖНЯЯ граница, истина снимается обходом"
+   },
+   "self_reference_resolved": "манифест пишется В НАЗНАЧЕНИЕ и описывает ИСТОЧНИК — не член своего предмета. Остаток назван: `ACK_STOP` и `AFTER_STAGE` ЭТОЙ стадии пишутся после обхода и в копию не попадут; их суммы уйдут в доклад. Residue сокращается с каждой стадией, но не исчезает.",
+   "owner": "разрешение владельца на живой запрос ИЗРАСХОДОВАНО 15:54:19Z; эта стадия наружу не обращается",
+   "stop": "СТОП кодом: (1) не PERMIT_CURRENT; (2) бюджет мал; (3) writer не разрешён; (4) любого из трёх названных файлов нет на диске; (5) каталог назначения от прошлой стадии отсутствует. Все пять — ДО записи ACK_START, поэтому наличие ACK_START снова означает старт. Любая копия, читающаяся иначе, попадает в `mismatches` и в доклад.",
+   "heartbeat": "2026-11-05T16:08:04.927976+00:00",
+   "surfaces": {
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "code": {
+     "reads": [],
+     "writes": []
+    },
+    "tests": {
+     "reads": [],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence": "logs.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes"
+   },
+   "no_net_tokens": "токенов `net:` нет вовсе — стадия наружу не ходит. Это важно назвать: прошлая стадия держала `net:…|0.0.0.0|443`, и именно он сериализовал нас с Моряком; здесь он не нужен и не объявлен.",
+   "depends": [
+    "сертификат epoch 49",
+    "каталог базы от прошлой стадии сохранения"
+   ],
+   "proves": [
+    "три названных файла лежат на долговечном диске и читаются равными источнику",
+    "НЕ доказывает, что они закоммичены: коммита базы менеджер не назначал, и в продуктовый репозиторий она не идёт"
+   ],
+   "active_neighbors": "seafarer/380 держит токен 443; у этой стадии сетевых токенов нет, пересечений нет",
+   "resource_identities": {
+    "note": "токенов net:/db: нет"
+   },
+   "next_action": "шаг 3 со свежим пульсом; опрашиваю каталог сертификатов по каноническому дайджесту, письма не жду",
+   "owner_window": "не требуется",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-preserve2.sh",
+     "sha256": "15c16a7145a1cdf2c2a4e99ca5b9fd81a656f4dcaeff66e624f39c53568e458f"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/LIVE-PROBE-ANALYSIS.md",
+     "sha256": "138b5d5df130c980267b1ada2db55c5dc0cd34c3e61d10118c38008d46a02d7b"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/ACK_STOP-930-probe.json",
+     "sha256": "07bfc462591217eb131fcb7fe1a538e9884b7d6d1a79c3f3182600cd638c6476"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-probe.json",
+     "sha256": "2f0c32dca1355a3ee755e98e5d1728c475d937c4a2d28f129094c703c84ec304"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-probe.sh",
+     "sha256": "a6259955ad8d38b3a25c073a0c5931225038c54026de3d02b328f055121d23ad"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105/prod-body.bin",
+     "sha256": "e9639e3c4681ce85f852fbac48e2eeee5ba51296dbfec57c200d59b76237ab80"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105/prod-headers.txt",
+     "sha256": "d89b1e3b331e076d8026c54860a5471ca94c4c7794ff0c022856f9e600ca1d92"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/LIVE-PROBE-HEADERS-DIGEST-CORRECTION.json",
+     "sha256": "4dac9bced941dcfcb1139e28c92ec904d31ce9fba7965d859ed68febc1e6116e"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "destination": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence",
+    "files_at_least": 96,
+    "measured_at": "2026-11-05T16:01:59Z",
+    "manifest": "MANIFEST-walked-at-copy-time.json, перезаписывается обходом в момент копирования",
+    "post_image": "по-файлово UNKNOWN заранее: состав источника растёт до самого гранта; объявлена нижняя граница и метод"
+   },
+   "hex_constants_inside_pinned_documents": {
+    "found_by": "ваш preflight_pins — и это ПЕРВОЕ живое срабатывание расширенного скана на моём материале",
+    "resolved_by_pinning": {
+     "a6259955ad8d…": "driver_sha256 в документе зонда = sha(run-930-probe.sh); файл внесён в evidence, константа разрешается",
+     "e9639e3c4681…": "response.body_sha256 = sha(prod-body.bin); файл внесён, разрешается"
+    },
+    "resolved_by_CORRECTION_because_the_number_was_WRONG_IN_UNIT": {
+     "1bb642a2bb41…": "response.headers_sha256 — дайджест ТЕКСТА заголовков с нормализованными переводами строк (722 Б), а не байтов файла (734 Б, 12 CRLF). Разница ровно 12 байт CR. Это ЦИФРА БЕЗ НАЗВАННОЙ ЕДИНИЦЫ — та же болезнь, что обрезанный отпечаток статуса и хвостовой \\n в хеше блока. Оба числа верны для своей единицы, неверным было одно имя на два смысла. Положил `LIVE-PROBE-HEADERS-DIGEST-CORRECTION.json` с обоими числами и единицами; вывод зонда это не меняет — он стоит на статусе, типе, теле и переписи импортов, а не на дайджесте заголовков."
+    },
+    "NOT_resolvable_by_me_and_this_is_a_finding_in_your_extension": {
+     "21a84ad7de14…": "лежит ВНУТРИ карточки пилота — документа МЕНЕДЖЕРА, который я лишь ссылаюсь через `pilot_card`. Контекст: «действующая ревизия 4 `<hex>`», то есть хеш состояния координатора. Писатель не может сделать так, чтобы константа из ЧУЖОГО документа разрешалась в файл его бандла. Значит расширенный скан по `pilot_card` даёт красноту, неустранимую той стороной, от которой он её требует — тот же класс, что суффикс без ключа пути: правило верно, адресат не тот."
+    }
+   }
+  }
+ ],
+ "notes": [
+  "ACK_START стоит ЗА пятью предпроверками — структурно проверено, `exit 4` и `exit 5` в тексте раньше",
+  "манифест в назначение, проверка чтением, счёт с временем и предикатом — три урока сегодняшнего дня, применённые без напоминания",
+  "менеджер заберёт прирост к себе в evidence/ своим порядком: его скан на секреты, манифест обходом, сверка чтением"
+ ]
+}

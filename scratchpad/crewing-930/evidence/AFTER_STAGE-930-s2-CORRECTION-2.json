@@ -1,0 +1,40 @@
+{
+ "document": "AFTER_STAGE_CORRECTION_2",
+ "correction_event_id": "crewing-930-s2-correction2-20261105T132244Z-fb04c4fa",
+ "document_written_at": "2026-11-05T13:22:44.628041+00:00",
+ "corrects": "AFTER_STAGE-930-s2-CORRECTION.json (мою же первую поправку)",
+ "corrects_sha256": "d7eaed4f6a12abb64d96cceda83b59dbdf342cad079bedfd7723937be78b4e55",
+ "stage_already_stopped": "да, ACK_STOP 13:18Z; это ДОКЛАДНОЕ чтение собственных логов, новых действий нет",
+ "retracted_claim": "«КОМПИЛЯТОР ОПРОВЕРГ мой вывод: refresh НЕ назван мёртвым, значит продуктовое употребление есть»",
+ "status": "ОПРОВЕРЖЕНИЕ СНЯТО. Компилятор мой вывод ПОДТВЕРЖДАЕТ, а не опровергает.",
+ "why_i_was_wrong": "`--message-format=short` сворачивает ГРУППОВОЙ диагностик dead_code в одну строку «warning: multiple methods are never used» БЕЗ ИМЁН. Я грепнул эту строку на `refresh`, не нашёл и прочёл молчание как ответ. Формат, который я сам выбрал, отбрасывает ровно тот датум, ради которого зонд ставился.",
+ "where_the_answer_was_all_along": "в моей же evidence: шаг `run-red-test` шёл БЕЗ --message-format=short, то есть в формате по умолчанию, и там группа перечислена по именам. Ответ лежал в том же прогоне, в другом логе.",
+ "compiler_verdict_product_cfg": {
+  "source": "s2-out/run-red-test.log, строки 601+, warning: multiple methods are never used -> impl Runtime (native_lifecycle.rs:262)",
+  "ten_methods_never_used_in_product": [
+   "claim_close (:285)",
+   "close_accepts_current (:311)",
+   "publish_logout (:465)",
+   "context (:493)",
+   "cancel (:537)",
+   "deny_refresh_if_current (:573)",
+   "refresh (:599)",
+   "ticket (:742)",
+   "logout (:747)",
+   "finish_logout (:756)"
+  ],
+  "plus": [
+   "struct `PrivateTicket` is never constructed",
+   "method `PrivateTicket::lease` is never used",
+   "variant `CreationPolicy::ExistingOrUncertain` is never constructed (:82)",
+   "variant `SameProcessRefresh` is never constructed (:129)",
+   "unused variable `unblocked` в authorizes (:189) — параметр политики в продукте не читается"
+  ],
+  "what_it_means": "в ПРОДУКТОВОЙ сборке не используется НИ ОДНА операция жизненного цикла сессии после первого коммита: ни продление (`refresh`), ни выход (`logout`/`finish_logout`), ни отмена (`cancel`), ни выдача тикета (`ticket`), а сам `PrivateTicket` НИКОГДА НЕ КОНСТРУИРУЕТСЯ. То есть дело не только в том, что политика не авторизует: потребительская сторона активной сессии в продукте отсутствует целиком. Это РАСШИРЯЕТ утренний вывод, а не отменяет его.",
+  "corroborations_of_earlier_findings": [
+   "«unused variable: unblocked» — прямое подтверждение, что authorizes() в продукте игнорирует аргумент (единственное плечо LocalOnly => false)",
+   "«ExistingOrUncertain is never constructed» — подтверждение карточного пункта о недостижимой второй стороне развилки CreationPolicy"
+  ]
+ },
+ "instrument_lesson": "дважды за один час мой предикат ответил на другой вопрос: сперва rc cargo не различил «прошёл» и «ничего не совпало», затем формат вывода скрыл имена в групповом диагностике. Общее: я читал МОЛЧАНИЕ прибора как ОТВЕТ, не проверив, способен ли прибор вообще произнести нужное слово."
+}

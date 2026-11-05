@@ -1,0 +1,2 @@
+[feature/crewing-930-red-active-session eb609c6] fix(crewing): исход несёт решение политики — активный коммит стал выразим (No.930 слайс A)
+ 4 files changed, 118 insertions(+), 37 deletions(-)

@@ -1,0 +1,43 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s6-ackstop-NOTSTARTED-20261105T144213Z-4bb724fa",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T14:42:13.853542+00:00",
+ "category": "ПЕРМИТ ВЫДАН, СТАДИЯ ОТКАЗАЛАСЬ СТАРТОВАТЬ — не провал стадии",
+ "lease_id": "d5c4629db0014287a02824fb2ff88b3e",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "vacuum_declared": "ОБА значения истинны ВАКУУМНО, и говорю это рядом с ними: не запускалось НИЧЕГО, поэтому прекращать нечего, и очереди не существовало. ACK_START по этому lease не писался — файла `ACK_START-930-s6.json` на диске НЕТ. Ни одна заявленная поверхность не тронута.",
+ "evidence": {
+  "ack_start_file_exists": false,
+  "driver_never_invoked": "да — отказ наступил ДО вызова драйвера, на моей проверке его собственной команды",
+  "why_refused": "в заверенном драйвере `git commit … --no-verify=false`; git отвергает: `error: option `no-verify' takes no value`",
+  "worktree_head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "commits_on_branch": 0,
+  "four_source_files_untouched": {
+   "native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+   "native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+   "native_local_joint_tests.rs": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+   "lib.rs": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+  },
+  "survivors_by_ppid": [
+   {
+    "pid": "997376",
+    "ppid": "997370",
+    "comm": "git",
+    "mine_by_ppid": false
+   },
+   {
+    "pid": "997497",
+    "ppid": "992851",
+    "comm": "git",
+    "mine_by_ppid": false
+   }
+  ],
+  "controls": {
+   "total_process_rows": 981,
+   "bash": 36
+  },
+  "evidence_destination_not_created": true
+ }
+}

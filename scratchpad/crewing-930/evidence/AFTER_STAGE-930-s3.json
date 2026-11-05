@@ -1,0 +1,45 @@
+{
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-s3-afterstage-20261105T134249Z-58cd1ec7",
+ "observed_at": "2026-11-05T13:42:55.462398+00:00",
+ "stage": "VERIFY_BUILD",
+ "stream_id": "crewing/930-session-activation",
+ "both_tree_states_declared": {
+  "state_A_with_control": "4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717",
+  "state_B_after_removal": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "state_B_equals_stage1_post_image": true,
+  "removal_method": "обратная правка байтов тем же блоком, не git checkout"
+ },
+ "oracle_aim_control": {
+  "list_rc": "0",
+  "tests_listed": 2,
+  "names": [
+   "native_lifecycle::runtime_tests::local_joint::native930_joint_successful_login_activates_private_session: test",
+   "native_lifecycle::runtime_tests::local_joint::native930_zzz_control_must_fail_delete_me_before_commit: test"
+  ],
+  "required": "ровно 2",
+  "passed_control": true
+ },
+ "redden_control": {
+  "control_test_present_in_run": true,
+  "note": "контроль одноразовый: доказывает, что харнесс сообщает падение именно в этом прогоне"
+ },
+ "result_composition": [
+  {
+   "verdict": "FAILED",
+   "passed": 0,
+   "failed": 2,
+   "filtered_out": 247
+  }
+ ],
+ "executed_total": 2,
+ "verdict_predicate": "СОСТАВ результата, не код возврата (rc 0 у cargo означает и «прошёл», и «ничего не совпало»)",
+ "run_rc_for_reference": "101",
+ "failed_assertions_naming_No930": [],
+ "logs": {
+  "list.log": "4334bf57992727b01d9e93faec5705eb1125239644f1d877109c2b1b429b938b",
+  "run.log": "1741688067951549060731b27ae22d647c03233104ba4adcc6280db39104dbd0"
+ },
+ "dead_code_probe_not_rerun": "НЕ прогонялся намеренно: ответ уже измерен в evidence стадии 2 (s2-out/run-red-test.log, формат по умолчанию, строки 601+) — `refresh` назван в групповом диагностике вместе с девятью другими методами. Повторять прогон ради формата значило бы тратить окно на уже доказанное.",
+ "umask_declared": "0022"
+}

@@ -1,0 +1,286 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "review-only",
+  "note": "шаг 1: три находки из вашего чтения драйвера исправлены; оба скрипта в evidence, чтобы адрес проверялся прибором"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s6c-FINALIZE_END-20261105T144740Z",
+   "stage": "FINALIZE_END",
+   "outcome": "ЗАКРЫТИЕ СЛАЙСА A ДВУМЯ ДЕЙСТВИЯМИ. (1) КОММИТ четырёх заверенных файлов — объекты уходят в общий gitdir и переживают удаление ворктри; на ветке сейчас НОЛЬ коммитов, в хранилище нет ни кода, ни провенанса. (2) КОПИЯ доказательной базы в дерево — переживает перезагрузку. Решение менеджера: базу в продуктовый репозиторий НЕ коммитить, он забирает её к себе в `skipi-ops` после своего скана на секреты.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "threat_rows": {
+    "reboot": "ЗАКРЫВАЕТСЯ копией в дерево",
+    "worktree_removal_or_prune": "ЗАКРЫВАЕТСЯ КОММИТОМ — объекты в общем gitdir",
+    "machine_loss": "НЕ ЗАКРЫВАЕТСЯ: это push, он outward-facing, слово владельца не дано. Названо прямо, а не умолчано."
+   },
+   "new": "Один коммит на ветке feature/crewing-930-red-active-session (сейчас их 0) с четырьмя файлами; каталог /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence с копией базы и манифестом, построенным ОБХОДОМ в момент копирования.",
+   "preserve": "Коммичу ТОЛЬКО заверенные байты: каждая из четырёх сумм сверяется с пост-образом слайса A (`9b7d54f7…`, `d9d54d13…`, `4f76ed41…`, `9a64aaea…`) ДО `git add`, и стадия отказывается при любом расхождении. Индекс проверяется на РОВНО четыре пути. HEAD обязан быть равен базе `f145c601` и `rev-list base..HEAD` = 0 — иначе чей-то коммит уже лёг и я останавливаюсь. База копируется в НОВЫЙ подкаталог, существующий WORKLOG `9e562425…` не перезаписывается. Исходники после коммита не меняются.",
+   "self_reference_resolved": "НАХОДКА КООРДИНАТОРА, и я беру его ПЕРВОЕ лечение: **манифест пишется в НАЗНАЧЕНИЕ и описывает ИСТОЧНИК**, поэтому он не член своего предмета. Точный пре-образ набора недостижим В ПРИНЦИПЕ, а не труден: запись манифеста увеличивает счёт и байты набора, и запись заявки о наборе — тоже, потому что заявка член набора. Поэтому объявленные ниже числа — НИЖНЯЯ ГРАНИЦА с временем замера, а истина снимается обходом в момент копирования. ОСТАТОК НАЗВАН: `AFTER_STAGE` и `ACK_STOP` самой этой стадии пишутся ПОСЛЕ обхода и в копию не попадут; их пути и суммы назову в передаче.",
+   "counts_with_time_and_predicate": {
+    "measured_at": "2026-11-05T14:46:17Z",
+    "recursive_files": 79,
+    "predicate_recursive": "rglob('*'), только файлы",
+    "root_only_files": 56,
+    "predicate_root": "iterdir(), только файлы (это и было моё прежнее «45»)",
+    "total_bytes": 1017658,
+    "predicate_bytes": "сумма st_size, то есть байты как у `du -sb`, НЕ занятые блоки как у `du -sh`",
+    "note": "счёт РАСТЁТ, пока я работаю: между замерами появлялись заявки и манифесты. Поэтому число без времени и предиката — не число."
+   },
+   "owner": "слово «А» 04.11 покрывает доделку; push НЕ делается — он outward-facing и ждёт владельца",
+   "stop": "СТОП кодом: (1) не PERMIT_CURRENT; (2) бюджет < 25 с после резерва 60; (3) writer не разрешён; (4) любая из четырёх сумм != пост-образа слайса A; (5) HEAD != база или на ветке уже есть коммит; (6) индекс НЕ ЧИСТ до `add`, либо после `add` в нём не ровно 4 пути — во втором случае индекс ОТКАТЫВАЕТСЯ; (7) коммит не удался; (8) после коммита не ровно один новый коммит. `--no-verify` НЕ применяется (запрещён домом); pre-push хук на коммите не исполняется — проверено, это единственный живой хук. Push и приёмка — не здесь.",
+   "heartbeat": "2026-11-05T14:47:40.726234+00:00",
+   "surfaces": {
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+      "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+      "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+      "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+      "path:/home/linux/Developer/skipi-crewing/.git/objects"
+     ]
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+     ]
+    },
+    "guard": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-crewing/.git/hooks"
+     ],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "tests": {
+     "reads": [],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "gitdir_subpaths_declared": {
+    "note": "коммит — запись в ОБЩИЙ gitdir, объявляю подпутями, а не родителем",
+    "paths": [
+     "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+     "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+     "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+     "path:/home/linux/Developer/skipi-crewing/.git/objects"
+    ],
+    "measured": "per-worktree существуют index, HEAD, logs/HEAD, ORIG_HEAD; COMMIT_EDITMSG будет создан — все внутри объявленного админ-каталога. Ветка и её reflog существуют. `packed-refs` коммит не трогает.",
+    "objects_is_broad_and_why": "`objects` объявлен каталогом, потому что имена новых объектов — хеши содержимого И времени: четыре BLOB-а предсказуемы (это байты файлов), а tree и commit нет. Назвать их заранее невозможно; фактические суммы пойдут в AFTER_STAGE."
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+    "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+    "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+    "path:/home/linux/Developer/skipi-crewing/.git/objects",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs": "code.writes",
+    "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/objects": "code.writes (добавлен ниже)",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence": "logs.writes"
+   },
+   "verification_method": "ЧТЕНИЕМ, не кодом возврата — сегодня код возврата обманывал дважды. Коммит проверяется так: байты каждого из четырёх объектов достаются `git show <commit>:<путь>` и хешируются; сверяется список файлов коммита и что новый коммит РОВНО один. Копия базы: хеш прочитанных байт назначения по каждому файлу. Ни одно утверждение не опирается на rc `git` или `cp`.",
+   "depends": [
+    "сертификат epoch 49",
+    "четыре файла в дереве равны пост-образам слайса A"
+   ],
+   "proves": [
+    "код слайса A лежит в объектах общего gitdir и переживёт удаление ворктри",
+    "база лежит в дереве и переживёт перезагрузку",
+    "НЕ доказывает: что что-либо отправлено наружу — push не делается; и не доказывает приёмку"
+   ],
+   "active_neighbors": "seafarer/380 между стадиями; его gitdir `skipi-public/.git`, мой `skipi-crewing/.git` — общих подпутей нет. cargo не вызывается, реестр не трогается, `.package-cache` не объявлен.",
+   "resource_identities": {
+    "note": "net:/db: нет"
+   },
+   "next_action": "шаг 3 со свежим пульсом по вашему слову; после закрытия — передача",
+   "owner_window": "не требуется для коммита; push ждёт владельца",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s6b.sh",
+     "sha256": "5dd7cc6d8aef0f6800400e7d6930f504560838f3fdd0777a04a1b652e179ebfa"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s6.sh",
+     "sha256": "367168698559e3824fc426ecd86d38d3dd8adf742b9e54970045f5e29d7bb369"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/commit-message-930-s6.txt",
+     "sha256": "70a4c48acba402a07fb364c11a9928e2e1ea45dbc89c12b5c04ea9f07b4124ab"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+     "sha256": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+     "sha256": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+     "sha256": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+     "sha256": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "commits_on_branch": 1,
+    "files_in_commit": 4,
+    "blob_sha256_in_commit": {
+     "native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+     "native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+     "native_local_joint_tests.rs": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+     "lib.rs": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+    },
+    "commit_message_sha256": "70a4c48acba402a07fb364c11a9928e2e1ea45dbc89c12b5c04ea9f07b4124ab",
+    "commit_id": "UNKNOWN по построению: хеш коммита зависит от времени",
+    "evidence_floor": {
+     "files_at_least": 79,
+     "bytes_at_least": 1017658,
+     "measured_at": "2026-11-05T14:46:17Z",
+     "truth_taken_by": "обход в момент копирования"
+    }
+   },
+   "driver_fix_disclosed": {
+    "what": "в прежней редакции драйвера стоял `--no-verify=false`, которого у булева флага git не существует",
+    "evidence": "прогон в ВЫБРАСЫВАЕМОМ репозитории: `error: option `no-verify' takes no value`; контроль там же — обычный `git commit` прошёл",
+    "fix": "флаг убран ВОВСЕ: `--no-verify` дом запрещает, а единственный живой хук `pre-push` на коммите не исполняется",
+    "certified_broken_sha256": "367168698559e3824fc426ecd86d38d3dd8adf742b9e54970045f5e29d7bb369",
+    "fixed_sha256": "5dd7cc6d8aef0f6800400e7d6930f504560838f3fdd0777a04a1b652e179ebfa",
+    "mechanical_proof_of_scope": "строк КОДА (без комментариев) 142 → 142; code-only diff ровно ДВЕ строки — удалённая и добавленная команда коммита. Остальное — три строки комментария, называющие ошибку. Прежняя редакция сохранена рядом как `run-930-s6.sh.certified-367168`, чтобы правка была сверяема.",
+    "why_i_did_not_just_run_it": "запустить заверенные байты, про которые я знаю, что они упадут, значит сжечь окно; подменить драйвер под выданным грантом значит исполнить незаверенные байты. Провенанс дороже окна.",
+    "class": "проверил ПРЕДМЕТ (что `pre-push` на коммите не исполняется) и не проверил ИНСТРУМЕНТ (что мой способ его не вызывать вообще разбирается). Тот же разрыв, что весь день ловил у чисел.",
+    "addressing_corrected": "ПОПРАВКА КООРДИНАТОРА, И ОНА ПРО АДРЕС: сертификат прошлого гранта называет путь `run-930-s6.sh`, значит пока тот lease жив, по этому пути обязаны лежать ЗАВЕРЕННЫЕ байты — иначе строка evidence в его сертификате перестаёт быть проверяемой. Я сделал наоборот: положил правку на заверенный путь, а заверенное под новое имя. ИСПРАВЛЕНО: `367168…` вернулся на `run-930-s6.sh` (и по-прежнему содержит отвергаемый флаг — адрес честен), правка живёт на `run-930-s6b.sh` = `75d6c239…`, лишняя копия удалена, чтобы заверенные байты существовали ровно по одному адресу. Проверено ЧТЕНИЕМ обоих файлов. Урок: провенанс держится не сохранностью байтов, а их АДРЕСОМ.",
+    "diagnosis_sharpened_by_coordinator": "его третий замер добавил то, чего в моём не было: `--no-verify` БЕЗ значения работает (rc 0), значит дефект в `=false`, а не во флаге. Мой контроль показал лишь, что обычный коммит проходит; его — отделил «флага нет» от «аргумент не разбирается». Правильный диагноз второй.",
+    "certified_broken_now_in_evidence": "ВАШЕ ЛЕЧЕНИЕ, и оно лучше переименования поля: `run-930-s6.sh` внесён в `evidence_files` со своим sha `367168698559e3824fc426ecd86d38d3dd8adf742b9e54970045f5e29d7bb369`. Теперь моё прозаическое «заверенные байты вернулись на свой путь» ПРОВЕРЯЕТСЯ вашим живым пересчётом, а не читается. Переименовать поле в `…_previous` я не стал: это побег от проверки, и семантически ложно — `_previous` означает прежнее состояние ТОГО ЖЕ объекта, а здесь другой файл.",
+    "driver_previous_state": {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s6b.sh",
+     "sha256_previous": "75d6c2396405373a0211252795653805dab62f1109cbaf14b6b9a1697b217d60",
+     "note": "состояние ТОГО ЖЕ файла ДО трёх исправлений по чтению координатора (порядок ACK_START, чистота индекса, откат). Прочитал `preflight_pins.py:55-93`: ветвь признанных суффиксов работает ТОЛЬКО внутри словаря, несущего ключ пути (`PATH_KEYS`), а плоское поле уходит в поздний общий скан и блокируется как «второе число об одном объекте». Поэтому число лежит РЯДОМ С ПУТЁМ и под суффиксом `_previous` — не переименование ради прохода, а структура, которую прибор понимает."
+    }
+   },
+   "driver_to_run": {
+    "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s6b.sh",
+    "sha256": "5dd7cc6d8aef0f6800400e7d6930f504560838f3fdd0777a04a1b652e179ebfa"
+   },
+   "three_findings_from_reading_the_driver": {
+    "source": "координатор прочитал драйвер ЦЕЛИКОМ — ровно то, чего хеш не даёт",
+    "1_index_left_dirty_on_refusal": {
+     "was": "`git add` стоял ПЕРЕД проверкой числа застейдженных; отказ (exit 6) оставлял индекс грязным, и следующая стадия получила бы предпосылки, отличные от объявленных: HEAD равен базе и коммитов 0 — да, а индекс не пуст",
+     "now": "ДВА исправления: (а) индекс обязан быть ЧИСТЫМ ДО `add` — иначе отказ до любой мутации; (б) на пути отказа после `add` идёт `git reset` по тем же четырём путям и печать состояния индекса после откат"
+    },
+    "2_driver_sha256_is_a_record_not_a_proof": {
+     "was": "поле читалось как доказательство, что бежал заверенный драйвер",
+     "now": "в документе рядом со значением стоит строка: это ЗАПИСЬ о том, что бежало, и НОЛЬ доказательства, что бежало заверенное — подменённый драйвер сообщил бы свой sha так же честно; привязка приходит только из живого пересчёта `evidence_files` координатором. Поэтому внесение обоих скриптов в evidence — не косметика, а единственное место, где привязка возникает"
+    },
+    "3_ack_start_preceded_the_refusals": {
+     "was": "ACK_START писался ДО трёх условий отказа (суммы, HEAD, индекс) — отказ оставил бы на диске документ, утверждающий старт стадии, которая ничего не сделала",
+     "why_it_mattered": "мы только что использовали ОТСУТСТВИЕ файла ACK_START как доказательство категории «пермит выдан, стадия не стартовала»; если он может лежать при отказе, доказательство исчезает",
+     "now": "ACK_START перенесён ЗА три предпроверки. Структурно проверено: `exit 4`, `exit 5` и проверка чистоты индекса стоят в тексте ДО записи ACK_START"
+    }
+   }
+  }
+ ],
+ "notes": [
+  "ваша поправка к вашей же классификации принята: моё «45» было `maxdepth 1` на своём момент, то есть дефект не «счёт из памяти», а ЧИСЛО БЕЗ ВРЕМЕНИ И ПРЕДИКАТА. Поэтому в заявке у каждого счёта стоят оба.",
+  "самоссылка манифеста решена первым вашим лечением: манифест пишется в НАЗНАЧЕНИЕ и описывает ИСТОЧНИК",
+  "и ваша общая форма принята как аргумент за гейт: прочитанное правило себя не устанавливает — устанавливает предикат. Я прочёл раздел про `mutates` утром и воспроизвёл дефект к вечеру."
+ ]
+}

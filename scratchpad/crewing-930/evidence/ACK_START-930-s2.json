@@ -1,0 +1,12 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-s2-ackstart-20261105T131708Z-28c0b7a1",
+ "observed_at": "2026-11-05T13:17:09.054610+00:00",
+ "stage": "VERIFY_BUILD",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-53",
+ "writer_provenance": "из streams[0].writer заявки; в сертификате поля writer нет — проверено на стадии 1",
+ "driver_sha256": "3427c8c4adadc97e0f5f3747a2642f8fe4042773f87af460ab4c6204f7919fc6",
+ "window_seconds_remaining_at_start": 162,
+ "umask_declared": "0022"
+}

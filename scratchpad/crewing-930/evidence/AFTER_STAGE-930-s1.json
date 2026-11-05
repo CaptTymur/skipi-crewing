@@ -1,0 +1,17 @@
+{
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-s1-afterstage-20261105T125615Z-a5978872",
+ "observed_at": "2026-11-05T12:56:15.734995+00:00",
+ "stage": "IMPLEMENT",
+ "stream_id": "crewing/930-session-activation",
+ "worktree": "/home/linux/Developer/worktrees/crewing-930-20261105",
+ "worktree_head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+ "branch_created": "feature/crewing-930-red-active-session",
+ "file_changed": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+ "file_sha256_after": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+ "worktree_status_lines": 1,
+ "worktree_status_sha256_untrimmed": "302127f0d27fa724e805177b36d0f920c6c0d08da5f6c4b6a747ef5a85beccb0",
+ "compiled": false,
+ "compiled_note": "стадия только пишет; первая типизация — в стадии VERIFY_BUILD, cargo пишет в target/",
+ "umask_declared": "0022"
+}

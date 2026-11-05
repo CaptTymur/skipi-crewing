@@ -1,0 +1,12 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-s6-ackstart-20261105T145156Z-fa261073",
+ "observed_at": "2026-11-05T14:51:56.448753+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-53",
+ "driver_sha256": "5dd7cc6d8aef0f6800400e7d6930f504560838f3fdd0777a04a1b652e179ebfa",
+ "driver_sha256_is": "ЗАПИСЬ о том, что бежало, НЕ доказательство, что бежало заверенное: подменённый драйвер сообщил бы свой sha так же честно. Привязка приходит из живого пересчёта evidence_files координатором.",
+ "window_seconds_remaining_at_start": 226,
+ "umask_declared": "0022"
+}

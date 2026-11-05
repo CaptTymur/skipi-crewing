@@ -1,0 +1,40 @@
+{
+ "changed_in_place": {
+  "native635_880_f11_production_policy_on_clean_install_reaches_fresh": {
+   "sha256_before": "cd33b9ac1eb3f9d7379fb6d510b4e97c0ee61ce901234a9fc55e2a2410702d3e",
+   "sha256_after": "59d175f764355155332c4b60fbbc8f2212c0a685b874b0deb2945f2f4caccd81"
+  },
+  "native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key": {
+   "sha256_before": "5f4328fc95424238f5e6dfc220e46d4fa139aa82ff830356c135a897ad3e2e9f",
+   "sha256_after": "5f2bd15a404658ab3c211da78268a24e40d1c2b8b150cab41ae0bfb0417f18e3"
+  }
+ },
+ "renamed": {
+  "native635_joint_fresh_actual_resources_are_atomically_bound_and_inactive": {
+   "to": "native635_joint_fresh_actual_resources_are_atomically_bound_and_active",
+   "sha256_before": "bba7899d4fc1f7418ba04327f190695ae1481fcb65d4b11e52dc3eebf1ec3526",
+   "bytes_before": 1609,
+   "sha256_after": "db871cd641a44b2ea5f0b25fde848f463d494a679d7205b1e616eee3e011bf24",
+   "bytes_after": 2615
+  },
+  "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_but_is_inactive": {
+   "to": "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active",
+   "sha256_before": "6a14e10ef8486db3708b030d9d8db6047e68fa387b1aa3c17fcd63cf9b61712e",
+   "bytes_before": 1840,
+   "sha256_after": "9b3aa7cf79ea82aa29fadf96125c1e1f7e39466e8a427c5c4ff87d25a2a55ad7",
+   "bytes_after": 2453
+  }
+ },
+ "must_be_unchanged": [
+  "native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked",
+  "native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row",
+  "native635_joint_actual_key_raw_or_inode_change_before_persist_is_refused",
+  "native635_joint_fresh_file_sync_error_reports_actual_artifacts_phase_and_cleanup",
+  "native635_joint_legacy_without_live_handle_refuses_without_inference_or_creation",
+  "native635_joint_old_native_record_refuses_before_any_preparation_or_persist",
+  "native635_joint_postrename_key_change_keeps_new_matching_record_blocked",
+  "native635_joint_wrong_actual_prepared_key_owner_or_reference_is_precommit",
+  "native930_joint_successful_login_activates_private_session"
+ ],
+ "oracle_block_sha256": "2c84acfbdac5852daaa1d724d54a458280068d966d5f4ffea249f68fce85627b"
+}

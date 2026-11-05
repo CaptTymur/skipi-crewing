@@ -1,0 +1,12 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-s1-ackstart-20261105T125615Z-20649784",
+ "observed_at": "2026-11-05T12:56:15.646988+00:00",
+ "stage": "IMPLEMENT",
+ "stream_id": "crewing/930-session-activation",
+ "writer": null,
+ "writer_provenance": "скопирован из сертификата, не набран рукой",
+ "driver_sha256": "47bbd9cafa2b4b33a9f334a257006d21f3395198695903402ac930863fc51847",
+ "window_seconds_remaining_at_start": 26,
+ "umask_declared": "0022"
+}

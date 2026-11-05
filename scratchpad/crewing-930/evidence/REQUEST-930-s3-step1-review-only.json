@@ -1,0 +1,216 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "review-only",
+  "note": "шаг 1: читаете содержание; остаток прошу считать после ревью — стадии нужно действие И доклад"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s3-VERIFY_BUILD-20261105T132910Z",
+   "stage": "VERIFY_BUILD",
+   "outcome": "ИЗМЕРИТЬ красноту RED-теста с двумя контролями. (1) наводка оракула: `cargo test native930 -- --list` обязан дать РОВНО ДВА совпадения с именами; (2) способность покраснеть: одноразовый контрольный тест с заведомо ложным утверждением, прогнанный ТЕМ ЖЕ вызовом и снятый в этой же стадии. Приёмка — по СОСТАВУ результата (`N passed; M failed`), не по коду возврата: у cargo rc 0 означает и «прошёл», и «ничего не совпало» — на этом я уже обжёгся в прошлой стадии.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "ДВА состояния файла теста, оба объявлены заранее: состояние A — с контрольным тестом `native930_zzz_control_must_fail_delete_me_before_commit` (sha 4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717, 46433 Б, 723 строки); состояние B — после снятия контроля (sha 50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d), равное пост-образу стадии 1. Имя контроля ОБВИНЯЕТ САМО СЕБЯ намеренно: если стадия оборвётся между прогоном и снятием, в дереве останется падающий тест, и следующий читатель за секунду увидит, что это мусор контроля, а не находка. Префикс `native930_` общий с предметным тестом — поэтому ОДИН подстрочный фильтр берёт оба одним вызовом.",
+   "preserve": "Снятие — ОБРАТНАЯ ПРАВКА БАЙТОВ тем же блоком (`text.replace(block,'',1)`), НЕ `git checkout`: восстановление обязано быть инверсией мутации, а не сбросом файла. Если блок не найден дословно — драйвер отказывается, а не снимает угадыванием. Три утверждения PRESERVE (:366/:382/:551) и предметный RED-тест не трогаются ни в одном состоянии; удалений в состоянии B относительно стадии 1 — ноль, что и доказывается равенством sha.",
+   "owner": "слово «А» 04.11 покрывает доделку; живых запросов к боевому серверу стадия не делает",
+   "stop": "СТОП: (1) вердикт не PERMIT_CURRENT; (2) бюджет < 40 с; (3) writer не разрешён; (4) sha файла на входе != 50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d; (5) состояние A != 4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717; (6) состояние B != 50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d; (7) блок контроля не найден дословно при снятии. Все семь выражены кодом драйвера, не обещанием. Если `--list` даст НЕ два совпадения — оракул не наведён, и вывода о красноте я не делаю ни в какую сторону. Если контрольный тест НЕ упадёт — харнесс не доказал способность покраснеть, и зелёный предметного теста ничего не значит.",
+   "heartbeat": "2026-11-05T13:29:10.210219+00:00",
+   "surfaces": {
+    "tests": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/state-A-with-control.rs",
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/snippet-930-control-must-fail.rs"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs"
+     ]
+    },
+    "build": {
+     "reads": [],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target"
+     ]
+    },
+    "cache": {
+     "reads": [
+      "path:/home/linux/.cargo/registry/cache"
+     ],
+     "writes": [
+      "path:/home/linux/.cargo/registry/src",
+      "path:/home/linux/.cargo/registry/cache",
+      "path:/home/linux/.cargo/.package-cache"
+     ]
+    },
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105",
+      "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105"
+     ],
+     "writes": []
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target",
+    "path:/home/linux/.cargo/registry/src",
+    "path:/home/linux/.cargo/registry/cache",
+    "path:/home/linux/.cargo/.package-cache",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs": "tests.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target": "build.writes",
+    "path:/home/linux/.cargo/registry/src": "cache.writes",
+    "path:/home/linux/.cargo/registry/cache": "cache.writes",
+    "path:/home/linux/.cargo/.package-cache": "cache.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes"
+   },
+   "read_gap_of_the_previous_stage_now_closed": "в прошлой заявке `code.reads` не включали корень дерева и админ-каталог worktree, хотя `src-tauri/build.rs` запускает `git rev-parse --short=12 HEAD` и читает git-метаданные. Нашёл это я сам до прогона; теперь объявлено: `path:/home/linux/Developer/worktrees/crewing-930-20261105` и `path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105`. Следствие для чтения ACK_STOP: `comm==git` может быть НЕНУЛЕВЫМ законно (дитя build.rs), поэтому атрибуция идёт ПО ppid — драйвер печатает pid/ppid/args каждого cargo/rustc/git и помечает `mine_by_ppid` по цепочке предков собственного процесса.",
+   "dead_code_probe_deliberately_not_rerun": "зонд НЕ повторяю: ответ уже ИЗМЕРЕН в evidence стадии 2 — `s2-out/run-red-test.log` строки 601+, формат по умолчанию, групповой диагностик `multiple methods are never used` перечисляет `pub(crate) fn refresh` (:599) вместе с девятью другими методами `impl Runtime`. Повторять прогон ради формата значило бы тратить окно на уже доказанное. Вывод стадии 2 ПОДТВЕРЖДЁН, моё промежуточное «опровержение» снято документом CORRECTION-2.",
+   "depends": [
+    "сертификат epoch 49",
+    "дерево на f145c601 с RED-тестом стадии 1 (sha 50774e79…)",
+    "тёплый target/ после стадии 2 (5,05 ГиБ) — поэтому пересборка инкрементальная"
+   ],
+   "proves": [
+    "красноту предметного теста ИЛИ её отсутствие — но только при двух пройденных контролях",
+    "что дерево вернулось к состоянию B побайтово",
+    "НЕ доказывает: продуктовую приёмку, push, и ничего о прод-сервере"
+   ],
+   "active_neighbors": "seafarer/380-remote-mount-fix — cargo не трогает (`dist/*.js`, `tests/*.mjs`), по вашему замеру живых cargo/rustc 0. Общий разделяемый объект между нами по-прежнему `/home/linux/.cargo/.package-cache`: объявлен точным путём, и если его объявит второй поток — очерёдность ваша. Третий дом (`scripts-6b`) вне пары и с моими путями не пересекается.",
+   "resource_identities": {
+    "note": "токенов net:/db: нет; сеть не потребуется — Cargo.lock зафиксирован, прирост реестра в прошлой стадии был ноль по обоим предикатам"
+   },
+   "next_action": "по вашему слову — шаг 3 со свежим пульсом; остаток прошу считать после ревью",
+   "owner_window": "не требуется",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s3.sh",
+     "sha256": "dfc6aaf60217aa6876bcae6c1fa6e4c7ae6a36f13168246d351a90850050a164"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/snippet-930-control-must-fail.rs",
+     "sha256": "a0f7e5432e7d888d411de74ef08e1f53d44bb193fdcd96c95a65a81845ef9e84"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/state-A-with-control.rs",
+     "sha256": "4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/expected-post-native_local_joint_tests.rs",
+     "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+     "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "files": [
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "sha256_post": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+      "intermediate_state_sha256_with_control": "4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717",
+      "note": "ОБА состояния объявлены намеренно, по требованию менеджера: обрыв между прогоном и снятием тогда не станет расхождением с вашим реестром, а будет НАЗВАННЫМ промежуточным состоянием A"
+     }
+    ],
+    "target_dir_post": "UNKNOWN: инкрементальная пересборка тестового профиля, объём не предсказываю",
+    "registry_growth_predicates": "unpacked (registry/src/*/*) и archives (registry/cache/*/*.crate), до и после, разностью"
+   }
+  }
+ ],
+ "my_hex_measurements": {
+  "note": "ваш предполёт содержимое .md/.json не читает — мой замер его заменяет; sha256sum, байты файла целиком",
+  "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md": {
+   "sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+   "bytes": 6554,
+   "mtime_utc": "2026-11-05T13:18:45Z",
+   "note": "НОВАЯ редакция карточки пары (fc9d4d65…), перерегистрирована вами в 13:18:45Z; обе строки потоков на месте — проверил сам"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/state-A-with-control.rs": {
+   "sha256": "4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717",
+   "note": "промежуточное состояние, посчитано ДО гранта"
+  }
+ },
+ "notes": [
+  "контроль на покраснение ОДНОРАЗОВЫЙ по природе: он доказывает переход «харнесс способен сообщить падение» ровно в том прогоне, где снят; на репетицию его тратить нельзя, поэтому репетиции на заявленной поверхности не будет",
+  "имя контроля обвиняет само себя по требованию менеджера — `zzz_control_must_fail_delete_me_before_commit`",
+  "приёмка по СОСТАВУ результата: `executed = passed + failed` обязан быть 2; при `executed != 2` вывода о красноте не делаю"
+ ]
+}

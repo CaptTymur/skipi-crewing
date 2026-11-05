@@ -1,0 +1,315 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "review-only",
+  "note": "шаг 1 на новых числах: четыре блока объявлены файлом, четыре патченые копии в evidence — хешируйте сами"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s4b-IMPLEMENT-20261105T141736Z",
+   "stage": "IMPLEMENT",
+   "outcome": "СЛАЙС A, выразимость. Исход начинает НЕСТИ решение политики: `CommitOutcome::Ready` → `Ready { authorized: bool }`; `PublicationPolicy` получает продуктовый `ServerCredit`; `LocalOutcome` получает `CommittedActive`; проекция в `native_local_commit.rs` выводится ИЗ ДАННЫХ, а не из знания вызывающего о своей политике. Плюс ЧЕТЫРЕ тестовых блока, наблюдавших отменённое поведение, приведены к новому — объявленно, по именам и хешам.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "Четыре файла (список-разрешение полный): native_lifecycle.rs, native_local_commit.rs, native_local_joint_tests.rs, lib.rs. Пост-образы: {\n \"native_lifecycle.rs\": \"9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb\",\n \"native_local_commit.rs\": \"d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4\",\n \"native_local_joint_tests.rs\": \"4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de\",\n \"lib.rs\": \"9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3\"\n}. Плюс НОВЫЙ /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/WORKLOG.md.",
+   "preserve": "ОРАКУЛ НЕПРИКОСНОВЕНЕН — блок `native930_joint_successful_login_activates_private_session` = `2c84acfbdac5852daaa1d724d54a458280068d966d5f4ffea249f68fce85627b`, проверяется хешем, и `compare-blocks.py` отказывает при любом его отличии. ИЗ 13 БЛОКОВ: 9 обязаны остаться байт-в-байт, 2 меняются НА МЕСТЕ, 2 ПЕРЕИМЕНОВЫВАЮТСЯ — множество объявлено файлом `declared-block-changes.json`, и расхождение сверх объявленного останавливает стадию (rc 6), в том числе на каждом `retry`. Девять проверок `BootstrapResponse::validate` не ослабляются.",
+   "four_affected_blocks": {
+    "changed_in_place": {
+     "native635_880_f11_production_policy_on_clean_install_reaches_fresh": {
+      "sha256_before": "cd33b9ac1eb3f9d7379fb6d510b4e97c0ee61ce901234a9fc55e2a2410702d3e",
+      "sha256_after": "59d175f764355155332c4b60fbbc8f2212c0a685b874b0deb2945f2f4caccd81"
+     },
+     "native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key": {
+      "sha256_before": "5f4328fc95424238f5e6dfc220e46d4fa139aa82ff830356c135a897ad3e2e9f",
+      "sha256_after": "5f2bd15a404658ab3c211da78268a24e40d1c2b8b150cab41ae0bfb0417f18e3"
+     }
+    },
+    "renamed": {
+     "native635_joint_fresh_actual_resources_are_atomically_bound_and_inactive": "native635_joint_fresh_actual_resources_are_atomically_bound_and_active",
+     "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_but_is_inactive": "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active"
+    },
+    "why_four_and_not_three": "мой первый счёт стоял на шаблоне `JointOutcome::Inactive` и дал три. Четвёртый (`…legacy_empty_or_relative_vault…`) выражает ТО ЖЕ ожидание другой формой — `CommittedInactive {…} => effects, other => panic!(\"…must be coherent and inactive\")` — и его `legacy_apply` (joint:69-88) вызывает продуктовый `commit_local`. Предикат отвечал о НАПИСАНИИ там, где вопрос был о СВОЙСТВЕ; поймал сам и до правки.",
+    "upper_bound_also_checked": "обратную сторону вывел, а не предположил: `…postrename_key_change…` и `…actual_directory_sync_unknown…` утверждают исход `Blocked`, а при `blocked = Some` `Ready` не строится вовсе (producer), `authorizes` не вызывается и флаг остаётся ложным — их утверждения остаются ВЕРНЫМИ. Координатор независимо исключил и пятого кандидата (`655-680`), который зовёт `legacy_apply`, но ждёт `unwrap_err()` — ни один поиск по маркерам этого бы не сказал.",
+    "names_changed_because_they_would_lie": "`…_and_inactive` → `…_and_active`, `…_but_is_inactive` → `…_and_stays_active`. Сообщение паники четвёртого блока тоже правлено с указанием, что его сделал ложным ЭТОТ ЖЕ патч — как и два ложных комментария."
+   },
+   "invariant_boundaries_declared": [
+    "НЕ видит правок ВНЕ блоков: комментарий, ОБЪЯСНЯЮЩИЙ оракул, стоит выше `#[test]` и вне блока. Две таких строки патч сделал ложными; обе исправлены, и правка инвариант не нарушила — проверено.",
+    "НЕ видит ожиданий, выраженных НЕ утверждением: плечо `panic!`, `unwrap_err()`. Побайтовая неизменность блока не говорит ничего о том, через какую ВЕТВЬ он идёт. Это важнее первой границы.",
+    "НЕ покрывает `lib.rs`: его 60 блоков `#[test]` не читает НИ ОДИН нарезчик — мой падает (`AssertionError`), координаторский даёт 15 из 60. Правка в `lib.rs` — одно плечо `match` вне любого `#[test]`, +118 Б, перехешировано координатором; но «блоки `lib.rs` не изменились` НЕ утверждает никто."
+   ],
+   "record_for_the_card_and_worklog": "Отказ «сервер ничего не подтвердил» слайсом A не затронут и не терялся: он живёт в `authenticate`, ДО коммита, потому что `VerifiedLogin` — обязательный параметр `commit_local` (`:235`), конструируется ровно дважды (`:567`, `:624`) и только на валидированном ответе, а единственный продуктовый вызывающий — `lib.rs:842` после успешного `authenticate`. Случай «кредит протух во время коммита» отказывается исходом `CommittedBlocked { reason: authorization_no_longer_fresh }`, а не неактивным коммитом. Активация УСЛОВНА: `authorizes(unblocked)`, где `unblocked` — результат перепроверки ответа по часам после I/O. «Замена константы на константу» — верное описание диффа и неверное описание поведения.",
+   "claims_not_proofs": "ПРИТЯЗАНИЯ, проверяемые только ПРОГОНОМ, объявлены заранее: (1) семь `assert_eq!(…, Ready { authorized: true })` в `native_lifecycle.rs` — значение ВЫНУЖДЕНО кодом (`Ready` строится лишь при `blocked.is_none()`, `authorizes(true)` даёт true у обоих конструируемых вариантов), подгонки нет, но проверяет прогон; (2) восьмая — `Ready { .. }`, сохраняет смысл дословно; (3) три `runtime.ticket(...).is_ok()` в правленых блоках: `ticket` идёт через `private_access`, который ПЕРЕПРОВЕРЯЕТ сохранённый ответ по часам — ожидаю Ok, но решает прогон. Если притязание окажется ложным, тест упадёт ГРОМКО, и это объявленный исход.",
+   "owner": "слово «А» 04.11 покрывает доделку; живых запросов к боевому серверу стадия не делает",
+   "stop": "СТОП, всё кодом: (1) вердикт не PERMIT_CURRENT — в КАЖДОЙ подкоманде; (2) бюджет < 40 с; (3) writer не разрешён; (4) любая pre-сумма не совпала; (5) любой пост-образ не совпал; (6) блоки разошлись сверх `declared-block-changes.json` — включая на каждом `retry`; (7) попытка > N=5; (8) повторный `apply`. ПРЕДМЕТНЫЙ ТЕСТ ПРАВИТЬ ЗАПРЕЩЕНО — если фикс не проходит, меняется фикс, а не оракул; это сверяется хешем блока оракула отдельной проверкой. `FoundationModel` не раскрывать. Push и приёмка — не здесь.",
+   "heartbeat": "2026-11-05T14:17:36.234581+00:00",
+   "surfaces": {
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105",
+      "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs"
+     ]
+    },
+    "tests": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A",
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/declared-block-changes.json"
+     ],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target"
+     ]
+    },
+    "cache": {
+     "reads": [
+      "hostresource:/home/linux/.cargo/registry/cache"
+     ],
+     "writes": [
+      "hostresource:/home/linux/.cargo/registry/src",
+      "hostresource:/home/linux/.cargo/registry/cache",
+      "hostresource:/home/linux/.cargo/.package-cache"
+     ]
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target",
+    "hostresource:/home/linux/.cargo/registry/src",
+    "hostresource:/home/linux/.cargo/registry/cache",
+    "hostresource:/home/linux/.cargo/.package-cache",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930"
+   ],
+   "compilation_attempts": {
+    "N": 5,
+    "partial_state_form": {
+     "files_that_may_remain_edited": [
+      "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+      "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+      "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs"
+     ],
+     "tree_state": "НЕ компилируется",
+     "reported": "код ошибки rustc и номер исчерпанной попытки",
+     "invariant_that_holds_even_then": "блоки не выходят за `declared-block-changes.json`; правки ради компиляции только в коде",
+     "exhaustion_is": "ОБЪЯВЛЕННЫЙ ИСХОД, не обрыв"
+    }
+   },
+   "dead_code_remeasure": "`native_lifecycle.rs` в `mutates`, значит ответ стадии 2 с этого дерева СНЯТ. Перемеряю в `finish` продуктовым `cargo check` БЕЗ `--tests` и в формате ПО УМОЛЧАНИЮ. Ожидаю НОВУЮ строку: `LocalOnly` после патча не конструируется (конструирований 0), значит вариант станет never-constructed, а охрана `matches!(policy, LocalOnly) && binding.is_none()` — навсегда ложной. Объявляю это ЗАРАНЕЕ как ожидаемый вывод компилятора, чтобы он не читался как находка.",
+   "depends": [
+    "сертификат epoch 49",
+    "дерево на f145c601 с RED-тестом",
+    "тёплый target/ после стадии 3"
+   ],
+   "proves": [
+    "исход несёт решение политики; четыре блока приведены к новому поведению объявленно",
+    "что девять блоков и оракул не изменены",
+    "НЕ доказывает: что предметный тест позеленел — предъявимость это слайс B, и я этого НЕ ЖДУ",
+    "НЕ доказывает: приёмку, push, поведение против боевого сервера"
+   ],
+   "active_neighbors": "seafarer/380 — cargo не трогает; `.package-cache` объявлен `hostresource:`; третий дом не пересекается",
+   "resource_identities": {
+    "note": "net:/db: нет; сеть не потребуется"
+   },
+   "next_action": "шаг 3 со свежим пульсом по вашему слову; порог — 180 с ПОСЛЕ ревью",
+   "owner_window": "не требуется",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s4.sh",
+     "sha256": "60ed82ef6783504595a58a6c61711ef852e519c5f6f47cfa6e0d435bfa70c0dd"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/cut-blocks.py",
+     "sha256": "609b3ffc380d70d48e771ffc7993284575068bc55befa2be07fd5b475a7ce6e6"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/compare-blocks.py",
+     "sha256": "84ef03823d402d482148e123442a790fefeb8af7fd1245cb08ae085b8f01a68c"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/finish-report.py",
+     "sha256": "3130c9703366194283047ceae22780d3ceaf07a458c5d784cb067266d75020cd"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/declared-block-changes.json",
+     "sha256": "cd7a5f6ea1abf2dcfead40c2e090eabd5c0ed742e436159173822db9b106fe1b"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_lifecycle.rs",
+     "sha256": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_local_commit.rs",
+     "sha256": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_local_joint_tests.rs",
+     "sha256": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/lib.rs",
+     "sha256": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+     "sha256": "5a9d96910d0a2dd24c4171630f4a9c29479a249d055401a29e97e4d0c15cfa6b"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+     "sha256": "4a549e5a9af9288186615723dd26db169c04122584153260e05979e75a390e21"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+     "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+     "sha256": "89a90f8893b362f82cfe4bb11b72c712365aab47b2c642bf0cc88c8cba694525"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "files": [
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+      "sha256_post": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+      "sha256_pre": "5a9d96910d0a2dd24c4171630f4a9c29479a249d055401a29e97e4d0c15cfa6b"
+     },
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+      "sha256_post": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+      "sha256_pre": "4a549e5a9af9288186615723dd26db169c04122584153260e05979e75a390e21"
+     },
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "sha256_post": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+      "sha256_pre": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+     },
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+      "sha256_post": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3",
+      "sha256_pre": "89a90f8893b362f82cfe4bb11b72c712365aab47b2c642bf0cc88c8cba694525"
+     }
+    ],
+    "blocks": {
+     "declaration_file": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/declared-block-changes.json",
+     "changed_in_place": 2,
+     "renamed": 2,
+     "must_be_unchanged": 9,
+     "oracle_block_sha256": "2c84acfbdac5852daaa1d724d54a458280068d966d5f4ffea249f68fce85627b"
+    },
+    "worklog_post_image": "UNKNOWN по построению: записывает результат попыток компиляции",
+    "target_dir_post": "UNKNOWN: инкрементальная пересборка"
+   }
+  }
+ ],
+ "my_hex_measurements": {
+  "note": "sha256sum, байты файла целиком",
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_lifecycle.rs": {
+   "sha256": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_local_commit.rs": {
+   "sha256": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/native_local_joint_tests.rs": {
+   "sha256": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/patched-slice-A/lib.rs": {
+   "sha256": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/declared-block-changes.json": {
+   "sha256": "cd7a5f6ea1abf2dcfead40c2e090eabd5c0ed742e436159173822db9b106fe1b"
+  }
+ },
+ "notes": [
+  "объём в четыре блока — ИСПРАВЛЕНИЕ МОЕГО НЕДОСЧЁТА внутри уже утверждённого объёма, а не расширение границы; менеджер подтвердил, координатор закрыл множество по СВОЙСТВУ и независимо исключил пятого кандидата",
+  "репетиция прогнана: сравнение текущего дерева с патченым даёт ровно объявленное — 2 на месте, 2 переименованы, 9 неизменны, оракул байт-в-байт",
+  "обе границы инварианта названы; `lib.rs` объявлен непрочитанным, а не проверенным"
+ ]
+}

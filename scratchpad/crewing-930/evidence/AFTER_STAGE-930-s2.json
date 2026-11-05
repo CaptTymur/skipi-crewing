@@ -1,0 +1,35 @@
+{
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-s2-afterstage-20261105T131708Z-878d6c0f",
+ "observed_at": "2026-11-05T13:18:08.644857+00:00",
+ "stage": "VERIFY_BUILD",
+ "stream_id": "crewing/930-session-activation",
+ "steps": {
+  "check-product": "0",
+  "check-tests": "0",
+  "run-red-test": "0"
+ },
+ "rc_legend": {
+  "0": "завершился сам",
+  "124": "СРЕЗАНО timeout на безопасной границе; target/ — точка возобновления",
+  "101": "cargo: тест упал (для RED-шага это ОЖИДАЕМОЕ)",
+  "skipped": "остатка окна не хватило"
+ },
+ "logs": {
+  "check-product": "d27d211d36e32467ba761f4092d4113ebf1da123e63a17affbe1d39bb77970e4",
+  "check-tests": "373873704b150cb2bc2bad747bc864cd769b76ad527621a4713c10696762c12e",
+  "run-red-test": "03c46e47db035adf907a3830a4575862df39c5cd59df77c17dc07cc8d15535a1"
+ },
+ "dead_code_probe": {
+  "predicate": "строки продуктового cargo check, содержащие 'never used' или 'dead_code'",
+  "all_dead_code_lines": 18,
+  "lines_naming_refresh": 0,
+  "refresh_lines": [],
+  "control_note": "число всех dead_code-строк — положительный контроль предиката: если оно 0, предикат ничего не нашёл ВООБЩЕ, и вывод про refresh делать нельзя",
+  "verdict": "refresh НЕ назван мёртвым — требует разбора, вывод не делать"
+ },
+ "red_test_outcome": "ЗЕЛЁН — это дефект оракула, разбирать",
+ "survivors_after": 0,
+ "worktree_head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+ "umask_declared": "0022"
+}

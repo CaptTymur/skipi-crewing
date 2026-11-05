@@ -1,0 +1,49 @@
+{
+ "document": "LIVE_PROBE_RESULT",
+ "observed_at": "2026-11-05T15:54:19.255828+00:00",
+ "authorization": {
+  "decision_id": "ask-crewing-live-probe",
+  "recorded_at": "2026-11-05T15:23:19Z",
+  "by": "Тимур",
+  "source": "~/.outbox/skipi-decisions-ack.jsonl, строка 1, сверено драйвером с первоисточником",
+  "scope": "ОДИН запрос, ничего не меняющий"
+ },
+ "request": {
+  "method": "GET",
+  "url": "https://assistant.skipi.app/api/app/crewing/bootstrap",
+  "credentials_sent": false,
+  "body_sent": false,
+  "follow_redirects": false,
+  "why": "редирект был бы ВТОРЫМ запросом, а разрешён один",
+  "requests_made_outward": 1,
+  "num_redirects_reported_by_curl": "0"
+ },
+ "response": {
+  "http_code": "404",
+  "content_type": "text/html; charset=utf-8",
+  "bytes": "207",
+  "seconds": "0.345960",
+  "remote_ip": "167.86.105.152",
+  "body_sha256": "e9639e3c4681ce85f852fbac48e2eeee5ba51296dbfec57c200d59b76237ab80",
+  "body_is_json": false,
+  "body_is_html": true,
+  "body_first_300": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n",
+  "headers_sha256": "1bb642a2bb4124e4528fea37e13e89ed34a2ee7a692f27a58062392488bcb81e"
+ },
+ "curl_rc": 0,
+ "positive_control": {
+  "local": true,
+  "expected": 418,
+  "observed": "HTTP/1.0 418 I'm a Teapot",
+  "why_local": "разрешён ровно один ИСХОДЯЩИЙ запрос, поэтому контроль поставлен на loopback, а не на второй внешний адрес",
+  "what_it_proves": "метод видит статус, заголовки и тело; значит молчание боевого адреса читалось бы как молчание, а не как слепота прибора"
+ },
+ "verdict": {
+  "conclusion": "ПУТЬ: 404 — этот хост по этому пути bootstrap НЕ обслуживает (версия 1, расхождение пути/хоста)"
+ },
+ "driver_sha256": "a6259955ad8d38b3a25c073a0c5931225038c54026de3d02b328f055121d23ad",
+ "driver_sha256_is": "запись о том, что бежало, не доказательство заверенности",
+ "evidence_dir": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105",
+ "evidence_on_durable_disk": true,
+ "umask_declared": "0022"
+}

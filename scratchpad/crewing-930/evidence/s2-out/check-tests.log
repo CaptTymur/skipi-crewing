@@ -1,0 +1,47 @@
+   Compiling skipi-crewing v0.4.139 (/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri)
+src/native_lifecycle.rs:6:66: warning: unused import: `Entitlement`
+src/native_local_commit.rs:4:33: warning: unused import: `Path`
+src/native_lifecycle.rs:189:25: warning: unused variable: `unblocked`: help: if this is intentional, prefix it with an underscore: `_unblocked`
+src/native_local_commit.rs:135:14: warning: variable does not need to be mutable
+src/lib.rs:200:8: warning: methods `persist_native_to_path` and `persist_native_using` are never used
+src/contact.rs:98:15: warning: function `percent_encode` is never used
+src/contact.rs:111:15: warning: function `mailto_url` is never used
+src/db.rs:210:12: warning: struct `CachedApplication` is never constructed
+src/db.rs:599:8: warning: function `list_applications` is never used
+src/native_database.rs:143:5: warning: variant `LegacySameSavedCompany` is never constructed
+src/native_fresh.rs:24:9: warning: fields `phase` and `effects` are never read
+src/native_fresh.rs:37:5: warning: field `effects` is never read
+src/native_fresh.rs:45:19: warning: method `effects` is never used
+src/native_keys.rs:64:19: warning: method `public_identity` is never used
+src/native_keys.rs:157:5: warning: field `owned_identity` is never read
+src/native_account.rs:17:9: warning: field `role` is never read
+src/native_account.rs:406:19: warning: associated function `loopback_qa` is never used
+src/native_account.rs:422:8: warning: struct `LogoutResponse` is never constructed
+src/native_account.rs:503:19: warning: method `logout` is never used
+src/native_profile.rs:10:17: warning: enum `ProfileDecodeError` is never used
+src/native_profile.rs:15:19: warning: struct `ExpectedProfileIdentity` is never constructed
+src/native_profile.rs:22:19: warning: struct `ProfileReadDecoded` is never constructed
+src/native_profile.rs:33:19: warning: struct `ProfileReadWire` is never constructed
+src/native_profile.rs:43:19: warning: struct `ProfileWire` is never constructed
+src/native_profile.rs:69:17: warning: enum `VerificationLevel` is never used
+src/native_profile.rs:89:4: warning: function `required_nullable` is never used
+src/native_profile.rs:97:4: warning: function `bounded` is never used
+src/native_profile.rs:101:4: warning: function `utc_date` is never used
+src/native_profile.rs:110:15: warning: function `decode_profile_read` is never used
+src/native_lifecycle.rs:82:34: warning: variant `ExistingOrUncertain` is never constructed
+src/native_lifecycle.rs:111:8: warning: method `logout` is never used
+src/native_lifecycle.rs:129:5: warning: variant `SameProcessRefresh` is never constructed
+src/native_lifecycle.rs:170:19: warning: struct `LogoutOutcome` is never constructed
+src/native_lifecycle.rs:210:35: warning: method `id` is never used
+src/native_lifecycle.rs:222:5: warning: fields `intent_id`, `parent_revision`, `parent_fingerprint`, `revision`, and `fingerprint` are never read
+src/native_lifecycle.rs:228:8: warning: struct `Closing` is never constructed
+src/native_lifecycle.rs:285:8: warning: multiple methods are never used
+src/native_lifecycle.rs:795:19: warning: struct `PrivateTicket` is never constructed
+src/native_lifecycle.rs:797:19: warning: method `lease` is never used
+src/native_local_commit.rs:32:60: warning: field `effects` is never read
+warning: `skipi-crewing` (lib) generated 40 warnings (run `cargo fix --lib -p skipi-crewing` to apply 4 suggestions)
+src/native_fresh.rs:40:19: warning: associated function `allocate_application` is never used
+src/native_profile.rs:63:9: warning: field `mlc_certified` is never read
+src/native_lifecycle.rs:178:9: warning: field `publication_error` is never read
+warning: `skipi-crewing` (lib test) generated 6 warnings (3 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.19s

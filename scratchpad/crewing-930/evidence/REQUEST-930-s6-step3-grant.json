@@ -1,0 +1,244 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "grant",
+  "note": "шаг 3: свежий пульс; содержание дословно как в отревьюированном шаге 1"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s6-FINALIZE_END-grant-20261105T143803Z",
+   "stage": "FINALIZE_END",
+   "outcome": "ЗАКРЫТИЕ СЛАЙСА A ДВУМЯ ДЕЙСТВИЯМИ. (1) КОММИТ четырёх заверенных файлов — объекты уходят в общий gitdir и переживают удаление ворктри; на ветке сейчас НОЛЬ коммитов, в хранилище нет ни кода, ни провенанса. (2) КОПИЯ доказательной базы в дерево — переживает перезагрузку. Решение менеджера: базу в продуктовый репозиторий НЕ коммитить, он забирает её к себе в `skipi-ops` после своего скана на секреты.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "threat_rows": {
+    "reboot": "ЗАКРЫВАЕТСЯ копией в дерево",
+    "worktree_removal_or_prune": "ЗАКРЫВАЕТСЯ КОММИТОМ — объекты в общем gitdir",
+    "machine_loss": "НЕ ЗАКРЫВАЕТСЯ: это push, он outward-facing, слово владельца не дано. Названо прямо, а не умолчано."
+   },
+   "new": "Один коммит на ветке feature/crewing-930-red-active-session (сейчас их 0) с четырьмя файлами; каталог /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence с копией базы и манифестом, построенным ОБХОДОМ в момент копирования.",
+   "preserve": "Коммичу ТОЛЬКО заверенные байты: каждая из четырёх сумм сверяется с пост-образом слайса A (`9b7d54f7…`, `d9d54d13…`, `4f76ed41…`, `9a64aaea…`) ДО `git add`, и стадия отказывается при любом расхождении. Индекс проверяется на РОВНО четыре пути. HEAD обязан быть равен базе `f145c601` и `rev-list base..HEAD` = 0 — иначе чей-то коммит уже лёг и я останавливаюсь. База копируется в НОВЫЙ подкаталог, существующий WORKLOG `9e562425…` не перезаписывается. Исходники после коммита не меняются.",
+   "self_reference_resolved": "НАХОДКА КООРДИНАТОРА, и я беру его ПЕРВОЕ лечение: **манифест пишется в НАЗНАЧЕНИЕ и описывает ИСТОЧНИК**, поэтому он не член своего предмета. Точный пре-образ набора недостижим В ПРИНЦИПЕ, а не труден: запись манифеста увеличивает счёт и байты набора, и запись заявки о наборе — тоже, потому что заявка член набора. Поэтому объявленные ниже числа — НИЖНЯЯ ГРАНИЦА с временем замера, а истина снимается обходом в момент копирования. ОСТАТОК НАЗВАН: `AFTER_STAGE` и `ACK_STOP` самой этой стадии пишутся ПОСЛЕ обхода и в копию не попадут; их пути и суммы назову в передаче.",
+   "counts_with_time_and_predicate": {
+    "measured_at": "2026-11-05T14:35:10Z",
+    "recursive_files": 74,
+    "predicate_recursive": "rglob('*'), только файлы",
+    "root_only_files": 51,
+    "predicate_root": "iterdir(), только файлы (это и было моё прежнее «45»)",
+    "total_bytes": 946527,
+    "predicate_bytes": "сумма st_size, то есть байты как у `du -sb`, НЕ занятые блоки как у `du -sh`",
+    "note": "счёт РАСТЁТ, пока я работаю: между замерами появлялись заявки и манифесты. Поэтому число без времени и предиката — не число."
+   },
+   "owner": "слово «А» 04.11 покрывает доделку; push НЕ делается — он outward-facing и ждёт владельца",
+   "stop": "СТОП кодом: (1) не PERMIT_CURRENT; (2) бюджет < 25 с после резерва 60; (3) writer не разрешён; (4) любая из четырёх сумм != пост-образа слайса A; (5) HEAD != база или на ветке уже есть коммит; (6) в индексе не ровно 4 пути; (7) коммит не удался; (8) после коммита не ровно один новый коммит. `--no-verify` НЕ применяется (запрещён домом); pre-push хук на коммите не исполняется — проверено, это единственный живой хук. Push и приёмка — не здесь.",
+   "heartbeat": "2026-11-05T14:38:03.308262+00:00",
+   "surfaces": {
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105"
+     ],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+      "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+      "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+      "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+      "path:/home/linux/Developer/skipi-crewing/.git/objects"
+     ]
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+     ]
+    },
+    "guard": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-crewing/.git/hooks"
+     ],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "tests": {
+     "reads": [],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "gitdir_subpaths_declared": {
+    "note": "коммит — запись в ОБЩИЙ gitdir, объявляю подпутями, а не родителем",
+    "paths": [
+     "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+     "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+     "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+     "path:/home/linux/Developer/skipi-crewing/.git/objects"
+    ],
+    "measured": "per-worktree существуют index, HEAD, logs/HEAD, ORIG_HEAD; COMMIT_EDITMSG будет создан — все внутри объявленного админ-каталога. Ветка и её reflog существуют. `packed-refs` коммит не трогает.",
+    "objects_is_broad_and_why": "`objects` объявлен каталогом, потому что имена новых объектов — хеши содержимого И времени: четыре BLOB-а предсказуемы (это байты файлов), а tree и commit нет. Назвать их заранее невозможно; фактические суммы пойдут в AFTER_STAGE."
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+    "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+    "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session",
+    "path:/home/linux/Developer/skipi-crewing/.git/objects",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs": "code.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs": "code.writes",
+    "path:/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session": "code.writes (добавлен ниже)",
+    "path:/home/linux/Developer/skipi-crewing/.git/objects": "code.writes (добавлен ниже)",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence": "logs.writes"
+   },
+   "verification_method": "ЧТЕНИЕМ, не кодом возврата — сегодня код возврата обманывал дважды. Коммит проверяется так: байты каждого из четырёх объектов достаются `git show <commit>:<путь>` и хешируются; сверяется список файлов коммита и что новый коммит РОВНО один. Копия базы: хеш прочитанных байт назначения по каждому файлу. Ни одно утверждение не опирается на rc `git` или `cp`.",
+   "depends": [
+    "сертификат epoch 49",
+    "четыре файла в дереве равны пост-образам слайса A"
+   ],
+   "proves": [
+    "код слайса A лежит в объектах общего gitdir и переживёт удаление ворктри",
+    "база лежит в дереве и переживёт перезагрузку",
+    "НЕ доказывает: что что-либо отправлено наружу — push не делается; и не доказывает приёмку"
+   ],
+   "active_neighbors": "seafarer/380 между стадиями; его gitdir `skipi-public/.git`, мой `skipi-crewing/.git` — общих подпутей нет. cargo не вызывается, реестр не трогается, `.package-cache` не объявлен.",
+   "resource_identities": {
+    "note": "net:/db: нет"
+   },
+   "next_action": "шаг 3 со свежим пульсом по вашему слову; после закрытия — передача",
+   "owner_window": "не требуется для коммита; push ждёт владельца",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s6.sh",
+     "sha256": "367168698559e3824fc426ecd86d38d3dd8adf742b9e54970045f5e29d7bb369"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/commit-message-930-s6.txt",
+     "sha256": "70a4c48acba402a07fb364c11a9928e2e1ea45dbc89c12b5c04ea9f07b4124ab"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs",
+     "sha256": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs",
+     "sha256": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+     "sha256": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs",
+     "sha256": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "commits_on_branch": 1,
+    "files_in_commit": 4,
+    "blob_sha256_in_commit": {
+     "native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+     "native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+     "native_local_joint_tests.rs": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+     "lib.rs": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+    },
+    "commit_message_sha256": "70a4c48acba402a07fb364c11a9928e2e1ea45dbc89c12b5c04ea9f07b4124ab",
+    "commit_id": "UNKNOWN по построению: хеш коммита зависит от времени",
+    "evidence_floor": {
+     "files_at_least": 74,
+     "bytes_at_least": 946527,
+     "measured_at": "2026-11-05T14:35:10Z",
+     "truth_taken_by": "обход в момент копирования"
+    }
+   }
+  }
+ ],
+ "notes": [
+  "ваша поправка к вашей же классификации принята: моё «45» было `maxdepth 1` на своём момент, то есть дефект не «счёт из памяти», а ЧИСЛО БЕЗ ВРЕМЕНИ И ПРЕДИКАТА. Поэтому в заявке у каждого счёта стоят оба.",
+  "самоссылка манифеста решена первым вашим лечением: манифест пишется в НАЗНАЧЕНИЕ и описывает ИСТОЧНИК",
+  "и ваша общая форма принята как аргумент за гейт: прочитанное правило себя не устанавливает — устанавливает предикат. Я прочёл раздел про `mutates` утром и воспроизвёл дефект к вечеру."
+ ]
+}

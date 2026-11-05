@@ -1,0 +1,12 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-preserve2-ackstart-20261105T160857Z-85c7eb88",
+ "observed_at": "2026-11-05T16:08:57.861879+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-53",
+ "driver_sha256": "15c16a7145a1cdf2c2a4e99ca5b9fd81a656f4dcaeff66e624f39c53568e458f",
+ "driver_sha256_is": "запись о том, что бежало, не доказательство заверенности; привязка — из живого пересчёта evidence_files",
+ "window_seconds_remaining_at_start": 247,
+ "umask_declared": "0022"
+}

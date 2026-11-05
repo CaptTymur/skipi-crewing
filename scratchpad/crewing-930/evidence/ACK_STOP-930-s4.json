@@ -1,0 +1,15 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s4-ackstop-20261105T142425Z-b67a9910",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T14:24:25.243391+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s4.json",
+  "after_state_sha256": "31e3adc50ca71cd880cd9c72ae752ce7a5257067eeed8e9a9737c69af47fa3a3",
+  "survivors_by_ppid": [],
+  "worklog_sha256": "9e562425cf80c28f17c49a30cc7d7c1e8e00d51697df3e8b29cf859e99f3028b",
+  "queued_operations_note": "очередей не ставил; timeout глушит группу"
+ }
+}

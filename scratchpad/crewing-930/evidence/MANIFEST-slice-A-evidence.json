@@ -1,0 +1,290 @@
+{
+ "source": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+ "destination": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/evidence",
+ "file_count": 70,
+ "total_bytes": 912829,
+ "verification": "ЧТЕНИЕМ скопированного файла и его хешем, НЕ кодом возврата cp; затем независимый обход назначения",
+ "residue_declared_outside_this_manifest": "Лицевые документы САМОЙ стадии сохранения (ACK_START/AFTER_STAGE/ACK_STOP стадии 5 и отчёт копирования) в манифест не входят ПО ПОСТРОЕНИЮ: они создаются после его расчёта, и их суммы до гранта не существуют. Их пути и суммы назову в передаче; у координатора они есть в своих записях. Доказательная база стадий 1-4, включая драйверы и приборы, покрыта.",
+ "files": {
+  "ACK_START-930-s1.json": {
+   "sha256": "123c62fda019a2d70d65245a6da1a866d1f1b01509ac68ae433ef932595d6193",
+   "bytes": 503
+  },
+  "ACK_START-930-s2.json": {
+   "sha256": "8ae69cb45fb2cf8e7ada624770b1b57f1dfcc236975f181b2803aa3011b9077e",
+   "bytes": 571
+  },
+  "ACK_START-930-s3.json": {
+   "sha256": "cb6aa73c443310dcb3cd7d4297b8c9f6b75328530b75cc0a29dfe07f8c248a38",
+   "bytes": 417
+  },
+  "ACK_START-930-s4.json": {
+   "sha256": "bee012d599a602dd37248af8fde1b4927bd4ee57af3a3cee6ee0b0562bc1be1c",
+   "bytes": 414
+  },
+  "ACK_STOP-930-s1-CORRECTED.json": {
+   "sha256": "0ff948546cbc29cf42d2cf41c68c9d71ab5c88574c1c63f1276bfcc93073d1bf",
+   "bytes": 3245
+  },
+  "ACK_STOP-930-s1-FINAL.json": {
+   "sha256": "1ae272154cb0e00752212fa0d52c9618a3b6cfd8bf88d5112abf4927f9081254",
+   "bytes": 4491
+  },
+  "ACK_STOP-930-s1-FRESH.json": {
+   "sha256": "cfa9da2ea8a11a41f7907db6a156eb70305fce20c946c4897002790843de6050",
+   "bytes": 4311
+  },
+  "ACK_STOP-930-s1.json": {
+   "sha256": "28451f78b2a2897ae156c31dcce59c1647f0d48fca6af0fa2ca577719e0e3ea5",
+   "bytes": 799
+  },
+  "ACK_STOP-930-s2.json": {
+   "sha256": "6e60624bc66aca6b321c2fc1be8ff6390c9ec38760775493aa0025c2b59190c7",
+   "bytes": 948
+  },
+  "ACK_STOP-930-s3.json": {
+   "sha256": "0740bc9dee746385fd361f6c2e843a096159c2c41092a8386337dc0a58d53813",
+   "bytes": 1209
+  },
+  "ACK_STOP-930-s4.json": {
+   "sha256": "d08e22839f60cd18123520a239c3dc74a5ace8b2be2036208daad8cc19f21ccf",
+   "bytes": 749
+  },
+  "AFTER_STAGE-930-s1.json": {
+   "sha256": "d44fc34d687aaadc75b93197cb04dc8b3595c8c75892f466984ff463da308c28",
+   "bytes": 964
+  },
+  "AFTER_STAGE-930-s2-CORRECTION-2.json": {
+   "sha256": "bf937712fee0df314ba552fa711854a73ba4988fd74cd9c07cf1fd489db3e6b8",
+   "bytes": 4321
+  },
+  "AFTER_STAGE-930-s2-CORRECTION.json": {
+   "sha256": "d7eaed4f6a12abb64d96cceda83b59dbdf342cad079bedfd7723937be78b4e55",
+   "bytes": 4499
+  },
+  "AFTER_STAGE-930-s2.json": {
+   "sha256": "defff41a622d783f6f98f166ffcafdf1009d37a5e51aa44ece0bbab54a157254",
+   "bytes": 1740
+  },
+  "AFTER_STAGE-930-s3.json": {
+   "sha256": "4744623018ec6b398f94514d1783eccc3486dcc620f7cb8159eacc6cc723b2cd",
+   "bytes": 2306
+  },
+  "AFTER_STAGE-930-s4.json": {
+   "sha256": "31e3adc50ca71cd880cd9c72ae752ce7a5257067eeed8e9a9737c69af47fa3a3",
+   "bytes": 1542
+  },
+  "PRESERVE-counts-and-form-choice.md": {
+   "sha256": "9aa28ab9fc81d9990891bd43653695b82a66476333aaa2621037f2ec928b4e50",
+   "bytes": 7871
+  },
+  "REQUEST-930-s1-step1-review-only.json": {
+   "sha256": "e885535b3e746ac89d359e75013346b081a87340346b831499215f0ed353dc16",
+   "bytes": 17303
+  },
+  "REQUEST-930-s1-step3-grant.json": {
+   "sha256": "c161cc5b98c95e8fdad0fad5795c3748bca00f517b4f9ade683282e8971e1a83",
+   "bytes": 20102
+  },
+  "REQUEST-930-s2-step1-review-only.json": {
+   "sha256": "9c71fafd343da2af277001f38a8e2356a41038d6d08b482049f72c1b33a38f84",
+   "bytes": 17155
+  },
+  "REQUEST-930-s2-step3-grant.json": {
+   "sha256": "6e21679c0a47c0d2b5fb645aa7cb27b618f6ffa8f3f9c5b3a810275fa184890d",
+   "bytes": 17069
+  },
+  "REQUEST-930-s3-step1-review-only.json": {
+   "sha256": "bdd95099e4d76c269c92a5dc381b654f6e74fbb8f033721725928e1897a5b04f",
+   "bytes": 16434
+  },
+  "REQUEST-930-s3b-step1-review-only.json": {
+   "sha256": "6644f7dbb2041276a52136b6ef602e541dcef339144d97fb45dc2fc6b45959fc",
+   "bytes": 19656
+  },
+  "REQUEST-930-s3b-step3-grant.json": {
+   "sha256": "657321121397a3315b34a53c36d3d9a1702543826702272d8a050484095b2ca0",
+   "bytes": 19576
+  },
+  "REQUEST-930-s4-step1-review-only.json": {
+   "sha256": "5e23afce09d5460c0a257009fada6b8038f80a971355e0f5531149da1c4f04c5",
+   "bytes": 23700
+  },
+  "REQUEST-930-s4b-step1-review-only.json": {
+   "sha256": "b24455865e9c1bf43050623d5e40376fc620b64636cbb6323e73ebd0ed4df3cf",
+   "bytes": 24500
+  },
+  "REQUEST-930-s4b-step3-grant.json": {
+   "sha256": "7a6a81c67cf776f05f5106c17ee705a2cfbc44c07c421a0c2c86432e8aba3332",
+   "bytes": 26281
+  },
+  "SPLIT-930-two-piles.md": {
+   "sha256": "05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3",
+   "bytes": 15774
+  },
+  "base-f145c601-native_local_joint_tests.rs": {
+   "sha256": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d",
+   "bytes": 42757
+  },
+  "blocks-after-slice-A-FINAL.json": {
+   "sha256": "07867715a6a53cfebf13d13805de6f49ec6d425a8bd3fd66599883bfe78cfd79",
+   "bytes": 2391
+  },
+  "blocks-after-slice-A-authored.json": {
+   "sha256": "edec0298d50347d33a29601a53ecaa3c26db61be1bcd1ea9fc7bb7317380cccf",
+   "bytes": 1951
+  },
+  "blocks-before-slice-A.json": {
+   "sha256": "3a1705d15de93761a1b6a22a377b376a6036b8ad03e97daa1dad056d795dbf89",
+   "bytes": 2392
+  },
+  "compare-blocks.py": {
+   "sha256": "32e7dc6ef3818c795e1524b463a372a09637a1118173c67fc8a9b5ea9fedb9f3",
+   "bytes": 2579
+  },
+  "cut-blocks.py": {
+   "sha256": "609b3ffc380d70d48e771ffc7993284575068bc55befa2be07fd5b475a7ce6e6",
+   "bytes": 1473
+  },
+  "declared-block-changes.json": {
+   "sha256": "06a0f23aceac5a41ce6a7f093820a2e0d701637f15b60a282036c0807a71b60a",
+   "bytes": 2257
+  },
+  "expected-post-native_local_joint_tests.rs": {
+   "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+   "bytes": 45462
+  },
+  "finish-report.py": {
+   "sha256": "3130c9703366194283047ceae22780d3ceaf07a458c5d784cb067266d75020cd",
+   "bytes": 5959
+  },
+  "patched-slice-A/lib.rs": {
+   "sha256": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3",
+   "bytes": 161489
+  },
+  "patched-slice-A/native_lifecycle.rs": {
+   "sha256": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+   "bytes": 116205
+  },
+  "patched-slice-A/native_local_commit.rs": {
+   "sha256": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+   "bytes": 20996
+  },
+  "patched-slice-A/native_local_joint_tests.rs": {
+   "sha256": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+   "bytes": 48181
+  },
+  "preserve-evidence.py": {
+   "sha256": "966bb3fbe68952355e907628a3ba424cc065a967e03e94aa33207060e58207de",
+   "bytes": 1939
+  },
+  "run-930-s1.sh": {
+   "sha256": "47bbd9cafa2b4b33a9f334a257006d21f3395198695903402ac930863fc51847",
+   "bytes": 7134
+  },
+  "run-930-s2.sh": {
+   "sha256": "3427c8c4adadc97e0f5f3747a2642f8fe4042773f87af460ab4c6204f7919fc6",
+   "bytes": 11816
+  },
+  "run-930-s3.sh": {
+   "sha256": "dfc6aaf60217aa6876bcae6c1fa6e4c7ae6a36f13168246d351a90850050a164",
+   "bytes": 10689
+  },
+  "run-930-s4.sh": {
+   "sha256": "60ed82ef6783504595a58a6c61711ef852e519c5f6f47cfa6e0d435bfa70c0dd",
+   "bytes": 6413
+  },
+  "run-930-s5.sh": {
+   "sha256": "8af7640cb615a60490586dd23381969fdabbe3cf47628d55f055ebbb22f15863",
+   "bytes": 5133
+  },
+  "s2-out/check-product.log": {
+   "sha256": "d27d211d36e32467ba761f4092d4113ebf1da123e63a17affbe1d39bb77970e4",
+   "bytes": 15570
+  },
+  "s2-out/check-product.rc": {
+   "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+   "bytes": 2
+  },
+  "s2-out/check-tests.log": {
+   "sha256": "373873704b150cb2bc2bad747bc864cd769b76ad527621a4713c10696762c12e",
+   "bytes": 3834
+  },
+  "s2-out/check-tests.rc": {
+   "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+   "bytes": 2
+  },
+  "s2-out/run-red-test.log": {
+   "sha256": "03c46e47db035adf907a3830a4575862df39c5cd59df77c17dc07cc8d15535a1",
+   "bytes": 23355
+  },
+  "s2-out/run-red-test.rc": {
+   "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+   "bytes": 2
+  },
+  "s3-out/list.log": {
+   "sha256": "4334bf57992727b01d9e93faec5705eb1125239644f1d877109c2b1b429b938b",
+   "bytes": 13623
+  },
+  "s3-out/list.rc": {
+   "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+   "bytes": 2
+  },
+  "s3-out/run.log": {
+   "sha256": "1741688067951549060731b27ae22d647c03233104ba4adcc6280db39104dbd0",
+   "bytes": 14543
+  },
+  "s3-out/run.rc": {
+   "sha256": "39b8dc3fc8b44765c8e6f1adee04c5b465e555ab791cc42d0d9e810d5b64297c",
+   "bytes": 4
+  },
+  "s3-out/survivors.json": {
+   "sha256": "d7466529293e4eee6b3040d38e3287af4a9d9b4ae4372207a1440f9b4a4e33af",
+   "bytes": 516
+  },
+  "s4-out/attempt-1.log": {
+   "sha256": "1c1d529aa7129d385193cc1607e59abd6a881469a340f27311aaa99ef2a553cc",
+   "bytes": 13208
+  },
+  "s4-out/attempt-1.rc": {
+   "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+   "bytes": 2
+  },
+  "s4-out/attempts": {
+   "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+   "bytes": 2
+  },
+  "s4-out/blocks-after-apply.json": {
+   "sha256": "b55a5d69231419ca3b5fda267977b4c24f4ab2268fa86d631029b075118fae70",
+   "bytes": 2620
+  },
+  "s4-out/blocks-before.json": {
+   "sha256": "1ec4622871234a5f8b321e33d0fc982966ec8ef5ef798df82dd93a7d0c9af585",
+   "bytes": 2621
+  },
+  "s4-out/blocks-final.json": {
+   "sha256": "b55a5d69231419ca3b5fda267977b4c24f4ab2268fa86d631029b075118fae70",
+   "bytes": 2620
+  },
+  "s4-out/blocks-now.json": {
+   "sha256": "b55a5d69231419ca3b5fda267977b4c24f4ab2268fa86d631029b075118fae70",
+   "bytes": 2620
+  },
+  "s4-out/product-check.log": {
+   "sha256": "472c6c9948d842dfb9fa08d36fb2a3638b41fd0577bdbad3ec7f4c889edaddd1",
+   "bytes": 11908
+  },
+  "snippet-930-control-must-fail.rs": {
+   "sha256": "a0f7e5432e7d888d411de74ef08e1f53d44bb193fdcd96c95a65a81845ef9e84",
+   "bytes": 971
+  },
+  "snippet-930-red-test.rs": {
+   "sha256": "19d8712a0d78bfcffb52e97746b7ba51802d4ede208fc6506ed8e8eb246b7269",
+   "bytes": 2705
+  },
+  "state-A-with-control.rs": {
+   "sha256": "4ab2cc553487b28d74d375d0c774b9495d7f615c38bba9b34787129a8ae88717",
+   "bytes": 46433
+  }
+ }
+}

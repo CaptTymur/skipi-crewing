@@ -1,0 +1,4 @@
+src-tauri/src/lib.rs
+src-tauri/src/native_lifecycle.rs
+src-tauri/src/native_local_commit.rs
+src-tauri/src/native_local_joint_tests.rs

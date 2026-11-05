@@ -1,0 +1,22 @@
+{
+ "counts": {
+  "cargo": 0,
+  "rustc": 0,
+  "git": 1
+ },
+ "attribution_by_ppid": [
+  {
+   "pid": "827921",
+   "ppid": "819563",
+   "comm": "git",
+   "args": "git ls-remote --heads git@github.com:CaptTymur/skipi-verify-emitter.git",
+   "mine_by_ppid": false
+  }
+ ],
+ "controls": {
+  "total_rows": 963,
+  "bash": 36,
+  "python3": 31
+ },
+ "note": "атрибуция по ppid, не по comm: имя процесса не отличает мою сборку от чужой команды того же имени"
+}

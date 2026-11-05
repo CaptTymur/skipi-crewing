@@ -1,0 +1,51 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s1-ackstop-FRESH-20261105T130133Z-96bcce23",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T13:01:33.637416+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "termination_primary_indicator": {
+   "predicate": "ps -eo pid,ppid,comm,args; счёт по ИМЕНИ ИСПОЛНЯЕМОГО (comm==), не по подстроке в args",
+   "comm_cargo": 0,
+   "comm_rustc": 0,
+   "comm_Xephyr": 0,
+   "comm_git": 1,
+   "positive_controls": {
+    "total_process_rows": 970,
+    "comm_python3": 32,
+    "comm_bash": 34
+   },
+   "control_note": "нули сняты прибором, который на том же вызове видит 970 строк, 32 python3 и 34 bash — он не слеп",
+   "needle_correction_disclosed": "ПЕРВАЯ редакция этого документа считала подстроку и дала comm_cargo=1 ЛОЖНО: подстрока «cargo» нашлась (а) внутри аргумента --json-schema постороннего процесса /usr/bin/claude -p --model haiku и (б) внутри КОМАНДНОЙ СТРОКИ МОЕГО ЖЕ ЗОНДА, потому что слово стояло в его тексте. То есть прибор совпал сам с собой. Предикат ужесточён до comm==, и по нему cargo/rustc/Xephyr/git — ноль. Ложное число до вас не доезжало: исправлено при составлении, раскрыто здесь намеренно.",
+   "queued_operations_note": "истинно ВАКУУМНО: очереди не было вовсе — драйвер синхронный, фоновых заданий не запускал (ни &, ни отложенных); весь прогон 12:56:15.646Z → 12:56:15.752Z"
+  },
+  "insertion_state": "ЗАВЕРШЕНА ПОЛНОСТЬЮ, не оборвана",
+  "file_path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+  "file_sha256_now": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "file_sha256_now_equals": "post_image",
+  "pinned_post_image": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "pinned_base": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d",
+  "worktree_head_now": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "worktree_branch_now": "feature/crewing-930-red-active-session",
+  "worktree_diff_shortstat_now": "1 file changed, 31 insertions(+)",
+  "declared_repo_head_now": "435b7650462cb838cd2267d16b8975390a9912be",
+  "declared_repo_status_sha256_now": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+  "actions_ended_at": "2026-11-05T12:56:15.752505+00:00",
+  "permit_expires_at": "2026-11-05T12:56:41.651060+00:00",
+  "all_repo_actions_before_expiry": true,
+  "writes_after_expiry": "ТОЛЬКО документы жизненного цикла и доклада в сессионный скрэтчпад (logs.writes заявки). Репозитория, рабочего дерева и .git после 12:56:15.752Z не касался — подтверждается тем, что sha файла и отпечаток объявленного чекаута совпадают с замером 12:57Z.",
+  "supersession_chain": [
+   {
+    "event_id": "crewing-930-s1-ackstop-20261105T125615Z-04cac621",
+    "defect": "ack_stop_writer: null — в сертификате поля writer нет, извлекатель вернул ничего"
+   },
+   {
+    "event_id": "crewing-930-s1-ackstop-CORRECTED-20261105T125735Z-ee8a73e5",
+    "defect": "writer исправлен, но observed_at = время события 12:56:15Z, к вашему чтению старше 300 с"
+   }
+  ],
+  "observed_at_semantics": "момент, когда снято НАБЛЮДЕНИЕ терминального состояния (процессов нет, очередей нет). Время окончания действий стоит отдельным полем actions_ended_at и не переписано; задним числом не датировано ничего."
+ }
+}

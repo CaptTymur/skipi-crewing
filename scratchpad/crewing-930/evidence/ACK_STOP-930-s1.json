@@ -1,0 +1,14 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s1-ackstop-20261105T125615Z-04cac621",
+ "ack_stop_writer": null,
+ "observed_at": "2026-11-05T12:56:15.752505+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "истинно ВАКУУМНО: очереди не было — стадия синхронная, фоновых процессов не запускала",
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s1.json",
+  "after_state_sha256": "d44fc34d687aaadc75b93197cb04dc8b3595c8c75892f466984ff463da308c28",
+  "file_sha256_after": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+ }
+}

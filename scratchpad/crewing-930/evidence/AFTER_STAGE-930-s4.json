@@ -1,0 +1,37 @@
+{
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-s4-afterstage-20261105T142425Z-b541cc5e",
+ "observed_at": "2026-11-05T14:24:25.243391+00:00",
+ "stage": "IMPLEMENT",
+ "stream_id": "crewing/930-session-activation",
+ "attempts": {
+  "1": "0"
+ },
+ "max_attempts": 5,
+ "tree_compiles": true,
+ "final_file_sha256": {
+  "native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+  "native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4",
+  "native_local_joint_tests.rs": "4f76ed419d2eca8f57a08cf731ea27efbb9fd7d654d554bcd33dfe05eb2c50de",
+  "lib.rs": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3"
+ },
+ "blocks": {
+  "unit": "from the `#[test]` line through the line with the closing brace, NO trailing newline",
+  "cutter_control": {
+   "blocks": 13,
+   "raw_test_attrs": 13
+  },
+  "compared_against": "blocks-before.json",
+  "verdict": "см. вывод compare-blocks.py в журнале стадии"
+ },
+ "dead_code_product_cfg": {
+  "log_present": true,
+  "lines": 31,
+  "refresh_named_in_group": 1,
+  "note": "формат по умолчанию: имена членов группового диагностика печатаются; --message-format=short их подавляет"
+ },
+ "survivors_by_ppid": [],
+ "umask_declared": "0022",
+ "worklog": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/WORKLOG.md",
+ "worklog_sha256": "9e562425cf80c28f17c49a30cc7d7c1e8e00d51697df3e8b29cf859e99f3028b"
+}

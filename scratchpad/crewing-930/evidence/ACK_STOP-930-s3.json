@@ -1,0 +1,35 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s3-ackstop-20261105T134249Z-1a7808e1",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T13:42:55.480842+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s3.json",
+  "after_state_sha256": "4744623018ec6b398f94514d1783eccc3486dcc620f7cb8159eacc6cc723b2cd",
+  "survivors": {
+   "counts": {
+    "cargo": 0,
+    "rustc": 0,
+    "git": 1
+   },
+   "attribution_by_ppid": [
+    {
+     "pid": "827921",
+     "ppid": "819563",
+     "comm": "git",
+     "args": "git ls-remote --heads git@github.com:CaptTymur/skipi-verify-emitter.git",
+     "mine_by_ppid": false
+    }
+   ],
+   "controls": {
+    "total_rows": 963,
+    "bash": 36,
+    "python3": 31
+   },
+   "note": "атрибуция по ppid, не по comm: имя процесса не отличает мою сборку от чужой команды того же имени"
+  },
+  "queued_operations_note": "очередей не ставил; timeout глушит группу"
+ }
+}

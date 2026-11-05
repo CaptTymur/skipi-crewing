@@ -1,0 +1,15 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-probe-ackstop-20261105T155419Z-51c73b9f",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T15:54:19.255828+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "live_probe_result": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105/LIVE_PROBE_RESULT.json",
+  "sha256": "2f0c32dca1355a3ee755e98e5d1728c475d937c4a2d28f129094c703c84ec304",
+  "outward_requests_made": 1,
+  "local_control_requests": 1,
+  "queued_operations_note": "локальный контрольный сервер остановлен; фоновых процессов не осталось"
+ }
+}

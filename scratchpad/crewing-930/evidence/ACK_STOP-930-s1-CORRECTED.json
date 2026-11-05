@@ -1,0 +1,32 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s1-ackstop-CORRECTED-20261105T125735Z-ee8a73e5",
+ "ack_stop_writer": "skipi-crewing-53",
+ "ack_stop_writer_provenance": "НАБРАН РУКОЙ из streams[0].writer моей заявки. Прежний замысел «копировать из сертификата, не набирать рукой» ОКАЗАЛСЯ НЕВЫПОЛНИМ: в сертификате поля writer НЕТ. Его ключи — verdict, lease_id, input_sha256, stage, epoch, revision, instance, expires_at. Мой извлекатель честно не нашёл ничего и вернул null.",
+ "observed_at": "2026-11-05T12:56:15.752505+00:00",
+ "observed_at_note": "ВРЕМЯ СОБЫТИЯ, не время этого файла: стадия остановлена в 12:56:15.752505Z, и этот момент я не переписываю. Документ СОСТАВЛЕН ПОЗЖЕ — см. document_written_at. Задним числом не датирую: документ, выглядящий своевременным, хуже отсутствующего.",
+ "document_written_at": "2026-11-05T12:57:35.932464+00:00",
+ "supersedes_event_id": "crewing-930-s1-ackstop-20261105T125615Z-04cac621",
+ "supersedes_reason": "прежний документ несёт ack_stop_writer: null, а гейт сверяет это поле ПОБАЙТОВО со строкой владельца lease — значит он отказал бы. Новый event_id взят намеренно: повторная подача того же id читается transition() как REPLAY прежнего решения.",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "истинно ВАКУУМНО: очереди не было — стадия синхронная, фоновых процессов не запускала, весь прогон занял менее секунды (12:56:15.646Z → 12:56:15.752Z)",
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s1.json",
+  "after_state_sha256": "d44fc34d687aaadc75b93197cb04dc8b3595c8c75892f466984ff463da308c28",
+  "file_sha256_after": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "file_sha256_after_reverified_independently": true,
+  "worktree_head": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "diff_shortstat": "1 file changed, 31 insertions(+), 0 deletions",
+  "declared_repo_unchanged": {
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256_untrimmed": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68"
+  },
+  "three_declared_tokens_all_exist": [
+   "/home/linux/Developer/skipi-crewing/.git/worktrees/crewing-930-20261105",
+   "/home/linux/Developer/skipi-crewing/.git/refs/heads/feature/crewing-930-red-active-session",
+   "/home/linux/Developer/skipi-crewing/.git/logs/refs/heads/feature/crewing-930-red-active-session"
+  ],
+  "certificate_read": "/home/linux/Developer/skipi-parallel-coordinator/reports/epoch49/certs/CERT-r1-836f3acf96ca4e6792dd2862df18b06e.json"
+ }
+}

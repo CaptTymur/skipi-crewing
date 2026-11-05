@@ -1,0 +1,21 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s2-ackstop-20261105T131708Z-a14821fc",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T13:18:08.685633+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "after_state_path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s2.json",
+  "after_state_sha256": "defff41a622d783f6f98f166ffcafdf1009d37a5e51aa44ece0bbab54a157254",
+  "survivors_cargo_rustc": 0,
+  "comm_counts": {
+   "cargo": 0,
+   "rustc": 0,
+   "python3": 31,
+   "bash": 37
+  },
+  "control_note": "нули при 966 строках всего и 37 bash — предикат comm==, не подстрока",
+  "queued_operations_note": "очередей не ставил; timeout глушит группу, выжившие перемерены после глушения"
+ }
+}

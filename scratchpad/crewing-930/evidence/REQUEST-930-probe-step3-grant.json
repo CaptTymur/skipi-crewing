@@ -1,0 +1,213 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "grant",
+  "note": "шаг 3: свежий пульс, содержание дословно как в отревьюированном шаге 1"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "fc9d4d65ac6eb7af7feadf98d76efbf577adcef4f0c88307167e29c6787e65e6",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-probe-VERIFY_BUILD-grant-20261105T155315Z",
+   "stage": "VERIFY_BUILD",
+   "outcome": "ОДИН живой запрос к боевому серверу по разрешению владельца — различить ЧЕТЫРЕ версии, по которым вход не активирует сессию. GET на `https://assistant.skipi.app/api/app/crewing/bootstrap`, БЕЗ кредов, БЕЗ тела, БЕЗ следования редиректам. Статус один разделяет версии: 404 → расхождение пути/хоста; 405/401/403 → **путь СУЩЕСТВУЕТ**, версия расхождения пути опровергнута; 503 → незаданная `CREWING_NATIVE_PUBLIC_SERVER_URL`; отказ соединения → настоящая недоступность.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "owner_authorization": {
+    "verified_by_me_from_the_primary_file": "/home/linux/.outbox/skipi-decisions-ack.jsonl",
+    "decision_id": "ask-crewing-live-probe",
+    "label": "Разрешаю",
+    "by": "Тимур",
+    "recorded_at": "2026-11-05T15:23:19Z",
+    "timestamp_recomputed_by_me": "ts 1793892199.4814818 → 2026-11-05T15:23:19Z, сошлось с записью менеджера",
+    "answer": "Разрешаю один живой запрос к боевому серверу по Крюингу",
+    "scope_limits_quoted": "разрешён ОДИН запрос, который ничего не меняет; НЕ разрешено: повторные запросы, любая запись на проде, другие эндпоинты, деплой. Разрешение исчерпывается получением ответа.",
+    "why_i_verified_rather_than_accepted": "слово пришло от менеджера, а сообщение коллеги разрешением не является. Поэтому читал первоисточник сам: файл, строку, decision_id, label и пересчитал ts. Драйвер сверяет это ЕЩЁ РАЗ перед запросом и отказывается, если текст не тот."
+   },
+   "new": "Каталог /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105 на ДОЛГОВЕЧНОМ диске: полный ответ (статус, заголовки, тело), метрики curl, копия разрешения владельца, результат разбора `LIVE_PROBE_RESULT.json`. В `/tmp` доказательство не остаётся — это требование менеджера и ровно та потеря, которую я сегодня предотвращал.",
+   "preserve": "Прод НЕ меняется: метод GET, кредов нет, тела нет. Коммит `eb609c63` и четыре файла слайса A не трогаются. Исходники не правятся. Ни одного повторного запроса: при любом исходе драйвер делает ровно один исходящий вызов и не повторяет его.",
+   "exactly_one_outward_request": {
+    "mechanism": "редиректы НЕ следуются: флаг `--no-location` плюс дефолт curl (`-L` нужно включать явно). Иначе 3xx превратился бы во ВТОРОЙ запрос, а разрешён один.",
+    "flag_checked_before_use": "проверил, что curl его разбирает: `curl --no-location … http://127.0.0.1:1` → rc 7 (соединение отказано, то есть флаг принят), при отрицательном контроле неизвестный флаг даёт `option … is unknown`. Это тот же класс, что сегодняшний `--no-verify=false`: инструмент проверяется ДО того, как от него зависит доказательство.",
+    "proof_in_evidence": "`%{num_redirects}` пишется в метрики и попадёт в отчёт"
+   },
+   "positive_control": {
+    "where": "ЛОКАЛЬНО, на loopback 127.0.0.1:19877, а не вторым внешним адресом",
+    "why": "разрешён ровно один ИСХОДЯЩИЙ запрос; контроль на внешнем адресе израсходовал бы разрешение",
+    "what": "свой http-сервер отвечает 418 с заголовком X-Control и телом; тем же curl снимается статус, заголовки и тело",
+    "gate": "если контроль НЕ увидел ответа — исходящий запрос НЕ делается (exit 4): молчание боевого адреса было бы нечитаемо",
+    "lesson_source": "требование менеджера и сегодняшний класс «ноль без положительного контроля»"
+   },
+   "owner": "слово владельца от 15:23:19Z, прочитано мной из первоисточника; границы разрешения вписаны выше дословно. Повторный запрос потребует НОВОГО слова и в эту стадию не входит.",
+   "stop": "СТОП кодом: (1) не PERMIT_CURRENT; (2) бюджет мал; (3) writer не разрешён; (4) текст разрешения в первоисточнике не тот — отказ ДО запроса; (5) положительный контроль не увидел ответа — исходящий запрос не делается. Повторов нет ни при каком исходе: ни ретраев, ни второго адреса, ни следования редиректу. POST, креды и запись на прод не выполняются в принципе.",
+   "heartbeat": "2026-11-05T15:53:15.047149+00:00",
+   "surfaces": {
+    "ports": {
+     "reads": [
+      "net:4026531840|tcp|0.0.0.0|443"
+     ],
+     "writes": [
+      "net:4026531840|tcp|127.0.0.1|19877"
+     ]
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/.outbox/skipi-decisions-ack.jsonl"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "code": {
+     "reads": [],
+     "writes": []
+    },
+    "tests": {
+     "reads": [],
+     "writes": []
+    },
+    "build": {
+     "reads": [],
+     "writes": []
+    },
+    "cache": {
+     "reads": [],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+    "net:4026531840|tcp|127.0.0.1|19877"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105": "logs.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes",
+    "net:4026531840|tcp|127.0.0.1|19877": "ports.writes"
+   },
+   "resource_identities": {
+    "net:4026531840|tcp|0.0.0.0|443": "namespace inode 4026531840, снято `readlink /proc/self/ns/net` → net:[4026531840] ИЗ ТОГО ЖЕ пространства, в котором пойдёт запрос. Адрес 0.0.0.0 — «честный самый широкий» по схеме: хост может иметь меняющиеся адреса, пин одного IP был бы ложной точностью; фактический remote_ip попадёт в доказательство.",
+    "net:4026531840|tcp|127.0.0.1|19877": "namespace inode 4026531840, то же пространство, тот же `readlink`. Порт поднимается и гасится этим же драйвером; это локальный положительный контроль, не исходящий запрос."
+   },
+   "depends": [
+    "сертификат epoch 49",
+    "разрешение владельца (1813), проверенное в первоисточнике"
+   ],
+   "proves": [
+    "какая из четырёх версий верна — или что наблюдённый код не покрыт заготовленной таблицей",
+    "НЕ доказывает: форму и имена полей ответа при УСПЕШНОЙ аутентификации — для этого нужны креды, а их запрос не посылает и не имеет",
+    "НЕ доказывает ничего о других эндпоинтах: запрошен ровно один"
+   ],
+   "active_neighbors": "seafarer/380 cargo и сети не трогает; порт 19877 поднимается и гасится мной, конфликта по нему нет",
+   "next_action": "шаг 3 со свежим пульсом по вашему слову",
+   "owner_window": "разрешение уже получено и записано; дополнительного слова эта стадия не требует",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-probe.sh",
+     "sha256": "a6259955ad8d38b3a25c073a0c5931225038c54026de3d02b328f055121d23ad"
+    },
+    {
+     "path": "/home/linux/.outbox/skipi-decisions-ack.jsonl",
+     "sha256": "be051e092b06f1a6e9b1ec386680557190648e337d6e0b0e2a3eb948beaf0e9b"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "evidence_dir": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/live-probe-20261105",
+    "files_expected": [
+     "owner-authorization.jsonl",
+     "control-body.txt",
+     "control-headers.txt",
+     "prod-body.bin",
+     "prod-headers.txt",
+     "prod-metrics.txt",
+     "prod-stderr.txt",
+     "LIVE_PROBE_RESULT.json"
+    ],
+    "post_image": "UNKNOWN по построению: содержимое ответа боевого сервера до запроса не существует",
+    "what_IS_declared": "состав файлов и то, что их суммы попадут в AFTER_STAGE"
+   },
+   "resource_identity_shape_lesson": "ЗНАЧЕНИЯ `resource_identities` обязаны быть НЕПУСТЫМИ СТРОКАМИ: `inspect_requests.py:145-148` делает `isinstance(evidence, str)`, и при словаре токен не попадает в `writes` ВООБЩЕ. Я подал словари — и получил ДВЕ ошибки «Resource identity evidence missing» плюс третью про непокрытый `mutates` как СЛЕДСТВИЕ. Хуже самой ошибки то, что я прочитал список ошибок через `head -6`, увидел только последнюю и полез отлаживать `overlaps()` — то есть СИМПТОМ вместо ПРИЧИНЫ, при том что причина стояла первой строкой. Усечённый вывод прибора — такой же ложный предикат, как неверный шаблон.",
+   "set_e_finding_fixed": {
+    "found_by": "координатор, чтением драйвера — не хешем",
+    "defect": "`set -Eeuo pipefail` стоит строкой 5, поэтому при rc!=0 контрольного `curl` скрипт умирал на САМОМ ПРИСВАИВАНИИ: мой `exit 4` не исполнялся, `REFUSE` не печатался, а `kill` слушателя не выполнялся — порт 19877 утекал. Боевой запрос я обернул в `set +e … set -e`, а контрольный забыл.",
+    "why_it_mattered_beyond_tidiness": "инвариант «исходящий запрос не делается без контроля» ДЕРЖАЛСЯ — боевой curl недостижим в обеих ветвях. Но доказательство инварианта переезжало с моей ЯВНОЙ проверки на флаг оболочки, а проверка написана именно для того, чтобы это доказывать.",
+    "fix": "контрольный запрос обёрнут так же, как боевой; rc сохраняется в `CTRL_RC` и уходит в отчёт",
+    "verified_on_a_stand_BOTH_branches": {
+     "negative": "контроль на мёртвый порт → `CTRL_CODE=000`, `CTRL_RC=7`, печатается REFUSE, выход **4**, а не 7",
+     "positive": "живой локальный сервер → **418**, проход дальше",
+     "stand_matches_the_subject": "первый мой стенд имел ERR-trap, которого в драйвере НЕТ, и текст trap'а попадал В ПЕРЕМЕННУЮ — то есть стенд задавал другой вопрос. Проверил: `grep -c trap` по драйверу даёт 2, но ОБА попадания — подстрока внутри «boo**tstrap**», а не команда `trap`. Перегнал стенд без trap'а, и он сошёлся с предметом."
+    },
+    "driver_sha256_after_fix": "a6259955ad8d38b3a25c073a0c5931225038c54026de3d02b328f055121d23ad"
+   },
+   "sequential_acknowledged": "ваш вердикт SEQUENTIAL_REQUIRED принят, порядок «seafarer, затем я» — по готовности, а не предпочтению. Причина пересечения — ОДИН токен `net:…|0.0.0.0|443` байт-в-байт в двух заявках: форма адресата не выражает, сравнение строковое. Это ограничение схемы, а не чья-то небрежность, и вы его назвали своим. Жду слот; переносить на завтра не нужно."
+  }
+ ],
+ "notes": [
+  "разрешение владельца я ПРОВЕРИЛ в первоисточнике, а не принял с сообщения менеджера: сообщение коллеги разрешением не является",
+  "флаг `--no-location` проверен на разбор ДО того, как от него зависит единственный запрос — с отрицательным контролем",
+  "положительный контроль поставлен на loopback именно потому, что разрешён один ИСХОДЯЩИЙ запрос"
+ ]
+}

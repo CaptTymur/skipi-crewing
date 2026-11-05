@@ -1,0 +1,238 @@
+{
+ "submission": {
+  "version": "v3",
+  "mode": "grant",
+  "note": "шаг 3: свежий пульс; содержание дословно как в шаге 1"
+ },
+ "coordinator_instance": "/session/skipi-parallel-coordinator-a7-e4d5e1/card-pilot2streams-20261105-epoch49",
+ "coordinator_epoch": 49,
+ "pilot_card": "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md",
+ "pilot_card_sha256": "783ba7cddd0dcaae49c2d6706433d44b13b5f657b2dd6d2c87326020f4a79d20",
+ "heartbeat_max_seconds": 300,
+ "requested_stream_id": "crewing/930-session-activation",
+ "inventory_complete": true,
+ "streams": [
+  {
+   "stream_id": "crewing/930-session-activation",
+   "writer": "skipi-crewing-53",
+   "event_id": "crewing-930-s2-VERIFY_BUILD-grant-20261105T131451Z",
+   "stage": "VERIFY_BUILD",
+   "outcome": "Три утверждения, каждое со своим прибором: (1) зонд компилятора dead_code на `Runtime::refresh` в ПРОДУКТОВОМ cfg; (2) компилируется ли RED-тест (`cargo check --tests`); (3) красен ли он и красен ли ПО ПРОДУКТОВОЙ причине (`cargo test` по точному имени). Плюс запись WORKLOG дома под заверением. Каждый шаг под своим бюджетом; чего окно не покроет — объявляется СРЕЗАННЫМ, а не недоказанным молча.",
+   "repo": "/home/linux/Developer/skipi-crewing",
+   "head": "435b7650462cb838cd2267d16b8975390a9912be",
+   "status_sha256": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+   "new": "`target/` в моём дереве (сейчас ОТСУТСТВУЕТ — дерево холодное), логи трёх шагов в /tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/s2-out/, и НОВЫЙ файл /home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/WORKLOG.md — числа PRESERVE «до/после» по трём тестам и разбор `CommitOutcome` переезжают из /tmp в репозиторий под заверением.",
+   "preserve": "Исходники не меняются ни на байт: ни один шаг не правит .rs. Файл src-tauri/src/native_local_joint_tests.rs остаётся равным пост-образу стадии 1 (50774e79…) — объявлен в evidence_files, живой прогон его пересчитает. Три утверждения PRESERVE (:366/:382/:551 на базе) не трогаются. Чужие деревья и их `target/` не затрагиваются: CARGO_TARGET_DIR не переопределяю, работаю только в своём.",
+   "owner": "слово «А» 04.11 покрывает доделку; живых запросов к боевому серверу стадия не делает",
+   "stop": "СТОП и строка: (1) вердикт не PERMIT_CURRENT — отказ до первого действия; (2) бюджет (остаток минус резерв 75 с) меньше 30 с — отказ, окно не покрывает действие И доклад; (3) writer не разрешился — отказ (урок стадии 1: неразрешённое значение есть ОСТАНОВКА, а не поле); (4) выжившие cargo/rustc после остановки — глушу группу и ПЕРЕМЕРЯЮ, число идёт в ACK_STOP как есть; (5) если RED-тест окажется ЗЕЛЁНЫМ — это дефект оракула, работу не продолжаю, несу разбор; (6) правок .rs ради зелёного не делаю. Push — отдельная стадия.",
+   "heartbeat": "2026-11-05T13:14:51.085626+00:00",
+   "surfaces": {
+    "build": {
+     "reads": [],
+     "writes": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target"
+     ]
+    },
+    "cache": {
+     "reads": [
+      "path:/home/linux/.cargo/registry/cache"
+     ],
+     "writes": [
+      "path:/home/linux/.cargo/registry/src",
+      "path:/home/linux/.cargo/registry/cache",
+      "path:/home/linux/.cargo/.package-cache"
+     ]
+    },
+    "code": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/Cargo.toml",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/Cargo.lock",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/dist"
+     ],
+     "writes": []
+    },
+    "tests": {
+     "reads": [
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs"
+     ],
+     "writes": []
+    },
+    "logs": {
+     "reads": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+     ],
+     "writes": [
+      "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split",
+      "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930"
+     ]
+    },
+    "card": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md"
+     ],
+     "writes": []
+    },
+    "schema": {
+     "reads": [
+      "path:/home/linux/Developer/skipi-parallel-coordinator/REQUEST-SCHEMA.md"
+     ],
+     "writes": []
+    },
+    "contracts": {
+     "reads": [],
+     "writes": []
+    },
+    "generated": {
+     "reads": [],
+     "writes": []
+    },
+    "database": {
+     "reads": [],
+     "writes": []
+    },
+    "ports": {
+     "reads": [],
+     "writes": []
+    },
+    "guard": {
+     "reads": [],
+     "writes": []
+    },
+    "release": {
+     "reads": [],
+     "writes": []
+    }
+   },
+   "mutates": [
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target",
+    "path:/home/linux/.cargo/registry/src",
+    "path:/home/linux/.cargo/registry/cache",
+    "path:/home/linux/.cargo/.package-cache",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split"
+   ],
+   "mutates_coverage": {
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/target": "build.writes",
+    "path:/home/linux/.cargo/registry/src": "cache.writes",
+    "path:/home/linux/.cargo/registry/cache": "cache.writes",
+    "path:/home/linux/.cargo/.package-cache": "cache.writes",
+    "path:/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930": "logs.writes",
+    "path:/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split": "logs.writes"
+   },
+   "cargo_registry_two_populations": {
+    "note": "вы назвали их двумя разными популяциями — согласен, и мерю обе ТЕМ ЖЕ предикатом, которым объявлю прирост",
+    "unpacked_packages_predicate": "каталоги registry/src/*/* (глубина 2)",
+    "unpacked_packages_now": 521,
+    "archives_predicate": "файлы registry/cache/*/*.crate",
+    "archives_now": 814,
+    "growth_will_be_reported_with": "те же два предиката, до и после, разностью",
+    "my_numbers_match_yours": [
+     true,
+     true
+    ]
+   },
+   "how_the_long_command_is_cut": {
+    "problem": "дерево ХОЛОДНОЕ: `target/` в моём worktree отсутствует (замерено). Тёплое дерево рядом — 5.6 ГБ, но переиспользовать его нельзя: sccache нет, общего target-dir в ~/.cargo/config нет, а чужой `target/` — не мой scope и под cargo-локом. Длительность НЕИЗВЕСТНА не по лени: в ваших же прежних VERIFY_BUILD она записана как UNKNOWN («never measured»).",
+    "mechanism": "каждый шаг идёт под `setsid timeout -k 10s <budget>s`, где budget = остаток окна из СЕРТИФИКАТА минус резерв 75 с на доклад. rc 124 = СРЕЗАНО на безопасной границе; инкрементальное состояние в `target/` — точка возобновления, и она уже в объявленных поверхностях.",
+    "order": "дешёвое-решающее первым: (1) `cargo check` без --tests — отдаёт вердикт dead_code по `refresh` без кодогенерации; (2) `cargo check --tests` — компилируется ли тест; (3) `cargo test` — краснота. Если окна хватит только на (1), стадия всё равно отдаёт доказанное утверждение.",
+    "no_survivors": "timeout глушит группу; после шагов предикат `comm==` считает cargo/rustc, при ненулевом — глушу и ПЕРЕМЕРЯЮ, и число идёт в ACK_STOP как есть, а не как обещание.",
+    "umask_of_the_run": "0022, выставлен в драйвере; числа сьюты 232/15 под 0o002 против 247/0 под 0o022"
+   },
+   "depends": [
+    "сертификат epoch 49",
+    "дерево crewing-930-20261105 на f145c601 с тестом из стадии 1",
+    "UNKNOWN и не блокирует: прод-форма ответа сервера (№956)"
+   ],
+   "proves": [
+    "вердикт dead_code по `refresh` в продуктовом cfg — компилятор, прибор ДРУГОГО рода, чем мой текстовый скан",
+    "компилируется ли RED-тест",
+    "красен ли он и по какой причине",
+    "НЕ доказывает: продуктовую приёмку, push, и ничего о прод-сервере"
+   ],
+   "active_neighbors": "seafarer/380-remote-mount-fix (skipi-seafarer, skipi-public/.git) — пересечений нет. ВНИМАНИЕ НА ОБЩЕЕ: реестр cargo `/home/linux/.cargo/registry` и `.package-cache` — РАЗДЕЛЯЕМЫЕ хостовые объекты; если Моряк тоже будет собирать Rust, мы столкнёмся на `.package-cache` (cargo держит на нём файловый лок). Называю это ДО, а не после: при его одновременной сборке решайте очерёдность вы.",
+   "resource_identities": {
+    "note": "токенов net:/db: нет: ни порта, ни базы стадия не трогает; сети cargo не потребуется — Cargo.lock зафиксирован, но если потребуется, это внешнее действие и я остановлюсь"
+   },
+   "next_action": "по вашему слову — шаг 3 со свежим пульсом. Прошу считать остаток ПОСЛЕ вашего ревью, как вы и решили: этой стадии нужно действие И доклад.",
+   "owner_window": "не требуется",
+   "evidence_files": [
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/run-930-s2.sh",
+     "sha256": "3427c8c4adadc97e0f5f3747a2642f8fe4042773f87af460ab4c6204f7919fc6"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/PRESERVE-counts-and-form-choice.md",
+     "sha256": "9aa28ab9fc81d9990891bd43653695b82a66476333aaa2621037f2ec928b4e50"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/SPLIT-930-two-piles.md",
+     "sha256": "05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/ACK_STOP-930-s1-CORRECTED.json",
+     "sha256": "0ff948546cbc29cf42d2cf41c68c9d71ab5c88574c1c63f1276bfcc93073d1bf"
+    },
+    {
+     "path": "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/AFTER_STAGE-930-s1.json",
+     "sha256": "d44fc34d687aaadc75b93197cb04dc8b3595c8c75892f466984ff463da308c28"
+    },
+    {
+     "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+     "sha256": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d"
+    }
+   ],
+   "untracked": [
+    "scratchpad/crewing-898/guardfix-s3b/",
+    "scratchpad/crewing-898/guardfix-s3c-norust/",
+    "scratchpad/crewing-898/guardfix-s3c/",
+    "scratchpad/crewing-898/guardfix/",
+    "scratchpad/crewing-898/mirror-s1-fresh-PATCHED-evidence/",
+    "scratchpad/crewing-898/mirror-s2-f12/",
+    "scratchpad/crewing-898/mirror-s2-verify/",
+    "scratchpad/crewing-898/mirror-s3-final/",
+    "scratchpad/crewing-898/mirror-s3-repro/",
+    "scratchpad/crewing-898/mirror-s4-final/",
+    "scratchpad/crewing-898/mirror-s5-auth1/",
+    "scratchpad/crewing-898/mirror-s5-auth2/",
+    "scratchpad/crewing-898/mirror-s5-fresh/",
+    "scratchpad/crewing-898/mirror-s6-debts/",
+    "scratchpad/crewing-898/mirror-s7-note/",
+    "scratchpad/crewing-898/mirror-s7-repro/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-503/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-en-closed/.local/",
+    "scratchpad/crewing-898/stage-smoke-a/stand-ru-closed/.local/"
+   ],
+   "expected_post": {
+    "files": [
+     {
+      "path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+      "sha256_post": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+      "note": "НЕ меняется этой стадией: объявлен неизменным, живой прогон пересчитает"
+     }
+    ],
+    "worklog_post_image": "UNKNOWN ПО ПОСТРОЕНИЮ и это названо заранее: WORKLOG записывает РЕЗУЛЬТАТ прогона (rc трёх шагов, вердикт зонда, число выживших), которого до гранта не существует. Объявляю суммы его СТАТИЧЕСКИХ частей: PRESERVE-counts 9aa28ab9fc81d9990891bd43653695b82a66476333aaa2621037f2ec928b4e50, SPLIT 05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3 — они войдут дословно, остальное приписывается замером.",
+    "target_dir_post": "UNKNOWN: объём и состав зависят от того, докуда дойдёт срезанный бюджет"
+   }
+  }
+ ],
+ "my_hex_measurements": {
+  "note": "ваш предполёт содержимое .md/.json не читает — мой замер его заменяет; команда sha256sum, единица — байты файла целиком",
+  "/home/linux/Developer/skipi-ops/handoffs/TASKCARD-2026-11-05-pilot-two-streams.md": {
+   "sha256": "783ba7cddd0dcaae49c2d6706433d44b13b5f657b2dd6d2c87326020f4a79d20",
+   "bytes": 3482,
+   "provenance": "файл не отслеживается git в skipi-ops — коммитнутой копии нет"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/PRESERVE-counts-and-form-choice.md": {
+   "sha256": "9aa28ab9fc81d9990891bd43653695b82a66476333aaa2621037f2ec928b4e50"
+  },
+  "/tmp/claude-1000/-home-linux-Developer-skipi-crewing/31d4904a-f74e-4746-8b18-a75244187e1d/scratchpad/930-split/SPLIT-930-two-piles.md": {
+   "sha256": "05020479999244a1a326e9bdacd85c6fff93591dfc4837eb90657e5d12fb0ee3"
+  }
+ },
+ "notes": [
+  "стадия 1 закрыта вами как SCOPE_RELEASED rev 3; её дефект (null writer) закрыт в драйвере этой стадии жёстким отказом, а не комментарием",
+  "моя поправка к себе: я счёл исправленный ACK_STOP просроченным, НЕ посчитав его возраст — он был 245 с при пределе 300, то есть годен, и два следующих документа были лишними. Предел свежести есть арифметика, а не ощущение.",
+  "дерево холодное, длительность UNKNOWN — поэтому стадия устроена так, чтобы отдать доказанное даже при срезанном бюджете"
+ ]
+}

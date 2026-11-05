@@ -1,0 +1,64 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s1-ackstop-FINAL-20261105T130237Z-878c7003",
+ "ack_stop_writer": "skipi-crewing-53",
+ "observed_at": "2026-11-05T13:02:37.606382+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "evidence": {
+  "termination_primary_indicator": {
+   "predicate": "ps -eo pid,ppid,comm,args; счёт по ИМЕНИ ИСПОЛНЯЕМОГО (comm==), не по подстроке",
+   "comm_cargo": 0,
+   "comm_rustc": 0,
+   "comm_Xephyr": 0,
+   "comm_git": 1,
+   "comm_git_explained": [
+    {
+     "pid": "669227",
+     "ppid": "661526",
+     "args": "git ls-remote --symref git@github.com:CaptTymur/skipi-settings.git HEAD",
+     "mine": false
+    }
+   ],
+   "comm_git_note": "НЕ МОЙ и не из этой стадии: процесс(ы) git в снимке — чужие ls-remote по ДРУГОМУ дому (skipi-onboard), их ppid вне моего дерева процессов. Моя стадия закончила все действия в 12:56:15.752Z и git с тех пор не запускала. Число названо, а не спрятано: необъяснённая единица в доказательстве остановки — дефект.",
+   "positive_controls": {
+    "total_process_rows": 967,
+    "comm_python3": 32,
+    "comm_bash": 34
+   },
+   "control_note": "нули сняты прибором, который в том же вызове видит 967 строк, 32 python3 и 34 bash",
+   "needle_correction_disclosed": "первая редакция считала ПОДСТРОКУ и дала cargo=1 ложно: слово нашлось в аргументе --json-schema постороннего процесса /usr/bin/claude и В КОМАНДНОЙ СТРОКЕ МОЕГО ЖЕ ЗОНДА — прибор совпал сам с собой. Предикат ужесточён до comm==; ложное число до координатора не доезжало, раскрыто намеренно.",
+   "queued_operations_note": "истинно ВАКУУМНО: очереди не было вовсе — драйвер синхронный, фоновых заданий не запускал; весь прогон 12:56:15.646Z → 12:56:15.752Z"
+  },
+  "insertion_state": "ЗАВЕРШЕНА ПОЛНОСТЬЮ, не оборвана",
+  "file_path": "/home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs",
+  "file_sha256_now": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "file_sha256_now_equals": "post_image",
+  "pinned_post_image": "50774e7986d3105307c153495746a72e04d7c145899572abbfb6d2014c80831d",
+  "pinned_base": "a070d241e73018a1b156ab17aa44b36448739fecb24d778989c3538af8197d5d",
+  "worktree_head_now": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+  "worktree_branch_now": "feature/crewing-930-red-active-session",
+  "worktree_diff_shortstat_now": "1 file changed, 31 insertions(+)",
+  "declared_repo_head_now": "435b7650462cb838cd2267d16b8975390a9912be",
+  "declared_repo_status_sha256_now": "fd2d6a22823a21ca26540fbfbb33732c0e849e4d23bd760fabbeb2b038a0dd68",
+  "actions_ended_at": "2026-11-05T12:56:15.752505+00:00",
+  "permit_expires_at": "2026-11-05T12:56:41.651060+00:00",
+  "all_repo_actions_before_expiry": true,
+  "writes_after_expiry": "только документы жизненного цикла и доклада в сессионный скрэтчпад (logs.writes заявки); репозитория, рабочего дерева и .git после 12:56:15.752Z не касался",
+  "supersession_chain": [
+   {
+    "event_id": "crewing-930-s1-ackstop-20261105T125615Z-04cac621",
+    "defect": "ack_stop_writer null — поля writer в сертификате нет"
+   },
+   {
+    "event_id": "crewing-930-s1-ackstop-CORRECTED-20261105T125735Z-ee8a73e5",
+    "defect": "observed_at = время события, к чтению старше 300 с"
+   },
+   {
+    "event_id": "crewing-930-s1-ackstop-FRESH-20261105T130133Z-96bcce23",
+    "defect": "cargo=1 от подстрочного зонда (самосовпадение) и необъяснённый comm_git=1"
+   }
+  ],
+  "observed_at_semantics": "момент снятия НАБЛЮДЕНИЯ терминального состояния; actions_ended_at отдельным полем, задним числом ничего не датировано"
+ }
+}
