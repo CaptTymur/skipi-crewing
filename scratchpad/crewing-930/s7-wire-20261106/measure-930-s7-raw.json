@@ -1,0 +1,3947 @@
+{
+ "measured_at_utc": "2026-11-06T01:55:09Z",
+ "layer": "НАЙДЕНО В КЛИЕНТСКОМ КОДЕ (чтение названного SHA). Не «проверено в работе».",
+ "base_sha_live_main": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+ "worktree": "/home/linux/Developer/worktrees/crewing-930-20261105",
+ "scan_set": {
+  "files": [
+   "dist/index.html",
+   "src-tauri/Cargo.toml",
+   "src-tauri/build.rs",
+   "src-tauri/src/api.rs",
+   "src-tauri/src/contact.rs",
+   "src-tauri/src/crewing_intake.rs",
+   "src-tauri/src/db.rs",
+   "src-tauri/src/feedback.rs",
+   "src-tauri/src/lib.rs",
+   "src-tauri/src/main.rs",
+   "src-tauri/src/messaging.rs",
+   "src-tauri/src/native_account.rs",
+   "src-tauri/src/native_binding.rs",
+   "src-tauri/src/native_database.rs",
+   "src-tauri/src/native_database_probe.rs",
+   "src-tauri/src/native_fresh.rs",
+   "src-tauri/src/native_keys.rs",
+   "src-tauri/src/native_lifecycle.rs",
+   "src-tauri/src/native_local_commit.rs",
+   "src-tauri/src/native_local_joint_tests.rs",
+   "src-tauri/src/native_profile.rs",
+   "src-tauri/src/native_session_record.rs",
+   "src-tauri/src/private_json.rs",
+   "src-tauri/src/private_store.rs",
+   "src-tauri/tauri.conf.json"
+  ],
+  "count": 25
+ },
+ "needles": {
+  "host_literal": {
+   "pattern": "assistant\\.skipi\\.app",
+   "expectation_declared": ">0",
+   "occurrences": 11,
+   "lines": 11,
+   "hits": [
+    {
+     "file": "dist/index.html",
+     "line": 1708,
+     "match": "assistant.skipi.app",
+     "text": "var CREWING_REGISTER_URL = 'https://assistant.skipi.app/register';"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 341,
+     "match": "assistant.skipi.app",
+     "text": "const EXTERNAL_URL_ALLOWED_HOSTS: [&str; 1] = [\"assistant.skipi.app\"];"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3518,
+     "match": "assistant.skipi.app",
+     "text": "assert!(external_url_allowed(\"https://assistant.skipi.app/register\"),"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3521,
+     "match": "assistant.skipi.app",
+     "text": "\"http://assistant.skipi.app/register\",      // не https"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3525,
+     "match": "assistant.skipi.app",
+     "text": "\"https://assistant.skipi.app.evil.com/x\",    // хост-приставка"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3526,
+     "match": "assistant.skipi.app",
+     "text": "\"https://user:pass@assistant.skipi.app/x\",   // креденшал в URL"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3527,
+     "match": "assistant.skipi.app",
+     "text": "\"https://assistant.skipi.app:8443/register\",  // нестандартный порт"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 3530,
+     "match": "assistant.skipi.app",
+     "text": "\"assistant.skipi.app/register\",              // без схемы вовсе"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 7,
+     "match": "assistant.skipi.app",
+     "text": "pub(crate) const ACCOUNT_ORIGIN: &str = \"https://assistant.skipi.app\";"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 525,
+     "match": "assistant.skipi.app",
+     "text": ".unwrap_or(\"https://assistant.skipi.app\");"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 545,
+     "match": "assistant.skipi.app",
+     "text": "\"https://assistant.skipi.app\",      // не петля: подмена боевого источника"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "prefix_api_app": {
+   "pattern": "/api/app",
+   "expectation_declared": ">0",
+   "occurrences": 8,
+   "lines": 8,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 488,
+     "match": "/api/app",
+     "text": "let response: LoginResponse = self.post(\"/api/app/login\", None,"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 497,
+     "match": "/api/app",
+     "text": "let response: BootstrapResponse = self.post(\"/api/app/crewing/bootstrap\", Some(app_credential),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 504,
+     "match": "/api/app",
+     "text": "let response: LogoutResponse = self.post(\"/api/app/logout\", Some(app_credential),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 763,
+     "match": "/api/app",
+     "text": "assert_eq!(sent[0].target,\"/api/app/login\");"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 778,
+     "match": "/api/app",
+     "text": "assert_eq!(sent[0].target,\"/api/app/login\");assert!(sent[0].header(\"authorization\").is_none());"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 780,
+     "match": "/api/app",
+     "text": "assert_eq!(sent[1].target,\"/api/app/crewing/bootstrap\");"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 783,
+     "match": "/api/app",
+     "text": "assert_eq!(sent[2].target,\"/api/app/logout\");"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 90,
+     "match": "/api/app",
+     "text": "// (`native_account.rs`, `/api/app/crewing/bootstrap`) — сервер создаёт"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "path_login": {
+   "pattern": "/api/app/login",
+   "expectation_declared": ">0",
+   "occurrences": 3,
+   "lines": 3,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 488,
+     "match": "/api/app/login",
+     "text": "let response: LoginResponse = self.post(\"/api/app/login\", None,"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 763,
+     "match": "/api/app/login",
+     "text": "assert_eq!(sent[0].target,\"/api/app/login\");"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 778,
+     "match": "/api/app/login",
+     "text": "assert_eq!(sent[0].target,\"/api/app/login\");assert!(sent[0].header(\"authorization\").is_none());"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "path_bootstrap": {
+   "pattern": "/api/app/crewing/bootstrap",
+   "expectation_declared": ">0",
+   "occurrences": 3,
+   "lines": 3,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 497,
+     "match": "/api/app/crewing/bootstrap",
+     "text": "let response: BootstrapResponse = self.post(\"/api/app/crewing/bootstrap\", Some(app_credential),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 780,
+     "match": "/api/app/crewing/bootstrap",
+     "text": "assert_eq!(sent[1].target,\"/api/app/crewing/bootstrap\");"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 90,
+     "match": "/api/app/crewing/bootstrap",
+     "text": "// (`native_account.rs`, `/api/app/crewing/bootstrap`) — сервер создаёт"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "path_logout": {
+   "pattern": "/api/app/logout",
+   "expectation_declared": ">0",
+   "occurrences": 2,
+   "lines": 2,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 504,
+     "match": "/api/app/logout",
+     "text": "let response: LogoutResponse = self.post(\"/api/app/logout\", Some(app_credential),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 783,
+     "match": "/api/app/logout",
+     "text": "assert_eq!(sent[2].target,\"/api/app/logout\");"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "const_account_origin": {
+   "pattern": "ACCOUNT_ORIGIN",
+   "expectation_declared": ">0",
+   "occurrences": 5,
+   "lines": 5,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 7,
+     "match": "ACCOUNT_ORIGIN",
+     "text": "pub(crate) const ACCOUNT_ORIGIN: &str = \"https://assistant.skipi.app\";"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 382,
+     "match": "ACCOUNT_ORIGIN",
+     "text": "if let Some(config) = option_env!(\"SKIPI_CREWING_DEV_ACCOUNT_ORIGIN\")"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 387,
+     "match": "ACCOUNT_ORIGIN",
+     "text": "account_origin: ACCOUNT_ORIGIN.to_owned(),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 518,
+     "match": "ACCOUNT_ORIGIN",
+     "text": "// No.880 п.7: в отладочной сборке с SKIPI_CREWING_DEV_ACCOUNT_ORIGIN источник"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 522,
+     "match": "ACCOUNT_ORIGIN",
+     "text": "let expected = option_env!(\"SKIPI_CREWING_DEV_ACCOUNT_ORIGIN\")"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "server_internal_prefix": {
+   "pattern": "/api/internal",
+   "expectation_declared": "0",
+   "occurrences": 0,
+   "lines": 0,
+   "hits": [],
+   "hits_truncated": 0,
+   "control": {
+    "needle": "prefix_api_app",
+    "occurrences": 8
+   },
+   "verdict": "ноль ПОДТВЕРЖДЁН контролем"
+  },
+  "field_workspace_id": {
+   "pattern": "workspace_id",
+   "expectation_declared": "0",
+   "occurrences": 0,
+   "lines": 0,
+   "hits": [],
+   "hits_truncated": 0,
+   "control": {
+    "needle": "field_crewing_id",
+    "occurrences": 214
+   },
+   "verdict": "ноль ПОДТВЕРЖДЁН контролем"
+  },
+  "field_crewing_id": {
+   "pattern": "crewing_id",
+   "expectation_declared": ">0",
+   "occurrences": 214,
+   "lines": 185,
+   "hits": [
+    {
+     "file": "dist/index.html",
+     "line": 1312,
+     "match": "crewing_id",
+     "text": "return ['server_url','crewing_id','organization_id','company_name','user_display_name',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1336,
+     "match": "crewing_id",
+     "text": "server_url: 'https://api.skipi.app', has_bearer_token: true, connection_context: 'ctx_demo', crewing_id: 'demo-crewing',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1352,
+     "match": "crewing_id",
+     "text": "{ id:'demo-v1', crewing_id:'demo-crewing', crewing_ref:'DEMO-001', rank:'Master', vessel_type:'Bulk Carrier',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1362,
+     "match": "crewing_id",
+     "text": "{ id:'demo-v2', crewing_id:'demo-crewing', crewing_ref:'DEMO-002', rank:'Chief Officer', vessel_type:'Container Ship',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1372,
+     "match": "crewing_id",
+     "text": "{ id:'demo-v3', crewing_id:'demo-crewing', crewing_ref:'DEMO-003', rank:'2nd Engineer', vessel_type:'Oil/Chemical Tanker',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1405,
+     "match": "crewing_id",
+     "text": "{ id:'demo-m1', crewing_id:'demo-crewing', crewing_ref:'DEMO-M01', title:'Standing search — Bulk Carrier Masters',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1410,
+     "match": "crewing_id",
+     "text": "{ id:'demo-m2', crewing_id:'demo-crewing', crewing_ref:'DEMO-M02', title:'Tanker engineers pool',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1417,
+     "match": "crewing_id",
+     "text": "{ id:'demo-cp1', crewing_id:'demo-crewing', name:'Captain — Bulk Carrier standard', rank:'Captain', description:'Standard requirements for our bulker client.',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1422,
+     "match": "crewing_id",
+     "text": "{ id:'demo-cp2', crewing_id:'demo-crewing', name:'Chief Officer — Chemical Tanker', rank:'Chief Officer', description:'IMO II/III chemical tanker officers.',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1426,
+     "match": "crewing_id",
+     "text": "{ id:'demo-cp3', crewing_id:'demo-crewing', name:'Captain — Tanker client', rank:'Captain', description:'Tanker owner baseline for senior deck candidates.',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1430,
+     "match": "crewing_id",
+     "text": "{ id:'demo-cp4', crewing_id:'demo-crewing', name:'Captain — Strict client', rank:'Captain', description:'Stricter customer checklist for urgent replacements.',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 1675,
+     "match": "crewing_id",
+     "text": "// компании), crewing_id (серверный UUID организации), localStorage skipi_crewing_entry"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 2218,
+     "match": "crewing_id",
+     "text": "\"settings.crewing.crewing_id\": \"Crewing ID\","
+    },
+    {
+     "file": "dist/index.html",
+     "line": 2219,
+     "match": "crewing_id",
+     "text": "\"settings.crewing.crewing_id.description\": \"The server UUID of the accredited organisation record.\","
+    },
+    {
+     "file": "dist/index.html",
+     "line": 2461,
+     "match": "crewing_id",
+     "text": "\"settings.crewing.crewing_id\": \"Crewing ID\","
+    },
+    {
+     "file": "dist/index.html",
+     "line": 2462,
+     "match": "crewing_id",
+     "text": "\"settings.crewing.crewing_id.description\": \"Серверный UUID аккредитованной записи организации.\","
+    },
+    {
+     "file": "dist/index.html",
+     "line": 3497,
+     "match": "crewing_id",
+     "text": "var hasConnection = !!(s.has_bearer_token && s.crewing_id);"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7269,
+     "match": "crewing_id",
+     "text": "return { server_url:String(s.server_url || '').trim(), connection_context:String(s.connection_context || '').trim(), crewing_id:String(s.crewing_id || '').trim(), account_session:String(s.account_session || '') };"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7269,
+     "match": "crewing_id",
+     "text": "return { server_url:String(s.server_url || '').trim(), connection_context:String(s.connection_context || '').trim(), crewing_id:String(s.crewing_id || '').trim(), account_session:String(s.account_session || '') };"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7272,
+     "match": "crewing_id",
+     "text": "return [context.server_url, context.connection_context, context.crewing_id].join('\\u001f');"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7278,
+     "match": "crewing_id",
+     "text": "return !!(context.server_url && context.connection_context && context.crewing_id"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7311,
+     "match": "crewing_id",
+     "text": "pilotFreshStateForContext({server_url:'',connection_context:'',crewing_id:''});"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7325,
+     "match": "crewing_id",
+     "text": "var oldKey = pilotContextKey({server_url:String(previous&&previous.server_url||'').trim(),connection_context:String(previous&&previous.connection_context||'').trim(),crewing_id:String(previous&&previous.crewing_id||'').trim()});"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7325,
+     "match": "crewing_id",
+     "text": "var oldKey = pilotContextKey({server_url:String(previous&&previous.server_url||'').trim(),connection_context:String(previous&&previous.connection_context||'').trim(),crewing_id:String(previous&&previous.crewing_id||'').trim()});"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7328,
+     "match": "crewing_id",
+     "text": "var newContext = {server_url:String(next&&next.server_url||'').trim(),connection_context:String(next&&next.connection_context||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim(),account_session:String((next&&next.account_session"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 7328,
+     "match": "crewing_id",
+     "text": "var newContext = {server_url:String(next&&next.server_url||'').trim(),connection_context:String(next&&next.connection_context||'').trim(),crewing_id:String(next&&next.crewing_id||'').trim(),account_session:String((next&&next.account_session"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 14515,
+     "match": "crewing_id",
+     "text": "var user = { id: (s.crewing_id || s.organization_id || 'crewing').toString() };"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 14658,
+     "match": "crewing_id",
+     "text": "'<div class=\"setting-row\"><div class=\"setting-info\"><div class=\"setting-label\">Crewing ID</div><div class=\"setting-desc\">Серверный идентификатор аккредитованной записи организации.</div></div><div class=\"setting-control\"><code>'+escapeHtml("
+    },
+    {
+     "file": "dist/index.html",
+     "line": 14972,
+     "match": "crewing_id",
+     "text": "// connection. The projection carries no crewing_id — the owner struck company mentions —"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 15025,
+     "match": "crewing_id",
+     "text": "crewing_id: s.crewing_id || '',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 15025,
+     "match": "crewing_id",
+     "text": "crewing_id: s.crewing_id || '',"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 15754,
+     "match": "crewing_id",
+     "text": "crewing_id: s.crewing_id || ''"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 15754,
+     "match": "crewing_id",
+     "text": "crewing_id: s.crewing_id || ''"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 16190,
+     "match": "crewing_id",
+     "text": "+ '<div class=\"mobile-setting-row\"><div class=\"mobile-muted\"><strong style=\"display:block;color:var(--text);margin-bottom:3px;\">Crewing ID</strong>'+escapeHtml(s.crewing_id || mobileTr('not_set'))+'</div></div>'"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 17474,
+     "match": "crewing_id",
+     "text": "// trial blocked-overlay. On an UNCONNECTED device (empty crewing_id) the License"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 17493,
+     "match": "crewing_id",
+     "text": "// Unconnected device: crewing_id is empty → license activation cannot work"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 17496,
+     "match": "crewing_id",
+     "text": "var connected = !!s.crewing_id;"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 17702,
+     "match": "crewing_id",
+     "text": "if (!s.crewing_id) {"
+    },
+    {
+     "file": "dist/index.html",
+     "line": 17703,
+     "match": "crewing_id",
+     "text": "console.log('Skipping pubkey registration — crewing_id not set in Settings');"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 17,
+     "match": "crewing_id",
+     "text": "crewing_id: String,"
+    }
+   ],
+   "hits_truncated": 174
+  },
+  "field_device_id": {
+   "pattern": "device_id",
+   "expectation_declared": "0",
+   "occurrences": 0,
+   "lines": 0,
+   "hits": [],
+   "hits_truncated": 0,
+   "control": {
+    "needle": "field_crewing_id",
+    "occurrences": 214
+   },
+   "verdict": "ноль ПОДТВЕРЖДЁН контролем"
+  },
+  "env_override_macro": {
+   "pattern": "option_env!|env!\\s*\\(",
+   "expectation_declared": "?",
+   "occurrences": 6,
+   "lines": 6,
+   "hits": [
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 391,
+     "match": "option_env!",
+     "text": "let sha = option_env!(\"SKIPI_BUILD_SHA\")"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 403,
+     "match": "env!(",
+     "text": "component_version: env!(\"CARGO_PKG_VERSION\").to_string(),"
+    },
+    {
+     "file": "src-tauri/src/lib.rs",
+     "line": 409,
+     "match": "env!(",
+     "text": "version: env!(\"CARGO_PKG_VERSION\").to_string(),"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 377,
+     "match": "option_env!",
+     "text": "// держат это узким: (1) `option_env!` читает КОМПИЛЯТОР, поэтому окружение"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 382,
+     "match": "option_env!",
+     "text": "if let Some(config) = option_env!(\"SKIPI_CREWING_DEV_ACCOUNT_ORIGIN\")"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 522,
+     "match": "option_env!",
+     "text": "let expected = option_env!(\"SKIPI_CREWING_DEV_ACCOUNT_ORIGIN\")"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "env_override_runtime": {
+   "pattern": "std::env::var|env::var\\s*\\(",
+   "expectation_declared": "?",
+   "occurrences": 9,
+   "lines": 8,
+   "hits": [
+    {
+     "file": "src-tauri/build.rs",
+     "line": 4,
+     "match": "env::var(",
+     "text": "if let Ok(sha) = env::var(\"SKIPI_BUILD_SHA\").or_else(|_| env::var(\"GITHUB_SHA\")) {"
+    },
+    {
+     "file": "src-tauri/build.rs",
+     "line": 4,
+     "match": "env::var(",
+     "text": "if let Ok(sha) = env::var(\"SKIPI_BUILD_SHA\").or_else(|_| env::var(\"GITHUB_SHA\")) {"
+    },
+    {
+     "file": "src-tauri/src/api.rs",
+     "line": 10,
+     "match": "std::env::var",
+     "text": "if let Ok(base) = std::env::var(\"SKIPI_API_BASE\") {"
+    },
+    {
+     "file": "src-tauri/src/api.rs",
+     "line": 30,
+     "match": "std::env::var",
+     "text": "if let Ok(base) = std::env::var(\"SKIPI_API_BASE\") {"
+    },
+    {
+     "file": "src-tauri/src/main.rs",
+     "line": 10,
+     "match": "std::env::var",
+     "text": "if std::env::var_os(\"WEBKIT_DISABLE_DMABUF_RENDERER\").is_none() {"
+    },
+    {
+     "file": "src-tauri/src/messaging.rs",
+     "line": 450,
+     "match": "std::env::var",
+     "text": "let home = std::env::var_os(\"HOME\")"
+    },
+    {
+     "file": "src-tauri/src/messaging.rs",
+     "line": 555,
+     "match": "std::env::var",
+     "text": "let home = std::env::var_os(\"HOME\")"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 722,
+     "match": "std::env::var",
+     "text": "if std::env::var(\"CREWING635_HTTP_CHILD\").ok().as_deref()==Some(scenario) {"
+    },
+    {
+     "file": "src-tauri/src/native_account.rs",
+     "line": 723,
+     "match": "std::env::var",
+     "text": "assert_eq!(namespace(),std::env::var(\"CREWING635_HTTP_NETNS\").expect(\"HTTP_QA_SETUP_ERROR namespace marker\"));"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "serde_deny_unknown": {
+   "pattern": "deny_unknown_fields",
+   "expectation_declared": "?",
+   "occurrences": 1,
+   "lines": 1,
+   "hits": [
+    {
+     "file": "src-tauri/src/native_profile.rs",
+     "line": 28,
+     "match": "deny_unknown_fields",
+     "text": "// No.623 (1624): без deny_unknown_fields. Правило дома — «DTO терпят неизвестные"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "serde_rename": {
+   "pattern": "#\\[serde\\(rename",
+   "expectation_declared": "?",
+   "occurrences": 0,
+   "lines": 0,
+   "hits": [],
+   "hits_truncated": 0
+  },
+  "serde_alias": {
+   "pattern": "#\\[serde\\(alias",
+   "expectation_declared": "?",
+   "occurrences": 0,
+   "lines": 0,
+   "hits": [],
+   "hits_truncated": 0
+  },
+  "serde_flatten": {
+   "pattern": "#\\[serde\\(flatten",
+   "expectation_declared": "?",
+   "occurrences": 2,
+   "lines": 2,
+   "hits": [
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 67,
+     "match": "#[serde(flatten",
+     "text": "#[serde(flatten)]"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 101,
+     "match": "#[serde(flatten",
+     "text": "#[serde(flatten)]"
+    }
+   ],
+   "hits_truncated": 0
+  },
+  "deserialize_calls": {
+   "pattern": "from_str::<|from_slice::<|serde_json::from_|\\.json::<",
+   "expectation_declared": "?",
+   "occurrences": 91,
+   "lines": 91,
+   "hits": [
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 905,
+     "match": "serde_json::from_",
+     "text": "let parsed = serde_json::from_slice::<Value>(&bytes).unwrap_or(Value::Null);"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 926,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_slice(&bytes)"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2100,
+     "match": "serde_json::from_",
+     "text": "let empty: CandidateResponseContact = serde_json::from_str(\"{}\").unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2106,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(r#\"{\"value\":\"a@b.test\"}\"#).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2110,
+     "match": "serde_json::from_",
+     "text": "let full: CandidateResponseContact = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2173,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(&profile_shortlist_body()).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2231,
+     "match": "serde_json::from_",
+     "text": "let row: ProfileShortlistItem = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2249,
+     "match": "serde_json::from_",
+     "text": "let hold: ShortlistHold = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2291,
+     "match": "serde_json::from_",
+     "text": "let card: CandidateIntakeReceipt = serde_json::from_str(&card_body_with_summary()).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2358,
+     "match": "serde_json::from_",
+     "text": "let card: CandidateIntakeReceipt = serde_json::from_str(&body).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2371,
+     "match": "serde_json::from_",
+     "text": "let row: CandidateIntakeReceipt = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2405,
+     "match": "serde_json::from_",
+     "text": "let s: CandidateResponseSummary = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2419,
+     "match": "serde_json::from_",
+     "text": "let zero: CandidateResponseSummary = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2634,
+     "match": "serde_json::from_",
+     "text": "let absent: CandidateIntakeSummary = serde_json::from_str(&format!(\"{base}}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2636,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(&format!(\"{base},\\\"candidate_name\\\":null}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2638,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(&format!(\"{base},\\\"candidate_name\\\":\\\"Oleksandr K.\\\"}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2654,
+     "match": "serde_json::from_",
+     "text": "let absent: CandidateIntakeSummary = serde_json::from_str(&format!(\"{base}}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2656,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(&format!(\"{base},\\\"candidate_name\\\":null}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2658,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(&format!(\"{base},\\\"candidate_name\\\":\\\"Ivan M.\\\"}}\")).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2682,
+     "match": "serde_json::from_",
+     "text": "serde_json::from_str(json).expect(\"a server build without the field must still parse\");"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2693,
+     "match": "serde_json::from_",
+     "text": "let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2707,
+     "match": "serde_json::from_",
+     "text": "let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2728,
+     "match": "serde_json::from_",
+     "text": "let summary: CandidateIntakeSummary = serde_json::from_str(json).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2952,
+     "match": "serde_json::from_",
+     "text": "let null_confidence: CandidateFact = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 2956,
+     "match": "serde_json::from_",
+     "text": "let zero_confidence: CandidateFact = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3371,
+     "match": "serde_json::from_",
+     "text": "let receipt: CandidateIntakeReceipt = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3376,
+     "match": "serde_json::from_",
+     "text": "let with_rows: CandidateIntakeReceipt = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3390,
+     "match": "serde_json::from_",
+     "text": "let parsed: Value = serde_json::from_str("
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3395,
+     "match": "serde_json::from_",
+     "text": "let parsed: Value = serde_json::from_str(\"{\\\"detail\\\":\\\"rank_not_found\\\"}\").unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3397,
+     "match": "serde_json::from_",
+     "text": "let parsed: Value = serde_json::from_str(\"{\\\"detail\\\":\\\"some_future_code\\\"}\").unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3614,
+     "match": "serde_json::from_",
+     "text": "let sent: Value = serde_json::from_str(body).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3615,
+     "match": "serde_json::from_",
+     "text": "let typed: CandidateRanksResponse = serde_json::from_str(body)"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3626,
+     "match": "serde_json::from_",
+     "text": "let unread: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_UNREAD).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3635,
+     "match": "serde_json::from_",
+     "text": "let mixed: CandidateRanksResponse = serde_json::from_str(LIVE_RANKS_MIXED).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3660,
+     "match": "serde_json::from_",
+     "text": "let sent: Value = serde_json::from_str(body).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3661,
+     "match": "serde_json::from_",
+     "text": "let typed: CandidateIntakeReceipt = serde_json::from_str(body)"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3675,
+     "match": "serde_json::from_",
+     "text": "let mixed: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_MIXED).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3677,
+     "match": "serde_json::from_",
+     "text": "let unread: CandidateIntakeReceipt = serde_json::from_str(LIVE_QUEUE_ROW_UNREAD).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3691,
+     "match": "serde_json::from_",
+     "text": "let sent: Value = serde_json::from_str(body).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/crewing_intake.rs",
+     "line": 3692,
+     "match": "serde_json::from_",
+     "text": "let typed: CandidateRankResponse = serde_json::from_str(body).unwrap();"
+    }
+   ],
+   "hits_truncated": 51
+  }
+ },
+ "blind_probes": [],
+ "response_shape": {
+  "name": "BootstrapResponse",
+  "found": true,
+  "file": "src-tauri/src/native_account.rs",
+  "decl_line": 22,
+  "lines": [
+   21,
+   26
+  ],
+  "container_attrs": [
+   "#[derive(Clone, Deserialize)]"
+  ],
+  "fields": [
+   {
+    "name": "account_id",
+    "type": "String",
+    "optional": false,
+    "attrs": []
+   },
+   {
+    "name": "connection",
+    "type": "Connection",
+    "optional": false,
+    "attrs": []
+   },
+   {
+    "name": "entitlement",
+    "type": "Entitlement",
+    "optional": false,
+    "attrs": []
+   }
+  ],
+  "nested": {
+   "connection": {
+    "name": "Connection",
+    "found": true,
+    "file": "src-tauri/src/native_account.rs",
+    "decl_line": 29,
+    "lines": [
+     28,
+     37
+    ],
+    "container_attrs": [
+     "#[derive(Clone, Deserialize, Serialize)]"
+    ],
+    "fields": [
+     {
+      "name": "server_url",
+      "type": "String",
+      "optional": false,
+      "attrs": []
+     },
+     {
+      "name": "crewing_id",
+      "type": "String",
+      "optional": false,
+      "attrs": []
+     },
+     {
+      "name": "organization_id",
+      "type": "Option<String>",
+      "optional": true,
+      "attrs": [
+       "#[serde(deserialize_with = \"required_nullable\")]"
+      ]
+     },
+     {
+      "name": "bearer_token",
+      "type": "String",
+      "optional": false,
+      "attrs": []
+     },
+     {
+      "name": "scopes",
+      "type": "Vec<String>",
+      "optional": false,
+      "attrs": []
+     },
+     {
+      "name": "expires_at",
+      "type": "String",
+      "optional": false,
+      "attrs": []
+     }
+    ],
+    "nested": {}
+   },
+   "entitlement": {
+    "name": "Entitlement",
+    "found": true,
+    "file": "src-tauri/src/native_account.rs",
+    "decl_line": 40,
+    "lines": [
+     39,
+     44
+    ],
+    "container_attrs": [
+     "#[derive(Clone, Deserialize, Serialize)]"
+    ],
+    "fields": [
+     {
+      "name": "source",
+      "type": "String",
+      "optional": false,
+      "attrs": []
+     },
+     {
+      "name": "expires_at",
+      "type": "Option<String>",
+      "optional": true,
+      "attrs": [
+       "#[serde(deserialize_with = \"required_nullable\")]"
+      ]
+     }
+    ],
+    "nested": {}
+   }
+  }
+ },
+ "url_assembly": {
+  "path_literals": [
+   {
+    "file": "dist/index.html",
+    "line": 2852,
+    "match": "/api/catalogs",
+    "text": "// the server is slow. The full /api/catalogs payload is cached for"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2859,
+    "match": "/api/catalogs",
+    "text": "var paths = ['/api/catalogs', '/api/taxonomy'];"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2859,
+    "match": "/api/taxonomy",
+    "text": "var paths = ['/api/catalogs', '/api/taxonomy'];"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4969,
+    "match": "/api/mail/mailbox",
+    "text": "// keeps its credentials on the fleet server (`PUT /api/mail/mailbox`), and the"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12474,
+    "match": "/api/catalogs",
+    "text": "// the cached requirements_matrix from /api/catalogs (Slice B). Lookup"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2514,
+    "match": "/api/crewings/crew",
+    "text": "\"/api/crewings/crew-test/intake-aliases/id%2Fwith%20space/rotate\""
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2749,
+    "match": "/api/crewings/crew",
+    "text": "\"DELETE /api/crewings/crew-test/candidate-intake/intake-1/shortlist/profile-a/1 \""
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2841,
+    "match": "/api/crewings/crew",
+    "text": "request.starts_with(\"POST /api/crewings/crew-test/candidate-intake/intake-1/rank \"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2867,
+    "match": "/api/crewings/crew",
+    "text": "\"/api/crewings/crew-test/candidate-intake/in%2Ftake/facts/certificate:coc%20master/correct\""
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2870,
+    "match": "/api/crewings/crew",
+    "text": "assert_eq!(url.path(), \"/api/crewings/crew-test/matching-profiles\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3493,
+    "match": "/api/crewings/crew",
+    "text": "\"GET /api/crewings/crew-test/candidate-intake/intake-1/attachments/{ordinal} HTTP/1.1\""
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3532,
+    "match": "/api/crewings/",
+    "text": "// stand (`GET /api/crewings/{crewing}/candidate-intake/{intake}/ranks` and"
+   },
+   {
+    "file": "src-tauri/src/feedback.rs",
+    "line": 212,
+    "match": "/api/feedback",
+    "text": "api::post_json_empty(None, None, \"/api/feedback\", &payload, 8)"
+   },
+   {
+    "file": "src-tauri/src/feedback.rs",
+    "line": 269,
+    "match": "/api/diagnostics/report",
+    "text": "api::post_json_empty(None, None, \"/api/diagnostics/report\", &payload, 8)"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 930,
+    "match": "/api/crewings/",
+    "text": "let path = format!(\"/api/crewings/{}/profile\", settings.crewing_id);"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 946,
+    "match": "/api/vacancies",
+    "text": "/// Wire-format payload as accepted by skipi-server's POST /api/vacancies."
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1085,
+    "match": "/api/vacancies",
+    "text": "\"/api/vacancies\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1108,
+    "match": "/api/vacancies/",
+    "text": "let path = format!(\"/api/vacancies/{vacancy_id}\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1168,
+    "match": "/api/mailing",
+    "text": "\"/api/mailing-requests\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1201,
+    "match": "/api/vacancies",
+    "text": "/// Vacancy as returned by GET /api/vacancies — superset of the local cache"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1385,
+    "match": "/api/compliance",
+    "text": "\"/api/compliance-profiles?crewing_id={}&include_archived={}\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1432,
+    "match": "/api/compliance",
+    "text": "\"/api/compliance-profiles\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1502,
+    "match": "/api/compliance",
+    "text": "let path = format!(\"/api/compliance-profiles/{profile_id}\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1519,
+    "match": "/api/compliance",
+    "text": "let path = format!(\"/api/compliance-profiles/{profile_id}/archive\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1538,
+    "match": "/api/vacancies",
+    "text": "\"/api/vacancies?crewing_id={}&include_closed=true&limit=200\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1562,
+    "match": "/api/mailing",
+    "text": "\"/api/mailing-requests?crewing_id={}&include_closed=true&limit=200\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1599,
+    "match": "/api/mailing",
+    "text": "let path = format!(\"/api/mailing-requests/{request_id}\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1617,
+    "match": "/api/mailing",
+    "text": "let path = format!(\"/api/mailing-requests/{request_id}/{action}\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1632,
+    "match": "/api/vacancies/",
+    "text": "let path = format!(\"/api/vacancies/{vacancy_id}/close\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1647,
+    "match": "/api/vacancies/",
+    "text": "let path = format!(\"/api/vacancies/{vacancy_id}/reopen\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1662,
+    "match": "/api/vacancies/",
+    "text": "let path = format!(\"/api/vacancies/{vacancy_id}\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1717,
+    "match": "/api/vacancies/",
+    "text": "let mut path = format!(\"/api/vacancies/{vacancy_id}/applications\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1794,
+    "match": "/api/crewing/compliance/rank",
+    "text": "\"/api/crewing/compliance/rank-candidates\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1807,
+    "match": "/api/mail/mailbox",
+    "text": "\"/api/mail/mailbox\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1822,
+    "match": "/api/mail/mailbox",
+    "text": "\"/api/mail/mailbox\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1838,
+    "match": "/api/mail/mailbox/test",
+    "text": "\"/api/mail/mailbox/test\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1851,
+    "match": "/api/mail/mailbox",
+    "text": "\"/api/mail/mailbox\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1868,
+    "match": "/api/mail/messages",
+    "text": "let path = format!(\"/api/mail/messages?folder={}&limit=100\", urlenc(folder));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1884,
+    "match": "/api/mail/messages/",
+    "text": "let path = format!(\"/api/mail/messages/{}\", urlenc(&message_id));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1900,
+    "match": "/api/mail/poll",
+    "text": "\"/api/mail/poll\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1915,
+    "match": "/api/mail/send",
+    "text": "\"/api/mail/send\","
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1925,
+    "match": "/api/mail/messages/",
+    "text": "let path = format!(\"/api/mail/messages/{}\", urlenc(&message_id));"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 179,
+    "match": "/api/messaging/pubkey",
+    "text": "\"/api/messaging/pubkey\","
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 192,
+    "match": "/api/messaging/pubkey/",
+    "text": "let path = format!(\"/api/messaging/pubkey/{user_id}\");"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 248,
+    "match": "/api/messaging/threads/",
+    "text": "let path = format!(\"/api/messaging/threads/{}/messages\", application_id);"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 292,
+    "match": "/api/messaging/direct",
+    "text": "\"/api/messaging/direct-ping\","
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 314,
+    "match": "/api/messaging/threads/",
+    "text": "\"/api/messaging/threads/{}/messages?user_id={}\","
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 431,
+    "match": "/api/messaging/threads/",
+    "text": "let path = format!(\"/api/messaging/threads/{}/attachments\", application_id);"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 476,
+    "match": "/api/messaging/attachments/",
+    "text": "\"/api/messaging/attachments/{}/body?user_id={}\","
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 540,
+    "match": "/api/messaging/threads/",
+    "text": "\"/api/messaging/threads/{}/attachments?user_id={}\","
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 488,
+    "match": "/api/app/login",
+    "text": "let response: LoginResponse = self.post(\"/api/app/login\", None,"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 497,
+    "match": "/api/app/crewing/bootstrap",
+    "text": "let response: BootstrapResponse = self.post(\"/api/app/crewing/bootstrap\", Some(app_credential),"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 504,
+    "match": "/api/app/logout",
+    "text": "let response: LogoutResponse = self.post(\"/api/app/logout\", Some(app_credential),"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 763,
+    "match": "/api/app/login",
+    "text": "assert_eq!(sent[0].target,\"/api/app/login\");"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 778,
+    "match": "/api/app/login",
+    "text": "assert_eq!(sent[0].target,\"/api/app/login\");assert!(sent[0].header(\"authorization\").is_none());"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 780,
+    "match": "/api/app/crewing/bootstrap",
+    "text": "assert_eq!(sent[1].target,\"/api/app/crewing/bootstrap\");"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 783,
+    "match": "/api/app/logout",
+    "text": "assert_eq!(sent[2].target,\"/api/app/logout\");"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 90,
+    "match": "/api/app/crewing/bootstrap",
+    "text": "// (`native_account.rs`, `/api/app/crewing/bootstrap`) — сервер создаёт"
+   }
+  ],
+  "str_consts": [
+   {
+    "file": "src-tauri/src/api.rs",
+    "line": 6,
+    "match": "const PRIMARY_API: &str = \"https://api.skipi.app\"",
+    "text": "pub(crate) const PRIMARY_API: &str = \"https://api.skipi.app\";"
+   },
+   {
+    "file": "src-tauri/src/api.rs",
+    "line": 7,
+    "match": "const RU_API: &str = \"https://api-ru.skipi.app\"",
+    "text": "pub(crate) const RU_API: &str = \"https://api-ru.skipi.app\";"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1835,
+    "match": "const LETTER_FOLDER: &str = \"Letters\"",
+    "text": "const LETTER_FOLDER: &str = \"Letters\";"
+   },
+   {
+    "file": "src-tauri/src/feedback.rs",
+    "line": 10,
+    "match": "const APP_SLUG: &str = \"crewing\"",
+    "text": "const APP_SLUG: &str = \"crewing\";"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 2663,
+    "match": "const NATIVE_SECRET: &str = \"legacy_native635_synthetic_getter_secret\"",
+    "text": "const NATIVE_SECRET: &str = \"legacy_native635_synthetic_getter_secret\";"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 23,
+    "match": "const SK_FILENAME: &str = \"x25519_sk.bin\"",
+    "text": "pub(crate) const SK_FILENAME: &str = \"x25519_sk.bin\";"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 7,
+    "match": "const ACCOUNT_ORIGIN: &str = \"https://assistant.skipi.app\"",
+    "text": "pub(crate) const ACCOUNT_ORIGIN: &str = \"https://assistant.skipi.app\";"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 611,
+    "match": "const ACCOUNT: &str = \"http://127.0.0.1:39163\"",
+    "text": "const ACCOUNT: &str = \"http://127.0.0.1:39163\";"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 612,
+    "match": "const PROXY: &str = \"http://127.0.0.1:39164\"",
+    "text": "const PROXY: &str = \"http://127.0.0.1:39164\";"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 613,
+    "match": "const SINK: &str = \"http://127.0.0.1:39165\"",
+    "text": "const SINK: &str = \"http://127.0.0.1:39165\";"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 175,
+    "match": "const CONTEXT:&str=\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\"",
+    "text": "const CONTEXT:&str=\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\";"
+   }
+  ],
+  "assembly_sites": [
+   {
+    "file": "dist/index.html",
+    "line": 2525,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2644,
+    "match": ".join(",
+    "text": "return (['']).concat(labels || []).map(function(label){ return optionHtml(label, selectedValue); }).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2664,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2739,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 2813,
+    "match": ".join(",
+    "text": ": (vals.length+' selected: '+vals.slice(0,3).join(', ')+(vals.length>3?'…':''));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 3515,
+    "match": ".join(",
+    "text": "}).join('') : '<tr><td colspan=\"5\" style=\"color:var(--text2);padding:14px 0;\">No team members yet.</td></tr>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 3811,
+    "match": ".join(",
+    "text": "return parts.length ? '<div class=\"team-msg-attachments\">'+parts.join('')+'</div>' : '';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4020,
+    "match": ".join(",
+    "text": "var nameRe = names.map(function(n){ return n.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); }).join('|');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4463,
+    "match": ".join(",
+    "text": "+ sortOptions.map(function(o){return '<option value=\"'+o[0]+'\"'+(state.sortBy===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4646,
+    "match": ".join(",
+    "text": "+ ids.map(function(id){ return '<li>'+escapeHtml(certLabelById(id))+' <code style=\"color:var(--text2);\">'+escapeHtml(id)+'</code></li>'; }).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4660,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4789,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4791,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4812,
+    "match": ".join(",
+    "text": "+ ['visa','training','endorsement','test','equipment','other'].map(function(c){ return '<option value=\"'+c+'\" '+((x.category||'other')===c?'selected':'')+'>'+c+'</option>'; }).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4818,
+    "match": ".join(",
+    "text": "}).join('') || '<div style=\"color:var(--text2);font-size:12px;\">No extra requirements yet.</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 4871,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 5434,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 5962,
+    "match": ".join(",
+    "text": "return bits.join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6096,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6295,
+    "match": ".join(",
+    "text": "}).join('') + '</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6787,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6804,
+    "match": ".join(",
+    "text": "+    '<div style=\"font-size:12px;margin-top:4px;\">Needs documents: '+escapeHtml(gaps.length ? gaps.map(certLabelById).join(', ') : 'none')+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6863,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6868,
+    "match": ".join(",
+    "text": "+   '<div class=\"sub\">'+escapeHtml([p.nationality || row.candidate && row.candidate.nationality, p.available_from ? ('available '+p.available_from) : 'availability pending'].filter(Boolean).join(' · '))+'</div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6871,
+    "match": ".join(",
+    "text": "+ '<div style=\"margin-top:10px;font-size:12px;\"><strong>Certificates:</strong> '+escapeHtml(certs.length ? certs.map(certLabelById).join(', ') : 'needs review')+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6887,
+    "match": ".join(",
+    "text": "}).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6902,
+    "match": ".join(",
+    "text": "+ '<div style=\"font-size:12px;margin-top:4px;\">gaps: '+escapeHtml(gaps.length ? gaps.map(certLabelById).join(', ') : 'none')+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6904,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6910,
+    "match": ".join(",
+    "text": "+   '<strong>Recommended:</strong> save to Seafarers DB, then request missing documents: '+escapeHtml(topGaps.length ? topGaps.map(certLabelById).join(', ') : 'none')+'.'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 6944,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7078,
+    "match": ".join(",
+    "text": ".join(' ').toLowerCase().indexOf(q) !== -1;"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7272,
+    "match": ".join(",
+    "text": "return [context.server_url, context.connection_context, context.crewing_id].join('\\u001f');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7365,
+    "match": ".join(",
+    "text": "return 'desktop-'+Array.from(bytes).map(function(v){return v.toString(16).padStart(2,'0');}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7399,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7426,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 7793,
+    "match": ".join(",
+    "text": "var body = rows.map(render).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8323,
+    "match": ".join(",
+    "text": "return bits.join(' \\u00b7 ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8378,
+    "match": ".join(",
+    "text": "+ versions.map(function(v, index){ return pilotCardFactVersionHtml(v, index === 0); }).join('')+'</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8379,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8397,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8516,
+    "match": ".join(",
+    "text": "}).join('')+'</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8587,
+    "match": ".join(",
+    "text": "var rows = split.shown.map(pilotCardRankRowHtml).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8592,
+    "match": ".join(",
+    "text": "var unranked = d.ranks.unranked_active_profiles.length ? '<div class=\"pilot-note\" data-qa=\"pilot-unranked\"><strong>'+escapeHtml(cardT('unranked'))+':</strong> '+d.ranks.unranked_active_profiles.map(function(u){ return escapeHtml(String(u.na"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8611,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8624,
+    "match": ".join(",
+    "text": "return d.ranks.confirmations.map(pilotCardHistoryRowHtml).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8641,
+    "match": ".join(",
+    "text": "}).join('')+'</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8649,
+    "match": ".join(",
+    "text": "var objects = (Array.isArray(c.objects) ? c.objects : []).map(function(o){ return '<div class=\"pilot-note\" data-qa=\"pilot-object\">'+escapeHtml(String(o.id))+' · '+escapeHtml(String(o.content_type))+'</div>'; }).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 8899,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9099,
+    "match": ".join(",
+    "text": "if (reqs.length) lines.push(cardT('draft_requirements') + ': ' + reqs.map(function(r){ return String(r.requirement) + ' — ' + String(r.wanted); }).join('; '));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9104,
+    "match": ".join(",
+    "text": "body:lines.join('\\n\\n')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9224,
+    "match": ".join(",
+    "text": "var text = [d.draft.to ? cardT('draft_to') + ': ' + d.draft.to : '', d.draft.subject, '', d.draft.body].filter(function(x){ return x !== ''; }).join('\\n');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9252,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9314,
+    "match": ".join(",
+    "text": "return parts.map(function(w){ return w.charAt(0).toUpperCase(); }).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9554,
+    "match": ".join(",
+    "text": "var subHtml = sub.length ? escapeHtml(sub.join(' \\u00b7 ')) : '';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 9691,
+    "match": ".join(",
+    "text": "? '<div class=\"cf-fitcards\">' + split.shown.map(pilotCardFitCardHtml).join('') + '</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10065,
+    "match": ".join(",
+    "text": "+ parts.join('<span class=\"ps-sep\" aria-hidden=\"true\"> \\u00b7 </span>')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10163,
+    "match": ".join(",
+    "text": "? items.map(profileShortlistRowHtml).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10428,
+    "match": ".join(",
+    "text": "parts.push(c2 === head.length - 1 ? text : (text + new Array(Math.max(1, widths[c2] - text.length + 1)).join(' ')));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10430,
+    "match": ".join(",
+    "text": "lines.push(parts.join(' | '));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10441,
+    "match": ".join(",
+    "text": "lines.join('\\n'),"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10447,
+    "match": ".join(",
+    "text": "out.body = (ls.bodyOverride === null || ls.bodyOverride === undefined) ? body.join('\\n') : String(ls.bodyOverride);"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10487,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10535,
+    "match": ".join(",
+    "text": ".map(function(i){ return profileLetterPickRowHtml(i, composed); }).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10549,
+    "match": ".join(",
+    "text": "}).join('') + '</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10564,
+    "match": ".join(",
+    "text": "}).join(' · ')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10745,
+    "match": ".join(",
+    "text": ".join(' ').toLowerCase().indexOf(q) !== -1;"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10818,
+    "match": ".join(",
+    "text": "+ '<div class=\"row full\"><div><label>Required languages</label><input value=\"'+escapeAttr((r.languages||[]).join(', ')||'—')+'\" disabled></div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10831,
+    "match": ".join(",
+    "text": "+ (['']).concat(taxonomyLabels('positions')).map(function(r){return '<option>'+escapeHtml(r)+'</option>';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 10834,
+    "match": ".join(",
+    "text": "+ (['']).concat(taxonomyLabels('vessel_types')).map(function(t){return '<option>'+escapeHtml(t)+'</option>';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11058,
+    "match": ".join(",
+    "text": "savedSeafarerVesselTypes(s).join(' '),"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11060,
+    "match": ".join(",
+    "text": "].join(' ').toLowerCase();"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11160,
+    "match": ".join(",
+    "text": "html += '<div class=\"ti-meta\">'+escapeHtml([s.rank||s.position,s.nationality,vesselType,expText,(s.doc_count||0)+' docs'].filter(Boolean).join(' · '))+'</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11214,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11218,
+    "match": ".join(",
+    "text": "+ '<div class=\"sub\">'+escapeHtml([s.rank||s.position,s.nationality].filter(Boolean).join(' · '))+'</div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11227,
+    "match": ".join(",
+    "text": "+ ['prospect','ex_crew','active','standby','not_available','blacklist'].map(function(v){return '<option value=\"'+v+'\"'+(s.status===v?' selected':'')+'>'+v+'</option>';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11249,
+    "match": ".join(",
+    "text": "var meta = [d.doc_number, d.issued_by, d.valid_to ? 'valid to '+d.valid_to : ''].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 11734,
+    "match": ".join(",
+    "text": "+ DOC_TYPES.map(function(t){return '<option value=\"'+t[0]+'\">'+escapeHtml(t[1])+'</option>';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12023,
+    "match": ".join(",
+    "text": "return '<div class=\"row full\"><div><label>Age / visa requirements</label><div>'+escapeHtml(items.join(' · '))+'</div></div></div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12071,
+    "match": ".join(",
+    "text": "+ '<div class=\"row full\"><div><label>Citizenship</label><div>'+escapeHtml((v.nationalities||[]).join(', ')||'—')+'</div></div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12176,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12455,
+    "match": ".join(",
+    "text": "rows.push(['Vessel experience', sum.vessel_type_experience.join(', ')]);"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12563,
+    "match": ".join(",
+    "text": "? ids.map(function(id){ return '<span class=\"tag\" style=\"font-size:10px;margin:2px 3px 2px 0;\">'+escapeHtml(certLabelById(id))+'</span>'; }).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12579,
+    "match": ".join(",
+    "text": "var gapText = gaps.length ? gaps.map(certLabelById).join(', ') : 'no gaps';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 12806,
+    "match": ".join(",
+    "text": "return parts.join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 13342,
+    "match": ".join(",
+    "text": "+     '<div style=\"font-size:12px;color:var(--text2);margin-top:2px;\">'+escapeHtml([mime, size].filter(Boolean).join(' · '))+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 13905,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 13955,
+    "match": ".join(",
+    "text": ".map(function(c){return '<option value=\"'+escapeAttr(c)+'\">';}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 13976,
+    "match": ".join(",
+    "text": "+ '<div><label>Currency</label><select id=\"f-cur\">'+['USD','EUR','GBP'].map(function(c){return optionHtml(c, seed.salary_currency || 'USD');}).join('')+'</select></div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 14526,
+    "match": ".join(",
+    "text": ".map(function(w){ return w.charAt(0); }).join('').toUpperCase() || 'SC';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 14574,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 14644,
+    "match": ".join(",
+    "text": "}).join(''));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 14736,
+    "match": ".join(",
+    "text": "return '<div class=\"settings-preview-grid\"'+(qa?' data-qa=\"'+qa+'\"':'')+'>'+cards.join('')+'</div>';"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 14808,
+    "match": ".join(",
+    "text": "}).join(''));"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15394,
+    "match": ".join(",
+    "text": "return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2, '0'); }).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15595,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15607,
+    "match": ".join(",
+    "text": "? p.permissions.map(function(x){ return '<span class=\"apps-perm\">'+escapeHtml(x)+'</span>'; }).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15820,
+    "match": ".join(",
+    "text": "return [mr.title || mobileModuleLabel('mailings'), [mr.rank, mr.vessel_type].filter(Boolean).join(' · ')];"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15832,
+    "match": ".join(",
+    "text": "return [sf.display_name || mobileModuleLabel('seafarers'), [sf.rank || sf.position, sf.nationality].filter(Boolean).join(' · ')];"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 15839,
+    "match": ".join(",
+    "text": "return [cfc.name || mobileModuleLabel('crew_flow'), [cfc.rank, cfc.nationality].filter(Boolean).join(' · ')];"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16201,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16289,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16351,
+    "match": ".join(",
+    "text": "return v.title || [v.rank, v.vessel_type].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16402,
+    "match": ".join(",
+    "text": "var meta = [v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16408,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16423,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-muted\">'+escapeHtml([v.rank || '?', v.vessel_type || '?', (v.published_at || '').slice(0,10)].join(' · '))+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16552,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-row\"><div class=\"mobile-field\"><label>Currency</label><select id=\"m-cur\">'+['USD','EUR','GBP'].map(function(c){return optionHtml(c, seed.salary_currency || 'USD');}).join('')+'</select></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16673,
+    "match": ".join(",
+    "text": "return [r.title, r.rank, r.vessel_type, r.crewing_ref, r.client_name, r.reply_to].join(' ').toLowerCase().indexOf(q) !== -1;"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16685,
+    "match": ".join(",
+    "text": "var meta = [r.rank || '?', r.vessel_type || '?', (r.published_at || '').slice(0,10)].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16691,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16705,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-muted\">'+escapeHtml([r.rank, r.vessel_type, (r.published_at || '').slice(0,10)].filter(Boolean).join(' · '))+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16716,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-kv\"><label>Languages</label><div>'+escapeHtml((r.languages || []).join(', ') || '—')+'</div></div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16859,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 16907,
+    "match": ".join(",
+    "text": "}).join('')"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17118,
+    "match": ".join(",
+    "text": "var meta = [s.rank || s.position, s.nationality, savedSeafarerPrimaryVesselType(s), formatExperienceMonths(savedSeafarerExperienceMonths(s)), (s.doc_count || 0)+' docs'].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17125,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17140,
+    "match": ".join(",
+    "text": "var meta = [d.doc_number, d.issued_by, d.valid_to ? 'valid to '+d.valid_to : ''].filter(Boolean).join(' · ');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17146,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17147,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17163,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-muted\">'+escapeHtml([s.rank || s.position, s.nationality].filter(Boolean).join(' · '))+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17174,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-row\"><div class=\"mobile-field\"><label>Status</label><select id=\"m-sf-status\">'+['prospect','ex_crew','active','standby','not_available','blacklist'].map(function(v){return '<option value=\"'+v+'\"'+(s.status===v?' select"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17291,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-list-meta\">'+escapeHtml([d.original_filename || '', d.valid_to ? 'valid to '+d.valid_to : '', d.issuer || ''].filter(Boolean).join(' · ') || d.doc_type || '')+'</div>'"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17293,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17294,
+    "match": ".join(",
+    "text": "}).join('');"
+   },
+   {
+    "file": "dist/index.html",
+    "line": 17313,
+    "match": ".join(",
+    "text": "+ '<div class=\"mobile-muted\">'+escapeHtml([d.category, dlt].filter(Boolean).join(' · '))+'</div>'"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1549,
+    "match": ".join(",
+    "text": "Ok(base.join(\"Skipi\").join(\"Crewing\"))"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1549,
+    "match": ".join(",
+    "text": "Ok(base.join(\"Skipi\").join(\"Crewing\"))"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1643,
+    "match": ".join(",
+    "text": "let folder = saved_root()?.join(safe_download_name("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1648,
+    "match": ".join(",
+    "text": "let target = folder.join(name);"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1896,
+    "match": "push_str(",
+    "text": "'&' => out.push_str(\"&amp;\"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1897,
+    "match": "push_str(",
+    "text": "'<' => out.push_str(\"&lt;\"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1898,
+    "match": "push_str(",
+    "text": "'>' => out.push_str(\"&gt;\"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1899,
+    "match": "push_str(",
+    "text": "'\"' => out.push_str(\"&quot;\"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1900,
+    "match": "push_str(",
+    "text": "'\\'' => out.push_str(\"&#39;\"),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1954,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"To: {}\\r\\n\", recipient));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1955,
+    "match": "push_str(",
+    "text": "out.push_str(&format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1959,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"Date: {}\\r\\n\", stamp));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1960,
+    "match": "push_str(",
+    "text": "out.push_str(\"MIME-Version: 1.0\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1961,
+    "match": "push_str(",
+    "text": "out.push_str(&format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1965,
+    "match": "push_str(",
+    "text": "out.push_str(\"This is a multi-part message in MIME format.\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1967,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}\\r\\n\", outer));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1968,
+    "match": "push_str(",
+    "text": "out.push_str(&format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1973,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}\\r\\n\", inner));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1974,
+    "match": "push_str(",
+    "text": "out.push_str(\"Content-Type: text/plain; charset=utf-8\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1975,
+    "match": "push_str(",
+    "text": "out.push_str(\"Content-Transfer-Encoding: 8bit\\r\\n\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1976,
+    "match": "push_str(",
+    "text": "out.push_str(&body_crlf);"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1977,
+    "match": "push_str(",
+    "text": "out.push_str(\"\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1979,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}\\r\\n\", inner));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1980,
+    "match": "push_str(",
+    "text": "out.push_str(\"Content-Type: text/html; charset=utf-8\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1981,
+    "match": "push_str(",
+    "text": "out.push_str(\"Content-Transfer-Encoding: 8bit\\r\\n\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1982,
+    "match": "push_str(",
+    "text": "out.push_str(\"<html><body><pre style=\\\"font-family:monospace;font-size:13px\\\">\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1983,
+    "match": "push_str(",
+    "text": "out.push_str(&letter_html_escape(&body_crlf));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1984,
+    "match": "push_str(",
+    "text": "out.push_str(\"\\r\\n</pre></body></html>\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1985,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}--\\r\\n\", inner));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1990,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}\\r\\n\", outer));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1991,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"Content-Type: {}; name=\\\"{}\\\"\\r\\n\", mime, name));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1992,
+    "match": "push_str(",
+    "text": "out.push_str(\"Content-Transfer-Encoding: base64\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1993,
+    "match": "push_str(",
+    "text": "out.push_str(&format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1998,
+    "match": "push_str(",
+    "text": "out.push_str(&String::from_utf8_lossy(chunk));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 1999,
+    "match": "push_str(",
+    "text": "out.push_str(\"\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2002,
+    "match": "push_str(",
+    "text": "out.push_str(&format!(\"--{}--\\r\\n\", outer));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2048,
+    "match": ".join(",
+    "text": "let folder = root.join(LETTER_FOLDER);"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2050,
+    "match": ".join(",
+    "text": "let target = folder.join(format!(\"Skipi_Crewing_{:x}.eml\", boundary_seed));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2546,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2581,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2742,
+    "match": ".join(",
+    "text": "let request = String::from_utf8_lossy(&server.join().unwrap()).to_string();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2766,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2784,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2798,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2816,
+    "match": ".join(",
+    "text": "server.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2838,
+    "match": ".join(",
+    "text": "let request = String::from_utf8_lossy(&server.join().unwrap()).to_string();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2977,
+    "match": ".join(",
+    "text": "let base = std::env::temp_dir().join(format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2982,
+    "match": ".join(",
+    "text": "let root = base.join(\"root\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2983,
+    "match": ".join(",
+    "text": "std::fs::create_dir_all(root.join(\"intake12\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2984,
+    "match": ".join(",
+    "text": "let inside = root.join(\"intake12\").join(\"letter.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2984,
+    "match": ".join(",
+    "text": "let inside = root.join(\"intake12\").join(\"letter.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2986,
+    "match": ".join(",
+    "text": "let outside = base.join(\"outside.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2998,
+    "match": ".join(",
+    "text": "root.join(\"intake12\").join(\"nope.eml\").to_str().unwrap()"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2998,
+    "match": ".join(",
+    "text": "root.join(\"intake12\").join(\"nope.eml\").to_str().unwrap()"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3003,
+    "match": ".join(",
+    "text": "root.join(\"intake12\")"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3004,
+    "match": ".join(",
+    "text": ".join(\"..\")"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3005,
+    "match": ".join(",
+    "text": ".join(\"..\")"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3006,
+    "match": ".join(",
+    "text": ".join(\"outside.eml\")"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3013,
+    "match": ".join(",
+    "text": "let link = root.join(\"intake12\").join(\"escape.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3013,
+    "match": ".join(",
+    "text": "let link = root.join(\"intake12\").join(\"escape.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3028,
+    "match": ".join(",
+    "text": "let base = std::env::temp_dir().join(format!(\"skipi-crewing-k21-{}-open\", std::process::id()));"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3029,
+    "match": ".join(",
+    "text": "let root = base.join(\"root\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3030,
+    "match": ".join(",
+    "text": "std::fs::create_dir_all(root.join(\"intake12\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3031,
+    "match": ".join(",
+    "text": "let inside = root.join(\"intake12\").join(\"letter.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3031,
+    "match": ".join(",
+    "text": "let inside = root.join(\"intake12\").join(\"letter.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3033,
+    "match": ".join(",
+    "text": "let outside = base.join(\"outside.eml\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3062,
+    "match": ".join(",
+    "text": "let base = std::env::temp_dir().join(format!("
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3067,
+    "match": ".join(",
+    "text": "let root = base.join(\"root\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3068,
+    "match": ".join(",
+    "text": "std::fs::create_dir_all(root.join(\"intake-1\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3069,
+    "match": ".join(",
+    "text": "std::fs::create_dir_all(root.join(\"intake-2\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3070,
+    "match": ".join(",
+    "text": "std::fs::write(root.join(\"intake-1\").join(\"attachment-0.pdf\"), b\"%PDF-1.4 one\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3070,
+    "match": ".join(",
+    "text": "std::fs::write(root.join(\"intake-1\").join(\"attachment-0.pdf\"), b\"%PDF-1.4 one\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3071,
+    "match": ".join(",
+    "text": "std::fs::write(root.join(\"intake-2\").join(\"attachment-0.pdf\"), b\"%PDF-1.4 two\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3071,
+    "match": ".join(",
+    "text": "std::fs::write(root.join(\"intake-2\").join(\"attachment-0.pdf\"), b\"%PDF-1.4 two\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3072,
+    "match": ".join(",
+    "text": "std::fs::write(base.join(\"outside.pdf\"), b\"%PDF-1.4 outside\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3083,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-1\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3083,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-1\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3087,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-2\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3087,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-2\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3168,
+    "match": ".join(",
+    "text": "base.join(\"outside.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3170,
+    "match": ".join(",
+    "text": "root.join(\"intake-1\").join(\"..\").join(\"..\").join(\"outside.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3170,
+    "match": ".join(",
+    "text": "root.join(\"intake-1\").join(\"..\").join(\"..\").join(\"outside.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3170,
+    "match": ".join(",
+    "text": "root.join(\"intake-1\").join(\"..\").join(\"..\").join(\"outside.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3170,
+    "match": ".join(",
+    "text": "root.join(\"intake-1\").join(\"..\").join(\"..\").join(\"outside.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3184,
+    "match": ".join(",
+    "text": "let link = root.join(\"intake-1\").join(\"escape.pdf\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3184,
+    "match": ".join(",
+    "text": "let link = root.join(\"intake-1\").join(\"escape.pdf\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3185,
+    "match": ".join(",
+    "text": "std::os::unix::fs::symlink(base.join(\"outside.pdf\"), &link).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3277,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-1\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3277,
+    "match": ".join(",
+    "text": "path: root.join(\"intake-1\").join(\"attachment-0.pdf\").to_string_lossy().to_string(),"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3311,
+    "match": ".join(",
+    "text": "let fat = root.join(\"intake-1\").join(\"fat.pdf\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3311,
+    "match": ".join(",
+    "text": "let fat = root.join(\"intake-1\").join(\"fat.pdf\");"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 3473,
+    "match": ".join(",
+    "text": ".join()"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 19,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\")"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 29,
+    "match": ".join(",
+    "text": "dir.join(\"crewing.sqlite\")"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 347,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\")"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 351,
+    "match": ".join(",
+    "text": "let docs = base.join(\"documents\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 372,
+    "match": ".join(",
+    "text": "let stored = documents_dir(vault_path).join(&stored_filename);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 452,
+    "match": ".join(",
+    "text": "let stored = documents_dir(vault_path).join(&stored_filename);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 630,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\")"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 634,
+    "match": ".join(",
+    "text": "let dir = base.join(\"seafarers\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 690,
+    "match": ".join(",
+    "text": "let dest = to.join(entry.file_name());"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 807,
+    "match": ".join(",
+    "text": "let docs_dir = seafarers_base.join(&safe_id);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 832,
+    "match": ".join(",
+    "text": ".map(|lid| seafarers_base.join(clean_path_part(lid, \"seafarer\")))"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 835,
+    "match": ".join(",
+    "text": "seafarers_base.join(format!(\".{}.{}\", safe_id, uuid::Uuid::new_v4().simple()));"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 836,
+    "match": ".join(",
+    "text": "let backup_dir = seafarers_base.join(format!("
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 897,
+    "match": ".join(",
+    "text": "let stage_dest = staging_dir.join(\"CV\").join(&fname);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 897,
+    "match": ".join(",
+    "text": "let stage_dest = staging_dir.join(\"CV\").join(&fname);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 898,
+    "match": ".join(",
+    "text": "let final_dest = docs_dir.join(\"CV\").join(&fname);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 898,
+    "match": ".join(",
+    "text": "let final_dest = docs_dir.join(\"CV\").join(&fname);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 928,
+    "match": ".join(",
+    "text": "let src = extracted_base.join(&rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 937,
+    "match": ".join(",
+    "text": "let stage_dest = staging_dir.join(&dest_rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 938,
+    "match": ".join(",
+    "text": "let final_dest = docs_dir.join(&dest_rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1337,
+    "match": ".join(",
+    "text": "let dir = std::env::temp_dir().join(format!("
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1385,
+    "match": ".join(",
+    "text": "let legacy_dir = seafarers_dir(v.to_str().unwrap()).join(clean_path_part(\"intake:I1\", \"seafarer\"));"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1460,
+    "match": ".join(",
+    "text": "let downloads = v.join(\"Downloads\").join(\"Skipi\").join(\"Crewing\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1460,
+    "match": ".join(",
+    "text": "let downloads = v.join(\"Downloads\").join(\"Skipi\").join(\"Crewing\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1460,
+    "match": ".join(",
+    "text": "let downloads = v.join(\"Downloads\").join(\"Skipi\").join(\"Crewing\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1463,
+    "match": ".join(",
+    "text": "let p = downloads.join(rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1484,
+    "match": ".join(",
+    "text": "let stored = |rel: &str| seafarers_dir(&vault_str).join(clean_path_part(pr, \"seafarer\")).join(rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1484,
+    "match": ".join(",
+    "text": "let stored = |rel: &str| seafarers_dir(&vault_str).join(clean_path_part(pr, \"seafarer\")).join(rel);"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1558,
+    "match": ".join(",
+    "text": "let d = save_docs(\"intake:2a353cdd-1\", pr, \"Ivan Petrenko\", \"\", vec![], Some(downloads.join(\"cv/cv-signed.pdf\").to_str().unwrap()), Some(\"merge\")).expect(\"save 5\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1564,
+    "match": ".join(",
+    "text": "let e2 = save_docs(\"intake:2a353cdd-1\", pr, \"Ivan Petrenko\", \"\", vec![], Some(downloads.join(\"cv/cv-signed.pdf\").to_str().unwrap()), Some(\"merge\")).expect(\"save 6b\");"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1568,
+    "match": ".join(",
+    "text": "std::fs::create_dir_all(downloads.join(\"7f7f7f7f/attachment-0.pdf\")).unwrap(); // a DIRECTORY where a file is expected: fs::copy fails"
+   },
+   {
+    "file": "src-tauri/src/db.rs",
+    "line": 1592,
+    "match": ".join(",
+    "text": "let f = save_docs(\"app-77\", pr, \"Ivan Petrenko\", downloads.join(\"bundle\").to_str().unwrap(), vec![(\"Identity/passport.pdf\", \"Passport\", \"Identity\")], None, None).expect(\"replace\");"
+   },
+   {
+    "file": "src-tauri/src/feedback.rs",
+    "line": 112,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\");"
+   },
+   {
+    "file": "src-tauri/src/feedback.rs",
+    "line": 115,
+    "match": ".join(",
+    "text": "dir.join(\"feedback.sqlite\")"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 19,
+    "match": ".join(",
+    "text": "PathBuf::from(\"/data/data/app.skipi.crewing.mobile/files\").join(\"skipi-crewing\")"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 154,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\");"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 157,
+    "match": ".join(",
+    "text": "dir.join(\"settings.json\")"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1697,
+    "match": "push_str(",
+    "text": "_ => out.push_str(&format!(\"%{:02X}\", b)),"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1744,
+    "match": "push_str(",
+    "text": "path.push_str(&q.join(\"&\"));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 1744,
+    "match": ".join(",
+    "text": "path.push_str(&q.join(\"&\"));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 2277,
+    "match": ".join(",
+    "text": "let tmp = std::env::temp_dir().join(format!("
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 2910,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-lifecycle-red-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 2913,
+    "match": ".join(",
+    "text": "Self { path: root.join(\"synthetic-settings.json\"), root }"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3121,
+    "match": ".join(",
+    "text": "let dbroot=f.root.join(format!(\"db-{label}\"));let keyroot=f.root.join(format!(\"key-{label}\"));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3121,
+    "match": ".join(",
+    "text": "let dbroot=f.root.join(format!(\"db-{label}\"));let keyroot=f.root.join(format!(\"key-{label}\"));"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3401,
+    "match": ".join(",
+    "text": "let f=Fixture::new();std::os::unix::fs::symlink(f.root.join(\"absent-target\"),&f.path).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 42,
+    "match": ".join(",
+    "text": "let dir = crate::app_data_dir().join(\"keys\");"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 47,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 48,
+    "match": ".join(",
+    "text": ".join(\"keys\");"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 55,
+    "match": ".join(",
+    "text": "keys_dir().join(SK_FILENAME)"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 115,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!("
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 126,
+    "match": ".join(",
+    "text": "let sk_path = root.join(\"skipi-crewing\").join(\"keys\").join(SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 126,
+    "match": ".join(",
+    "text": "let sk_path = root.join(\"skipi-crewing\").join(\"keys\").join(SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 126,
+    "match": ".join(",
+    "text": "let sk_path = root.join(\"skipi-crewing\").join(\"keys\").join(SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 454,
+    "match": ".join(",
+    "text": ".join(\"Downloads\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 455,
+    "match": ".join(",
+    "text": ".join(\"Skipi\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 456,
+    "match": ".join(",
+    "text": ".join(\"Inbox\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 457,
+    "match": ".join(",
+    "text": ".join(\".cache\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 458,
+    "match": ".join(",
+    "text": ".join(\"attachments\");"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 460,
+    "match": ".join(",
+    "text": "let target = cache_dir.join(format!("
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 529,
+    "match": ".join(",
+    "text": "errors.join(\"; \")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 559,
+    "match": ".join(",
+    "text": ".join(\"Downloads\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 560,
+    "match": ".join(",
+    "text": ".join(\"Skipi\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 561,
+    "match": ".join(",
+    "text": ".join(\"Inbox\")"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 562,
+    "match": ".join(",
+    "text": ".join(format!(\"bundle_{}\", application_id));"
+   },
+   {
+    "file": "src-tauri/src/messaging.rs",
+    "line": 581,
+    "match": ".join(",
+    "text": "let out_path = dest.join(&rel);"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 696,
+    "match": "push_str(",
+    "text": "for (key,value) in reply.extra {head.push_str(&format!(\"{}: {}\\r\\n\",key,value));}"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 697,
+    "match": "push_str(",
+    "text": "head.push_str(\"\\r\\n\");"
+   },
+   {
+    "file": "src-tauri/src/native_account.rs",
+    "line": 711,
+    "match": ".join(",
+    "text": "if worker.join().is_err() {self.errors.lock().unwrap().push(\"server_thread_panic\");}"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 72,
+    "match": ".join(",
+    "text": "fn main(&self) -> PathBuf { self.root.join(\"crewing.sqlite\") }"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 76,
+    "match": ".join(",
+    "text": "let path = self.root.join(format!(\"crewing.sqlite{suffix}\"));"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 231,
+    "match": ".join(",
+    "text": "for path in [namespace.main(), namespace.root.join(\"crewing.sqlite-journal\"), namespace.root.join(\"crewing.sqlite-wal\"), namespace.root.join(\"crewing.sqlite-shm\")] {"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 231,
+    "match": ".join(",
+    "text": "for path in [namespace.main(), namespace.root.join(\"crewing.sqlite-journal\"), namespace.root.join(\"crewing.sqlite-wal\"), namespace.root.join(\"crewing.sqlite-shm\")] {"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 231,
+    "match": ".join(",
+    "text": "for path in [namespace.main(), namespace.root.join(\"crewing.sqlite-journal\"), namespace.root.join(\"crewing.sqlite-wal\"), namespace.root.join(\"crewing.sqlite-shm\")] {"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 374,
+    "match": ".join(",
+    "text": "let sql = format!(\"SELECT {} FROM {table} LIMIT 0\", required.join(\",\"));"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 449,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-native-db-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 451,
+    "match": ".join(",
+    "text": "let db = root.join(\"workspace\"); fs::create_dir(&db).unwrap(); Self { root, db }"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 454,
+    "match": ".join(",
+    "text": "fn main(&self) -> PathBuf { self.db.join(\"crewing.sqlite\") }"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 475,
+    "match": ".join(",
+    "text": "assert_eq!(crate::private_store::atomic_write(&f.root.join(\"private-reference.json\"), &bytes).unwrap(), crate::private_store::Durability::Confirmed);"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 476,
+    "match": ".join(",
+    "text": "assert!(serde_json::from_slice::<DatabaseReference>(&fs::read(f.root.join(\"private-reference.json\")).unwrap()).unwrap() == *reference);"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 484,
+    "match": ".join(",
+    "text": "fs::write(f.root.join(\"private-reference.json\"), b\"old synthetic reference\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 487,
+    "match": ".join(",
+    "text": "assert!(crate::private_store::atomic_write_with_fault(&f.root.join(\"private-reference.json\"), &serde_json::to_vec(&prepared.reference()).unwrap(), crate::private_store::TestFault::FileSync).is_err());"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 489,
+    "match": ".join(",
+    "text": "assert_eq!(fs::read(f.root.join(\"private-reference.json\")).unwrap(), b\"old synthetic reference\");"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 510,
+    "match": ".join(",
+    "text": "fs::rename(f.main(), f.db.join(\"old.sqlite\")).unwrap(); fs::write(f.main(), b\"replacement synthetic bytes\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 517,
+    "match": ".join(",
+    "text": "let f = Fixture::new(); f.cold(); fs::write(f.db.join(\"crewing.sqlite-journal\"), b\"synthetic non-hot journal\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 520,
+    "match": ".join(",
+    "text": "let journal = f.db.join(\"crewing.sqlite-journal\"); fs::rename(&journal, f.db.join(\"preserved-journal\")).unwrap(); fs::write(&journal, b\"replacement sidecar\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 520,
+    "match": ".join(",
+    "text": "let journal = f.db.join(\"crewing.sqlite-journal\"); fs::rename(&journal, f.db.join(\"preserved-journal\")).unwrap(); fs::write(&journal, b\"replacement sidecar\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 538,
+    "match": ".join(",
+    "text": "let f = Fixture::new(); f.cold(); let outside = f.root.join(\"synthetic-target\"); fs::write(&outside, b\"do not touch\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 539,
+    "match": ".join(",
+    "text": "if target == \"crewing.sqlite\" { fs::remove_file(f.db.join(target)).unwrap(); }"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 540,
+    "match": ".join(",
+    "text": "symlink(&outside, f.db.join(target)).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 544,
+    "match": ".join(",
+    "text": "let f = Fixture::new(); f.cold(); fs::hard_link(f.main(), f.root.join(\"extra-link\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 547,
+    "match": ".join(",
+    "text": "fs::remove_file(f.root.join(\"extra-link\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 549,
+    "match": ".join(",
+    "text": "fs::rename(&f.db, f.root.join(\"old-workspace\")).unwrap(); fs::create_dir(&f.db).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 571,
+    "match": ".join(",
+    "text": "assert!(serde_json::from_slice::<DatabaseReference>(&fs::read(f.root.join(\"private-reference.json\")).unwrap()).unwrap() == reference);"
+   },
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 645,
+    "match": ".join(",
+    "text": "if !retain_shm { fs::remove_file(f.db.join(\"crewing.sqlite-shm\")).unwrap(); }"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 23,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-db-probe-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 25,
+    "match": ".join(",
+    "text": "let live = root.join(\"live\"); let copy = root.join(\"copy\");"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 25,
+    "match": ".join(",
+    "text": "let live = root.join(\"live\"); let copy = root.join(\"copy\");"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 28,
+    "match": ".join(",
+    "text": "fn database(root: &Path) -> PathBuf { root.join(\"synthetic.sqlite\") }"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 45,
+    "match": ".join(",
+    "text": "fs::copy(self.live.join(name), self.copy.join(name)).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 45,
+    "match": ".join(",
+    "text": "fs::copy(self.live.join(name), self.copy.join(name)).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_database_probe.rs",
+    "line": 47,
+    "match": ".join(",
+    "text": "assert!(!self.copy.join(\"synthetic.sqlite-shm\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 42,
+    "match": ".join(",
+    "text": ".join(\"skipi-crewing\");"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 123,
+    "match": ".join(",
+    "text": "let path=parent.namespace.root.join(name);"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 179,
+    "match": ".join(",
+    "text": "let root=std::env::temp_dir().join(format!(\"crewing635-fresh-{}\",uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 181,
+    "match": ".join(",
+    "text": "let base=root.join(\"application\");"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 189,
+    "match": ".join(",
+    "text": "let container=self.base.join(\"native-contexts\"); let context=container.join(CONTEXT);"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 189,
+    "match": ".join(",
+    "text": "let container=self.base.join(\"native-contexts\"); let context=container.join(CONTEXT);"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 190,
+    "match": ".join(",
+    "text": "[container,context.clone(),context.join(\"database\"),context.join(\"keys\")]"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 190,
+    "match": ".join(",
+    "text": "[container,context.clone(),context.join(\"database\"),context.join(\"keys\")]"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 198,
+    "match": ".join(",
+    "text": "for path in [self.paths()[2].join(\"crewing.sqlite\"),"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 199,
+    "match": ".join(",
+    "text": "self.paths()[3].join(crate::messaging::SK_FILENAME),self.base.join(\"settings.json\")] {"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 199,
+    "match": ".join(",
+    "text": "self.paths()[3].join(crate::messaging::SK_FILENAME),self.base.join(\"settings.json\")] {"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 242,
+    "match": ".join(",
+    "text": "let sentinel=paths[1].join(\"sentinel\"); fs::write(&sentinel,b\"existing context\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 243,
+    "match": ".join(",
+    "text": "let other=paths[0].join(\"unrelated\"); fs::write(&other,b\"keep\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 259,
+    "match": ".join(",
+    "text": "let sentinel=container.join(\"unrelated\"); fs::write(&sentinel,b\"existing\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 272,
+    "match": ".join(",
+    "text": "let target=f.root.join(\"target\");"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 274,
+    "match": ".join(",
+    "text": "let sentinel=target.join(\"sentinel\"); fs::write(&sentinel,b\"untouched\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_fresh.rs",
+    "line": 293,
+    "match": ".join(",
+    "text": "assert!(!target.join(CONTEXT).exists());"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 100,
+    "match": ".join(",
+    "text": "let path = namespace.root.join(SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 142,
+    "match": ".join(",
+    "text": "if identity(&secret_metadata(&namespace.root.join(SK_FILENAME))?)!=saved.key_identity {"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 183,
+    "match": ".join(",
+    "text": "let path = namespace.root.join(SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 242,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-native-key-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 244,
+    "match": ".join(",
+    "text": "let keys = root.join(\"keys\"); fs::create_dir(&keys).unwrap(); fs::set_permissions(&keys, fs::Permissions::from_mode(0o700)).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 248,
+    "match": ".join(",
+    "text": "fn path(&self) -> PathBuf { self.keys.join(SK_FILENAME) }"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 293,
+    "match": ".join(",
+    "text": "let f=Fixture::new(); let outside=f.root.join(\"owned-target\"); fs::write(&outside,synthetic_raw()).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 299,
+    "match": ".join(",
+    "text": "f.write(&synthetic_raw()); fs::hard_link(f.path(),f.root.join(\"same-inode\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 326,
+    "match": ".join(",
+    "text": "fs::rename(f.path(),f.root.join(\"old-key\")).unwrap(); f.write(&synthetic_raw());"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 328,
+    "match": ".join(",
+    "text": "assert_eq!(fs::read(f.path()).unwrap(),synthetic_raw()); assert_eq!(fs::read(f.root.join(\"old-key\")).unwrap(),synthetic_raw());"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 353,
+    "match": ".join(",
+    "text": "fs::remove_file(f.path()).unwrap(); symlink(f.root.join(\"absent-synthetic-target\"),f.path()).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 356,
+    "match": ".join(",
+    "text": "assert!(!f.root.join(\"absent-synthetic-target\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 371,
+    "match": ".join(",
+    "text": "let f=Fixture::new(); let ns=f.namespace(); let moved=f.root.join(\"owned-created-key\"); let replacement=[42u8;32];"
+   },
+   {
+    "file": "src-tauri/src/native_keys.rs",
+    "line": 384,
+    "match": ".join(",
+    "text": "fs::rename(&f.keys,f.root.join(\"old-keys\")).unwrap(); fs::create_dir(&f.keys).unwrap(); f.write(&[42;32]);"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 892,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-runtime-core-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 894,
+    "match": ".join(",
+    "text": "let vault = root.join(\"vault\"); fs::create_dir(&vault).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 895,
+    "match": ".join(",
+    "text": "let db = Sqlite::open(vault.join(\"synthetic.sqlite\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 897,
+    "match": ".join(",
+    "text": "Self { path: root.join(\"synthetic-settings.json\"), vault: vault.to_str().unwrap().into(), root, db: Mutex::new(Some(db)) }"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1039,
+    "match": ".join(",
+    "text": "let (logout, before, calls) = actor.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1297,
+    "match": ".join(",
+    "text": "let (result, writes, closes) = actor.join().unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1334,
+    "match": "push_str(",
+    "text": "3 => receipt.parent_revision.push_str(\"-foreign\"),"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1336,
+    "match": "push_str(",
+    "text": "5 => receipt.revision.push_str(\"-foreign\"),"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1599,
+    "match": ".join(",
+    "text": "let old_context=rt.context().unwrap();let witness=f.root.join(\"owned-settings-witness\");"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1671,
+    "match": ".join(",
+    "text": "\"missing_parent\" => f.root.join(\"missing\").join(\"settings.json\"),"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1671,
+    "match": ".join(",
+    "text": "\"missing_parent\" => f.root.join(\"missing\").join(\"settings.json\"),"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1672,
+    "match": ".join(",
+    "text": "\"directory\" => {let p=f.root.join(\"target-directory\");fs::create_dir(&p).unwrap();p},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1673,
+    "match": ".join(",
+    "text": "\"dangling_symlink\" => {let p=f.root.join(\"dangling\");std::os::unix::fs::symlink(f.root.join(\"absent\"),&p).unwrap();p},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1673,
+    "match": ".join(",
+    "text": "\"dangling_symlink\" => {let p=f.root.join(\"dangling\");std::os::unix::fs::symlink(f.root.join(\"absent\"),&p).unwrap();p},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1674,
+    "match": ".join(",
+    "text": "\"symlink_parent\" => {let p=f.root.join(\"parent-alias\");std::os::unix::fs::symlink(&f.root,&p).unwrap();p.join(\"settings-new.json\")},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1674,
+    "match": ".join(",
+    "text": "\"symlink_parent\" => {let p=f.root.join(\"parent-alias\");std::os::unix::fs::symlink(&f.root,&p).unwrap();p.join(\"settings-new.json\")},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1675,
+    "match": ".join(",
+    "text": "_ => {let p=f.root.join(\"writable\");fs::create_dir(&p).unwrap();fs::set_permissions(&p,fs::Permissions::from_mode(0o777)).unwrap();p.join(\"settings.json\")},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1675,
+    "match": ".join(",
+    "text": "_ => {let p=f.root.join(\"writable\");fs::create_dir(&p).unwrap();fs::set_permissions(&p,fs::Permissions::from_mode(0o777)).unwrap();p.join(\"settings.json\")},"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1681,
+    "match": ".join(",
+    "text": "assert!(!f.root.join(\"missing\").exists());assert!(!f.root.join(\"absent\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1681,
+    "match": ".join(",
+    "text": "assert!(!f.root.join(\"missing\").exists());assert!(!f.root.join(\"absent\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1682,
+    "match": ".join(",
+    "text": "assert!(!f.root.join(\"settings-new.json\").exists());assert!(!f.root.join(\"writable/settings.json\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1682,
+    "match": ".join(",
+    "text": "assert!(!f.root.join(\"settings-new.json\").exists());assert!(!f.root.join(\"writable/settings.json\").exists());"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1689,
+    "match": ".join(",
+    "text": "let f=Fixture::new();let target=f.root.join(\"never-created-settings.json\");"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1703,
+    "match": ".join(",
+    "text": "let f=Fixture::new();let target=f.root.join(\"orphan-settings-never-created.json\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 60,
+    "match": ".join(",
+    "text": "let path = root.join(\"skipi-crewing\").join(\"settings.json\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 60,
+    "match": ".join(",
+    "text": "let path = root.join(\"skipi-crewing\").join(\"settings.json\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 95,
+    "match": ".join(",
+    "text": "let root=dirs::config_dir().ok_or(\"key_unavailable\")?.join(\"skipi-crewing\").join(\"keys\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 95,
+    "match": ".join(",
+    "text": "let root=dirs::config_dir().ok_or(\"key_unavailable\")?.join(\"skipi-crewing\").join(\"keys\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 324,
+    "match": ".join(",
+    "text": "let path=control.key_root.join(crate::messaging::SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_local_commit.rs",
+    "line": 329,
+    "match": ".join(",
+    "text": "fs::rename(&path,control.key_root.join(\"retained-original-key\")).map_err(|_|\"key_unavailable\")?;"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 32,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-joint-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 35,
+    "match": ".join(",
+    "text": "let db_root = root.join(\"database\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 36,
+    "match": ".join(",
+    "text": "let key_root = root.join(\"independent-keys\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 37,
+    "match": ".join(",
+    "text": "let alternative_root = root.join(\"alternative-keys\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 48,
+    "match": ".join(",
+    "text": "path: root.join(\"settings.json\"), root, db_root, key_root, alternative_root,"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 71,
+    "match": ".join(",
+    "text": "let database=self.root.join(\"decoy-fresh-database\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 72,
+    "match": ".join(",
+    "text": "let key=self.root.join(\"decoy-fresh-keys\");"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 92,
+    "match": ".join(",
+    "text": "let path=self.root.join(name);"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 181,
+    "match": ".join(",
+    "text": "let database = Sqlite::open_with_flags(self.db_root.join(\"crewing.sqlite\"),"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 198,
+    "match": ".join(",
+    "text": "let path = self.key_root.join(crate::messaging::SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 205,
+    "match": ".join(",
+    "text": "fs::rename(&path, self.key_root.join(\"retained-original-key\")).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 599,
+    "match": ".join(",
+    "text": "assert!(fs::metadata(fixture.db_root.join(\"crewing.sqlite\")).unwrap().is_file());"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 620,
+    "match": ".join(",
+    "text": "let key_path=fixture.key_root.join(crate::messaging::SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 685,
+    "match": ".join(",
+    "text": "let key_path=fixture.key_root.join(crate::messaging::SK_FILENAME);"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 687,
+    "match": ".join(",
+    "text": "let old_inode=fs::metadata(fixture.db_root.join(\"crewing.sqlite\")).unwrap().ino();"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 699,
+    "match": ".join(",
+    "text": "assert_eq!(fs::metadata(fixture.db_root.join(\"crewing.sqlite\")).unwrap().ino(),old_inode);"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 47,
+    "match": ".join(",
+    "text": "let pending = parent.join(format!(\".{}.pending-{}\", name.to_string_lossy(), uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 96,
+    "match": ".join(",
+    "text": "let pending = parent.join(format!(\".runtime-test-pending-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 155,
+    "match": ".join(",
+    "text": "let root = std::env::temp_dir().join(format!(\"crewing635-private-store-{}\", uuid::Uuid::new_v4()));"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 159,
+    "match": ".join(",
+    "text": "let path = root.join(\"synthetic-settings.json\");"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 160,
+    "match": ".join(",
+    "text": "let temp = root.join(\"synthetic-pending\");"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 203,
+    "match": ".join(",
+    "text": "let f = Fixture::new(); let directory_target = f.root.join(\"existing-dir\"); fs::create_dir(&directory_target).unwrap();"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 204,
+    "match": ".join(",
+    "text": "fs::write(directory_target.join(\"marker\"), b\"synthetic preserve\").unwrap();"
+   },
+   {
+    "file": "src-tauri/src/private_store.rs",
+    "line": 207,
+    "match": ".join(",
+    "text": "assert_eq!(fs::read(directory_target.join(\"marker\")).unwrap(), b\"synthetic preserve\"); f.old();"
+   }
+  ]
+ },
+ "subject_digests": {
+  "src-tauri/src/native_account.rs": "513c79a4f85f7a64de6b581575f8d0f9c2930966ef6c7bfec5e784f172df3f7d",
+  "src-tauri/src/native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+  "src-tauri/src/native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+ },
+ "read_failures": []
+}

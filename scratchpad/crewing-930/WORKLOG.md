@@ -78,3 +78,18 @@
   `START_COORDINATOR`. Эта секция — запись задачи по правилу дома, а не пишущая стадия.
 - Запись слайса намеренно лежит отдельным коммитом и касается только `scratchpad/crewing-930`,
   поэтому её легко не брать в PR по коду.
+
+---
+
+## СТАДИЯ 2, первый шаг — ЗАМЕР ПО КОДУ адреса и формы второй ступени (2026-11-06T01:55:09Z)
+
+Запись замера: `s7-wire-20261106/MEASURE-930-s7-wire.md` (две списка, второй пуст и объяснён).
+Сырой JSON: `s7-wire-20261106/measure-930-s7-raw.json`.
+
+- **Q1 URL:** хост-литерал(ы): `assistant.skipi.app`; путевые литералы: `/api/app`
+- **Q2 поле рабочего места:** `connection.crewing_id` (String, в `Connection`, src-tauri/src/native_account.rs:29); `connection.organization_id` (Option<String>, в `Connection`, src-tauri/src/native_account.rs:29, аттрибуты: #[serde(deserialize_with = "required_nullable")])
+- **Q3 форма:** ВЛОЖЕННУЮ. Десериализатор требует поля-структуры: `connection: Connection`, `entitlement: Entitlement`. `#[serde(flatten)]` в наборе замера: 2 вхождений; `#[serde(alias` : 0. Плоские семь ключей в такую структуру НЕ укладываются — это свойство типа, а не строгости проверок.
+- **Q4 происхождение префикса:** константа `ACCOUNT_ORIGIN` — `src-tauri/src/native_account.rs:7`, `src-tauri/src/native_account.rs:382`, `src-tauri/src/native_account.rs:387`, `src-tauri/src/native_account.rs:518` (+1 ещё); строковые константы адреса: `src-tauri/src/api.rs:6` pub(crate) const PRIMARY_API: &str = "https://api.skipi.app";, `src-tauri/src/api.rs:7` pub(crate) const RU_API: &str = "https://api-ru.skipi.app";, `src-tauri/src/native_account.rs:7` pub(crate) const ACCOUNT_ORIGIN: &str = "https://assistant.skipi.app";; перекрытие средой: `env!/option_env!` 6 вхождений, `env::var` 9 вхождений
+
+**Слой:** найдено в клиентском коде на базисе `f145c6017eaea3804a5429e5aa428b6fb0ece6d9` (живой main по моему ls-remote ДО стадии, в стадии проверен локально); против боевого сервера НЕ проверено ни раз. Стенд в стадии не поднимался, живых запросов нет.
+
