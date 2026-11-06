@@ -1,0 +1,25 @@
+{
+ "observed_at": "2026-11-06T05:00:35.181946+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "lease_id": "160e68688f3a438c836d683ad30ea0e5",
+ "revision": 1,
+ "certificate_path": "/home/linux/Developer/skipi-parallel-coordinator/reports/epoch50/certs/CERT-crewing-930-pushA-r1-160e68688f3a438c836d683ad30ea0e5.json",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "по очередям ВАКУУМНО: стадия синхронная",
+ "outcome": "PUSHED",
+ "evidence": {
+  "push_rc": 0,
+  "push_transcript_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/push-a-20261106/push-transcript.txt",
+  "push_transcript_sha256": "add094b4a5a6fcdf6769cd3671d3d25852d52219d4b2b786cc5bd7440283dfe5",
+  "remote_sha_after_push_LIVE": "eb609c63778888f100e591f6c30c090fd2da85c7",
+  "target_sha": "eb609c63778888f100e591f6c30c090fd2da85c7",
+  "branch": "preserve/crewing-930-slice-a-code",
+  "proof_note": "исход определён ЖИВЫМ ls-remote после push, а не кодом возврата: rc говорит «команда завершилась», а не «ссылка на сервере указывает на мой объект»"
+ },
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-pushA-ACKSTOP-20261106T050035Z",
+ "ack_stop_writer": "skipi-crewing-9b"
+}

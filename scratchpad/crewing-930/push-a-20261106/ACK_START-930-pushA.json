@@ -1,0 +1,13 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-pushA-ACKSTART-20261106T050018Z",
+ "observed_at": "2026-11-06T05:00:18.192401+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "lease_id": "160e68688f3a438c836d683ad30ea0e5",
+ "revision": 1,
+ "certificate_path": "/home/linux/Developer/skipi-parallel-coordinator/reports/epoch50/certs/CERT-crewing-930-pushA-r1-160e68688f3a438c836d683ad30ea0e5.json",
+ "driver_sha256": "2c64a20fbffbb3cda6c37e62eb5fa1fa76b02927ce732f001a8772e79314b45f",
+ "window_seconds_remaining_at_start": 160
+}
