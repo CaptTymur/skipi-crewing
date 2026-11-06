@@ -1,0 +1,17 @@
+{
+ "observed_at": "2026-11-06T02:38:52.771024+00:00",
+ "stage": "IMPLEMENT",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "по очередям ВАКУУМНО: стадия синхронная, очередей нет",
+ "evidence": {
+  "agents_md_pre_sha256": "d9f2b9878a5ad483ed8ba545be90e8db3d30071cf94bea0b04695eb76794ea32",
+  "agents_md_post_sha256": "9fcf927fc8416e2efbf42c74fad87d67b7e22e1961551aa7f65f00b9abcc18ef",
+  "after_state_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/rules-20261106/after-state-930-rules.txt",
+  "after_state_sha256": "3874ac11643d9c192d7c223a75f92d16bb162122e5b3cad0b3c888cf8ca54b97"
+ },
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-rules-AFTERSTAGE-20261106T023852Z"
+}

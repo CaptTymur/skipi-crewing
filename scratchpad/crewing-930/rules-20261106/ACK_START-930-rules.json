@@ -1,0 +1,10 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-rules-ACKSTART-20261106T023852Z",
+ "observed_at": "2026-11-06T02:38:52.729475+00:00",
+ "stage": "IMPLEMENT",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "driver_sha256": "2dc76e6a85aab21c47190b5680888db6184e5b7e2109ea6e5643d657795d009b",
+ "window_seconds_remaining_at_start": 147
+}
