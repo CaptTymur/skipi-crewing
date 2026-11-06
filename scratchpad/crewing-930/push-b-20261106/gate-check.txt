@@ -1,0 +1,4 @@
+{
+  "verdict": "PERMIT_CURRENT",
+  "scope": "stage concurrency permission only; local controls still apply"
+}

@@ -1,0 +1,24 @@
+{
+ "observed_at": "2026-11-06T04:46:32.102901+00:00",
+ "stage": "FINALIZE_END",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "lease_id": "daae35a8f2ee43838756fdd5f855ddae",
+ "revision": 1,
+ "certificate_path": "/home/linux/Developer/skipi-parallel-coordinator/reports/epoch50/certs/CERT-crewing-930-pushB-r1-daae35a8f2ee43838756fdd5f855ddae.json",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "по очередям ВАКУУМНО: стадия синхронная",
+ "outcome": "PUSHED",
+ "evidence": {
+  "push_rc": 0,
+  "push_transcript_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/push-b-20261106/push-transcript.txt",
+  "push_transcript_sha256": "c81251ff11df3c34cdb3bb635d33e7e8730db6d039e44d279230dbe7d2f3eb66",
+  "remote_sha_after_push_LIVE": "335ccef3b0c6f64ea099c79e419a312d2f5635ef",
+  "target_sha": "335ccef3b0c6f64ea099c79e419a312d2f5635ef",
+  "branch": "preserve/crewing-930-agents-invariant",
+  "proof_note": "исход определён ЖИВЫМ ls-remote после push, а не кодом возврата: rc говорит «команда завершилась», а не «ссылка на сервере указывает на мой объект»"
+ },
+ "document": "AFTER_STAGE",
+ "after_stage_event_id": "crewing-930-pushB-AFTERSTAGE-20261106T044632Z"
+}

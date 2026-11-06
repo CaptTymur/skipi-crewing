@@ -1,0 +1,10 @@
+Skipi Guard skipi-guard.v1: PASS
+home/task: crewing / repo-meta
+repo: /home/linux/Developer/worktrees/crewing-930-20261105
+range: f145c6017eaea3804a5429e5aa428b6fb0ece6d9 -> 335ccef3b0c6f64ea099c79e419a312d2f5635ef (triple-dot)
+sha: 335ccef
+changed files: 1
+  - AGENTS.md
+protected touches: 0
+release changes: no
+harness commands: 0
