@@ -1,0 +1,17 @@
+{
+ "observed_at": "2026-11-06T02:30:46.306713+00:00",
+ "stage": "PREP",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "истинно ВАКУУМНО по очередям: стадия синхронная, очередей не создавала. Сами операции завершились САМИ, внутри окна.",
+ "evidence": {
+  "after_state_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/sB2-tickets-20261106/after-state-930-sB2.txt",
+  "after_state_sha256": "3848ec45bfb561d8f1cd9b6e7304ac23896b508fbe86e40caddaab8a82b31895"
+ },
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-sB2-ACKSTOP-20261106T023046Z",
+ "ack_stop_writer": "skipi-crewing-9b",
+ "note": "написан ЗАРАНЕЕ и СВЕЖИМ на случай дренажа; нормальный путь закрывается AFTER_STAGE, но форму решает момент вызова гейта, не мой путь"
+}

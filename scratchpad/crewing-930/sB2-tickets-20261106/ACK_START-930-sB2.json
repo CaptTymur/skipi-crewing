@@ -1,0 +1,11 @@
+{
+ "document": "ACK_START",
+ "ack_start_event_id": "crewing-930-sB2-ACKSTART-20261106T023046Z",
+ "observed_at": "2026-11-06T02:30:46.073382+00:00",
+ "stage": "PREP",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "driver_sha256": "e9c1ea58d71923c85f18283e8f17ecd6364974a97b52cb44179d4b4827581685",
+ "window_seconds_remaining_at_start": 206,
+ "note": "документ оформлен в тот же миг, что и начало; задним числом не датирован"
+}

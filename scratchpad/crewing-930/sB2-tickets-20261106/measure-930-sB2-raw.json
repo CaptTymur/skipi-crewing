@@ -1,0 +1,359 @@
+{
+ "measured_at_utc": "2026-11-06T02:30:46Z",
+ "layer": "НАЙДЕНО В КЛИЕНТСКОМ КОДЕ (чтение названного SHA). Не «проверено в работе».",
+ "base_sha": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+ "subject": "ticket",
+ "scan_files": 21,
+ "include_map": {
+  "src-tauri/src/native_local_joint_tests.rs": {
+   "included_from": "src-tauri/src/native_lifecycle.rs",
+   "at_line": 1550,
+   "site_is_test": true,
+   "owed_to": "fn native635_closing_protocol_publication_failure_preserves_actual_close_failure @1528"
+  }
+ },
+ "definition_ranges": [
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "from": 760,
+   "to": 764
+  }
+ ],
+ "voids_previous": {
+  "previous_raw": "scratchpad/crewing-930/sB-tickets-20261106/measure-930-sB-raw.json",
+  "previous_verdict": "claim_holds_in_full=False (ЛОЖНОЕ ОПРОВЕРЖЕНИЕ)",
+  "reason": "подстрока вместо разбора cfg; include! не разбирался; игла считала комментарии и тело определения"
+ },
+ "calls": [
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 980,
+   "code": "let old_ticket = rt.ticket(&parent).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "mod runtime_tests @832",
+   "enclosing": "fn closing_race_at @969"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1052,
+   "code": "assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "mod runtime_tests @832",
+   "enclosing": "fn closing_race_at @969"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1161,
+   "code": "let ticket = rt.ticket(&parent).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_closing_authority_poison_invalidates_old_snapshot_without_panic @1158",
+   "enclosing": "fn native635_closing_authority_poison_invalidates_old_snapshot_without_panic @1158"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1203,
+   "code": "let parent = rt.context().unwrap(); let old_ticket = rt.ticket(&parent).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_closing_authority_poison_after_rename_keeps_matching_blocked_memory @1201",
+   "enclosing": "fn native635_closing_authority_poison_after_rename_keeps_matching_blocked_memory @1201"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1635,
+   "code": "assert_eq!(f.row().as_deref(),Some(\"synthetic-preserved\"));assert!(rt.ticket(&context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_nativepersist_file_sync_failure_via_adapter_is_precommit @1629",
+   "enclosing": "fn native635_nativepersist_file_sync_failure_via_adapter_is_precommit @1629"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1651,
+   "code": "assert!(f.row().is_none());assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_nativepersist_directory_sync_unknown_via_adapter_is_committed_blocked @1641",
+   "enclosing": "fn native635_nativepersist_directory_sync_unknown_via_adapter_is_committed_blocked @1641"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1713,
+   "code": "let old_context = rt.context().unwrap(); let old_ticket = rt.ticket(&old_context).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711",
+   "enclosing": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1723,
+   "code": "assert_ne!(rt.context().unwrap(), old_context); assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711",
+   "enclosing": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1734,
+   "code": "assert!(rt.settings.lock().unwrap().native_account.is_none()); assert!(rt.ticket(&context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context @1728",
+   "enclosing": "fn native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context @1728"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1745,
+   "code": "assert!(f.row().is_none()); assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_actual_postrename_unknown_keeps_new_identity_blocked_and_closes_db @1737",
+   "enclosing": "fn native635_runtime_actual_postrename_unknown_keeps_new_identity_blocked_and_closes_db @1737"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1753,
+   "code": "assert!(f.row().is_none()); assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_activation_failure_is_committed_matching_blocked @1748",
+   "enclosing": "fn native635_runtime_activation_failure_is_committed_matching_blocked @1748"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1835,
+   "code": "assert_eq!(f.bytes(), old); assert!(f.row().is_some()); assert!(rt.ticket(&context).is_ok()); assert!(fake.calls.borrow().is_empty());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_logout_without_account_cancels_pending_login_but_preserves_legacy_access @1830",
+   "enclosing": "fn native635_runtime_logout_without_account_cancels_pending_login_but_preserves_legacy_access @1830"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1840,
+   "code": "let old_snapshot = rt.settings.lock().unwrap().clone(); let ticket = rt.ticket(&context).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838",
+   "enclosing": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1847,
+   "code": "assert!(ticket.lease().is_err()); assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838",
+   "enclosing": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1854,
+   "code": "assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850",
+   "enclosing": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1863,
+   "code": "assert!(newer.ticket(&old_context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850",
+   "enclosing": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1868,
+   "code": "let late_proof = proof(&rt, &Fake::default()); let old_ticket = rt.ticket(&context).unwrap(); let old = f.bytes();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866",
+   "enclosing": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1877,
+   "code": "assert!(restart.ticket(&restarted_context).is_err()); assert_eq!(restart.refresh(&no_network, &restarted_context).unwrap_err(), \"login_required\");",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866",
+   "enclosing": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1886,
+   "code": "assert!(fake.calls.borrow().is_empty()); assert!(rt.ticket(&context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_logout_holds_owned_barrier_through_remote_and_rejects_stale_context @1881",
+   "enclosing": "fn native635_runtime_logout_holds_owned_barrier_through_remote_and_rejects_stale_context @1881"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1909,
+   "code": "assert!(fake.calls.borrow().is_empty()); assert_eq!(f.bytes(), old); assert!(f.row().is_some()); assert!(rt.ticket(&context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_unsupported_native_rejects_before_transport_or_mutating_callbacks @1901",
+   "enclosing": "fn native635_runtime_unsupported_native_rejects_before_transport_or_mutating_callbacks @1901"
+  },
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 1926,
+   "code": "assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_runtime_refresh_expiring_between_validation_boundaries_denies_current_authorization @1913",
+   "enclosing": "impl Clock @1916"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 315,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "include! из src-tauri/src/native_lifecycle.rs:1550 (fn native635_closing_protocol_publication_failure_preserves_actual_close_failure @1528)",
+   "enclosing": "fn seed_native_session @309"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 409,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_fresh_actual_resources_are_atomically_bound_and_active @377",
+   "enclosing": "fn native635_joint_fresh_actual_resources_are_atomically_bound_and_active @377"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 477,
+   "code": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472",
+   "enclosing": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 496,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472",
+   "enclosing": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 515,
+   "code": "assert!(runtime.ticket(&old_context).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row @500",
+   "enclosing": "fn native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row @500"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 524,
+   "code": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519",
+   "enclosing": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 541,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519",
+   "enclosing": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 551,
+   "code": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545",
+   "enclosing": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 572,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545",
+   "enclosing": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 674,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key @609",
+   "enclosing": "fn native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key @609"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 722,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err(),",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+   "enclosing": "fn native930_joint_successful_login_activates_private_session @715"
+  },
+  {
+   "file": "src-tauri/src/native_local_joint_tests.rs",
+   "line": 733,
+   "code": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok(),",
+   "verdict": "ТЕСТОВОЕ",
+   "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+   "enclosing": "fn native930_joint_successful_login_activates_private_session @715"
+  }
+ ],
+ "private_ticket_constructions": [
+  {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "line": 761,
+   "code": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };",
+   "verdict": "ПРОДУКТОВОЕ",
+   "test_owed_to": null,
+   "enclosing": "fn ticket @760"
+  }
+ ],
+ "private_ticket_consumptions": [],
+ "summary": {
+  "calls": {
+   "total": 33,
+   "production": 0,
+   "test": 33
+  },
+  "constructions": {
+   "total": 1,
+   "production": 1,
+   "test": 0
+  },
+  "consumptions": {
+   "total": 0,
+   "production": 0,
+   "test": 0
+  }
+ },
+ "production_sites": {
+  "calls": [],
+  "constructions": [
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 761,
+    "code": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };",
+    "verdict": "ПРОДУКТОВОЕ",
+    "test_owed_to": null,
+    "enclosing": "fn ticket @760"
+   }
+  ],
+  "consumptions": []
+ },
+ "card_claim": {
+  "claim": "продуктового вызывающего нет ни у `ticket`, ни у `PrivateTicket`",
+  "production_calls": 0,
+  "production_constructions": 1,
+  "production_consumptions": 0,
+  "verdict": "ДЕРЖИТСЯ: продуктовых вызывающих 0"
+ },
+ "calibration_on_real_tree": {
+  "real_tree_boundary": {
+   "file": "src-tauri/src/native_lifecycle.rs",
+   "test_module_opens_at_line": 832,
+   "independent_rule": "строка > границы тестового модуля => ТЕСТОВОЕ",
+   "call_sites_in_file": 21,
+   "agree_with_independent_rule": 21,
+   "disagree": []
+  },
+  "known_production_needle": {
+   "needle": "#[tauri::command]",
+   "total": 95,
+   "classified_production": 95,
+   "classified_test": 0
+  }
+ },
+ "read_failures": []
+}
