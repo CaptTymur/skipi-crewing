@@ -1,0 +1,1932 @@
+{
+ "measured_at_utc": "2026-11-06T02:14:58Z",
+ "layer": "НАЙДЕНО В КЛИЕНТСКОМ КОДЕ (чтение названного SHA). Не «проверено в работе».",
+ "base_sha": "f145c6017eaea3804a5429e5aa428b6fb0ece6d9",
+ "scan_files": 21,
+ "modules_declared_cfg_test": {},
+ "modules_declared_plain_count": 18,
+ "B1_ticket": {
+  "definitions": [
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 760,
+    "text": "pub(crate) fn ticket(self: &Arc<Self>, expected: &str) -> Result<PrivateTicket, &'static str> {",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   }
+  ],
+  "mentions": [
+   {
+    "file": "src-tauri/src/native_database.rs",
+    "line": 19,
+    "text": "// workspace UUID, NOT an ephemeral authorization generation or ctx_ ticket.",
+    "enclosing": {
+     "kind": "impl",
+     "name": "Owner",
+     "line": 17,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 760,
+    "text": "pub(crate) fn ticket(self: &Arc<Self>, expected: &str) -> Result<PrivateTicket, &'static str> {",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 761,
+    "text": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 762,
+    "text": "{ let _lease = ticket.lease()?; }",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 763,
+    "text": "Ok(ticket)",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 980,
+    "text": "let old_ticket = rt.ticket(&parent).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "closing_race_at",
+     "line": 969,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1052,
+    "text": "assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "closing_race_at",
+     "line": 969,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1161,
+    "text": "let ticket = rt.ticket(&parent).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_closing_authority_poison_invalidates_old_snapshot_without_panic",
+     "line": 1158,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_closing_authority_poison_invalidates_old_snapshot_without_panic @1158",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1171,
+    "text": "let lease = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ticket.lease().is_err()));",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_closing_authority_poison_invalidates_old_snapshot_without_panic",
+     "line": 1158,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_closing_authority_poison_invalidates_old_snapshot_without_panic @1158",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1172,
+    "text": "assert!(lease.expect(\"ticket must not panic\"));",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_closing_authority_poison_invalidates_old_snapshot_without_panic",
+     "line": 1158,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_closing_authority_poison_invalidates_old_snapshot_without_panic @1158",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1203,
+    "text": "let parent = rt.context().unwrap(); let old_ticket = rt.ticket(&parent).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_closing_authority_poison_after_rename_keeps_matching_blocked_memory",
+     "line": 1201,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_closing_authority_poison_after_rename_keeps_matching_blocked_memory @1201",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1635,
+    "text": "assert_eq!(f.row().as_deref(),Some(\"synthetic-preserved\"));assert!(rt.ticket(&context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_nativepersist_file_sync_failure_via_adapter_is_precommit",
+     "line": 1629,
+     "attrs": [
+      "#[test]",
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_nativepersist_file_sync_failure_via_adapter_is_precommit @1629",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1651,
+    "text": "assert!(f.row().is_none());assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_nativepersist_directory_sync_unknown_via_adapter_is_committed_blocked",
+     "line": 1641,
+     "attrs": [
+      "#[test]",
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_nativepersist_directory_sync_unknown_via_adapter_is_committed_blocked @1641",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1713,
+    "text": "let old_context = rt.context().unwrap(); let old_ticket = rt.ticket(&old_context).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role",
+     "line": 1711,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1723,
+    "text": "assert_ne!(rt.context().unwrap(), old_context); assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role",
+     "line": 1711,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_success_preserves_legacy_db_profile_vault_and_retires_team_role @1711",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1734,
+    "text": "assert!(rt.settings.lock().unwrap().native_account.is_none()); assert!(rt.ticket(&context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context",
+     "line": 1728,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context @1728",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1745,
+    "text": "assert!(f.row().is_none()); assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_actual_postrename_unknown_keeps_new_identity_blocked_and_closes_db",
+     "line": 1737,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_actual_postrename_unknown_keeps_new_identity_blocked_and_closes_db @1737",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1753,
+    "text": "assert!(f.row().is_none()); assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_activation_failure_is_committed_matching_blocked",
+     "line": 1748,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_activation_failure_is_committed_matching_blocked @1748",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1835,
+    "text": "assert_eq!(f.bytes(), old); assert!(f.row().is_some()); assert!(rt.ticket(&context).is_ok()); assert!(fake.calls.borrow().is_empty());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_logout_without_account_cancels_pending_login_but_preserves_legacy_access",
+     "line": 1830,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_logout_without_account_cancels_pending_login_but_preserves_legacy_access @1830",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1840,
+    "text": "let old_snapshot = rt.settings.lock().unwrap().clone(); let ticket = rt.ticket(&context).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login",
+     "line": 1838,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1841,
+    "text": "clock.expire(); assert!(ticket.lease().is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login",
+     "line": 1838,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1847,
+    "text": "assert!(ticket.lease().is_err()); assert!(rt.ticket(&rt.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login",
+     "line": 1838,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_same_tuple_refresh_rotates_context_and_old_ticket_without_interactive_login @1838",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1854,
+    "text": "assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_malformed_refresh_response_blocks_only_current_attempt",
+     "line": 1850,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1863,
+    "text": "assert!(newer.ticket(&old_context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_malformed_refresh_response_blocks_only_current_attempt",
+     "line": 1850,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_malformed_refresh_response_blocks_only_current_attempt @1850",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1868,
+    "text": "let late_proof = proof(&rt, &Fake::default()); let old_ticket = rt.ticket(&context).unwrap(); let old = f.bytes();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport",
+     "line": 1866,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1877,
+    "text": "assert!(restart.ticket(&restarted_context).is_err()); assert_eq!(restart.refresh(&no_network, &restarted_context).unwrap_err(), \"login_required\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport",
+     "line": 1866,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1886,
+    "text": "assert!(fake.calls.borrow().is_empty()); assert!(rt.ticket(&context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_logout_holds_owned_barrier_through_remote_and_rejects_stale_context",
+     "line": 1881,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_logout_holds_owned_barrier_through_remote_and_rejects_stale_context @1881",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1909,
+    "text": "assert!(fake.calls.borrow().is_empty()); assert_eq!(f.bytes(), old); assert!(f.row().is_some()); assert!(rt.ticket(&context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_unsupported_native_rejects_before_transport_or_mutating_callbacks",
+     "line": 1901,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_unsupported_native_rejects_before_transport_or_mutating_callbacks @1901",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1926,
+    "text": "assert!(rt.ticket(&rt.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "impl",
+     "name": "Clock",
+     "line": 1916,
+     "attrs": [],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_refresh_expiring_between_validation_boundaries_denies_current_authorization @1913",
+     "ancestors": [
+      "fn native635_runtime_refresh_expiring_between_validation_boundaries_denies_current_authorization @1913",
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 315,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "seed_native_session",
+     "line": 309,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl JointFixture @30",
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 407,
+    "text": "// ПРИТЯЗАНИЕ, не вывод: `ticket` идёт через `private_access`, который ПЕРЕПРОВЕРЯЕТ",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_fresh_actual_resources_are_atomically_bound_and_active",
+     "line": 377,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_fresh_actual_resources_are_atomically_bound_and_active @377",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 409,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_fresh_actual_resources_are_atomically_bound_and_active",
+     "line": 377,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_fresh_actual_resources_are_atomically_bound_and_active @377",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 467,
+    "text": "// session. No ticket/crypto-usability success is inferred here.",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_actual_key_raw_or_inode_change_before_persist_is_refused",
+     "line": 452,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_actual_key_raw_or_inode_change_before_persist_is_refused @452",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 477,
+    "text": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_postrename_key_change_keeps_new_matching_record_blocked",
+     "line": 472,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 496,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_postrename_key_change_keeps_new_matching_record_blocked",
+     "line": 472,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_postrename_key_change_keeps_new_matching_record_blocked @472",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 515,
+    "text": "assert!(runtime.ticket(&old_context).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row",
+     "line": 500,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_actual_file_sync_failure_preserves_old_settings_handle_and_business_row @500",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 524,
+    "text": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked",
+     "line": 519,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 541,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked",
+     "line": 519,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_actual_directory_sync_unknown_keeps_new_v1_record_blocked @519",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 551,
+    "text": "let old_ticket = runtime.ticket(&old_context).unwrap();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active",
+     "line": 545,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 572,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active",
+     "line": 545,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_same_owner_refresh_preserves_private_binding_and_opaque_metadata_and_stays_active @545",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 674,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key",
+     "line": 609,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_joint_legacy_empty_or_relative_vault_uses_live_physical_db_and_independent_existing_key @609",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 722,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_err(),",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 733,
+    "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok(),",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 734,
+    "text": "\"No.930: the activated session must be presentable as a ticket\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   }
+  ]
+ },
+ "B2_private_ticket": {
+  "type_decl": [
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 813,
+    "text": "pub(crate) struct PrivateTicket { runtime: Arc<Runtime>, context: String, epoch: u64 }",
+    "enclosing": {
+     "kind": "struct",
+     "name": "PrivateTicket",
+     "line": 813,
+     "attrs": [
+      "#[derive(Clone)]"
+     ],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   }
+  ],
+  "mentions": [
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 760,
+    "text": "pub(crate) fn ticket(self: &Arc<Self>, expected: &str) -> Result<PrivateTicket, &'static str> {",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 761,
+    "text": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 813,
+    "text": "pub(crate) struct PrivateTicket { runtime: Arc<Runtime>, context: String, epoch: u64 }",
+    "enclosing": {
+     "kind": "struct",
+     "name": "PrivateTicket",
+     "line": 813,
+     "attrs": [
+      "#[derive(Clone)]"
+     ],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 814,
+    "text": "impl PrivateTicket {",
+    "enclosing": {
+     "kind": "impl",
+     "name": "PrivateTicket",
+     "line": 814,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   }
+  ],
+  "constructions": [
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 761,
+    "text": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };",
+    "enclosing": {
+     "kind": "fn",
+     "name": "ticket",
+     "line": 760,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 814,
+    "text": "impl PrivateTicket {",
+    "enclosing": {
+     "kind": "impl",
+     "name": "PrivateTicket",
+     "line": 814,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   }
+  ],
+  "consumptions": []
+ },
+ "B3_active": {
+  "active_literal": [
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2161,
+    "text": "r#\"{\"profile_id\":\"prof-A\",\"profile_version\":3,\"profile_state\":\"active\",",
+    "enclosing": {
+     "kind": "fn",
+     "name": "profile_shortlist_body",
+     "line": 2160,
+     "attrs": [],
+     "is_test_item": true,
+     "test_owed_to": "mod tests @2091",
+     "ancestors": [
+      "mod tests @2091"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/crewing_intake.rs",
+    "line": 2178,
+    "text": "assert_eq!(list.profile_state, \"active\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "the_profile_shortlist_keeps_every_field_across_the_bridge",
+     "line": 2171,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn the_profile_shortlist_keeps_every_field_across_the_bridge @2171",
+     "ancestors": [
+      "mod tests @2091"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 677,
+    "text": "Ok(()) => \"active\",",
+    "enclosing": {
+     "kind": "fn",
+     "name": "account_session_state",
+     "line": 669,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3023,
+    "text": "assert_eq!(session_field(&active), \"active\", \"an authorized live session reads active\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_session_names_every_outcome",
+     "line": 3003,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_session_names_every_outcome @3003",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3034,
+    "text": "assert_ne!(session_field(&token_only), \"active\", \"a company bearer token is not an account session\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_session_rejects_the_false_sources",
+     "line": 3030,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_session_rejects_the_false_sources @3030",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3037,
+    "text": "assert_ne!(session_field(&company_only), \"active\", \"an organization UUID is not an account session\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_session_rejects_the_false_sources",
+     "line": 3030,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_session_rejects_the_false_sources @3030",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 732,
+    "text": "\"No.930: account_session_state reads 'active' only when private_access is Ok\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   }
+  ],
+  "session_state": [
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 669,
+    "text": "fn account_session_state(settings: &Settings, origins: &[&str], now: chrono::DateTime<chrono::Utc>) -> &'static str {",
+    "enclosing": {
+     "kind": "fn",
+     "name": "account_session_state",
+     "line": 669,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 708,
+    "text": "account_session: account_session_state(settings, &[api::PRIMARY_API, api::RU_API], chrono::Utc::now()),",
+    "enclosing": {
+     "kind": "fn",
+     "name": "settings_for_ui",
+     "line": 685,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 732,
+    "text": "\"No.930: account_session_state reads 'active' only when private_access is Ok\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   }
+  ],
+  "native_authorized_assign": [
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 749,
+    "text": "proposed.native_authorized = current.native_authorized;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "merge_ui_settings",
+     "line": 719,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 2944,
+    "text": "let f=Fixture::new(); let mut s=native(false); s.native_authorized=true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_lifecycle_red_locked_restart_does_not_open_private_db",
+     "line": 2943,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_lifecycle_red_locked_restart_does_not_open_private_db @2943",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3022,
+    "text": "active.native_authorized = true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_session_names_every_outcome",
+     "line": 3003,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_session_names_every_outcome @3003",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3025,
+    "text": "expired.native_authorized = true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_session_names_every_outcome",
+     "line": 3003,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_session_names_every_outcome @3003",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3042,
+    "text": "active.native_authorized = true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_880_account_entitlement_is_projected_flat",
+     "line": 3040,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_880_account_entitlement_is_projected_flat @3040",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3286,
+    "text": "let f=Fixture::new();let mut s=native(false);s.native_authorized=true;s.native_generation=\"synthetic-runtime-generation\".into();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_lifecycle_red_private_record_control_persists_without_runtime_auth",
+     "line": 3285,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_lifecycle_red_private_record_control_persists_without_runtime_auth @3285",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3297,
+    "text": "let mut current=native(false);current.native_authorized=true;current.native_generation=\"live-synthetic-generation\".into();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_lifecycle_red_bridge_injected_record_cannot_replace_native_identity",
+     "line": 3296,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_lifecycle_red_bridge_injected_record_cannot_replace_native_identity @3296",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3310,
+    "text": "let mut current=native(false);current.native_authorized=true;current.native_generation=\"live-synthetic-generation\".into();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_lifecycle_red_bridge_omission_cannot_drop_private_state",
+     "line": 3309,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_lifecycle_red_bridge_omission_cannot_drop_private_state @3309",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3421,
+    "text": "s.native_authorized = true; s.native_generation = \"synthetic-generation-old\".into();",
+    "enclosing": {
+     "kind": "fn",
+     "name": "synthetic",
+     "line": 3411,
+     "attrs": [],
+     "is_test_item": true,
+     "test_owed_to": "mod native635_revision_red_tests @3409",
+     "ancestors": [
+      "mod native635_revision_red_tests @3409"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3470,
+    "text": "let mut authorized=native(); authorized.native_authorized=true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "blocked_modes",
+     "line": 3468,
+     "attrs": [],
+     "is_test_item": true,
+     "test_owed_to": "mod native635_boot_tests @3452",
+     "ancestors": [
+      "mod native635_boot_tests @3452"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3539,
+    "text": "let mut input=native();input.native_authorized=true;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_boot_app_state_constructor_never_reuses_native_authorization",
+     "line": 3538,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_boot_app_state_constructor_never_reuses_native_authorization @3538",
+     "ancestors": [
+      "mod native635_boot_tests @3452"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 278,
+    "text": "settings.native_authorized = false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "new",
+     "line": 275,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 351,
+    "text": "proposed.native_authorized = false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "install_unpublished",
+     "line": 348,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 389,
+    "text": "proposed.native_authorized = policy.authorizes(blocked.is_none());",
+    "enclosing": {
+     "kind": "fn",
+     "name": "publish_committed_core",
+     "line": 380,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 593,
+    "text": "next.native_authorized = false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "deny_refresh_if_current",
+     "line": 585,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 690,
+    "text": "proposed.native_authorized = false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "commit_core",
+     "line": 654,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 794,
+    "text": "proposed.native_authorized = false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "finish_logout",
+     "line": 774,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 59,
+    "text": "settings.native_authorized=false;",
+    "enclosing": {
+     "kind": "fn",
+     "name": "legacy_settings",
+     "line": 54,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl JointFixture @30",
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   }
+  ],
+  "mode_fn": [
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 231,
+    "text": "native_lifecycle::Mode::NativeLocked | native_lifecycle::Mode::NativeSession | native_lifecycle::Mode::SignedOut)",
+    "enclosing": {
+     "kind": "fn",
+     "name": "persist_native_detailed_using",
+     "line": 225,
+     "attrs": [
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Settings @146"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 673,
+    "text": "native_lifecycle::Mode::NativeLocked => \"locked\",",
+    "enclosing": {
+     "kind": "fn",
+     "name": "account_session_state",
+     "line": 669,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3111,
+    "text": "assert_eq!(native_lifecycle::mode(&locked,&[api::PRIMARY_API,api::RU_API]),native_lifecycle::Mode::NativeLocked);",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_bindingfmt_old_record_control_restarts_locked_without_inferred_refs",
+     "line": 3105,
+     "attrs": [
+      "#[test]",
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_bindingfmt_old_record_control_restarts_locked_without_inferred_refs @3105",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/lib.rs",
+    "line": 3161,
+    "text": "assert_eq!(native_lifecycle::mode(&locked,&[api::PRIMARY_API,api::RU_API]),native_lifecycle::Mode::NativeLocked);",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_bindingfmt_real_refs_roundtrip_restart_locked_and_profile_preserved",
+     "line": 3154,
+     "attrs": [
+      "#[test]",
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_bindingfmt_real_refs_roundtrip_restart_locked_and_profile_preserved @3154",
+     "ancestors": [
+      "mod native635_lifecycle_red_tests @2903"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 14,
+    "text": "pub(crate) enum Mode { Unbound, LegacyConnected, NativeLocked, NativeSession, SignedOut, Unavailable }",
+    "enclosing": {
+     "kind": "enum",
+     "name": "Mode",
+     "line": 14,
+     "attrs": [
+      "#[derive(Clone, Copy, Debug, PartialEq, Eq)]"
+     ],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 50,
+    "text": "pub(crate) fn mode(s: &Settings, origins: &[&str]) -> Mode {",
+    "enclosing": {
+     "kind": "fn",
+     "name": "mode",
+     "line": 50,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 55,
+    "text": "return if s.native_authorized { Mode::NativeSession } else { Mode::NativeLocked };",
+    "enclosing": {
+     "kind": "fn",
+     "name": "mode",
+     "line": 50,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 57,
+    "text": "if s.bearer_token.trim().starts_with(\"skn_\") { return Mode::NativeLocked; }",
+    "enclosing": {
+     "kind": "fn",
+     "name": "mode",
+     "line": 50,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": []
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 526,
+    "text": "if current == Mode::NativeLocked && settings.native_account.is_none() { return Err(\"ownership_conflict\"); }",
+    "enclosing": {
+     "kind": "fn",
+     "name": "begin",
+     "line": 518,
+     "attrs": [],
+     "is_test_item": false,
+     "test_owed_to": null,
+     "ancestors": [
+      "impl Runtime @274"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ПРОДУКТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1706,
+    "text": "assert_eq!(mode(&settings,&[crate::api::PRIMARY_API,crate::api::RU_API]),Mode::NativeLocked);",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_nativepersist_recordless_skn_orphan_cannot_create_settings_target",
+     "line": 1702,
+     "attrs": [
+      "#[test]",
+      "#[cfg(target_os = \"linux\")]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_nativepersist_recordless_skn_orphan_cannot_create_settings_target @1702",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_lifecycle.rs",
+    "line": 1876,
+    "text": "assert_eq!(mode(&restart.settings.lock().unwrap(), &restart.origins()), Mode::NativeLocked);",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport",
+     "line": 1866,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native635_runtime_logout_double_failure_blocks_memory_and_restart_without_any_transport @1866",
+     "ancestors": [
+      "mod runtime_tests @832"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   },
+   {
+    "file": "src-tauri/src/native_local_joint_tests.rs",
+    "line": 729,
+    "text": "\"No.930: the mode after a successful login must be NativeSession, not NativeLocked\");",
+    "enclosing": {
+     "kind": "fn",
+     "name": "native930_joint_successful_login_activates_private_session",
+     "line": 715,
+     "attrs": [
+      "#[test]"
+     ],
+     "is_test_item": true,
+     "test_owed_to": "fn native930_joint_successful_login_activates_private_session @715",
+     "ancestors": [
+      "mod local_joint @1"
+     ]
+    },
+    "file_is_test_only": false,
+    "verdict": "ТЕСТОВОЕ"
+   }
+  ]
+ },
+ "classifier_controls": {
+  "known_production_needle": {
+   "needle": "#[tauri::command]",
+   "total": 95,
+   "classified_production": 95,
+   "classified_test": 0
+  },
+  "known_test_needle": {
+   "needle": "тело функции под `#[test]` обязано классифицироваться ТЕСТОВЫМ",
+   "probes": 249,
+   "probes_misclassified_as_production": 0,
+   "misclassified_examples": [],
+   "sites_classified_test_among_my_needles": 36,
+   "test_modules_file_level": 0,
+   "cfg_test_attr_lines": 44,
+   "note": "контроль НЕ зависит от моих игл. Две прежние версии были негодны: первая спрашивала ПРОКСИ (число файловых cfg(test)-модулей) и давала ложный отказ на дереве со встроенными модулями (арм F); вторая требовала, чтобы хоть одно место МОИХ игл попало в тест — и отказала бы ровно тогда, когда все места продуктовые, то есть на законном исходе, ОПРОВЕРГАЮЩЕМ утверждение карточки"
+  },
+  "second_instrument_attr_vs_walker": {
+   "method_1": "обход вверх по отступу (enclosing_context) — допущение: отступ следует вложенности; скобки НЕ разбираются вовсе",
+   "method_2": "счёт строк, равных ровно `#[test]` — ни отступов, ни скобок",
+   "files_where_walker_claims_MORE_test_items_than_attrs_exist": {},
+   "verdict": "согласие: обход не приписал тестовость там, где атрибутов нет",
+   "total_test_attr_lines": 249,
+   "files_with_test_attrs": 14
+  }
+ },
+ "subject_digests": {
+  "src-tauri/src/lib.rs": "9a64aaea9b8cd9cda33e05226f02a99eb16b5982317b886045f1aecbde5f05b3",
+  "src-tauri/src/native_account.rs": "513c79a4f85f7a64de6b581575f8d0f9c2930966ef6c7bfec5e784f172df3f7d",
+  "src-tauri/src/native_lifecycle.rs": "9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb",
+  "src-tauri/src/native_local_commit.rs": "d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4"
+ },
+ "read_failures": [],
+ "production_callers": {
+  "ticket": {
+   "count": 7,
+   "sites": [
+    {
+     "file": "src-tauri/src/native_database.rs",
+     "line": 19,
+     "enclosing": "Owner",
+     "kind": "impl",
+     "text": "// workspace UUID, NOT an ephemeral authorization generation or ctx_ ticket."
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 761,
+     "enclosing": "ticket",
+     "kind": "fn",
+     "text": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 762,
+     "enclosing": "ticket",
+     "kind": "fn",
+     "text": "{ let _lease = ticket.lease()?; }"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 763,
+     "enclosing": "ticket",
+     "kind": "fn",
+     "text": "Ok(ticket)"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 980,
+     "enclosing": "closing_race_at",
+     "kind": "fn",
+     "text": "let old_ticket = rt.ticket(&parent).unwrap();"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 1052,
+     "enclosing": "closing_race_at",
+     "kind": "fn",
+     "text": "assert!(rt.ticket(&rt.context().unwrap()).is_ok());"
+    },
+    {
+     "file": "src-tauri/src/native_local_joint_tests.rs",
+     "line": 315,
+     "enclosing": "seed_native_session",
+     "kind": "fn",
+     "text": "assert!(runtime.ticket(&runtime.context().unwrap()).is_ok());"
+    }
+   ]
+  },
+  "private_ticket_constructions": {
+   "count": 2,
+   "sites": [
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 761,
+     "enclosing": "ticket",
+     "text": "let ticket = PrivateTicket { runtime: self.clone(), context: expected.to_owned(), epoch: self.epoch.load(Ordering::SeqCst) };"
+    },
+    {
+     "file": "src-tauri/src/native_lifecycle.rs",
+     "line": 814,
+     "enclosing": "PrivateTicket",
+     "text": "impl PrivateTicket {"
+    }
+   ]
+  },
+  "private_ticket_consumptions": {
+   "count": 0,
+   "sites": []
+  },
+  "note": "у ТИПА нет «вызывающих»: считаются КОНСТРУКЦИИ и ПОТРЕБЛЕНИЯ. Упоминание в возвращаемом типе не является ни тем, ни другим, и включать его значило бы отвечать не на тот вопрос."
+ },
+ "card_claim_under_test": {
+  "claim": "ни у `ticket`, ни у `PrivateTicket` нет ПРОДУКТОВОГО вызывающего (замер 05.11)",
+  "ticket_production_callers": 7,
+  "private_ticket_production_constructions": 2,
+  "private_ticket_production_consumptions": 0,
+  "verdict_ticket": "вызывающие в проде ЕСТЬ: 7",
+  "verdict_private_ticket": "в проде есть: конструкций 2, потреблений 0",
+  "claim_holds_in_full": false
+ },
+ "summary": {
+  "ticket_mentions": {
+   "total": 44,
+   "production": 8,
+   "test": 36
+  },
+  "ticket_definitions": {
+   "total": 1,
+   "production": 1,
+   "test": 0
+  },
+  "private_ticket_mentions": {
+   "total": 4,
+   "production": 4,
+   "test": 0
+  },
+  "private_ticket_type_decl": {
+   "total": 1,
+   "production": 1,
+   "test": 0
+  },
+  "native_authorized_assign": {
+   "total": 18,
+   "production": 8,
+   "test": 10
+  }
+ }
+}

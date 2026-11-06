@@ -1,0 +1,30 @@
+9b7d54f7788612796d216141fc1fee7c39716fc2501143f1fd152e21d32e29bb  /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs
+d9d54d13f839231812c5397592c111f3dfb43bb180cb4f68a0aa78eeadea20c4  /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs
+513c79a4f85f7a64de6b581575f8d0f9c2930966ef6c7bfec5e784f172df3f7d  /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_account.rs
+1793883375.6597015620 233 /home/linux/Developer/worktrees/crewing-930-20261105/dist/SETTINGS_VERSION
+1793883375.6621400630 1129919 /home/linux/Developer/worktrees/crewing-930-20261105/dist/index.html
+1793883375.6621400630 117564 /home/linux/Developer/worktrees/crewing-930-20261105/dist/skipi-settings.js
+1793883375.6621400630 4096 /home/linux/Developer/worktrees/crewing-930-20261105/dist
+1793883375.6621400630 46490 /home/linux/Developer/worktrees/crewing-930-20261105/dist/skipi-settings.css
+1793883375.6731401640 14130 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/api.rs
+1793883375.6747475930 168389 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/crewing_intake.rs
+1793883375.6747475930 18605 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/feedback.rs
+1793883375.6747475930 21005 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/messaging.rs
+1793883375.6747475930 651 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/main.rs
+1793883375.6747475930 67038 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/db.rs
+1793883375.6747475930 9080 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/contact.rs
+1793883375.6751401820 18268 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_profile.rs
+1793883375.6751401820 18963 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_fresh.rs
+1793883375.6751401820 24886 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_keys.rs
+1793883375.6751401820 3894 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_binding.rs
+1793883375.6751401820 4435 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_session_record.rs
+1793883375.6751401820 46569 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_database.rs
+1793883375.6751401820 47015 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_account.rs
+1793883375.6751401820 6010 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_database_probe.rs
+1793883375.6761401920 12791 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/private_store.rs
+1793883375.6761401920 4042 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/private_json.rs
+1793883375.6761401920 4096 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src
+1793888634.0964326460 116205 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_lifecycle.rs
+1793888634.0975416880 20996 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_commit.rs
+1793888634.0984336710 48181 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/native_local_joint_tests.rs
+1793888634.0995178740 161489 /home/linux/Developer/worktrees/crewing-930-20261105/src-tauri/src/lib.rs

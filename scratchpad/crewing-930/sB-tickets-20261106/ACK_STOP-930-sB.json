@@ -1,0 +1,30 @@
+{
+ "observed_at": "2026-11-06T02:16:06.211652+00:00",
+ "stage": "PREP",
+ "stream_id": "crewing/930-session-activation",
+ "writer": "skipi-crewing-9b",
+ "lease_id": "1c080f5f7af14ec78902b2c4452f470a",
+ "epoch": 50,
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "по очередям истинно ВАКУУМНО: стадия синхронная. Сами операции ОСТАНОВЛЕНЫ МНОЙ после отказа драйвера, а не завершились сами.",
+ "partial_execution_DECLARED": {
+  "what_ran": "ворота 1-4, ACK_START, ЗАМЕР (успешно, rc 0)",
+  "what_did_NOT_run": "форматированная запись, дописывание WORKLOG драйвером, копирование приборов, коммит драйвером",
+  "cause": "мой драйвер ссылается на record-930-sB-v2.py, которого я не написал вовсе: драйвер адаптирован из s7 переименованием, и ссылка осталась. set -e оборвал его на cp. Дефект мой и declaration-level: в evidence_files этого файла тоже нет, поэтому ваш inspect не мог его поймать — он проверяет наличие ОБЪЯВЛЕННЫХ файлов, а не разрешимость внутренних ссылок драйвера.",
+  "what_I_did_by_hand": "оба терминальных документа, снимок after-state, дописывание WORKLOG прозой и коммит артефактов",
+  "what_I_did_NOT_do": "форматированную запись НЕ собрал: подменять объявленный прибор необъявленным внутри окна я не стал. Она остаётся долгом и будет собрана объявленным генератором."
+ },
+ "evidence": {
+  "raw_measurement": {
+   "path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/sB-tickets-20261106/measure-930-sB-raw.json",
+   "sha256": "e0157a9c2774f6823145d5f60c36c43078748d3aa216eddcc6e2e9e11df94bf6"
+  },
+  "after_state_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/sB-tickets-20261106/after-state-930-sB.txt",
+  "after_state_sha256": "92737de7b9ed8d994be91fddf9a73de52c61f6de83c1d4b3648ec665edb03ff2",
+  "ack_start": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/sB-tickets-20261106/ACK_START-930-sB.json"
+ },
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-sB-ACKSTOP-20261106T021606Z",
+ "ack_stop_writer": "skipi-crewing-9b"
+}

@@ -1,0 +1,15 @@
+{
+ "document": "ACK_STOP",
+ "ack_stop_event_id": "crewing-930-s7-ACKSTOP-20261106T015509Z",
+ "ack_stop_writer": "skipi-crewing-9b",
+ "stream_id": "crewing/930-session-activation",
+ "observed_at": "2026-11-06T01:55:09.491550+00:00",
+ "operations_terminated": true,
+ "queued_operations_cancelled": true,
+ "queued_operations_note": "истинно ВАКУУМНО: очереди и фоновых процессов стадия не создавала вовсе — стадия синхронная, отменять было нечего",
+ "evidence": {
+  "after_state_path": "/home/linux/Developer/worktrees/crewing-930-20261105/scratchpad/crewing-930/s7-wire-20261106/after-state-930-s7.txt",
+  "after_state_sha256": "3848ec45bfb561d8f1cd9b6e7304ac23896b508fbe86e40caddaab8a82b31895",
+  "record_commit": "718e6885dfec7ba96ef7b240eb34969e46575a26"
+ }
+}
