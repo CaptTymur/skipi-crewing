@@ -66,7 +66,7 @@ ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc37098336667
 // single-screen route and the No.664 person-keyed save route widened to all
 // eight paths the line touches); the superseded b72a59ca, aa3b2efb and
 // 37ff9581 must not be accepted.
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: 4a1033338ed55bda0cffe5717bec6b14956aafc6\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: 32b19c9d30086cf30cebe418deb762298c3ebc59\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -2888,7 +2888,7 @@ console.log('# K2 modules/crew-flow');
     // ---- S5: one guard pin, one localized team row ---------------------------
     {
       const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
-      softOk(pins === '4a1033338ed55bda0cffe5717bec6b14956aafc6', 'S5: the workflow pins exactly the accepted guard SHA');
+      softOk(pins === '32b19c9d30086cf30cebe418deb762298c3ebc59', 'S5: the workflow pins exactly the accepted guard SHA');
       // The needles are assembled from halves on purpose: a probe that spells a
       // SHA out reads its own source and can never pass (self-referential-probe
       // class — measured three times in this session, this line included).
