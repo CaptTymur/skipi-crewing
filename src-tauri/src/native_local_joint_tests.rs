@@ -40,7 +40,7 @@ mod local_joint {
             }
             let stable_uuid = uuid::Uuid::new_v4().to_string();
             let owner = database::Owner::from_validated_binding(
-                login().account_id, response().connection.crewing_id, stable_uuid.clone()).unwrap();
+                login().account_id, response().connection.workspace_id, stable_uuid.clone()).unwrap();
             Self {
                 db_namespace: database::Namespace::inspect(&db_root).unwrap(),
                 key_namespace: database::Namespace::inspect(&key_root).unwrap(),
@@ -110,7 +110,7 @@ mod local_joint {
             settings.profile.legal_name = "Canonical joint fixture profile".into();
             let reply = response();
             settings.server_url = reply.connection.server_url;
-            settings.crewing_id = reply.connection.crewing_id;
+            settings.crewing_id = reply.connection.workspace_id;
             settings.bearer_token = reply.connection.bearer_token;
             settings.token_scopes = reply.connection.scopes;
             settings.token_expires_at = Some(reply.connection.expires_at);
@@ -196,7 +196,7 @@ mod local_joint {
         fn mutate_key(&self, replace_inode: bool) {
             let path = self.key_root.join(crate::messaging::SK_FILENAME);
             let before = keys::inspect_legacy_snapshot(&self.key_namespace, self.owner.clone(),
-                &response().connection.crewing_id).unwrap().public_identity();
+                &response().connection.workspace_id).unwrap().public_identity();
             let inode = fs::symlink_metadata(&path).unwrap().ino();
             let raw = fs::read(&path).unwrap();
             assert_eq!(raw.len(), 32);
@@ -212,7 +212,7 @@ mod local_joint {
                 assert_eq!(fs::symlink_metadata(&path).unwrap().ino(), inode);
             }
             let after = keys::inspect_legacy_snapshot(&self.key_namespace, self.owner.clone(),
-                &response().connection.crewing_id).unwrap().public_identity();
+                &response().connection.workspace_id).unwrap().public_identity();
             assert_eq!(before.user_id, after.user_id);
             assert_eq!(before.pubkey_b64, after.pubkey_b64,
                 "same public identity does not prove unchanged raw key/reference");
@@ -241,7 +241,7 @@ mod local_joint {
             let key = if matches!(fault, KeyFault::WrongOwner | KeyFault::WrongReference) {
                 let owner = if fault == KeyFault::WrongOwner {
                     database::Owner::from_validated_binding("other-synthetic-account".into(),
-                        response().connection.crewing_id, self.stable_uuid.clone()).unwrap()
+                        response().connection.workspace_id, self.stable_uuid.clone()).unwrap()
                 } else { self.owner.clone() };
                 keys::prepare_fresh(&database::Namespace::inspect(&self.alternative_root).unwrap(), owner)
                     .map_err(|_| "key_unavailable")?
@@ -624,7 +624,7 @@ mod local_joint {
             assert_eq!(saved.company_name,company_name);
             assert_eq!(serde_json::to_value(&saved.profile).unwrap(),profile);
             let binding=saved.native_account.as_ref().unwrap().binding().unwrap();
-            assert!(binding.matches_owner(&login().account_id,&response().connection.crewing_id));
+            assert!(binding.matches_owner(&login().account_id,&response().connection.workspace_id));
             assert_ne!(binding.stable_uuid(),fixture.stable_uuid,"adoption issues a new native context, not a Fresh namespace");
             let uuid=uuid::Uuid::parse_str(binding.stable_uuid()).unwrap();
             assert_eq!(uuid.get_version_num(),4);

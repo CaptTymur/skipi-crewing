@@ -28,8 +28,12 @@ pub(crate) struct BootstrapResponse {
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct Connection {
     pub server_url: String,
-    pub crewing_id: String,
-    #[serde(deserialize_with = "required_nullable")]
+    /// 983 names this `workspace_id`; on the server crewing_id == workspace_id.
+    pub workspace_id: String,
+    /// 983 does NOT send this key at all, so it must not be required: `required_nullable`
+    /// demanded PRESENCE (null was fine, absence was not) and the response would have
+    /// failed on a MISSING key rather than on a null one.
+    #[serde(default)]
     pub organization_id: Option<String>,
     pub bearer_token: String,
     pub scopes: Vec<String>,
@@ -120,13 +124,13 @@ impl BootstrapResponse {
         if !valid_id(account_id) || self.account_id != account_id {
             return Err("tenant_mismatch");
         }
-        if !valid_id(&c.crewing_id)
+        if !valid_id(&c.workspace_id)
             || c.organization_id.as_deref().is_some_and(|id| !valid_id(id))
             || !trusted_origin(&c.server_url, trusted_company_origins)
             || !c.bearer_token.starts_with("skn_") || c.bearer_token.len() <= 4
             || !valid_opaque_credential(&c.bearer_token)
         { return Err("invalid_response"); }
-        if existing_company.is_some_and(|existing| existing != c.crewing_id) {
+        if existing_company.is_some_and(|existing| existing != c.workspace_id) {
             return Err("tenant_mismatch");
         }
         let scopes: BTreeSet<&str> = c.scopes.iter().map(String::as_str).collect();
@@ -180,9 +184,15 @@ mod tests {
     fn clock() -> DateTime<Utc> { "2026-10-19T16:00:00Z".parse().unwrap() }
     fn wire() -> Value {
         json!({"account_id":"account-635", "connection": {
-            "server_url":"https://api.skipi.app", "crewing_id":"company-635",
-            "organization_id":null,"bearer_token":"skn_synthetic_secret_635",
-            "scopes":["vacancy:write","mailing:write","applications:read","profile:write","pubkey:write"],"expires_at":"2026-10-19T16:14:00Z"},
+            "server_url":"https://api.skipi.app", "workspace_id":"company-635",
+            "bearer_token":"skn_synthetic_secret_635",
+            "scopes":["vacancy:write","mailing:write","applications:read","profile:write","pubkey:write"],"expires_at":"2026-10-19T16:14:00Z",
+            // O3: the two keys a real 983 reply also carries. They pin the house's tolerance of
+            // UNKNOWN keys, which today rests only on deny_unknown_fields being absent
+            // (native_profile.rs:28 states that rule). Their TYPES here are mine, not measured
+            // from 983: what the fixture proves is that an extra key does not break parsing.
+            "issued_at":"2026-10-19T16:00:00Z"},
+            "workspace_created":true,
             "entitlement":{"source":"paddle","expires_at":"2026-10-20T16:00:00Z"}})
     }
     fn validate(value: Value) -> Result<(), &'static str> {
@@ -203,7 +213,9 @@ mod tests {
             let mut v=wire();v.as_object_mut().unwrap().remove(field);assert!(validate(v).is_err(),"{field}");
             let mut v=wire();v[field]=json!(false);assert!(validate(v).is_err(),"wrong type {field}");
         }
-        for field in ["server_url","crewing_id","organization_id","bearer_token","scopes","expires_at"] {
+        // organization_id is deliberately NOT in this list any more: 983 omits the key,
+        // so requiring its PRESENCE would reject a valid response.
+        for field in ["server_url","workspace_id","bearer_token","scopes","expires_at"] {
             let mut v=wire();v["connection"].as_object_mut().unwrap().remove(field);assert!(validate(v).is_err(),"{field}");
             let mut v=wire();v["connection"][field]=json!(false);assert!(validate(v).is_err(),"wrong type {field}");
         }
@@ -217,14 +229,24 @@ mod tests {
         for (field,value) in [("account_id",json!("another-account")),("account_id",json!(""))] {
             let mut v=wire();v[field]=value;assert!(validate(v).is_err());
         }
-        for (field,value) in [("crewing_id",json!("another-company")),("crewing_id",json!(" ")),
-            ("organization_id",json!("")),("organization_id",json!(false)),
+        for (field,value) in [("workspace_id",json!("another-company")),("workspace_id",json!(" ")),
+            ("organization_id",json!(false)),("organization_id",json!("")),
             ("server_url",json!("https://untrusted.invalid")),("server_url",json!("http://api.skipi.app")),
             ("server_url",json!("https://api.skipi.app/path")),("server_url",json!("https://x@api.skipi.app")),
             ("server_url",json!("https://api.skipi.app?redirect=elsewhere")),
             ("bearer_token",json!("legacy-token")),("bearer_token",json!("skn_")),("bearer_token",json!("skn_a\nb"))] {
             let mut v=wire();v["connection"][field]=value;assert!(validate(v).is_err(),"{field}");
         }
+    }
+    // O3: the form "key PRESENT, value null" - S-1 bought coverage of "key absent" and spent
+    // this one. Both now hold: the base fixture omits the key, this drill supplies it as null.
+    #[test]
+    fn native635_bootstrap_accepts_organization_id_null_and_absent() {
+        let mut v=wire();v["connection"]["organization_id"]=json!(null);
+        assert!(validate(v).is_ok(),"a present-but-null organization_id must be accepted");
+        assert!(wire()["connection"].get("organization_id").is_none(),
+            "the base fixture must keep the key ABSENT, which is the form 983 actually sends");
+        assert!(validate(wire()).is_ok(),"and the absent form must stay accepted");
     }
     #[test]
     fn native635_bootstrap_rejects_scope_expiry_and_unproven_entitlement() {
@@ -310,7 +332,7 @@ mod tests {
     #[test]
     fn native635_stored_shape_shares_canonical_credential_scope_time_and_grant_checks() {
         for (field,value) in [("bearer_token",json!("skn_")),("bearer_token",json!(" skn_synthetic")),
-            ("bearer_token",json!("skn_a\nb")),("organization_id",json!("")),("organization_id",json!("bad\nid")),
+            ("bearer_token",json!("skn_a\nb")),("organization_id",json!("bad\nid")),("organization_id",json!("")),
             ("expires_at",json!("2026-10-19T16:14:00-00:00")),("expires_at",json!("2026-10-19T17:14:00+01:00")),
             ("scopes",json!(["vacancy:write","mailing:write","applications:read","profile:write","profile:write"]))] {
             let mut v=wire();v["connection"][field]=value;assert!(stored(v).is_err(),"{field}");
@@ -744,7 +766,7 @@ mod http_tests {
     }
     fn bootstrap_reply() -> serde_json::Value {
         serde_json::json!({"account_id":"account-http-635","connection":{
-            "server_url":ACCOUNT,"crewing_id":"company-http-635","organization_id":null,
+            "server_url":ACCOUNT,"workspace_id":"company-http-635",
             "bearer_token":"skn_synthetic_http_company_635","scopes":COMPANY_SCOPES,
             "expires_at":(Utc::now()+chrono::Duration::minutes(10)).to_rfc3339()},
             "entitlement":{"source":"approved_free","expires_at":null}})

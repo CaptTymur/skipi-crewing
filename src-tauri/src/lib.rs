@@ -321,7 +321,9 @@ impl AppState {
 
 // Transitional admission until the coherent native consumers are integrated.
 // Even a native_authorized flag alone cannot activate private RPC or resources.
-// Only these three public commands can run in a non-legacy process.
+// FIVE public commands can run in a non-legacy process (pinned both ways by
+// native635_boot_public_commands_and_legacy_dispatch_control). The earlier wording said
+// "three" and contradicted the code below it.
 fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'static str> {
     // native_account_login is admitted in a non-legacy process on purpose: it is the one
     // command a person must be able to run BEFORE being connected, and refusing it would
@@ -818,9 +820,9 @@ pub struct NativeAccountLogin {
     local_outcome: String,
 }
 
-// Registered but NOT admitted. boot_command_allowed (line 325) lets only three
-// commands run in a non-legacy process, so an invoke of this returns login_required
-// until the allowlist is widened together with the test that pins its size.
+// Registered AND admitted: boot_command_allowed lists this command explicitly, and the
+// test pins the list in both directions. The earlier wording said "NOT admitted" and
+// "only three" — both were contradicted by the code and by that test.
 // The outcome is projected to a flat string: LocalOutcome is cfg-gated and must not
 // cross into the public surface.
 #[tauri::command]

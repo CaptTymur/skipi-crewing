@@ -18,7 +18,7 @@ fn stored_response(s: &Settings) -> Option<BootstrapResponse> {
     Some(BootstrapResponse {
         account_id: record.account_id.clone(),
         connection: Connection {
-            server_url: s.server_url.clone(), crewing_id: s.crewing_id.clone(),
+            server_url: s.server_url.clone(), workspace_id: s.crewing_id.clone(),
             organization_id: if s.organization_id.is_empty() { None } else { Some(s.organization_id.clone()) },
             bearer_token: s.bearer_token.clone(), scopes: s.token_scopes.clone(),
             expires_at: s.token_expires_at.clone()?,
@@ -661,7 +661,9 @@ impl Runtime {
         let mut proposed = current.clone();
         proposed.server_url = proof.response.connection.server_url.clone();
         proposed.bearer_token = proof.response.connection.bearer_token.clone();
-        proposed.crewing_id = proof.response.connection.crewing_id.clone();
+        // THE substitution: 983 returns workspace_id, and settings.crewing_id (30 consumers)
+        // keeps its name. One visible line instead of renaming a field across the house.
+        proposed.crewing_id = proof.response.connection.workspace_id.clone();
         proposed.organization_id = proof.response.connection.organization_id.clone().unwrap_or_default();
         proposed.token_scopes = proof.response.connection.scopes.clone();
         proposed.token_expires_at = Some(proof.response.connection.expires_at.clone());
@@ -829,7 +831,7 @@ mod runtime_tests {
     }
     fn response() -> BootstrapResponse {
         BootstrapResponse { account_id: "synthetic-account".into(), connection: Connection {
-            server_url: crate::api::PRIMARY_API.into(), crewing_id: "synthetic-company".into(),
+            server_url: crate::api::PRIMARY_API.into(), workspace_id: "synthetic-company".into(),
             organization_id: None, bearer_token: "skn_synthetic-company-credential".into(),
             scopes: COMPANY_SCOPES.iter().map(|s| (*s).into()).collect(),
             expires_at: (now() + chrono::Duration::minutes(10)).to_rfc3339(),
@@ -1766,7 +1768,7 @@ mod runtime_tests {
     #[test]
     fn native635_runtime_existing_binding_never_requests_creation_and_wrong_company_has_no_writes() {
         let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true)); let old = f.bytes();
-        let mut fake = Fake::default(); fake.reply.connection.crewing_id = "different-company".into();
+        let mut fake = Fake::default(); fake.reply.connection.workspace_id = "different-company".into();
         let pending = rt.start_login(&rt.context().unwrap(), CreationPolicy::FreshNativeContext).unwrap();
         assert_eq!(rt.authenticate(&fake, "synthetic", "synthetic", pending).unwrap_err(), "tenant_mismatch");
         assert_eq!(fake.calls.borrow().as_slice(), ["login", "bootstrap:synthetic-company:false"]);
