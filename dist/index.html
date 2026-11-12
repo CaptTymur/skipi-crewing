@@ -967,7 +967,7 @@ button.cf-save-done:hover:not(:disabled) { background:#1f7a45; filter:brightness
 #ec-doors { display: flex; }
 #ec-doors[hidden] { display: none; }
 </style>
-<!-- @skipi/settings v0.3.0 — vendored CSS (byte-exact from skipi-settings 9caeff6;
+<!-- @skipi/settings v0.3.2 — vendored CSS (byte-exact from skipi-settings bcc4966f;
      sha pinned in dist/skipi-settings.SETTINGS_VERSION). Scoped under .skipi-settings. -->
 <link rel="stylesheet" href="skipi-settings.css">
 <style>
@@ -1016,8 +1016,8 @@ body.mobile-shell #skipi-settings-overlay #settings-root .skipi-settings { --ski
 <div id="skipi-settings-overlay" onclick="if(event.target===this)closeSettings()"><div id="settings-root"></div></div>
 <div id="toast-container"></div>
 
-<!-- @skipi/settings v0.3.0 — vendored module (byte-exact from skipi-settings
-     9caeff6). Publishes window.SkipiSettings; sha256 pinned in
+<!-- @skipi/settings v0.3.2 — vendored module (byte-exact from skipi-settings
+     bcc4966f). Publishes window.SkipiSettings; sha256 pinned in
      dist/skipi-settings.SETTINGS_VERSION. -->
 <script src="skipi-settings.js"></script>
 
@@ -14245,7 +14245,7 @@ try{
   });
 }catch(e){}
 
-// ── @skipi/settings host adapter (CONTRACT.md v0.3.0) over Crewing stores ─────
+// ── @skipi/settings host adapter (CONTRACT.md v0.3.2) over Crewing stores ─────
 // REAL backing only — no mock names/numbers:
 //   getSettings/saveSettings → get_settings/save_settings (persist
 //     ~/.config/skipi-crewing/settings.json);
@@ -14631,7 +14631,8 @@ function crewingSettingsHost(){
     // отсутствие ключа даёт {}, а {} правдиво, и секция ОСТАЁТСЯ (вендорные
     // profileCapability/storageCapability). modulesMount и about работают по
     // ОБРАТНОМУ правилу - нужна именно их НЕпередача, и они не передаются (проверено
-    // ассертом этой стадии). Против вендора 0.3.0 оба флага инертны: гейтов там нет.
+    // ассертом этой стадии). Вендор поднят до 0.3.2 СЛЕДУЮЩИМ коммитом, поэтому
+    // оба гейта ТЕПЕРЬ действуют; на 0.3.0 они были инертны - гейтов там не было.
     profile: { enabled: false },
     storage: { enabled: false },
     appSpecificSections: _crewingSettingsSections()

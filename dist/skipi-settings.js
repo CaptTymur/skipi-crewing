@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = '0.3.0';
+  var VERSION = '0.3.2';
   var SKIPPED = {};
   var GENERIC_IDS = {
     profile: true,
@@ -385,6 +385,22 @@
       return isObject(host.team) && host.team.enabled !== false ? host.team : null;
     }
 
+    // Mirror of storageCapability in FORM, its opposite in DEFAULT: an absent
+    // host.profile keeps the section, so only a strict enabled === false suppresses
+    // it. Returning {} for an absent key is load-bearing — the loader gate below
+    // tests this value, and a boolean would break it.
+    function profileCapability() {
+      if (isObject(host.profile) && host.profile.enabled === false) return null;
+      return isObject(host.profile) ? host.profile : {};
+    }
+
+    // Missing storage must stay an object, not a boolean: loader gates rely on
+    // this default-enabled capability and its optional getInfo method.
+    function storageCapability() {
+      if (isObject(host.storage) && host.storage.enabled === false) return null;
+      return isObject(host.storage) ? host.storage : {};
+    }
+
     function recoveryCapability() {
       var capability = host.recovery && typeof host.recovery === 'object' ? host.recovery : {};
       return {
@@ -398,10 +414,10 @@
     }
 
     function storageInfoLoader() {
+      var capability = storageCapability();
+      if (!capability) return null;
       if (typeof host.getStorageInfo === 'function') return host.getStorageInfo;
-      if (host.storage && typeof host.storage.getInfo === 'function') {
-        return function () { return host.storage.getInfo(); };
-      }
+      if (typeof capability.getInfo === 'function') return function () { return capability.getInfo(); };
       return null;
     }
 
@@ -442,7 +458,9 @@
     }
 
     function loadProfile(generation, request) {
-      if (typeof host.getProfile !== 'function') {
+      // No section, no loader: a suppressed Profile must not reach host.getProfile
+      // and must not report an error about a surface nobody can see.
+      if (!profileCapability() || typeof host.getProfile !== 'function') {
         if (!supplementalObsolete(generation, request)) {
           delete state.optionalErrors.profile;
           state.profile = null;
@@ -604,13 +622,14 @@
     }
 
     function genericSections() {
-      var list = [
-        {
+      var list = [];
+      if (profileCapability()) {
+        list.push({
           id: 'profile', order: 100, icon: 'P', labelKey: 'settings.section.profile',
           descriptionKey: 'settings.section.profile.description', mobileGroupKey: 'settings.group.general', render: renderProfile,
           badge: function () { return valueText(state.trustStatus, ['label', 'status', 'state']); }
-        }
-      ];
+        });
+      }
       if (deviceCapability()) {
         list.push({
           id: 'devices', order: 200, icon: 'D', labelKey: 'settings.section.devices',
@@ -1127,7 +1146,7 @@
         ? '<img class="skipi-settings__mobile-avatar-image" src="' + escapeAttr(avatarUrl) + '" alt="" referrerpolicy="no-referrer">'
         : '<span aria-hidden="true">' + escapeHtml(avatarText) + '</span>';
       var avatarControl = linkedSection
-        ? '<button type="button" class="skipi-settings__mobile-avatar-action" data-settings-action="profile-section" data-settings-value="' + escapeAttr(sectionId) + '" aria-label="' + escapeAttr(sectionLabel(linkedSection)) + '"><span class="skipi-settings__mobile-avatar">' + avatar + '</span><span class="skipi-settings__mobile-avatar-edit" aria-hidden="true">✎</span></button>'
+        ? '<button type="button" class="skipi-settings__mobile-avatar-action" data-settings-action="profile-section" data-settings-value="' + escapeAttr(sectionId) + '" aria-label="' + escapeAttr(sectionLabel(linkedSection)) + '"><span class="skipi-settings__mobile-avatar">' + avatar + '</span></button>'
         : '<div class="skipi-settings__mobile-avatar">' + avatar + '</div>';
       return '<div class="skipi-settings__mobile-profile">'
         + avatarControl
@@ -1430,7 +1449,7 @@
 
     function renderApplication() {
       return renderAppearance()
-        + renderStorage()
+        + (storageCapability() ? renderStorage() : '')
         + (typeof host.modulesMount === 'function' ? renderModules() : '')
         + renderAbout();
     }
