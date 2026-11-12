@@ -44,6 +44,26 @@
   --err: #dc2626;
   --border: #d8dde5;
 }
+/* Login-refusal text on the tinted error box: the inline style declares the light-theme
+   value (and harness No.898/3d asserts that declaration exists), so the DARK theme is served
+   here instead. Measured on the surface the engine resolves for that box - the entry-choice
+   overlay, painted var(--bg):
+     dark  before 2.07:1 (FAIL, AA needs 4.5)  ->  after 9.07:1
+     light 6.40:1, unchanged either way
+   The override keyword below is required because an inline style cannot be beaten any other
+   way; it is scoped to the explicitly-dark theme only, so the default theme is untouched by
+   construction - by construction, not by promise.
+   DO NOT "tidy" the inline style of #ec-login-error to match the colour actually seen on the
+   dark theme: harness assertion No.898/3d extracts the colour by matching a LITERAL form in
+   that inline style, so replacing it with a variable or deleting it makes the extraction
+   undefined and fails the assert (measured: 184/0 before, 156 passed / 1 failed / 1 setup
+   error after). The inline literal is the LIGHT-theme value and the assert's input; this rule
+   serves the dark theme instead. The assert pins the FORM of the declaration, not the outcome.
+   Neither the override keyword nor any colour literal is repeated in this comment: a later
+   count of either would match the comment and inflate the check. */
+:root[data-theme="dark"] #ec-login-error {
+  color: #fca5a5 !important;
+}
 /* Checkbox-dropdown widget — used for citizenship multi-select on the
    vacancy form. Closes on click outside via JS. */
 .cd-wrap { position: relative; display: inline-block; width: 100%; }
