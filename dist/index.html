@@ -14332,7 +14332,12 @@ function _crewingSettingsSections(){
         // Отключение ПО СПОСОБНОСТИ, не по сроку: вне демо команды завершения входа в
         // этой версии нет, команды удаления локальной копии нет вовсе. Когда команды
         // появятся, предикат включит кнопки сам, без обратной правки.
-        var canLogout = demo;
+        // No.1871 phase D: the predicate is MEASURED, not 'the command exists'. finish_logout
+        // increments attempts BEFORE ok_or("login_required"), and the author's comment says a
+        // no-account logout cancels a PENDING FIRST native login. So the button is live only
+        // when a native record EXISTS.
+        var hasRecord = (raw === 'active' || raw === 'locked' || raw === 'expired');
+        var canLogout = demo || hasRecord;
         var canDelete = false;
         var btn = function(action, labelKey, enabled){
           return '<button type="button" class="skipi-settings__button skipi-settings__button--secondary"'
@@ -14345,17 +14350,27 @@ function _crewingSettingsSections(){
           + _crewSetHtmlRow(ctx, logoutKey, canLogout ? '' : ctx.t('settings.crewing.account.logout.disabled'),
               btn('crewing-account-logout', logoutKey, canLogout))
           + _crewSetHtmlRow(ctx, 'settings.crewing.account.delete_local',
-              ctx.t('settings.crewing.account.delete_local.description')
-                + (canDelete ? '' : ' ' + ctx.t('settings.crewing.account.delete_local.disabled')),
+              // ONE text at a time, never both: concatenating them read as «deletes only the
+              // local copy ... does not delete the local copy». A warning about what is
+              // irreversible is addressed to whoever is about to PRESS; a disabled button has
+              // no such reader, so there it is replaced by the reason, not appended to it.
+              canDelete ? ctx.t('settings.crewing.account.delete_local.description')
+                        : ctx.t('settings.crewing.account.delete_local.disabled'),
               btn('crewing-account-delete-local', 'settings.crewing.account.delete_local', canDelete));
         // Без заголовка группы: имя вкладки модуль уже печатает в шапке детали, и
         // второй такой же заголовок дублировал бы его на экране.
         return '<div class="skipi-settings__group" data-qa="settings.account.group">' + rows + '</div>';
       },
       handlers: {
-        'crewing-account-logout': function(){
+        'crewing-account-logout': function(ctx){
+          // __demoMode asked FIRST: the demo fixture carries account_session:'active', so
+          // asking about the session before demo would take the wrong branch.
           if (typeof __demoMode !== 'undefined' && __demoMode) { return exitDemoMode(); }
-          return undefined;
+          var s = (ctx && ctx.settings) || state.settings || {};
+          // camelCase key, as in native_account_login: tauri maps it to snake_case.
+          return Promise.resolve(invoke('native_account_logout',
+            { expectedContext: String(s.connection_context || '') }))
+            .then(function(){ return goAccountSignIn(); });
         },
         'crewing-account-delete-local': function(){ return undefined; }
       }
