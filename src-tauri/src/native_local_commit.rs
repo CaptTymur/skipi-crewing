@@ -65,7 +65,7 @@ impl NativeSettingsTarget {
         crate::private_store::native_settings_destination(path).unwrap();
         Self { path:path.to_owned(), fault }
     }
-    fn persist(&self, settings: &Settings) -> Result<Durability, crate::NativePersistError> {
+    pub(super) fn persist(&self, settings: &Settings) -> Result<Durability, crate::NativePersistError> {
         #[cfg(test)]
         if let Some(fault) = self.fault { return settings.persist_native_detailed_with_fault(&self.path, fault); }
         settings.persist_native_detailed(&self.path)
