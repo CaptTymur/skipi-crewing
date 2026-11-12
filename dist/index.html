@@ -1990,7 +1990,7 @@ var UI_STRINGS = {
     "settings.section.team": "Team",
     "settings.section.team.description": "Team profile, roles, members and invitations.",
     "settings.section.application": "Application",
-    "settings.section.application.description": "Theme, language, storage, modules and app details.",
+    "settings.section.application.description": "Language, theme and version.",
     "settings.section.modules": "Modules",
     "settings.section.modules.description": "Extensions supplied by the module host.",
     "settings.section.identity": "Identity & access",
@@ -2218,7 +2218,22 @@ var UI_STRINGS = {
     "settings.crewing.crewing_id": "Crewing ID",
     "settings.crewing.crewing_id.description": "The server UUID of the accredited organisation record.",
     "settings.crewing.action.validate": "Validate",
-    "settings.crewing.action.trial": "30-day trial"
+    "settings.crewing.action.trial": "30-day trial",
+    "settings.crewing.account": "Account",
+    "settings.crewing.account.email": "Account e-mail",
+    "settings.crewing.account.logout": "Sign out",
+    "settings.crewing.account.logout_demo": "Exit demo",
+    "settings.crewing.account.delete_local": "Delete data",
+    "settings.crewing.account.delete_local.description": "Removes only the local copy on this device. Your account and the data on the server are not affected.",
+    "settings.crewing.account.state.active": "Signed in. The address is not stored on this device.",
+    "settings.crewing.account.state.legacy": "Access is open through this device's settings. The account address is not stored here.",
+    "settings.crewing.account.state.none": "No account sign-in has happened on this device.",
+    "settings.crewing.account.state.signed_out": "Signed out of the account.",
+    "settings.crewing.account.state.expired": "Your sign-in has expired. Sign in again.",
+    "settings.crewing.account.state.locked": "The account is locked. Sign-in is not possible until the lock is lifted.",
+    "settings.crewing.account.state.unavailable": "The account state has not been received yet.",
+    "settings.crewing.account.delete_local.disabled": "This version does not delete the local copy.",
+    "settings.crewing.account.logout.disabled": "This version does not sign you out."
   },
   ru: {
     "settings.title": "Настройки",
@@ -2230,7 +2245,7 @@ var UI_STRINGS = {
     "settings.section.team": "Команда",
     "settings.section.team.description": "Профиль команды, роли, участники и приглашения.",
     "settings.section.application": "Приложение",
-    "settings.section.application.description": "Тема, язык, хранилище, модули и сведения о приложении.",
+    "settings.section.application.description": "Язык, тема и версия.",
     "settings.section.modules": "Модули",
     "settings.section.modules.description": "Расширения, предоставленные хостом модулей.",
     "settings.section.identity": "Идентичность и доступ",
@@ -2461,7 +2476,22 @@ var UI_STRINGS = {
     "settings.crewing.crewing_id": "Crewing ID",
     "settings.crewing.crewing_id.description": "Серверный UUID аккредитованной записи организации.",
     "settings.crewing.action.validate": "Проверить",
-    "settings.crewing.action.trial": "30-дневный триал"
+    "settings.crewing.action.trial": "30-дневный триал",
+    "settings.crewing.account": "Аккаунт",
+    "settings.crewing.account.email": "Электронная почта аккаунта",
+    "settings.crewing.account.logout": "Выйти",
+    "settings.crewing.account.logout_demo": "Выйти из демо",
+    "settings.crewing.account.delete_local": "Удалить данные",
+    "settings.crewing.account.delete_local.description": "Удаляет только локальную копию на этом устройстве. Аккаунт и данные на сервере не затрагиваются.",
+    "settings.crewing.account.state.active": "Вход в аккаунт выполнен. Адрес на этом устройстве не хранится.",
+    "settings.crewing.account.state.legacy": "Доступ открыт настройками этого устройства. Адрес аккаунта здесь не хранится.",
+    "settings.crewing.account.state.none": "Входа в аккаунт с этого устройства не было.",
+    "settings.crewing.account.state.signed_out": "Выход из аккаунта выполнен.",
+    "settings.crewing.account.state.expired": "Срок входа истёк. Нужно войти заново.",
+    "settings.crewing.account.state.locked": "Аккаунт заблокирован. Вход невозможен, пока блокировка не снята.",
+    "settings.crewing.account.state.unavailable": "Состояние аккаунта пока не получено.",
+    "settings.crewing.account.delete_local.disabled": "Эта версия программы не удаляет локальную копию.",
+    "settings.crewing.account.logout.disabled": "Эта версия программы не завершает вход."
   }
   };
   ['en','ru'].forEach(function(lang){
@@ -14276,6 +14306,60 @@ function _crewSetHtmlInput(ctx, id, value, type, placeholder){
 // Profile row keeps showing «Недоступно» exactly as before).
 function _crewingSettingsSections(){
   return [
+    // No.1871, слово владельца 11.11: вкладка «Аккаунт» несёт РОВНО три предмета -
+    // почта аккаунта, «Выйти», «Удалить данные». order 50 < 100 намеренно: вендор
+    // сортирует по возрастанию order, а при РАВНОМ order хостовая секция уходит ПОСЛЕ
+    // generic, поэтому 50 верно и при включённом, и при выключенном гейте
+    // host.profile.enabled (profile=100, application=300) - значение не придётся
+    // переделывать после вендоринга. Побочно Account становится sections[0], то есть
+    // секцией деталь-панели по умолчанию: владелец видит её без клика.
+    { id:'account', order:50, icon:'A', labelKey:'settings.crewing.account',
+      renderHtml: function(ctx){
+        var s = ctx.settings || {};
+        var raw = String(s.account_session == null ? '' : s.account_session);
+        var KNOWN = { none:1, locked:1, signed_out:1, expired:1, active:1, legacy:1, unavailable:1 };
+        var known = !!KNOWN[raw];
+        // Экран спокоен ВСЕГДА: неизвестный код показывается строкой «пока не получено»
+        // и СЫРЫМ НЕ ПЕЧАТАЕТСЯ НИКОГДА (механизм settings.identity.trust, за который
+        // прошлый экран забракован). Но в разметке «неизвестный код» и «ничего не
+        // пришло» различимы полем: через месяц это разные неисправности.
+        var stateKey = 'settings.crewing.account.state.' + (known ? raw : 'unavailable');
+        var source = known ? 'known' : (raw === '' ? 'empty' : 'unrecognised');
+        var demo = (typeof __demoMode !== 'undefined' && __demoMode);
+        // __demoMode спрашивается ПЕРВЫМ: демо-фикстура несёт account_session:'active',
+        // поэтому вопрос о сессии раньше вопроса о демо дал бы неверную ветку.
+        var logoutKey = demo ? 'settings.crewing.account.logout_demo' : 'settings.crewing.account.logout';
+        // Отключение ПО СПОСОБНОСТИ, не по сроку: вне демо команды завершения входа в
+        // этой версии нет, команды удаления локальной копии нет вовсе. Когда команды
+        // появятся, предикат включит кнопки сам, без обратной правки.
+        var canLogout = demo;
+        var canDelete = false;
+        var btn = function(action, labelKey, enabled){
+          return '<button type="button" class="skipi-settings__button skipi-settings__button--secondary"'
+            + (enabled ? ' data-settings-action="' + ctx.escapeAttr(action) + '"' : ' disabled aria-disabled="true"')
+            + '>' + ctx.escapeHtml(ctx.t(labelKey)) + '</button>';
+        };
+        var rows = '<div data-qa="settings.account.email" data-account-state-source="' + ctx.escapeAttr(source) + '">'
+            + _crewSetHtmlRow(ctx, 'settings.crewing.account.email', '', ctx.escapeHtml(ctx.t(stateKey)))
+            + '</div>'
+          + _crewSetHtmlRow(ctx, logoutKey, canLogout ? '' : ctx.t('settings.crewing.account.logout.disabled'),
+              btn('crewing-account-logout', logoutKey, canLogout))
+          + _crewSetHtmlRow(ctx, 'settings.crewing.account.delete_local',
+              ctx.t('settings.crewing.account.delete_local.description')
+                + (canDelete ? '' : ' ' + ctx.t('settings.crewing.account.delete_local.disabled')),
+              btn('crewing-account-delete-local', 'settings.crewing.account.delete_local', canDelete));
+        // Без заголовка группы: имя вкладки модуль уже печатает в шапке детали, и
+        // второй такой же заголовок дублировал бы его на экране.
+        return '<div class="skipi-settings__group" data-qa="settings.account.group">' + rows + '</div>';
+      },
+      handlers: {
+        'crewing-account-logout': function(){
+          if (typeof __demoMode !== 'undefined' && __demoMode) { return exitDemoMode(); }
+          return undefined;
+        },
+        'crewing-account-delete-local': function(){ return undefined; }
+      }
+    },
     // No.880 (1495): секция подключения («Server URL», токен компании, Crewing ID)
     // снята целиком. Хост отдаёт модулю только «Рабочие данные» ниже — тем же
     // механизмом appSpecificSection. Второй системы настроек нет, и подключать
@@ -14499,10 +14583,6 @@ function crewingSettingsHost(){
     ],
     appName: 'Skipi Crewing',
     get appVersion(){ try { return appVersionLabel(); } catch(_){ return ''; } },
-    about: {
-      support: 'info@tymur.org',
-      get description(){ try { return (typeof stackAboutSummary==='function') ? stackAboutSummary() : ''; } catch(_){ return ''; } }
-    },
     getProfile: function(){
       // Company entity — Crewing represents a crewing agency (a company).
       var s = state.settings || {};
@@ -14532,6 +14612,13 @@ function crewingSettingsHost(){
       };
     },
     onError: function(error, context){ try { console.error('[skipi-settings]', context, error); } catch(_){} },
+    // No.1871: гейты модуля 0.3.2. profile и storage ТРЕБУЮТ явного {enabled:false} -
+    // отсутствие ключа даёт {}, а {} правдиво, и секция ОСТАЁТСЯ (вендорные
+    // profileCapability/storageCapability). modulesMount и about работают по
+    // ОБРАТНОМУ правилу - нужна именно их НЕпередача, и они не передаются (проверено
+    // ассертом этой стадии). Против вендора 0.3.0 оба флага инертны: гейтов там нет.
+    profile: { enabled: false },
+    storage: { enabled: false },
     appSpecificSections: _crewingSettingsSections()
   };
 
