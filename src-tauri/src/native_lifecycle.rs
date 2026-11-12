@@ -76,6 +76,53 @@ pub(crate) fn private_access(s: &Settings, origins: &[&str], now: DateTime<Utc>)
     }
 }
 
+// Единая точка сессии: один источник и токена, и отказа. До No.1833 токен читали
+// 27 команд `lib.rs` и 25 интейк-команд через `snapshot_context`, каждая со своим
+// гейтом. Нового предиката «вход выполнен» здесь НЕТ намеренно: политику целиком
+// решает `private_access`, которая уже существует и уже кормит `account_session_state`.
+// Поэтому `LegacyConnected` остаётся допустимым — ровно как до правки.
+pub(crate) struct SessionToken(String);
+
+impl SessionToken {
+    pub(crate) fn as_str(&self) -> &str { &self.0 }
+}
+
+// `Debug` РУКОЙ, а не производный: производный напечатал бы САМ бережр-токен в любой
+// панике, в любом сообщении `unwrap` и в логе, а транскрипт сессии лежит на диске.
+// Идиома дома уже в этом файле: `impl std::fmt::Debug for VerifiedLogin` печатает
+// `VerifiedLogin(<private>)`. Дриллы требуют `Debug` у Ok-типа (`assert_eq!`/`unwrap`),
+// и закрывать это надо редактирующей реализацией, а не derive. Сторожит тест
+// `native1833_session_token_debug_never_prints_the_credential`.
+impl std::fmt::Debug for SessionToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SessionToken(<private>)")
+    }
+}
+
+// `now` идёт параметром, а не `Utc::now()` внутри: иначе дриллы вырождаются в
+// «false есть false», потому что сравниваемое значение уезжает наружу функции.
+pub(crate) fn session_token(
+    s: &Settings,
+    origins: &[&str],
+    now: DateTime<Utc>,
+) -> Result<SessionToken, &'static str> {
+    private_access(s, origins, now)?;
+    ensure_fresh(s, now)
+}
+
+// A3 поставит сюда ленивый перевыпуск `skn_`. Сегодня отдаёт сохранённое, но стоит
+// в интерфейсе С САМОГО НАЧАЛА, иначе 28 площадок пришлось бы трогать дважды.
+// Пустота здесь НЕДОСТИЖИМА через `session_token`: пустой или пробельный токен не
+// проходит `valid_opaque_credential`, и `private_access` отказывает раньше. Проверка
+// оставлена как защита для A3, где перевыпущенный токен может прийти пустым.
+pub(crate) fn ensure_fresh(s: &Settings, _now: DateTime<Utc>) -> Result<SessionToken, &'static str> {
+    let token = s.bearer_token.trim();
+    if token.is_empty() {
+        return Err("login_required");
+    }
+    Ok(SessionToken(token.to_string()))
+}
+
 // An explicit native-owned fresh context is a creation intent, never server ownership proof.
 // No value of this type comes from JS. Its production allocator remains a later integration.
 #[derive(Clone, Copy)]

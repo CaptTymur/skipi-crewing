@@ -327,6 +327,120 @@ mod local_joint {
         }
     }
     fn runtime_origins() -> Vec<&'static str> { vec![crate::api::PRIMARY_API,crate::api::RU_API] }
+
+    // Лёгкая установка без JointFixture: mode() для legacy-ветки требует лишь непустой
+    // server_url, валидный opaque-токен и валидный crewing_id — база данных и ключи не нужны.
+    fn session_settings(token: &str) -> Settings {
+        let mut settings = Settings::default();
+        settings.server_url = crate::api::PRIMARY_API.to_string();
+        settings.crewing_id = "crew-drill".into();
+        settings.bearer_token = token.into();
+        settings
+    }
+
+    // D1 — СТОРОЖ РЕШЕНИЯ, а не кода. Буквальная конъюнкция из карточки
+    // (`mode == NativeSession` И `private_access == Ok(())`) выбросила бы LegacyConnected
+    // и покраснила бы 14 тестов интейка, чья фикстура даёт именно его.
+    // МУТАЦИЯ ДЛЯ ПОКАЗА КРАСНЫМ: заменить в session_token `private_access(s, origins, now)?`
+    // на `if mode(s, origins) != Mode::NativeSession { return Err("login_required"); }`.
+    #[test]
+    fn native1833_session_point_keeps_legacy_connected_authorized() {
+        let settings = session_settings("legacy-owned-company-credential");
+        assert_eq!(mode(&settings, &runtime_origins()), Mode::LegacyConnected);
+        assert_eq!(
+            session_token(&settings, &runtime_origins(), Utc::now()).unwrap().as_str(),
+            "legacy-owned-company-credential",
+            "legacy installation must keep working: private_access:65 returns Ok(()) for it"
+        );
+    }
+
+    // D2 — ужесточение, которое СРЕЗ И ВВОДИТ: `skn_`-токен без записи аккаунта даёт
+    // NativeLocked, то есть вход не завершён, и интейк больше не работает на
+    // неподтверждённой сессии (раньше ему было довольно непустого токена).
+    // МУТАЦИЯ: убрать из session_token вызов `private_access` целиком.
+    #[test]
+    fn native1833_session_point_refuses_native_locked() {
+        let settings = session_settings("skn_drill_not_authorized");
+        assert_eq!(mode(&settings, &runtime_origins()), Mode::NativeLocked);
+        assert_eq!(
+            session_token(&settings, &runtime_origins(), Utc::now()).unwrap_err(),
+            "login_required"
+        );
+    }
+
+    // D3/D4 — часы. Требуют настоящей native-записи, поэтому идут через JointFixture.
+    // D4 — ГРАНИЦА `t == now`: та же `<=`, что в private_access:71, иначе два места разойдутся.
+    // МУТАЦИЯ ДЛЯ ОБОИХ: передать `now - Duration::hours(1)` вместо фактического now
+    // (возможна ТОЛЬКО потому, что часы идут параметром, а не берутся внутри).
+    #[test]
+    fn native1833_session_point_refuses_expired_connection_and_its_boundary() {
+        let fixture = JointFixture::new();
+        let mut settings = fixture.existing_settings(true);
+        settings.native_authorized = true;
+        assert_eq!(mode(&settings, &runtime_origins()), Mode::NativeSession);
+        let expiry: DateTime<Utc> = settings.token_expires_at.as_ref().unwrap().parse().unwrap();
+        // D3: время после срока
+        assert_eq!(
+            session_token(&settings, &runtime_origins(), expiry + chrono::Duration::seconds(1)).unwrap_err(),
+            "connection_expired"
+        );
+        // D4: ровно граница
+        assert_eq!(
+            session_token(&settings, &runtime_origins(), expiry).unwrap_err(),
+            "connection_expired",
+            "boundary t == now must refuse, same `<=` as private_access:71"
+        );
+        // и до срока — тот же вход действует
+        assert!(session_token(&settings, &runtime_origins(), expiry - chrono::Duration::seconds(1)).is_ok());
+    }
+
+    // D5 — ПЕРЕДЕЛАН после опровержения: через session_token этот случай НЕДОСТИЖИМ,
+    // потому что пробельный токен не проходит valid_opaque_credential и private_access
+    // отказывает раньше. Поэтому ensure_fresh вызывается НАПРЯМУЮ. Прежняя редакция D5
+    // была бы «false есть false»: зелёной и неспособной покраснеть.
+    // МУТАЦИЯ: убрать `.trim()` в ensure_fresh.
+    #[test]
+    fn native1833_ensure_fresh_refuses_blank_token_directly() {
+        let settings = session_settings("   ");
+        // граница измерения, названная прямо: через session_token сюда не дойти
+        assert_eq!(mode(&settings, &runtime_origins()), Mode::Unavailable);
+        assert_eq!(
+            session_token(&settings, &runtime_origins(), Utc::now()).unwrap_err(),
+            "settings_unavailable",
+            "unreachable via the session point: private_access refuses before ensure_fresh"
+        );
+        assert_eq!(ensure_fresh(&settings, Utc::now()).unwrap_err(), "login_required");
+    }
+
+    // D6 — сторож того, что A3 заменит ТЕЛО ensure_fresh, а не её интерфейс.
+    // МУТАЦИЯ: вернуть из ensure_fresh константу вместо сохранённого значения.
+    #[test]
+    fn native1833_ensure_fresh_returns_the_stored_token_today() {
+        let settings = session_settings("legacy-owned-company-credential");
+        assert_eq!(
+            ensure_fresh(&settings, Utc::now()).unwrap().as_str(),
+            settings.bearer_token.trim()
+        );
+    }
+
+    // СТОРОЖ РЕДАКТИРУЮЩЕГО `Debug` (обязательное условие менеджера к правке).
+    // Без него правка закрывает мину только до следующего человека: `#[derive(Debug)]`
+    // скомпилируется, поведение изменится МОЛЧА, и ничто не покраснеет.
+    // МУТАЦИЯ ДЛЯ ПОКАЗА КРАСНЫМ: заменить рукописный impl на `#[derive(Debug)]`.
+    #[test]
+    fn native1833_session_token_debug_never_prints_the_credential() {
+        let needle = "SYNTHETIC-CREDENTIAL-b7f3e9";
+        let settings = session_settings(needle);
+        let token = session_token(&settings, &runtime_origins(), Utc::now()).unwrap();
+        let shown = format!("{:?}", token);
+        // ПОЛОЖИТЕЛЬНЫЙ КОНТРОЛЬ: предикат обязан уметь находить эту подстроку, иначе
+        // «не содержит» было бы нулём слепого прибора.
+        assert!(format!("carrier {}", needle).contains(needle),
+                "control: the substring predicate can find the needle at all");
+        assert!(!shown.contains(needle),
+                "Debug must never print the credential; got {}", shown);
+        assert_eq!(shown, "SessionToken(<private>)");
+    }
     fn business_row() -> Option<(String,String,String)> {
         Some(("fixture-date".into(),"{}".into(),"open".into()))
     }

@@ -749,9 +749,14 @@ fn snapshot_context(
     expected: &PilotExpectedContext,
 ) -> Result<PilotContext, PilotBridgeError> {
     let server_url = settings.server_url.trim();
-    let bearer_token = settings.bearer_token.trim();
     let crewing_id = settings.crewing_id.trim();
-    if server_url.is_empty() || bearer_token.is_empty() || crewing_id.is_empty() {
+    // «СКОНФИГУРИРОВАНО ЛИ ВООБЩЕ» и «ДЕЙСТВУЕТ ЛИ ВХОД» — разные вопросы, и спрашивать
+    // их одним предикатом было бы ошибкой, а не экономией (решение менеджера 12.11,
+    // вариант A). Пустая настройка остаётся под своим прежним кодом: через единую точку
+    // она дала бы `settings_unavailable`, спаренный с текстом «Не удалось прочитать
+    // локальные данные. Перезапустите приложение.» — ложный диагноз для человека,
+    // который просто ещё не вошёл. Ложный диагноз хуже отсутствующего.
+    if server_url.is_empty() || settings.bearer_token.trim().is_empty() || crewing_id.is_empty() {
         return Err(PilotBridgeError::invalid_context("pilot_not_configured"));
     }
     if server_url != expected.server_url.trim()
@@ -760,9 +765,17 @@ fn snapshot_context(
     {
         return Err(PilotBridgeError::invalid_context("settings_changed"));
     }
+    // ЗНАЧЕНИЕ токена приходит ТОЛЬКО из единой точки сессии: интейк больше не берёт
+    // его из настроек. Пустоту выше спрашивает конфигурация, значение — сессия.
+    let session = crate::native_lifecycle::session_token(
+        settings,
+        &[crate::api::PRIMARY_API, crate::api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(PilotBridgeError::invalid_context)?;
     Ok(PilotContext {
         server_url: server_url.to_string(),
-        bearer_token: bearer_token.to_string(),
+        bearer_token: session.as_str().to_string(),
         crewing_id: crewing_id.to_string(),
     })
 }

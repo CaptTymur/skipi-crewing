@@ -928,9 +928,17 @@ fn sync_crewing_profile(state: tauri::State<AppState>) -> Result<String, String>
         public_description: nonempty(&profile.public_description),
     };
     let path = format!("/api/crewings/{}/profile", settings.crewing_id);
+    let session = match native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    ) {
+        Ok(session) => session,
+        Err(_) => return Ok("skipped: connection settings incomplete".into()),
+    };
     api::patch_json_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         &wire,
         15,
@@ -1079,9 +1087,15 @@ fn post_vacancy(
     ensure_vacancy_connection_settings(&settings)?;
     let wire = vacancy_wire_from_draft(&draft, &settings);
 
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let server_resp: VacancyServerResponse = api::post_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/vacancies",
         &wire,
         30,
@@ -1106,9 +1120,15 @@ fn update_vacancy_remote(
     ensure_vacancy_connection_settings(&settings)?;
     let wire = vacancy_wire_from_draft(&draft, &settings);
     let path = format!("/api/vacancies/{vacancy_id}");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let updated: ServerVacancy = api::patch_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         &wire,
         30,
@@ -1162,9 +1182,15 @@ fn post_mailing_request(
         languages: draft.languages.as_ref(),
     };
 
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let server_resp: MailingRequestServerResponse = api::post_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mailing-requests",
         &wire,
         30,
@@ -1390,9 +1416,15 @@ fn fetch_compliance_profiles(
             "false"
         }
     );
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let parsed: ComplianceProfileListResp = api::get_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         20,
     )?;
@@ -1426,9 +1458,15 @@ fn create_compliance_profile(
         "mandatory_certs": draft.mandatory_certs.unwrap_or_default(),
         "extra_requirements": draft.extra_requirements.unwrap_or_default(),
     });
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/compliance-profiles",
         &body,
         20,
@@ -1500,9 +1538,15 @@ fn update_compliance_profile(
         body.insert("status".into(), serde_json::Value::String(status));
     }
     let path = format!("/api/compliance-profiles/{profile_id}");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::patch_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         &body,
         20,
@@ -1517,9 +1561,15 @@ fn archive_compliance_profile(
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
     let path = format!("/api/compliance-profiles/{profile_id}/archive");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_empty_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         20,
     )
@@ -1538,9 +1588,15 @@ fn fetch_my_vacancies(state: tauri::State<AppState>) -> Result<Vec<ServerVacancy
         "/api/vacancies?crewing_id={}&include_closed=true&limit=200",
         settings.crewing_id
     );
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let parsed: VacancyListResp = api::get_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )?;
@@ -1562,9 +1618,15 @@ fn fetch_my_mailing_requests(
         "/api/mailing-requests?crewing_id={}&include_closed=true&limit=200",
         settings.crewing_id
     );
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     let parsed: MailingRequestListResp = api::get_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )?;
@@ -1597,9 +1659,15 @@ fn delete_mailing_request_remote(
         return Err("Not configured".into());
     }
     let path = format!("/api/mailing-requests/{request_id}");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::delete_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1615,9 +1683,15 @@ fn mailing_request_action(
         return Err("Not configured".into());
     }
     let path = format!("/api/mailing-requests/{request_id}/{action}");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1630,9 +1704,15 @@ fn close_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> Re
         return Err("Not configured".into());
     }
     let path = format!("/api/vacancies/{vacancy_id}/close");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1645,9 +1725,15 @@ fn reopen_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> R
         return Err("Not configured".into());
     }
     let path = format!("/api/vacancies/{vacancy_id}/reopen");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1660,9 +1746,15 @@ fn delete_vacancy_remote(vacancy_id: String, state: tauri::State<AppState>) -> R
         return Err("Not configured".into());
     }
     let path = format!("/api/vacancies/{vacancy_id}");
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::delete_empty(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1744,9 +1836,15 @@ fn fetch_applications_for_vacancy(
             path.push_str(&q.join("&"));
         }
     }
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::get_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         20,
     )
@@ -1788,9 +1886,15 @@ fn rank_compliance_candidate(
         }
     }
     let body = serde_json::json!({ "candidate": candidate });
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_json(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/crewing/compliance/rank-candidates",
         &body,
         20,
@@ -1801,9 +1905,15 @@ fn rank_compliance_candidate(
 fn get_mailbox_status(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::get_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/mailbox",
         15,
     )
@@ -1816,9 +1926,15 @@ fn save_mailbox_config(
 ) -> Result<serde_json::Value, String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::put_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/mailbox",
         &payload,
         20,
@@ -1832,9 +1948,15 @@ fn test_mailbox(
 ) -> Result<serde_json::Value, String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/mailbox/test",
         &payload,
         30,
@@ -1845,9 +1967,15 @@ fn test_mailbox(
 fn disconnect_mailbox(state: tauri::State<AppState>) -> Result<(), String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::delete_empty_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/mailbox",
         15,
     )
@@ -1866,9 +1994,15 @@ fn fetch_mail_messages(
         .filter(|s| !s.is_empty())
         .unwrap_or("INBOX");
     let path = format!("/api/mail/messages?folder={}&limit=100", urlenc(folder));
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::get_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         20,
     )
@@ -1882,9 +2016,15 @@ fn fetch_mail_message(
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
     let path = format!("/api/mail/messages/{}", urlenc(&message_id));
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::get_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -1894,9 +2034,15 @@ fn fetch_mail_message(
 fn poll_mail(state: tauri::State<AppState>) -> Result<serde_json::Value, String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_empty_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/poll",
         60,
     )
@@ -1909,9 +2055,15 @@ fn send_mail(
 ) -> Result<serde_json::Value, String> {
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::post_json_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         "/api/mail/send",
         &payload,
         30,
@@ -1923,9 +2075,15 @@ fn delete_mail_message(message_id: String, state: tauri::State<AppState>) -> Res
     let settings = state.settings.lock().unwrap().clone();
     require_api_settings(&settings)?;
     let path = format!("/api/mail/messages/{}", urlenc(&message_id));
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     api::delete_empty_primary(
         Some(&settings.server_url),
-        Some(&settings.bearer_token),
+        Some(session.as_str()),
         &path,
         15,
     )
@@ -2117,9 +2275,15 @@ fn send_saved_seafarer_ping(
     if settings.crewing_id.trim().is_empty() {
         return Err("No crewing_id configured. Open Settings.".into());
     }
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     messaging::register_pubkey_native(
         settings.crewing_id.clone(),
-        Some(settings.bearer_token.clone()),
+        Some(session.as_str().to_string()),
         Some(settings.server_url.clone()),
     )?;
     let saved = db::get_saved_seafarer(&seafarer_id)?;
@@ -2139,7 +2303,7 @@ fn send_saved_seafarer_ping(
         messaging::send_direct_availability_ping(
             seafarer_id.clone(),
             plaintext,
-            settings.bearer_token.clone(),
+            session.as_str().to_string(),
             Some(settings.server_url.clone()),
         )?
     };
@@ -2193,15 +2357,21 @@ fn send_direct_availability_ping(
     if settings.crewing_id.trim().is_empty() {
         return Err("No crewing_id configured. Open Settings.".into());
     }
+    let session = native_lifecycle::session_token(
+        &settings,
+        &[api::PRIMARY_API, api::RU_API],
+        chrono::Utc::now(),
+    )
+    .map_err(|e| e.to_string())?;
     messaging::register_pubkey_native(
         settings.crewing_id.clone(),
-        Some(settings.bearer_token.clone()),
+        Some(session.as_str().to_string()),
         Some(settings.server_url.clone()),
     )?;
     let msg = messaging::send_direct_availability_ping(
         seafarer_id.clone(),
         plaintext,
-        settings.bearer_token.clone(),
+        session.as_str().to_string(),
         Some(settings.server_url.clone()),
     )?;
     db::mark_saved_seafarer_ping_sent(&seafarer_id, Some(&msg.application_id), Some(&msg.sent_at))
