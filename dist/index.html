@@ -2082,9 +2082,9 @@ var UI_STRINGS = {
     "settings.devices.one_time_code.description": "Use this short-lived code on the device being connected.",
     "settings.appearance.title": "Interface",
     "settings.appearance.theme": "Theme",
-    "settings.appearance.theme.description": "Applied and persisted by the mock host.",
+    "settings.appearance.theme.description": "",
     "settings.appearance.language": "Language",
-    "settings.appearance.language.description": "Switch the host translation dictionary.",
+    "settings.appearance.language.description": "",
     "settings.theme.light": "Light",
     "settings.theme.dark": "Dark",
     "settings.language.en": "English",
@@ -2337,9 +2337,9 @@ var UI_STRINGS = {
     "settings.devices.one_time_code.description": "Введите этот короткоживущий код на подключаемом устройстве.",
     "settings.appearance.title": "Интерфейс",
     "settings.appearance.theme": "Тема",
-    "settings.appearance.theme.description": "Применяется и сохраняется тестовым хостом.",
+    "settings.appearance.theme.description": "",
     "settings.appearance.language": "Язык",
-    "settings.appearance.language.description": "Переключает словарь переводов хоста.",
+    "settings.appearance.language.description": "",
     "settings.theme.light": "Светлая",
     "settings.theme.dark": "Тёмная",
     "settings.language.en": "English",
@@ -2511,6 +2511,16 @@ function getUiLang() {
 }
 function tr(key) {
   var lang = getUiLang();
+  // ДВА ПРАВИЛА, и второе адресовано тому, кто будет ДОПОЛНЯТЬ словарь.
+  // 1. Явная пустота в таблице активного языка значит «описания НЕТ», а не «перевод
+  //    потерян». Без этой ветви '' ложна: проваливается в английский и дальше возвращает
+  //    САМ КЛЮЧ, то есть печатает `settings.*.description` буквами. Не «чинить» обратно.
+  // 2. ТАБЛИЦУ РАСШИРЯЮТ, ОПУСКАЯ КЛЮЧ, А НЕ ЗАГЛУШАЯ ЕГО ПУСТОЙ СТРОКОЙ. Пропущенный
+  //    ключ по-прежнему откатывается в английский; пустой теперь ЗНАЧИМ и строку скроет.
+  //    Это важно именно для tl/hi/id: в них по 34 ключа против 299 в en/ru, то есть почти
+  //    девять десятых их строк держатся на английском запасном пути.
+  if (UI_STRINGS[lang] && Object.prototype.hasOwnProperty.call(UI_STRINGS[lang], key)
+      && UI_STRINGS[lang][key] === '') return '';
   return (UI_STRINGS[lang] && UI_STRINGS[lang][key]) || UI_STRINGS.en[key] || key;
 }
 // A numeral must agree with the noun it counts, and the agreement belongs to the TEXT, not
