@@ -1805,12 +1805,16 @@ function renderDemoBanner(){
   // "Выйти из демо" button hard to tap (Yana mobile QA, 2026-06-24).
   if (isMobileShellActive()) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
   if (!__demoMode) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
-  if (existing) return;
+  // No.1880: the text is rebuilt on EVERY call, so a language change refreshes the
+  // banner in place. The old `if (existing) return;` left it in the boot language while
+  // the rest of the screen switched — one markup source now serves both paths.
+  var html = escapeHtml(tr('demo.banner')) + ' '
+    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">'+escapeHtml(tr('demo.exit'))+'</button>';
+  if (existing) { existing.innerHTML = html; return; }
   var b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:calc(env(safe-area-inset-top,0px) + 5px) 10px 5px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-  b.innerHTML = escapeHtml(tr('demo.banner')) + ' '
-    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">'+escapeHtml(tr('demo.exit'))+'</button>';
+  b.innerHTML = html;
   document.body.appendChild(b);
   // Nudge content below the fixed bar so nothing is hidden under it (desktop).
   document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
@@ -1896,6 +1900,47 @@ function connectShowError(msg){
 // =================== END CONNECT DIALOG ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
+// No.1881. A chosen language must outlive the process, and localStorage cannot carry it:
+// a non-legacy boot hands the view an EPHEMERAL browser context (src-tauri/src/lib.rs
+// `configure_boot_windows`, gated on `startup_should_open_db`, which matches only
+// LegacyConnected), so every fresh profile loses the key when the process exits. The
+// durable copy therefore goes through Rust — `get_settings`/`save_settings` are admitted
+// by `boot_command_allowed` even in a blocked process.
+// Both calls use __realInvoke ON PURPOSE: the demo bridge intercepts every command
+// (demoInvoke), so inside the demo the FIXTURE would answer the read and a toast plus
+// `demo_read_only` would answer the write. A UI language is a preference of the PERSON,
+// not of the demonstration data. But the WRITE is built from the REAL settings and never
+// from the fixture: on a legacy profile save_settings accepts more than `interface`, so
+// fixture values sent there could overwrite a real profile.
+var __persistedUiSettings = null;
+var __persistedUiLang = '';
+async function loadPersistedUiLanguage(){
+  try {
+    var real = await __realInvoke('get_settings');
+    if (!crewingIsPublicSettings(real)) return;
+    __persistedUiSettings = real;
+    var lang = (real.interface && real.interface.language) || '';
+    if (UI_STRINGS[lang]) __persistedUiLang = lang;
+  } catch (e) {}
+}
+function persistUiLanguage(lang){
+  var real = __persistedUiSettings;
+  if (!real || !real.connection_context) return;
+  var iface = Object.assign({}, real.interface || {}, {
+    theme: (real.interface && real.interface.theme) || 'light',
+    language: lang
+  });
+  var next = Object.assign({}, real, { interface: iface });
+  return Promise.resolve(__realInvoke('save_settings',
+      { newSettings: next, expectedContext: real.connection_context }))
+    .then(function(publicSettings){
+      if (!crewingIsPublicSettings(publicSettings)) return;
+      __persistedUiSettings = publicSettings;
+      __persistedUiLang = lang;
+      if (!__demoMode && typeof state !== 'undefined' && state) state.settings = publicSettings;
+    })
+    .catch(function(){});
+}
 var UI_LANG_OPTIONS = [
   ['ru','Русский'],
   ['en','English'],
@@ -2476,7 +2521,10 @@ var UI_STRINGS = {
 function getUiLang() {
   var stored = localStorage.getItem(UI_LANG_KEY);
   var settingsLang = (typeof state !== 'undefined' && state.settings && state.settings.interface && state.settings.interface.language) || '';
-  var lang = stored || settingsLang || 'ru';
+  // No.1881: the SAVED choice outranks `settingsLang`, which inside the demo is the
+  // FIXTURE's language — otherwise a restart always returns the fixture's value and the
+  // person's choice can never win on the very screen the owner looks at.
+  var lang = stored || __persistedUiLang || settingsLang || 'ru';
   return UI_STRINGS[lang] ? lang : 'ru';
 }
 function tr(key) {
@@ -2513,9 +2561,14 @@ function setUiLang(lang) {
     state.settings.interface = state.settings.interface || {};
     state.settings.interface.language = lang;
   }
+  // No.1881: the durable copy. Fire-and-forget on purpose — the selector must not wait
+  // on IPC, and a refusal must never leave the screen in the old language.
+  try { persistUiLanguage(lang); } catch (e) {}
   applyI18nChrome();
   try { renderSettingsModal(); } catch(e) {}
   try { showView(state.view); } catch(e) {}
+  // No.1880: the demo banner is chrome too and must follow the language like the rest.
+  try { renderDemoBanner(); } catch(e) {}
 }
 function languageSettingsSelectHtml() {
   var cur = getUiLang();
@@ -17641,6 +17694,9 @@ async function bootDesktopMain(){
   setInterval(silentRefreshVacancies, 30000);
 }
 (async function(){
+  // No.1881: the saved language must be known BEFORE the first paint and before the demo
+  // fixture can answer for it. Both shells need it, so it runs above the branch.
+  await loadPersistedUiLanguage();
   if (shouldUseMobileShell()) {
     await loadBuildInfo();
     await bootMobile();
