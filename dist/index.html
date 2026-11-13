@@ -2170,9 +2170,7 @@ var UI_STRINGS = {
     "settings.crewing.agency_data": "Agency data",
     "settings.crewing.agency_data.description": "Company, certificate, vault and mailbox — unchanged, moved under this heading.",
     "settings.crewing.company": "Company profile",
-    "settings.crewing.company.description": "Legal name, jurisdiction and MLC certificate.",
     "settings.crewing.mlc": "MLC certificate",
-    "settings.crewing.mlc.description": "Certificate number and validity.",
     "settings.crewing.contact_email.description": "For verification correspondence and contacting the organisation.",
     "settings.crewing.vault": "Vault",
     "settings.crewing.vault.description": "Local shared storage folder for this device.",
@@ -2413,9 +2411,7 @@ var UI_STRINGS = {
     "settings.crewing.agency_data": "Данные агентства",
     "settings.crewing.agency_data.description": "Компания, сертификат, хранилище и почтовый ящик — без изменений, перенесены под этот заголовок.",
     "settings.crewing.company": "Профиль компании",
-    "settings.crewing.company.description": "Юридическое название, юрисдикция и сертификат MLC.",
     "settings.crewing.mlc": "Сертификат MLC",
-    "settings.crewing.mlc.description": "Номер сертификата и срок действия.",
     "settings.crewing.contact_email.description": "Для переписки по верификации и связи с организацией.",
     "settings.crewing.vault": "Профиль (vault)",
     "settings.crewing.vault.description": "Локальная общая папка хранилища на этом устройстве.",
@@ -14388,9 +14384,9 @@ function _crewingSettingsSections(){
         var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' \u00b7 ' + mlcTo) : ''));
         var vault = (s.vault_path || '').trim() || na;
         var agencyRows =
-            _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
+            _crewSetHtmlRow(ctx, 'settings.crewing.company', '',
                 _crewSetCode(ctx, legal + ' \u00b7 ' + juris), 'stack')
-          + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
+          + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', '',
                 _crewSetCode(ctx, mlcVal))
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
                 _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'), 'stack')
