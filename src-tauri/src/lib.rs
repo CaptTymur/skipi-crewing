@@ -182,7 +182,7 @@ impl Settings {
                 // Refuse the entire file without rewriting; old format stays unchanged.
                 #[cfg(target_os = "linux")]
                 if settings.native_account.as_ref().is_some_and(|record|
-                    record.has_binding() && native_lifecycle::mode(&settings, &[api::PRIMARY_API,api::RU_API]) == native_lifecycle::Mode::Unavailable)
+                    record.has_binding() && native_lifecycle::mode(&settings, &native_account::trusted_company_origins()) == native_lifecycle::Mode::Unavailable)
                 { return uncertain(); }
                 // Preserve the existing legacy endpoint correction only in memory.
                 if settings.native_account.is_none() && !settings.bearer_token.trim().starts_with("skn_")
@@ -226,7 +226,7 @@ impl Settings {
         write: impl FnOnce(&std::path::Path, &[u8])
             -> Result<private_store::Durability, private_store::PersistError>,
     ) -> Result<private_store::Durability, NativePersistError> {
-        let origins=[api::PRIMARY_API,api::RU_API];
+        let origins=native_account::trusted_company_origins();
         if self.native_account.is_none() || !matches!(native_lifecycle::mode(self,&origins),
             native_lifecycle::Mode::NativeLocked | native_lifecycle::Mode::NativeSession | native_lifecycle::Mode::SignedOut)
         { return Err(NativePersistError {code:"settings_unavailable",phase:"native_admission",cleanup_confirmed:true}); }
@@ -707,7 +707,7 @@ fn settings_for_ui(settings: &Settings) -> PublicSettings {
         // Признак сессии читается из НАСТОЯЩИХ настроек, а не из `visible`:
         // скрытая проекция обнуляет рабочее место, но состояние входа человек
         // обязан видеть именно тогда, когда рабочего места ещё нет.
-        account_session: account_session_state(settings, &[api::PRIMARY_API, api::RU_API], chrono::Utc::now()),
+        account_session: account_session_state(settings, &native_account::trusted_company_origins(), chrono::Utc::now()),
         entitlement_source: settings.native_account.as_ref()
             .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
         entitlement_expires_at: settings.native_account.as_ref()
@@ -2531,7 +2531,7 @@ fn attach_demo_to_template(
 
 // Actual startup admission seam. Baseline was unconditional DB init.
 fn startup_should_open_db(settings: &Settings) -> bool {
-    matches!(native_lifecycle::mode(settings, &[api::PRIMARY_API, api::RU_API]),
+    matches!(native_lifecycle::mode(settings, &native_account::trusted_company_origins()),
         native_lifecycle::Mode::LegacyConnected)
 }
 
