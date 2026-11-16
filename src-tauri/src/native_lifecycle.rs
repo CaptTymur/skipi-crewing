@@ -789,6 +789,23 @@ impl Runtime {
             durability: stored.as_ref().ok().copied(), storage_error: stored.err(), database_closed, remote_acknowledged, context_published,
             publication_error: (!context_published).then_some("settings_publication_unavailable") })
     }
+    // No.1871: assembles the APPLICATION target and store and calls `logout` above.
+    // Contains no logout logic - the difference from `logout` is exactly the SOURCE of its
+    // arguments, as with the neighbouring NativeSettingsTarget::for_application and
+    // Store::for_application.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn logout_application(
+        &self, transport: &impl AccountTransport, expected: &str,
+    ) -> Result<LogoutOutcome, &'static str> {
+        let target = NativeSettingsTarget::for_application()?;
+        let store = crate::db::native_database::Store::for_application();
+        self.logout(
+            transport,
+            expected,
+            |settings| target.persist(settings).map_err(|error| error.code),
+            || store.close_all().map_err(|_| "database_close_failed"),
+        )
+    }
 }
 
 #[derive(Clone)]
