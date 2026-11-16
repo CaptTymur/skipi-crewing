@@ -1919,21 +1919,42 @@ async function loadPersistedUiLanguage(){
     if (UI_STRINGS[lang]) __persistedUiLang = lang;
   } catch (e) {}
 }
+// №1871/O2 (возражение Супервайзора 2026-11-16). БАЗА ЗАПИСИ ЧИТАЕТСЯ С ДИСКА ПРЯМО
+// СЕЙЧАС, а не берётся из снимка __persistedUiSettings. Снимок обновлялся только при
+// загрузке и после СОБСТВЕННОЙ записи, тогда как все прочие записи идут шимом invoke(
+// 'save_settings') и двигают state.settings, но не его. Из-за этого «сменил тему →
+// сменил язык» записывало на диск СТАРУЮ тему, а на легаси-профиле откатывало
+// company_name, profile, reply_to, vault_path и recent_vaults: merge_ui_settings берёт
+// proposed целиком, а connection_fingerprint эти поля не вращает.
+// Почему чтение, а не state.settings: оно верно в ОБОИХ режимах одной веткой. В демо
+// state.settings — это фикстура, и писать её в настоящий профиль нельзя (ровно то, от
+// чего защищался исходный комментарий ниже); __realInvoke минует demoInvoke и в обоих
+// случаях отдаёт настоящие настройки. Диск — то, во что мы пишем, он и есть источник
+// истины для базы.
+// Отказ закрыт: если чтение не удалось или ответ не похож на публичные настройки —
+// записи НЕ происходит. Писать поверх непрочитанной базы и есть разбираемый дефект.
 function persistUiLanguage(lang){
-  var real = __persistedUiSettings;
-  if (!real || !real.connection_context) return;
-  var iface = Object.assign({}, real.interface || {}, {
-    theme: (real.interface && real.interface.theme) || 'light',
-    language: lang
-  });
-  var next = Object.assign({}, real, { interface: iface });
-  return Promise.resolve(__realInvoke('save_settings',
-      { newSettings: next, expectedContext: real.connection_context }))
-    .then(function(publicSettings){
-      if (!crewingIsPublicSettings(publicSettings)) return;
-      __persistedUiSettings = publicSettings;
-      __persistedUiLang = lang;
-      if (!__demoMode && typeof state !== 'undefined' && state) state.settings = publicSettings;
+  return Promise.resolve(__realInvoke('get_settings'))
+    .then(function(real){
+      if (!crewingIsPublicSettings(real) || !real.connection_context) return;
+      var iface = Object.assign({}, real.interface || {}, {
+        theme: (real.interface && real.interface.theme) || 'light',
+        language: lang
+      });
+      var next = Object.assign({}, real, { interface: iface });
+      return Promise.resolve(__realInvoke('save_settings',
+          { newSettings: next, expectedContext: real.connection_context }))
+        .then(function(publicSettings){
+          if (!crewingIsPublicSettings(publicSettings)) return;
+          __persistedUiSettings = publicSettings;
+          __persistedUiLang = lang;
+          if (!__demoMode && typeof state !== 'undefined' && state) {
+            state.settings = publicSettings;
+            // экран обязан совпасть с диском: база могла принести тему, выбранную
+            // другим писателем между загрузкой и этой записью
+            if (typeof applyTheme === 'function') applyTheme();
+          }
+        });
     })
     .catch(function(){});
 }
