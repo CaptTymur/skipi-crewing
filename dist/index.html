@@ -17815,11 +17815,19 @@ function initLeftPanelResizer() {
 
 // ------------- boot -------------
 async function bootDesktopMain(){
+  // №1918: предупреждение о демо рисуется ПЕРВЫМ — до триал-гейта и до сетевого
+  // ожидания. Единственная строка, которая говорит «это не настоящее», не должна
+  // зависеть ни от сети, ни от состояния подписки: `loadTaxonomy()` ходит на хост,
+  // который сейчас отваливается по сертификату (№1917), и пока он не ответит, в
+  // демо видна хрома БЕЗ предупреждения. Куплено 12.11: неотличимость без
+  // предупреждения — не показ, а ловушка. Мобильная загрузка (bootMobile) уже
+  // рисует полосу до гейта — этой правкой десктоп перестаёт быть исключением.
+  // Вызов безопасен раньше: renderDemoBanner() читает только __demoMode, tr() и DOM.
+  renderDemoBanner();
   if (await trialGateApply() === 'blocked') return;
   startAppDiagnostics();
   await loadTaxonomy();
   updateVaultLabel();
-  renderDemoBanner();
   showView('crew_flow');
   setupFileDragDrop();
   setTimeout(checkForUpdates, 2000);
