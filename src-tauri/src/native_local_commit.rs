@@ -147,7 +147,7 @@ impl<'a> LocalPlan<'a> {
                 .map_err(|_|"key_unavailable")?;
             effects.borrow_mut().key_existing_loaded=true;
             (LocalPrepared {database,key,binding}, WorkspaceReference::Keep)
-        } else if mode(current,&[crate::api::PRIMARY_API,crate::api::RU_API]) == Mode::LegacyConnected {
+        } else if mode(current,&crate::native_account::trusted_company_origins()) == Mode::LegacyConnected {
             // This UUID binds the proven current resources locally. It is not a
             // new namespace or historical server attestation of the existing key.
             let stable_uuid=uuid::Uuid::new_v4().to_string();
@@ -164,7 +164,7 @@ impl<'a> LocalPlan<'a> {
             let binding=Binding::from_references(stable_uuid,database.reference(),key.reference())?;
             (LocalPrepared {database,key,binding},WorkspaceReference::Keep)
         } else {
-            if !allow_fresh || mode(current,&[crate::api::PRIMARY_API,crate::api::RU_API]) != Mode::Unbound {
+            if !allow_fresh || mode(current,&crate::native_account::trusted_company_origins()) != Mode::Unbound {
                 return Err("migration_required");
             }
             // No.880 п.2 (№793). Прежде здесь стоял отказ `fresh_context_unavailable`

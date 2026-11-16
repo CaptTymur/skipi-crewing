@@ -13,6 +13,16 @@ pub(crate) const ACCOUNT_ORIGIN: &str = "https://assistant.skipi.app";
 // этой правки, а переменная сборки даёт ту же компиляционную границу.
 pub(crate) const PILOT_ACCOUNT_ORIGIN: &str = "https://api.skipi.app:8444";
 pub(crate) fn pilot_build() -> bool { option_env!("SKIPI_CREWING_PILOT") == Some("1") }
+// ЕДИНСТВЕННЫЙ источник доверенных origin компании (F1 Супервайзора 16.11).
+// До этой функции пара была вшита в семи местах, а расширялась ровно в одном —
+// в конфиге транспорта, который читается ТОЛЬКО в bootstrap. Поэтому пилотная
+// сборка проходила вход и падала на первом же пост-логин перечтении.
+pub(crate) fn trusted_company_origins() -> Vec<&'static str> {
+    if pilot_build() {
+        return vec![crate::api::PRIMARY_API, crate::api::RU_API, PILOT_ACCOUNT_ORIGIN];
+    }
+    vec![crate::api::PRIMARY_API, crate::api::RU_API]
+}
 pub(crate) const COMPANY_SCOPES: [&str; 5] = [
     "vacancy:write", "mailing:write", "applications:read", "profile:write", "pubkey:write",
 ];
@@ -298,6 +308,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn native635_pilot_trusts_its_own_server_url_everywhere_production_rejects_it() {
+        // F1: доверие обязано быть ОДНИМ источником. Этот тест смотрит на путь
+        // ПОСЛЕ логина (validate_stored_shape), а не на bootstrap: именно там
+        // пилотная сборка падала в Unavailable -> settings_unavailable.
+        let mut v = wire();
+        v["connection"]["server_url"] = json!("https://api.skipi.app:8444");
+        let parsed: BootstrapResponse = serde_json::from_value(v).unwrap();
+        let origins = trusted_company_origins();
+        let got = parsed.validate_stored_shape("account-635", Some("company-635"), &origins);
+        if pilot_build() {
+            assert!(got.is_ok(), "pilot build must trust its own server_url after login");
+        } else {
+            assert!(got.is_err(), "production must reject the pilot server_url");
+        }
+    }
+
     fn stored(v: Value) -> Result<ValidatedTimes, &'static str> {
         let parsed:BootstrapResponse=serde_json::from_value(v).map_err(|_| "invalid_response")?;
         parsed.validate_stored_shape("account-635",Some("company-635"),&["https://api.skipi.app"])
@@ -397,7 +424,7 @@ impl TransportConfig {
             #[cfg(debug_assertions)]
             direct_loopback_qa: false,
             account_origin: ACCOUNT_ORIGIN.to_owned(),
-            company_origins: vec![crate::api::PRIMARY_API.to_owned(), crate::api::RU_API.to_owned()],
+            company_origins: trusted_company_origins().into_iter().map(str::to_owned).collect(),
         }
     }
     // Состав пилотной сборки. Вынесен отдельной функцией по той же причине,
@@ -412,9 +439,7 @@ impl TransportConfig {
             // bootstrap валидируется против этого списка (см. bootstrap()), и без
             // пилота в нём сервер пилота вернул бы собственный server_url как
             // `invalid_response`.
-            company_origins: vec![crate::api::PRIMARY_API.to_owned(),
-                                  crate::api::RU_API.to_owned(),
-                                  PILOT_ACCOUNT_ORIGIN.to_owned()],
+            company_origins: trusted_company_origins().into_iter().map(str::to_owned).collect(),
         })
     }
     // Предикат вынесен, чтобы проверяться без пересборки с переменной: иначе
@@ -426,7 +451,11 @@ impl TransportConfig {
             direct_loopback_qa: true,
             account_origin: origin.trim_end_matches('/').to_owned(),
             // Origin КОМПАНИИ не подменяются: предмет переопределения — только
-            // источник аккаунта.
+            // источник аккаунта. И пилот сюда НЕ подмешивается: эта сборка целится
+            // в локальную петлю, доверять серверу пилота ей незачем. Поэтому здесь
+            // боевая пара явно, а не trusted_company_origins() — единственное
+            // намеренное исключение из «одного источника», и его пинит
+            // native635_880_dev_account_origin_is_loopback_only.
             company_origins: vec![crate::api::PRIMARY_API.to_owned(), crate::api::RU_API.to_owned()],
         })
     }

@@ -270,7 +270,7 @@ impl Runtime {
         let authority = settings.connection_revision.clone();
         Arc::new(Self { authority, close_state: Mutex::new(CloseState::default()), gate: RwLock::new(()), settings: Arc::new(Mutex::new(settings)),
             closing: AtomicBool::new(false), denied: AtomicBool::new(false), attempts: AtomicU64::new(0),
-            epoch: AtomicU64::new(0), origins: vec![crate::api::PRIMARY_API.into(), crate::api::RU_API.into()],
+            epoch: AtomicU64::new(0), origins: crate::native_account::trusted_company_origins().into_iter().map(Into::into).collect(),
             supported: cfg!(target_os = "linux"), clock: Arc::new(SystemClock) })
     }
 
