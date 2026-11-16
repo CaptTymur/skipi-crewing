@@ -34,6 +34,37 @@ const ok = (cond, msg) => {
 const section = (title) => console.log('\n# ' + title);
 
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'presence-manifest.json'), 'utf8'));
+
+// №1871: ожидания о Профиле/Аккаунте ЗАВИСЯТ ОТ ВЕРСИИ ВЕНДОРА, а не от того, что
+// удобно прибору. Владелец в К3 велел убрать Профиль и Team; модуль 0.3.3 их убрал, и
+// прибор, требующий Профиль, после этого красен не из-за дефекта, а из-за собственной
+// устарелости. Версия живёт в dist/SETTINGS_VERSION (НЕ в presence-manifest.json —
+// там её нет вовсе), первой строкой.
+// Правило правки — то же, что в No.880 ниже: утверждение не удаляется, а ЗАМЕНЯЕТСЯ
+// обратным по смыслу утверждением новой модели. Счёт утверждений не меняется, и ни в
+// одной ветке по версии нет «пропустить проверку».
+const VENDOR_VERSION = fs.readFileSync(path.join(ROOT, 'dist', 'SETTINGS_VERSION'), 'utf8')
+  .split('\n')[0].trim();
+function cmpVersion(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i += 1) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+// 0.3.3 — версия, где Профиль стал Аккаунтом. До неё Профиль ОБЯЗАН быть; с неё — обязан ОТСУТСТВОВАТЬ.
+const ACCOUNT_ERA = cmpVersion(VENDOR_VERSION, '0.3.3') >= 0;
+const HOME_SECTION = ACCOUNT_ERA ? 'account' : 'profile';
+// Маркер зависит ещё и от режима: 0.3.3 печатает settings.account.body на десктопе и
+// settings.mobile.account.body в мобильном. Общий «settings.account.email» был бы слабее —
+// он есть в обоих, но не доказывает, что отрисовано именно тело раздела.
+function homeMarker(mode) {
+  if (!ACCOUNT_ERA) return 'data-qa="settings.profile.user"';
+  return mode === 'mobile' ? 'data-qa="settings.mobile.account.body"' : 'data-qa="settings.account.body"';
+}
+ok(/^\d+\.\d+\.\d+$/.test(VENDOR_VERSION),
+  'vendor version read from dist/SETTINGS_VERSION looks like a version (' + VENDOR_VERSION + ')');
 const HTML = fs.readFileSync(path.join(ROOT, manifest.artifact || 'dist/index.html'), 'utf8');
 
 section('manifest integrity — required floor cannot be dropped');
@@ -1776,10 +1807,12 @@ section('635 real Settings and no manual credential entry');
         if (!instance) continue;
         await instance.ready;
         const loaded = instance.getState();
-        ok(!loaded.loading && loaded.version === vendor.version && loaded.sections.includes('profile'),
-          label + ': real vendor finishes loading a valid Profile');
-        ok(instance.open('profile') && target.innerHTML.includes('data-qa="settings.profile.user"'),
-          label + ': actual Profile content renders');
+        ok(!loaded.loading && loaded.version === vendor.version && loaded.sections.includes(HOME_SECTION)
+          && (ACCOUNT_ERA ? !loaded.sections.includes('profile') : true),
+          label + ': real vendor finishes loading a valid ' + (ACCOUNT_ERA ? 'Account (and Profile is gone)' : 'Profile'));
+        ok(instance.open(HOME_SECTION) && target.innerHTML.includes(homeMarker(mode))
+          && (ACCOUNT_ERA ? !target.innerHTML.includes('data-qa="settings.profile.user"') : true),
+          label + ': actual ' + (ACCOUNT_ERA ? 'Account' : 'Profile') + ' content renders');
         ok(!loaded.sections.includes('team') && instance.open('team') === false,
           label + ': real navigation cannot open Team');
         ok(!/settings\.profile\.team_role|profile-team|settings\.team\.join|settings\.team\.role/.test(target.innerHTML),
@@ -1803,8 +1836,12 @@ section('635 real Settings and no manual credential entry');
           control = vendor.mount(target, host, { mode, initialSection: 'profile', mobileInitialView: 'section' });
           await control.ready;
           ok(!control.getState().loading && control.getState().sections.includes('team')
-            && target.innerHTML.includes('settings.profile.team_role'),
-            label + ': positive control real vendor renders Team navigation and Profile role');
+            && (ACCOUNT_ERA
+                ? !target.innerHTML.includes('settings.profile.team_role')
+                : target.innerHTML.includes('settings.profile.team_role')),
+            label + (ACCOUNT_ERA
+              ? ': positive control — Team navigation IS offered to a Team-capable host, and the profile role line is gone with Profile'
+              : ': positive control real vendor renders Team navigation and Profile role'));
           ok(control.open('team') && target.innerHTML.includes('settings.team.role')
             && target.innerHTML.includes('settings.team.join.root'),
             label + ': positive control real vendor renders Membership and Join');
