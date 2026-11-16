@@ -2244,6 +2244,8 @@ var UI_STRINGS = {
     "settings.crewing.login.bad_email": "That does not look like an email address. Check it and try again.",
     "settings.crewing.login.invalid_credentials": "Email or password is incorrect.",
     "settings.crewing.login.too_many_attempts": "Too many attempts. Wait a minute before trying again.",
+    "settings.crewing.login.workspace_ambiguous": "This email is linked to more than one workspace. An owner or admin must choose which one — this can't sign you in automatically.",
+    "settings.crewing.login.too_many_credentials": "This account already has the maximum number of connections. Revoke an old one before signing in here.",
     "settings.crewing.login.upstream_unavailable": "The server is unavailable. This is on our side — try later.",
     "settings.crewing.login.transport_unreachable": "No connection to the server. Check your network and try again.",
     "settings.crewing.login.migration_required": "This device still holds data from an earlier installation. Signing in over it is not possible — please contact Skipi support.",
@@ -2501,6 +2503,8 @@ var UI_STRINGS = {
     "settings.crewing.login.bad_email": "Это не похоже на адрес почты. Проверьте и попробуйте снова.",
     "settings.crewing.login.invalid_credentials": "Неверная почта или пароль.",
     "settings.crewing.login.too_many_attempts": "Слишком много попыток. Подождите минуту и попробуйте снова.",
+    "settings.crewing.login.workspace_ambiguous": "Эта почта привязана к нескольким рабочим пространствам. Выбор делает владелец или администратор — автоматический вход сюда невозможен.",
+    "settings.crewing.login.too_many_credentials": "У аккаунта уже максимум подключений. Отзовите старое, прежде чем входить здесь.",
     "settings.crewing.login.upstream_unavailable": "Сервер недоступен. Это на нашей стороне — попробуйте позже.",
     "settings.crewing.login.transport_unreachable": "Нет связи с сервером. Проверьте сеть и попробуйте снова.",
     "settings.crewing.login.migration_required": "На устройстве остались данные прежней установки. Войти поверх них нельзя — напишите в поддержку Skipi.",
@@ -15191,7 +15195,7 @@ async function nativeAccountLogin() {
 // STRING and never the call site — the fifteen sites it covers are indistinguishable
 // here. Splitting it needs distinct Rust codes (BACKLOG No.797), not a UI change.
 function loginRefusalText(code) {
-  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "database_close_failed": "storage_still_open", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "fresh_namespace_unavailable": "fresh_unavailable", "migration_required": "migration_required", "connection_expired": "connection_expired", "tenant_mismatch": "tenant_mismatch", "ownership_conflict": "ownership_conflict", "native_binding_missing": "binding_missing"};
+  var map = {"bad_email": "bad_email", "invalid_credentials": "invalid_credentials", "too_many_attempts": "too_many_attempts", "upstream_unavailable": "upstream_unavailable", "transport_unreachable": "transport_unreachable", "invalid_request": "exchange_failed", "invalid_response": "exchange_failed", "entitlement_missing": "entitlement_missing", "entitlement_expired": "entitlement_expired", "entitlement_revoked": "entitlement_revoked", "scope_denied": "scope_denied", "login_required": "refused_unspecified", "settings_unavailable": "restart_needed", "database_unavailable": "restart_needed", "database_close_failed": "storage_still_open", "settings_storage_error": "storage_error", "key_unavailable": "local_damaged", "invalid_binding": "local_damaged", "settings_changed": "settings_changed", "native_unsupported": "unsupported_platform", "fresh_context_unavailable": "fresh_unavailable", "fresh_namespace_unavailable": "fresh_unavailable", "migration_required": "migration_required", "connection_expired": "connection_expired", "tenant_mismatch": "tenant_mismatch", "ownership_conflict": "ownership_conflict", "native_binding_missing": "binding_missing", "workspace_ambiguous": "workspace_ambiguous", "too_many_credentials": "too_many_credentials"};
   return 'settings.crewing.login.' + (map[code] || 'refused_unspecified');
 }
 

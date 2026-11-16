@@ -15,17 +15,30 @@ pub(crate) enum Mode { Unbound, LegacyConnected, NativeLocked, NativeSession, Si
 
 fn stored_response(s: &Settings) -> Option<BootstrapResponse> {
     let record = s.native_account.as_ref()?;
+    let expires_at = s.token_expires_at.clone()?;
+    // No.1931 доводка С3 (RISKS №1006): файл, сохранённый ДО этого слайса, не
+    // несёт `token_issued_at` вовсе (`#[serde(default)]` на `Settings` даёт
+    // `None`, а не выдуманную строку). Момент настоящей выдачи такой сессии
+    // неизвестен и не восстанавливается; подставлять сюда `Utc::now()` или
+    // любое другое "как будто реальное" значение запрещено — это была бы
+    // фальсификация случая, которого контракт не видел. Вместо этого берём
+    // уже прочитанный `expires_at` как `issued_at`: нулевое по ширине окно
+    // `issued == expires`, которое `validate_connection_shape` уже признаёт
+    // легитимным (см. `native1931_bootstrap_rejects_issued_at_after_expires_at`
+    // в `native_account.rs`). Это не расширяет НИКАКОЕ доверительное окно —
+    // ни истечение, ни 15-минутную границу `validate()`, ни грант: все они
+    // считаются от `expires_at`/`now`, а не от `issued_at`. Проводная проверка
+    // (`BootstrapResponse::validate` на живом ответе сервера) этим не
+    // ослабляется: там `issued_at` остаётся обязательным непустым полем, этот
+    // fallback касается только восстановления уже сохранённой сессии.
+    let issued_at = s.token_issued_at.clone().unwrap_or_else(|| expires_at.clone());
     Some(BootstrapResponse {
         account_id: record.account_id.clone(),
         connection: Connection {
             server_url: s.server_url.clone(), crewing_id: s.crewing_id.clone(),
             organization_id: if s.organization_id.is_empty() { None } else { Some(s.organization_id.clone()) },
             bearer_token: s.bearer_token.clone(), scopes: s.token_scopes.clone(),
-            expires_at: s.token_expires_at.clone()?,
-            // Not persisted in Settings and not read by any validation here (C2
-            // only requires the WIRE response to carry the key); reconstructing a
-            // stored session has no real issued_at to supply.
-            issued_at: String::new(),
+            expires_at, issued_at,
         }, entitlement: record.entitlement.clone(),
     })
 }
@@ -669,6 +682,7 @@ impl Runtime {
         proposed.organization_id = proof.response.connection.organization_id.clone().unwrap_or_default();
         proposed.token_scopes = proof.response.connection.scopes.clone();
         proposed.token_expires_at = Some(proof.response.connection.expires_at.clone());
+        proposed.token_issued_at = Some(proof.response.connection.issued_at.clone());
         // Retain the same owner's private binding and additive metadata on refresh.
         let mut record = current.native_account.clone().unwrap_or_else(|| SessionRecord::new(
             proof.identity.account_id().to_owned(), proof.identity.credential().to_owned(),
@@ -1727,6 +1741,51 @@ mod runtime_tests {
         assert_ne!(rt.context().unwrap(), old_context); assert!(rt.ticket(&rt.context().unwrap()).is_ok());
         assert_eq!(fs::metadata(&f.path).unwrap().permissions().mode() & 0o777, 0o600);
         assert!(!f.saved().native_authorized);
+    }
+    // Confirmatory only (No.1931 С3, п.1): cannot fail against pre-fix code
+    // (it exercises the new `token_issued_at` field and would not compile
+    // without it), unlike the two shape tests in native_account.rs which are
+    // the actual failing-before-fix regression tests for this bug.
+    #[test]
+    fn native1931_runtime_fresh_login_issued_at_round_trips_through_restore_validation() {
+        let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true));
+        let verified = proof(&rt, &Fake::default());
+        assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready);
+        let state = rt.settings.lock().unwrap();
+        assert_eq!(state.token_issued_at, Some(response().connection.issued_at));
+        let origins = rt.origins();
+        assert_eq!(mode(&state, &origins), Mode::NativeSession);
+        assert_eq!(private_access(&state, &origins, now()), Ok(()));
+    }
+    // No.1931 доводка С3 (RISKS №1006, менеджерская находка по чтению кода):
+    // `token_issued_at` отсутствует в файле ЦЕЛИКОМ (не просто None в памяти) —
+    // так выглядит файл, сохранённый ДО слайса С3. `#[serde(default)]` на
+    // `Settings` даёт `None` при загрузке; до фикса это валило `stored_response()`
+    // в `None` через `?`, а дальше `stored_shape()`→false→`Mode::Unavailable` —
+    // машина с уже сохранённым нативным входом «окирпичивалась» после
+    // обновления. Удаление ключа через `serde_json::Value` (не присвоение
+    // `None` полю в памяти) воспроизводит именно файловый случай, а не
+    // синтетику. `native_authorized` помечено `#[serde(skip)]` (lib.rs) —
+    // оно runtime-only и НИКОГДА не переживает загрузку с диска, даже когда
+    // `token_issued_at` на месте, поэтому честный результат restart'а —
+    // `NativeLocked`/`login_required` («честно потребовать повторного входа»
+    // из ТЗ), а не `NativeSession`: это и есть поведение ДО слайса С3 для
+    // точно такой же сессии, фикс его не меняет. Чинится только падение в
+    // `Unavailable`/`settings_unavailable`.
+    #[test]
+    fn native1931_c3_followup_stored_session_without_issued_at_key_stays_native_locked() {
+        let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true));
+        let verified = proof(&rt, &Fake::default());
+        assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready);
+        let mut value = serde_json::to_value(&*rt.settings.lock().unwrap()).unwrap();
+        assert!(value.as_object_mut().unwrap().remove("token_issued_at").is_some(),
+            "fixture must actually carry the key before this test removes it");
+        let old_file: Settings = serde_json::from_value(value).unwrap();
+        assert_eq!(old_file.token_issued_at, None);
+        assert!(old_file.native_account.is_some(), "the bound session itself must survive the round trip");
+        let origins = rt.origins();
+        assert_eq!(mode(&old_file, &origins), Mode::NativeLocked);
+        assert_eq!(private_access(&old_file, &origins, now()), Err("login_required"));
     }
     #[test]
     fn native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context() {

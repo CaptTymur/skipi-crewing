@@ -114,6 +114,7 @@ mod local_joint {
             settings.bearer_token = reply.connection.bearer_token;
             settings.token_scopes = reply.connection.scopes;
             settings.token_expires_at = Some(reply.connection.expires_at);
+            settings.token_issued_at = Some(reply.connection.issued_at);
             settings.vault_path = self.db_root.to_str().unwrap().into();
             settings.recent_vaults = vec![settings.vault_path.clone()];
             settings.native_account = Some(SessionRecord::new(login().account_id, login().token,

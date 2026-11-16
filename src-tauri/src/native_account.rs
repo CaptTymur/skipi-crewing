@@ -157,7 +157,10 @@ impl BootstrapResponse {
         if scopes.len() != COMPANY_SCOPES.len() || c.scopes.len() != COMPANY_SCOPES.len()
             || scopes != COMPANY_SCOPES.into_iter().collect()
         { return Err("scope_denied"); }
-        utc_time(&c.expires_at)
+        let issued = utc_time(&c.issued_at)?;
+        let expiry = utc_time(&c.expires_at)?;
+        if issued > expiry { return Err("invalid_response"); }
+        Ok(expiry)
     }
 
     fn validate_entitlement_shape(&self) -> Result<Option<DateTime<Utc>>, &'static str> {
@@ -228,6 +231,21 @@ mod tests {
             .expect("v2 six-key connection (workspace_id, issued_at, no organization_id) must parse");
         assert_eq!(parsed.connection.crewing_id, "company-973");
         assert_eq!(parsed.connection.organization_id, None);
+    }
+    #[test]
+    fn native1931_bootstrap_rejects_empty_or_malformed_issued_at() {
+        for issued in [json!(""), json!("not-a-time"), json!("2026-10-19T15:45:00+01:00")] {
+            let mut v=wire();v["connection"]["issued_at"]=issued.clone();
+            assert!(validate(v).is_err(),"{issued}");
+        }
+    }
+    #[test]
+    fn native1931_bootstrap_rejects_issued_at_after_expires_at() {
+        let mut v=wire();v["connection"]["issued_at"]=json!("2026-10-19T16:20:00Z");
+        assert_eq!(validate(v),Err("invalid_response"));
+        // Equal to expires_at is still a valid (zero-width) window.
+        let mut v=wire();v["connection"]["issued_at"]=json!("2026-10-19T16:14:00Z");
+        assert_eq!(validate(v),Ok(()));
     }
     #[test]
     fn native635_bootstrap_accepts_exact_paid_and_explicit_free() {
@@ -354,6 +372,7 @@ mod tests {
     #[test]
     fn native635_stored_shape_recognizes_expired_binding_without_admitting_it() {
         let mut v=wire();v["connection"]["expires_at"]=json!("2020-01-01T00:01:00Z");
+        v["connection"]["issued_at"]=json!("2020-01-01T00:00:00Z");
         v["entitlement"]["expires_at"]=json!("2020-01-01T00:02:00Z");
         let shape=stored(v.clone()).unwrap();
         assert_eq!(shape.connection_expiry,"2020-01-01T00:01:00Z".parse::<DateTime<Utc>>().unwrap());
@@ -528,6 +547,8 @@ fn response_json<T: serde::de::DeserializeOwned>(
         (403, "tenant_mismatch") => "tenant_mismatch",
         (403, "scope_denied") => "scope_denied",
         (409, "ownership_conflict") => "ownership_conflict",
+        (409, "workspace_ambiguous") => "workspace_ambiguous",
+        (429, "too_many_credentials") => "too_many_credentials",
         (503, "upstream_unavailable") => "upstream_unavailable",
         _ => "upstream_unavailable",
     })
@@ -668,6 +689,20 @@ mod transport_tests {
             (403,b"{\"error\":\"synthetic_secret\"}"),(409,b"{\"error\":\"tenant_mismatch\"}")] {
             assert_eq!(response_json::<Value>(status,bytes,false),Err("upstream_unavailable"));
         }
+    }
+    #[test]
+    fn native1931_transport_bootstrap_workspace_ambiguous_is_409_not_503() {
+        let bytes = serde_json::to_vec(&json!({"error":"workspace_ambiguous"})).unwrap();
+        assert_eq!(response_json::<Value>(409, &bytes, false), Err("workspace_ambiguous"));
+    }
+    #[test]
+    fn native1931_transport_bootstrap_too_many_credentials_distinct_from_login_rate_limit() {
+        let bytes = serde_json::to_vec(&json!({"error":"too_many_credentials"})).unwrap();
+        assert_eq!(response_json::<Value>(429, &bytes, false), Err("too_many_credentials"));
+        // The login endpoint's rate limiter is a different source with a different word; its
+        // word must not be accepted on the bootstrap call even though the status digit matches.
+        let login_word = serde_json::to_vec(&json!({"error":"too_many_attempts"})).unwrap();
+        assert_eq!(response_json::<Value>(429, &login_word, false), Err("upstream_unavailable"));
     }
     #[test]
     fn native635_transport_bounds_responses_and_requires_success_body() {
