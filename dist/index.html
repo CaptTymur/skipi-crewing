@@ -17817,11 +17817,22 @@ function initLeftPanelResizer() {
 
 // ------------- boot -------------
 async function bootDesktopMain(){
+  // №1918: предупреждение о демо рисуется ПЕРВЫМ. Выигрыш здесь РОВНО ОДИН и он
+  // над `loadTaxonomy()`: это сетевой fetch, он ходит на хост, который сейчас
+  // отваливается по сертификату (№1917), и пока тот не ответит, в демо видна
+  // хрома БЕЗ единственной строки, говорящей «это не настоящее». Куплено 12.11:
+  // неотличимость без предупреждения — не показ, а ловушка.
+  // Над `trialGateApply()` выигрыша НЕТ: он уже отработал в boot-IIFE до вызова
+  // bootDesktopMain, а в демо он бессетевой.
+  // Мобильной оболочки это не касается и прецедентом её называть нельзя:
+  // renderDemoBanner() на ней выходит ПЕРВОЙ веткой (isMobileShellActive), её
+  // полосу рисует mobileRenderChrome() — тоже после гейта.
+  // Вызов безопасен раньше: renderDemoBanner() читает только __demoMode, tr() и DOM.
+  renderDemoBanner();
   if (await trialGateApply() === 'blocked') return;
   startAppDiagnostics();
   await loadTaxonomy();
   updateVaultLabel();
-  renderDemoBanner();
   showView('crew_flow');
   setupFileDragDrop();
   setTimeout(checkForUpdates, 2000);
