@@ -547,6 +547,8 @@ fn response_json<T: serde::de::DeserializeOwned>(
         (403, "tenant_mismatch") => "tenant_mismatch",
         (403, "scope_denied") => "scope_denied",
         (409, "ownership_conflict") => "ownership_conflict",
+        (409, "workspace_ambiguous") => "workspace_ambiguous",
+        (429, "too_many_credentials") => "too_many_credentials",
         (503, "upstream_unavailable") => "upstream_unavailable",
         _ => "upstream_unavailable",
     })
@@ -687,6 +689,20 @@ mod transport_tests {
             (403,b"{\"error\":\"synthetic_secret\"}"),(409,b"{\"error\":\"tenant_mismatch\"}")] {
             assert_eq!(response_json::<Value>(status,bytes,false),Err("upstream_unavailable"));
         }
+    }
+    #[test]
+    fn native1931_transport_bootstrap_workspace_ambiguous_is_409_not_503() {
+        let bytes = serde_json::to_vec(&json!({"error":"workspace_ambiguous"})).unwrap();
+        assert_eq!(response_json::<Value>(409, &bytes, false), Err("workspace_ambiguous"));
+    }
+    #[test]
+    fn native1931_transport_bootstrap_too_many_credentials_distinct_from_login_rate_limit() {
+        let bytes = serde_json::to_vec(&json!({"error":"too_many_credentials"})).unwrap();
+        assert_eq!(response_json::<Value>(429, &bytes, false), Err("too_many_credentials"));
+        // The login endpoint's rate limiter is a different source with a different word; its
+        // word must not be accepted on the bootstrap call even though the status digit matches.
+        let login_word = serde_json::to_vec(&json!({"error":"too_many_attempts"})).unwrap();
+        assert_eq!(response_json::<Value>(429, &login_word, false), Err("upstream_unavailable"));
     }
     #[test]
     fn native635_transport_bounds_responses_and_requires_success_body() {
