@@ -22,10 +22,7 @@ fn stored_response(s: &Settings) -> Option<BootstrapResponse> {
             organization_id: if s.organization_id.is_empty() { None } else { Some(s.organization_id.clone()) },
             bearer_token: s.bearer_token.clone(), scopes: s.token_scopes.clone(),
             expires_at: s.token_expires_at.clone()?,
-            // Not persisted in Settings and not read by any validation here (C2
-            // only requires the WIRE response to carry the key); reconstructing a
-            // stored session has no real issued_at to supply.
-            issued_at: String::new(),
+            issued_at: s.token_issued_at.clone()?,
         }, entitlement: record.entitlement.clone(),
     })
 }
@@ -669,6 +666,7 @@ impl Runtime {
         proposed.organization_id = proof.response.connection.organization_id.clone().unwrap_or_default();
         proposed.token_scopes = proof.response.connection.scopes.clone();
         proposed.token_expires_at = Some(proof.response.connection.expires_at.clone());
+        proposed.token_issued_at = Some(proof.response.connection.issued_at.clone());
         // Retain the same owner's private binding and additive metadata on refresh.
         let mut record = current.native_account.clone().unwrap_or_else(|| SessionRecord::new(
             proof.identity.account_id().to_owned(), proof.identity.credential().to_owned(),
@@ -1727,6 +1725,21 @@ mod runtime_tests {
         assert_ne!(rt.context().unwrap(), old_context); assert!(rt.ticket(&rt.context().unwrap()).is_ok());
         assert_eq!(fs::metadata(&f.path).unwrap().permissions().mode() & 0o777, 0o600);
         assert!(!f.saved().native_authorized);
+    }
+    // Confirmatory only (No.1931 С3, п.1): cannot fail against pre-fix code
+    // (it exercises the new `token_issued_at` field and would not compile
+    // without it), unlike the two shape tests in native_account.rs which are
+    // the actual failing-before-fix regression tests for this bug.
+    #[test]
+    fn native1931_runtime_fresh_login_issued_at_round_trips_through_restore_validation() {
+        let f = Fixture::new(); let (rt, _) = f.runtime(f.settings(true));
+        let verified = proof(&rt, &Fake::default());
+        assert_eq!(f.apply(&rt, verified, None, None, false).unwrap(), CommitOutcome::Ready);
+        let state = rt.settings.lock().unwrap();
+        assert_eq!(state.token_issued_at, Some(response().connection.issued_at));
+        let origins = rt.origins();
+        assert_eq!(mode(&state, &origins), Mode::NativeSession);
+        assert_eq!(private_access(&state, &origins, now()), Ok(()));
     }
     #[test]
     fn native635_runtime_atomic_precommit_error_keeps_old_file_handle_and_context() {

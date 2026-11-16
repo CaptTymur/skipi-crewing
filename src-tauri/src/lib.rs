@@ -76,6 +76,7 @@ pub struct Settings {
     pub user_display_name: String,
     pub token_scopes: Vec<String>,
     pub token_expires_at: Option<String>,
+    pub token_issued_at: Option<String>,
     pub team_role: String,
     pub team_onboarding_seen: bool,
     pub reply_to: String,
@@ -121,6 +122,7 @@ impl Clone for Settings {
             user_display_name: self.user_display_name.clone(),
             token_scopes: self.token_scopes.clone(),
             token_expires_at: self.token_expires_at.clone(),
+            token_issued_at: self.token_issued_at.clone(),
             team_role: self.team_role.clone(),
             team_onboarding_seen: self.team_onboarding_seen,
             reply_to: self.reply_to.clone(),
@@ -747,6 +749,9 @@ fn merge_ui_settings(
         { return Err("connection_change_requires_validation".into()); }
     }
     // The generic settings bridge never accepts private native state from JS.
+    // token_issued_at is not in PublicSettings (never shown to the UI), so it
+    // must be carried over explicitly or every save would silently drop it.
+    proposed.token_issued_at = current.token_issued_at.clone();
     proposed.native_account = current.native_account.clone();
     proposed.native_authorized = current.native_authorized;
     proposed.native_generation = current.native_generation.clone();
@@ -2712,6 +2717,7 @@ mod native635_settings_tests {
             user_display_name: "635 synthetic person".into(),
             token_scopes: vec!["applications:read".into()],
             token_expires_at: Some("2026-10-19T12:15:00Z".into()),
+            token_issued_at: Some("2026-10-19T12:00:00Z".into()),
             team_role: "member".into(),
             team_onboarding_seen: true,
             reply_to: "fixture@example.invalid".into(),
@@ -2751,6 +2757,7 @@ mod native635_settings_tests {
             "user_display_name": "635 synthetic person",
             "token_scopes": ["applications:read"],
             "token_expires_at": "2026-10-19T12:15:00Z",
+            "token_issued_at": "2026-10-19T12:00:00Z",
             "team_role": "member",
             "team_onboarding_seen": true,
             "reply_to": "fixture@example.invalid",
@@ -3034,6 +3041,10 @@ mod native635_lifecycle_red_tests {
         s.server_url = api::PRIMARY_API.into();
         s.token_scopes = native_account::COMPANY_SCOPES.iter().map(|scope| scope.to_string()).collect();
         s.token_expires_at = Some((chrono::Utc::now() + expires_in).to_rfc3339());
+        // Fixed point safely before every expires_in used by callers (including
+        // the negative, already-expired one), so this fixture isolates the clock
+        // check in private_access() from the shape-only issued_at<=expires_at check.
+        s.token_issued_at = Some((chrono::Utc::now() - chrono::Duration::minutes(20)).to_rfc3339());
         s
     }
     fn session_field(s: &Settings) -> String {
@@ -3103,6 +3114,7 @@ mod native635_lifecycle_red_tests {
         let mut s=native(false);s.server_url=api::PRIMARY_API.into();
         s.token_scopes=native_account::COMPANY_SCOPES.iter().map(|scope|scope.to_string()).collect();
         s.token_expires_at=Some((chrono::Utc::now()+chrono::Duration::minutes(10)).to_rfc3339());
+        s.token_issued_at=Some((chrono::Utc::now()-chrono::Duration::minutes(20)).to_rfc3339());
         s
     }
     #[cfg(target_os = "linux")]
@@ -3500,6 +3512,7 @@ mod native635_boot_tests {
         let mut s=legacy(); s.server_url=api::PRIMARY_API.into(); s.bearer_token="skn_synthetic_only".into();
         s.token_scopes=native_account::COMPANY_SCOPES.iter().map(|s|s.to_string()).collect();
         s.token_expires_at=Some((chrono::Utc::now()+chrono::Duration::minutes(10)).to_rfc3339());
+        s.token_issued_at=Some((chrono::Utc::now()-chrono::Duration::minutes(20)).to_rfc3339());
         s.native_account=Some(native_lifecycle::SessionRecord::new(
             "account-synthetic".into(), "app-synthetic-only".into(), false,
             native_account::Entitlement {source:"approved_free".into(),expires_at:None},
