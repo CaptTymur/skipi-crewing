@@ -1376,7 +1376,7 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
   // с диалогом токена и старым гейтом; на их месте ключи трёх дверей канона.
   const NEW_KEYS = [
     'vacancies.empty_select','vacancies.sort.open_first','vacancies.sort.with_replies','vacancies.sort.stale','vacancies.sort.newest','vacancies.sort.oldest',
-    'entry.tagline','entry.login','entry.login_desc','entry.register','entry.register_desc','entry.register_open','entry.back','entry.show_demo','entry.show_demo_desc','entry.demo_note',
+    'entry.tagline','entry.login','entry.login_desc','entry.register','entry.register_desc','entry.register_open','entry.back','entry.show_demo','entry.show_demo_desc',
     
     'common.cancel','common.ok',
     'confirm.team_remove','confirm.profile_archive','confirm.profile_archive_note','confirm.mailbox_disconnect','confirm.mailing_close','confirm.mailing_close_note','confirm.mailing_delete','confirm.document_delete','confirm.document_delete_note','confirm.vacancy_close','confirm.vacancy_close_note','confirm.vacancy_delete','confirm.vacancy_delete_note','confirm.vacancy_delete_hint','confirm.vault_folder','confirm.vault_folder_note',
@@ -1436,6 +1436,15 @@ console.log('# labels №440/№433: RU/EN strings served by the dictionaries');
   ok(enBlock.includes("'mobile.apps_sub':'Plugins for your team'"), '6 (A8): mobile.apps_sub is an en dictionary value');
   ok(/if \(view === 'apps'\) return \[mobileTr\('apps_title'\), mobileTr\('apps_sub'\)\];/.test(html), '6 (A8): the mobile Apps header reads both strings through mobileTr()');
   ok(!/mobileNavButton\('apps'/.test(html), '6 (A8, K2.2): the Apps rail slot is retired — its pinned label literal left with it');
+
+  // 7-0 (№1913). Ключи, СНЯТЫЕ с экрана по слову владельца, не удаляются из прибора
+  // молча: их отсутствие утверждается явно, иначе возврат строки пройдёт незамеченным.
+  // Счёт тот же — два утверждения ушли из циклов 7 и 10, два пришли сюда.
+  const REMOVED_KEYS = ['entry.demo_note'];
+  for (const key of REMOVED_KEYS) {
+    ok(valueOf(enBlock, key) === null, `7-0: removed key ${key} is absent from en (№1913)`);
+    ok(valueOf(ruBlock, key) === null, `7-0: removed key ${key} is absent from ru (№1913)`);
+  }
 
   // 7. Key parity: every new key exists in both en and ru.
   for (const key of NEW_KEYS) {
