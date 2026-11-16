@@ -1761,15 +1761,12 @@ function renderEntryChoice(next){
     + '<h1 style="margin:0 0 6px;font-size:22px;color:var(--text,#e5e7eb);">Skipi Crewing</h1>'
     + '<p style="margin:0 0 22px;color:var(--text2,#9aa4b2);font-size:14px;line-height:1.5;">'+escapeHtml(tr('entry.tagline'))+'</p>'
     + '<div id="ec-doors" style="flex-direction:column;gap:12px;">'
-    +   '<button id="ec-login" onclick="entryShowLogin(true)" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;">'
-    +     escapeHtml(tr('entry.login'))
-    +     '<div style="font-size:11px;font-weight:500;opacity:.85;margin-top:3px;">'+escapeHtml(tr('entry.login_desc'))+'</div></button>'
-    +   '<button id="ec-register" onclick="entryOpenRegister()" style="'+doorStyle+'border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);">'
-    +     escapeHtml(tr('entry.register'))
-    +     '<div style="font-size:11px;font-weight:500;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.register_desc'))+'</div></button>'
-    +   '<button id="ec-demo" onclick="enterDemoMode()" style="'+doorStyle+'border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-weight:600;">'
-    +     '&#127909; '+escapeHtml(tr('entry.show_demo'))
-    +     '<div style="font-size:11px;font-weight:400;opacity:.8;margin-top:3px;">'+escapeHtml(tr('entry.show_demo_desc'))+'</div></button>'
+    +   '<button id="ec-login" onclick="entryShowLogin(true)" title="'+escapeAttr(tr('entry.login_desc'))+'" style="'+doorStyle+'border:none;background:var(--accent,#004564);color:#fff;">'
+    +     escapeHtml(tr('entry.login'))+'</button>'
+    +   '<button id="ec-register" onclick="entryOpenRegister()" title="'+escapeAttr(tr('entry.register_desc'))+'" style="'+doorStyle+'border:1px solid var(--accent,#004564);background:transparent;color:var(--text,#e5e7eb);">'
+    +     escapeHtml(tr('entry.register'))+'</button>'
+    +   '<button id="ec-demo" onclick="enterDemoMode()" title="'+escapeAttr(tr('entry.show_demo_desc'))+'" style="'+doorStyle+'border:1px solid var(--border,#2a3340);background:transparent;color:var(--text,#e5e7eb);font-weight:600;">'
+    +     '&#127909; '+escapeHtml(tr('entry.show_demo'))+'</button>'
     + '</div>'
     + '<div id="ec-login-form" hidden style="text-align:left;">'
     +   '<div style="font-size:15px;font-weight:700;color:var(--text,#e5e7eb);margin-bottom:4px;">'+escapeHtml(tr('settings.crewing.login.title'))+'</div>'
@@ -1781,7 +1778,6 @@ function renderEntryChoice(next){
     +   '<div id="ec-login-error" hidden role="alert" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.45);color:#fca5a5;font-size:13px;line-height:1.45;"></div>'
     +   '<button onclick="entryShowLogin(false)" style="margin-top:12px;background:none;border:none;color:var(--text2,#9aa4b2);font-size:13px;cursor:pointer;padding:0;">'+escapeHtml(tr('entry.back'))+'</button>'
     + '</div>'
-    + '<p style="margin:16px 0 0;color:var(--text2,#9aa4b2);font-size:12px;line-height:1.5;">'+escapeHtml(tr('entry.demo_note'))+'</p>'
     + '</div>';
   document.body.appendChild(ov);
 }
@@ -1805,12 +1801,16 @@ function renderDemoBanner(){
   // "Выйти из демо" button hard to tap (Yana mobile QA, 2026-06-24).
   if (isMobileShellActive()) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
   if (!__demoMode) { if (existing) existing.remove(); document.body.style.paddingTop = ''; return; }
-  if (existing) return;
+  // No.1880: the text is rebuilt on EVERY call, so a language change refreshes the
+  // banner in place. The old `if (existing) return;` left it in the boot language while
+  // the rest of the screen switched — one markup source now serves both paths.
+  var html = escapeHtml(tr('demo.banner')) + ' '
+    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">'+escapeHtml(tr('demo.exit'))+'</button>';
+  if (existing) { existing.innerHTML = html; return; }
   var b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:center;gap:12px;background:#e67e22;color:#fff;font-size:12px;font-weight:700;padding:calc(env(safe-area-inset-top,0px) + 5px) 10px 5px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-  b.innerHTML = escapeHtml(tr('demo.banner')) + ' '
-    + '<button onclick="exitDemoMode()" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:7px;padding:2px 10px;font-weight:700;cursor:pointer;">'+escapeHtml(tr('demo.exit'))+'</button>';
+  b.innerHTML = html;
   document.body.appendChild(b);
   // Nudge content below the fixed bar so nothing is hidden under it (desktop).
   document.body.style.paddingTop = 'calc(env(safe-area-inset-top,0px) + 28px)';
@@ -1896,6 +1896,68 @@ function connectShowError(msg){
 // =================== END CONNECT DIALOG ===================
 
 var UI_LANG_KEY = 'skipi-crewing-ui-language';
+// No.1881. A chosen language must outlive the process, and localStorage cannot carry it:
+// a non-legacy boot hands the view an EPHEMERAL browser context (src-tauri/src/lib.rs
+// `configure_boot_windows`, gated on `startup_should_open_db`, which matches only
+// LegacyConnected), so every fresh profile loses the key when the process exits. The
+// durable copy therefore goes through Rust — `get_settings`/`save_settings` are admitted
+// by `boot_command_allowed` even in a blocked process.
+// Both calls use __realInvoke ON PURPOSE: the demo bridge intercepts every command
+// (demoInvoke), so inside the demo the FIXTURE would answer the read and a toast plus
+// `demo_read_only` would answer the write. A UI language is a preference of the PERSON,
+// not of the demonstration data. But the WRITE is built from the REAL settings and never
+// from the fixture: on a legacy profile save_settings accepts more than `interface`, so
+// fixture values sent there could overwrite a real profile.
+var __persistedUiSettings = null;
+var __persistedUiLang = '';
+async function loadPersistedUiLanguage(){
+  try {
+    var real = await __realInvoke('get_settings');
+    if (!crewingIsPublicSettings(real)) return;
+    __persistedUiSettings = real;
+    var lang = (real.interface && real.interface.language) || '';
+    if (UI_STRINGS[lang]) __persistedUiLang = lang;
+  } catch (e) {}
+}
+// №1871/O2 (возражение Супервайзора 2026-11-16). БАЗА ЗАПИСИ ЧИТАЕТСЯ С ДИСКА ПРЯМО
+// СЕЙЧАС, а не берётся из снимка __persistedUiSettings. Снимок обновлялся только при
+// загрузке и после СОБСТВЕННОЙ записи, тогда как все прочие записи идут шимом invoke(
+// 'save_settings') и двигают state.settings, но не его. Из-за этого «сменил тему →
+// сменил язык» записывало на диск СТАРУЮ тему, а на легаси-профиле откатывало
+// company_name, profile, reply_to, vault_path и recent_vaults: merge_ui_settings берёт
+// proposed целиком, а connection_fingerprint эти поля не вращает.
+// Почему чтение, а не state.settings: оно верно в ОБОИХ режимах одной веткой. В демо
+// state.settings — это фикстура, и писать её в настоящий профиль нельзя (ровно то, от
+// чего защищался исходный комментарий ниже); __realInvoke минует demoInvoke и в обоих
+// случаях отдаёт настоящие настройки. Диск — то, во что мы пишем, он и есть источник
+// истины для базы.
+// Отказ закрыт: если чтение не удалось или ответ не похож на публичные настройки —
+// записи НЕ происходит. Писать поверх непрочитанной базы и есть разбираемый дефект.
+function persistUiLanguage(lang){
+  return Promise.resolve(__realInvoke('get_settings'))
+    .then(function(real){
+      if (!crewingIsPublicSettings(real) || !real.connection_context) return;
+      var iface = Object.assign({}, real.interface || {}, {
+        theme: (real.interface && real.interface.theme) || 'light',
+        language: lang
+      });
+      var next = Object.assign({}, real, { interface: iface });
+      return Promise.resolve(__realInvoke('save_settings',
+          { newSettings: next, expectedContext: real.connection_context }))
+        .then(function(publicSettings){
+          if (!crewingIsPublicSettings(publicSettings)) return;
+          __persistedUiSettings = publicSettings;
+          __persistedUiLang = lang;
+          if (!__demoMode && typeof state !== 'undefined' && state) {
+            state.settings = publicSettings;
+            // экран обязан совпасть с диском: база могла принести тему, выбранную
+            // другим писателем между загрузкой и этой записью
+            if (typeof applyTheme === 'function') applyTheme();
+          }
+        });
+    })
+    .catch(function(){});
+}
 var UI_LANG_OPTIONS = [
   ['ru','Русский'],
   ['en','English'],
@@ -1916,7 +1978,7 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Settings','mobile.work_setup':'Work setup','mobile.work_setup_desc':'Choose how this device joins the team','mobile.role_owner':'Team lead / manager','mobile.role_member':'Team member','mobile.join_team':'Join team','mobile.join_team_desc':'Send your public ID to the team lead','mobile.appearance':'Appearance','mobile.theme':'Theme','mobile.theme_desc':'Fresh installs open in Light. Existing saved preferences are respected.','mobile.language':'Language','mobile.access':'Access','mobile.api':'API','mobile.about':'About','mobile.version':'Version','mobile.updates':'Updates','mobile.updates_desc':'Manual update checks are available on desktop builds.','mobile.light':'Light','mobile.dark':'Dark','mobile.light_enabled':'Light theme enabled','mobile.dark_enabled':'Dark theme enabled',
 	    'feedback.title':'Rate Skipi Crewing','feedback.desc':'Please tell us how the beta feels. Your stars and comment help decide what to fix first.','feedback.rating_label':'Your rating','feedback.comment_label':'Comment','feedback.comment_placeholder':'What worked well, what blocked you, or what should be improved?','feedback.later':'Later','feedback.submit':'Send feedback','feedback.saved':'Thank you. Feedback saved.','feedback.required':'Choose stars and add a comment.','feedback.manual_button':'Rate Skipi',
 	    'vacancies.empty_select':'Select a vacancy on the left to view details and applications.','vacancies.sort.open_first':'Open first','vacancies.sort.with_replies':'With replies first','vacancies.sort.stale':'Stale (no replies)','vacancies.sort.newest':'Newest first','vacancies.sort.oldest':'Oldest first',
-	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.login':'Sign in','entry.login_desc':'Sign in with your Skipi account.','entry.register':'Create an account','entry.register_desc':'Registration happens on the Skipi website.','entry.register_open':'Registration is on the Skipi website: ','entry.back':'Back','entry.show_demo':'Show the demonstration','entry.show_demo_desc':'No sign-up — an example on prepared data.','entry.demo_note':'The demonstration is an example with prepared data and no sign-up. Changes are not available.',
+	    'entry.tagline':'Vacancies, applications and a seafarer database for crewing companies.','entry.login':'Sign in','entry.login_desc':'Sign in with your Skipi account.','entry.register':'Create an account','entry.register_desc':'Registration happens on the Skipi website.','entry.register_open':'Registration is on the Skipi website: ','entry.back':'Back','entry.show_demo':'Demonstration','entry.show_demo_desc':'No sign-up — an example on prepared data.',
     
 	    'common.cancel':'Cancel','common.ok':'OK',
     'confirm.team_remove':'Remove this team member?','confirm.profile_archive':'Archive this profile?','confirm.profile_archive_note':'It will not be available for new vacancies. Existing vacancy snapshots stay valid.','confirm.mailbox_disconnect':'Disconnect this mailbox and purge cached messages?','settings.mailbox_legacy':'Personal mailbox (legacy)','settings.mailbox_legacy_desc':'The Mail module is retired. One operation is left here: disconnect the mailbox so the server stops keeping its password.','settings.mailbox_legacy_none':'There is no connected mailbox to disconnect.','settings.mailbox_legacy_done':'Mailbox disconnected.','settings.mailbox_legacy_failed':'Disconnect failed','confirm.mailing_close':'Close this mailing request?','confirm.mailing_close_note':'It will stop appearing in seafarer mailing lists.','confirm.mailing_delete':'Delete this mailing request permanently?','confirm.document_delete':'Delete this document?','confirm.document_delete_note':'The file will be removed from the vault.','confirm.vacancy_close':'Close this vacancy?','confirm.vacancy_close_note':'It will stop appearing on the public board. Existing applications and chats stay accessible.','confirm.vacancy_delete':'Hard-delete this vacancy?','confirm.vacancy_delete_note':'This removes the posting AND all applications + chat messages tied to it. Cannot be undone.','confirm.vacancy_delete_hint':'Use Close instead if you just want to stop accepting candidates.','confirm.vault_folder':'Skipi Crewing will use this vault folder after restart:','confirm.vault_folder_note':'The clear folder name makes it easier to find in your file manager.',
@@ -1936,7 +1998,7 @@ var UI_STRINGS = {
 	    'mobile.settings_title':'Настройки','mobile.work_setup':'Рабочий режим','mobile.work_setup_desc':'Выберите, как это устройство входит в команду','mobile.role_owner':'Глава команды / менеджер','mobile.role_member':'Член команды','mobile.join_team':'Войти в команду','mobile.join_team_desc':'Отправьте публичный ID главе команды','mobile.appearance':'Внешний вид','mobile.theme':'Тема','mobile.theme_desc':'Новая установка открывается в светлой теме. Сохранённые настройки уважаются.','mobile.language':'Язык','mobile.access':'Доступ','mobile.api':'API','mobile.about':'О приложении','mobile.version':'Версия','mobile.updates':'Обновления','mobile.updates_desc':'Ручная проверка обновлений доступна в desktop-сборках.','mobile.light':'Светлая','mobile.dark':'Тёмная','mobile.light_enabled':'Светлая тема включена','mobile.dark_enabled':'Тёмная тема включена',
 	    'feedback.title':'Оцените Skipi Crewing','feedback.desc':'Пожалуйста, расскажите, как вам бета-версия. Звёзды и комментарий помогут понять, что исправлять в первую очередь.','feedback.rating_label':'Ваша оценка','feedback.comment_label':'Комментарий','feedback.comment_placeholder':'Что получилось хорошо, что мешает, что нужно улучшить?','feedback.later':'Позже','feedback.submit':'Отправить отзыв','feedback.saved':'Спасибо. Отзыв сохранён.','feedback.required':'Выберите звёзды и напишите комментарий.','feedback.manual_button':'Оценить Skipi',
 	    'vacancies.empty_select':'Выберите вакансию слева, чтобы посмотреть детали и заявки.','vacancies.sort.open_first':'Открытые сначала','vacancies.sort.with_replies':'С откликами сначала','vacancies.sort.stale':'Зависшие (без откликов)','vacancies.sort.newest':'От новых к старым','vacancies.sort.oldest':'От старых к новым',
-	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.login':'Войти','entry.login_desc':'Вход по аккаунту Skipi.','entry.register':'Создать аккаунт','entry.register_desc':'Регистрация — на сайте Skipi.','entry.register_open':'Регистрация — на сайте Skipi: ','entry.back':'Назад','entry.show_demo':'Показать демонстрацию','entry.show_demo_desc':'Без регистрации — пример на готовых данных.','entry.demo_note':'Демонстрация — пример с заполненными данными, без регистрации. Изменения недоступны.',
+	    'entry.tagline':'Вакансии, заявки и база моряков для крюинговых компаний.','entry.login':'Войти','entry.login_desc':'Вход по аккаунту Skipi.','entry.register':'Создать аккаунт','entry.register_desc':'Регистрация — на сайте Skipi.','entry.register_open':'Регистрация — на сайте Skipi: ','entry.back':'Назад','entry.show_demo':'Демонстрация','entry.show_demo_desc':'Без регистрации — пример на готовых данных.',
     
 	    'common.cancel':'Отмена','common.ok':'Подтвердить',
     'confirm.team_remove':'Удалить этого участника команды?','confirm.profile_archive':'Архивировать этот профиль?','confirm.profile_archive_note':'Он перестанет быть доступен для новых вакансий. Уже сделанные снимки по вакансиям останутся в силе.','confirm.mailbox_disconnect':'Отключить этот почтовый ящик и удалить кэшированные письма?','settings.mailbox_legacy':'Личный ящик (устаревший)','settings.mailbox_legacy_desc':'Модуль «Почта» снят. Здесь осталась одна операция — отключить ящик, чтобы сервер перестал хранить его пароль.','settings.mailbox_legacy_none':'Подключённого ящика нет — отключать нечего.','settings.mailbox_legacy_done':'Ящик отключён.','settings.mailbox_legacy_failed':'Не удалось отключить','confirm.mailing_close':'Закрыть этот запрос на рассылку?','confirm.mailing_close_note':'Он перестанет появляться в рассылках морякам.','confirm.mailing_delete':'Удалить этот запрос на рассылку навсегда?','confirm.document_delete':'Удалить этот документ?','confirm.document_delete_note':'Файл будет удалён из хранилища.','confirm.vacancy_close':'Закрыть эту вакансию?','confirm.vacancy_close_note':'Она перестанет показываться на публичной доске. Уже поданные заявки и чаты останутся доступны.','confirm.vacancy_delete':'Удалить эту вакансию безвозвратно?','confirm.vacancy_delete_note':'Будут удалены и сама вакансия, и все связанные с ней заявки и сообщения чата. Отменить это нельзя.','confirm.vacancy_delete_hint':'Если нужно просто перестать принимать кандидатов, используйте «Закрыть».','confirm.vault_folder':'После перезапуска Skipi Crewing будет использовать эту папку хранилища:','confirm.vault_folder_note':'Понятное имя папки облегчает её поиск в файловом менеджере.',
@@ -2170,9 +2232,7 @@ var UI_STRINGS = {
     "settings.crewing.agency_data": "Agency data",
     "settings.crewing.agency_data.description": "Company, certificate, vault and mailbox — unchanged, moved under this heading.",
     "settings.crewing.company": "Company profile",
-    "settings.crewing.company.description": "Legal name, jurisdiction and MLC certificate.",
     "settings.crewing.mlc": "MLC certificate",
-    "settings.crewing.mlc.description": "Certificate number and validity.",
     "settings.crewing.contact_email.description": "For verification correspondence and contacting the organisation.",
     "settings.crewing.vault": "Vault",
     "settings.crewing.vault.description": "Local shared storage folder for this device.",
@@ -2413,9 +2473,7 @@ var UI_STRINGS = {
     "settings.crewing.agency_data": "Данные агентства",
     "settings.crewing.agency_data.description": "Компания, сертификат, хранилище и почтовый ящик — без изменений, перенесены под этот заголовок.",
     "settings.crewing.company": "Профиль компании",
-    "settings.crewing.company.description": "Юридическое название, юрисдикция и сертификат MLC.",
     "settings.crewing.mlc": "Сертификат MLC",
-    "settings.crewing.mlc.description": "Номер сертификата и срок действия.",
     "settings.crewing.contact_email.description": "Для переписки по верификации и связи с организацией.",
     "settings.crewing.vault": "Профиль (vault)",
     "settings.crewing.vault.description": "Локальная общая папка хранилища на этом устройстве.",
@@ -2476,7 +2534,10 @@ var UI_STRINGS = {
 function getUiLang() {
   var stored = localStorage.getItem(UI_LANG_KEY);
   var settingsLang = (typeof state !== 'undefined' && state.settings && state.settings.interface && state.settings.interface.language) || '';
-  var lang = stored || settingsLang || 'ru';
+  // No.1881: the SAVED choice outranks `settingsLang`, which inside the demo is the
+  // FIXTURE's language — otherwise a restart always returns the fixture's value and the
+  // person's choice can never win on the very screen the owner looks at.
+  var lang = stored || __persistedUiLang || settingsLang || 'ru';
   return UI_STRINGS[lang] ? lang : 'ru';
 }
 function tr(key) {
@@ -2513,9 +2574,14 @@ function setUiLang(lang) {
     state.settings.interface = state.settings.interface || {};
     state.settings.interface.language = lang;
   }
+  // No.1881: the durable copy. Fire-and-forget on purpose — the selector must not wait
+  // on IPC, and a refusal must never leave the screen in the old language.
+  try { persistUiLanguage(lang); } catch (e) {}
   applyI18nChrome();
   try { renderSettingsModal(); } catch(e) {}
   try { showView(state.view); } catch(e) {}
+  // No.1880: the demo banner is chrome too and must follow the language like the rest.
+  try { renderDemoBanner(); } catch(e) {}
 }
 function languageSettingsSelectHtml() {
   var cur = getUiLang();
@@ -14388,9 +14454,9 @@ function _crewingSettingsSections(){
         var mlcVal = mlcNo === na ? na : (mlcNo + (mlcTo ? (' \u00b7 ' + mlcTo) : ''));
         var vault = (s.vault_path || '').trim() || na;
         var agencyRows =
-            _crewSetHtmlRow(ctx, 'settings.crewing.company', ctx.t('settings.crewing.company.description'),
+            _crewSetHtmlRow(ctx, 'settings.crewing.company', '',
                 _crewSetCode(ctx, legal + ' \u00b7 ' + juris), 'stack')
-          + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', ctx.t('settings.crewing.mlc.description'),
+          + _crewSetHtmlRow(ctx, 'settings.crewing.mlc', '',
                 _crewSetCode(ctx, mlcVal))
           + _crewSetHtmlRow(ctx, 'settings.crewing.vault', ctx.t('settings.crewing.vault.description'),
                 _crewSetCode(ctx, vault) + ' ' + _crewSetHtmlButton(ctx, 'crewing-open-profile', 'settings.crewing.open_profile'), 'stack')
@@ -17641,6 +17707,9 @@ async function bootDesktopMain(){
   setInterval(silentRefreshVacancies, 30000);
 }
 (async function(){
+  // No.1881: the saved language must be known BEFORE the first paint and before the demo
+  // fixture can answer for it. Both shells need it, so it runs above the branch.
+  await loadPersistedUiLanguage();
   if (shouldUseMobileShell()) {
     await loadBuildInfo();
     await bootMobile();
