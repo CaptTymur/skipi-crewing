@@ -66,7 +66,7 @@ ok(/repository: CaptTymur\/skipi-host-runtime\n\s+ref: d6238191c554bc37098336667
 // single-screen route and the No.664 person-keyed save route widened to all
 // eight paths the line touches); the superseded b72a59ca, aa3b2efb and
 // 37ff9581 must not be accepted.
-ok(/repository: CaptTymur\/skipi-guard\n\s+ref: 32b19c9d30086cf30cebe418deb762298c3ebc59\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
+ok(/repository: CaptTymur\/skipi-guard\n\s+ref: d293fd5e37ebceafa90761d15146eca86b7bd689\n/.test(workflow), 'the workflow pins exactly the accepted guard SHA (K2 + K2.1 + No.664 routes)');
 ok(!c3b2Source.includes('localStorage'), 'card block never persists card state');
 ok((c3b1Source.match(/PILOT_REASON_TEXT\s*=\s*\{/g) || []).length === 1 && !c3b2Source.includes('PILOT_REASON_TEXT ='), 'queue reason catalogue stays single');
 ok(/data-qa="pilot-open-card"/.test(c3b1Source), 'queue rows expose an explicit Open control');
@@ -2897,7 +2897,7 @@ console.log('# K2 modules/crew-flow');
     // ---- S5: one guard pin, one localized team row ---------------------------
     {
       const pins = (workflow.match(/repository: CaptTymur\/skipi-guard\n\s+ref: ([0-9a-f]{40})/) || [])[1];
-      softOk(pins === '32b19c9d30086cf30cebe418deb762298c3ebc59', 'S5: the workflow pins exactly the accepted guard SHA');
+      softOk(pins === 'd293fd5e37ebceafa90761d15146eca86b7bd689', 'S5: the workflow pins exactly the accepted guard SHA');
       // The needles are assembled from halves on purpose: a probe that spells a
       // SHA out reads its own source and can never pass (self-referential-probe
       // class — measured three times in this session, this line included).
@@ -2916,7 +2916,7 @@ console.log('# K2 modules/crew-flow');
       // door — so a gate running it blocks this slice's two Cargo touches
       // outright. Its own bump touched one file, so assert-config-superset was
       // skipped there and this line is where the pair was reconciled.
-      const superseded = ['93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5', 'b72a59ca' + '947ddb6a70a07b0328b61f9a29eca090', 'aa3b2efb' + '19cb4448226075be36b3f8c7b302c3df', '37ff9581' + 'f3e8ccca399525844f1c27cb7f468698', 'e8000d75' + '7ea387fc29220cbe8a14c6efea7b7fb4'];
+      const superseded = ['32b19c9d' + '30086cf30cebe418deb762298c3ebc59', '93b1a51e' + 'b59d0dff5f2db3f2289b8afb09761f39', '7bd93006' + '01e5445a9a60f1136d2fd57a9e9b32c5', 'b72a59ca' + '947ddb6a70a07b0328b61f9a29eca090', 'aa3b2efb' + '19cb4448226075be36b3f8c7b302c3df', '37ff9581' + 'f3e8ccca399525844f1c27cb7f468698', 'e8000d75' + '7ea387fc29220cbe8a14c6efea7b7fb4'];
       const selfSrc = fs.readFileSync('tests/crewing_c3b2_candidate_harness.mjs', 'utf8');
       softOk(superseded.every((sha) => !selfSrc.includes(sha) && !workflow.includes(sha)),
         'S5: neither the harness nor the workflow still accepts a superseded guard pin');
