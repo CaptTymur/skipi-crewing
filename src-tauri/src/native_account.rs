@@ -46,12 +46,18 @@ pub(crate) struct BootstrapResponse {
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct Connection {
     pub server_url: String,
+    // Contract 973 v2: the wire key is workspace_id; this is the ONLY place in the
+    // crate that translates it to the internal crewing_id concept.
+    #[serde(rename = "workspace_id")]
     pub crewing_id: String,
-    #[serde(deserialize_with = "required_nullable")]
+    // v2 no longer sends this key at all. Plain Option (no required_nullable) means
+    // an absent key deserializes to None, deliberately — not a silent default added
+    // in passing, but the lifted requirement itself (BACKLOG №1931 slice C2).
     pub organization_id: Option<String>,
     pub bearer_token: String,
     pub scopes: Vec<String>,
     pub expires_at: String,
+    pub issued_at: String,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -198,14 +204,30 @@ mod tests {
     fn clock() -> DateTime<Utc> { "2026-10-19T16:00:00Z".parse().unwrap() }
     fn wire() -> Value {
         json!({"account_id":"account-635", "connection": {
-            "server_url":"https://api.skipi.app", "crewing_id":"company-635",
-            "organization_id":null,"bearer_token":"skn_synthetic_secret_635",
-            "scopes":["vacancy:write","mailing:write","applications:read","profile:write","pubkey:write"],"expires_at":"2026-10-19T16:14:00Z"},
+            "server_url":"https://api.skipi.app", "workspace_id":"company-635",
+            "bearer_token":"skn_synthetic_secret_635",
+            "scopes":["vacancy:write","mailing:write","applications:read","profile:write","pubkey:write"],
+            "expires_at":"2026-10-19T16:14:00Z","issued_at":"2026-10-19T15:45:00Z"},
             "entitlement":{"source":"paddle","expires_at":"2026-10-20T16:00:00Z"}})
     }
     fn validate(value: Value) -> Result<(), &'static str> {
         let parsed: BootstrapResponse = serde_json::from_value(value).map_err(|_|"invalid_response")?;
         parsed.validate("account-635",Some("company-635"), &["https://api.skipi.app"],clock())
+    }
+    #[test]
+    fn native973_bootstrap_accepts_v2_six_key_connection_via_workspace_id() {
+        // Contract 973 v2: the server sends EXACTLY these six connection keys.
+        // Neither crewing_id nor organization_id is present on the wire.
+        let v = json!({"account_id":"account-973", "connection": {
+            "server_url":"https://api.skipi.app", "workspace_id":"company-973",
+            "bearer_token":"skn_synthetic_secret_973",
+            "scopes":["vacancy:write","mailing:write","applications:read","profile:write","pubkey:write"],
+            "expires_at":"2026-10-19T16:14:00Z","issued_at":"2026-10-19T15:45:00Z"},
+            "entitlement":{"source":"paddle","expires_at":"2026-10-20T16:00:00Z"}});
+        let parsed: BootstrapResponse = serde_json::from_value(v)
+            .expect("v2 six-key connection (workspace_id, issued_at, no organization_id) must parse");
+        assert_eq!(parsed.connection.crewing_id, "company-973");
+        assert_eq!(parsed.connection.organization_id, None);
     }
     #[test]
     fn native635_bootstrap_accepts_exact_paid_and_explicit_free() {
@@ -221,7 +243,7 @@ mod tests {
             let mut v=wire();v.as_object_mut().unwrap().remove(field);assert!(validate(v).is_err(),"{field}");
             let mut v=wire();v[field]=json!(false);assert!(validate(v).is_err(),"wrong type {field}");
         }
-        for field in ["server_url","crewing_id","organization_id","bearer_token","scopes","expires_at"] {
+        for field in ["server_url","workspace_id","bearer_token","scopes","expires_at","issued_at"] {
             let mut v=wire();v["connection"].as_object_mut().unwrap().remove(field);assert!(validate(v).is_err(),"{field}");
             let mut v=wire();v["connection"][field]=json!(false);assert!(validate(v).is_err(),"wrong type {field}");
         }
@@ -235,7 +257,7 @@ mod tests {
         for (field,value) in [("account_id",json!("another-account")),("account_id",json!(""))] {
             let mut v=wire();v[field]=value;assert!(validate(v).is_err());
         }
-        for (field,value) in [("crewing_id",json!("another-company")),("crewing_id",json!(" ")),
+        for (field,value) in [("workspace_id",json!("another-company")),("workspace_id",json!(" ")),
             ("organization_id",json!("")),("organization_id",json!(false)),
             ("server_url",json!("https://untrusted.invalid")),("server_url",json!("http://api.skipi.app")),
             ("server_url",json!("https://api.skipi.app/path")),("server_url",json!("https://x@api.skipi.app")),
@@ -815,9 +837,10 @@ mod http_tests {
     }
     fn bootstrap_reply() -> serde_json::Value {
         serde_json::json!({"account_id":"account-http-635","connection":{
-            "server_url":ACCOUNT,"crewing_id":"company-http-635","organization_id":null,
+            "server_url":ACCOUNT,"workspace_id":"company-http-635",
             "bearer_token":"skn_synthetic_http_company_635","scopes":COMPANY_SCOPES,
-            "expires_at":(Utc::now()+chrono::Duration::minutes(10)).to_rfc3339()},
+            "expires_at":(Utc::now()+chrono::Duration::minutes(10)).to_rfc3339(),
+            "issued_at":Utc::now().to_rfc3339()},
             "entitlement":{"source":"approved_free","expires_at":null}})
     }
     #[test]

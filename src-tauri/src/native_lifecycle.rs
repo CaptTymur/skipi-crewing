@@ -22,6 +22,10 @@ fn stored_response(s: &Settings) -> Option<BootstrapResponse> {
             organization_id: if s.organization_id.is_empty() { None } else { Some(s.organization_id.clone()) },
             bearer_token: s.bearer_token.clone(), scopes: s.token_scopes.clone(),
             expires_at: s.token_expires_at.clone()?,
+            // Not persisted in Settings and not read by any validation here (C2
+            // only requires the WIRE response to carry the key); reconstructing a
+            // stored session has no real issued_at to supply.
+            issued_at: String::new(),
         }, entitlement: record.entitlement.clone(),
     })
 }
@@ -850,6 +854,7 @@ mod runtime_tests {
             organization_id: None, bearer_token: "skn_synthetic-company-credential".into(),
             scopes: COMPANY_SCOPES.iter().map(|s| (*s).into()).collect(),
             expires_at: (now() + chrono::Duration::minutes(10)).to_rfc3339(),
+            issued_at: now().to_rfc3339(),
         }, entitlement: Entitlement { source: "approved_free".into(), expires_at: None } }
     }
     struct Fake<'a> {
