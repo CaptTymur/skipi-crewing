@@ -321,7 +321,9 @@ impl AppState {
 
 // Transitional admission until the coherent native consumers are integrated.
 // Even a native_authorized flag alone cannot activate private RPC or resources.
-// Only these three public commands can run in a non-legacy process.
+// Only the public commands named in the list below can run in a non-legacy process.
+// The count is pinned by native635_boot_public_commands_and_legacy_dispatch_control,
+// not by this comment: an earlier edition said "three" while the list held five.
 fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'static str> {
     // native_account_login is admitted in a non-legacy process on purpose: it is the one
     // command a person must be able to run BEFORE being connected, and refusing it would
@@ -329,7 +331,7 @@ fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'stat
     // pinned by native635_boot_public_commands_and_legacy_dispatch_control below.
     // No.880 п.5: `open_external_url` в том же списке — дверь «Регистрация»
     // живёт на развилке, то есть в не-легаси процессе.
-    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "open_external_url")
+    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "native_account_logout" | "open_external_url")
         || startup_should_open_db(settings) { Ok(()) } else { Err("login_required") }
 }
 // No.880 п.5 (1495). Дверь «Регистрация» ведёт на страницу Skipi, и открыть её
@@ -818,11 +820,50 @@ pub struct NativeAccountLogin {
     local_outcome: String,
 }
 
-// Registered but NOT admitted. boot_command_allowed (line 325) lets only three
-// commands run in a non-legacy process, so an invoke of this returns login_required
-// until the allowlist is widened together with the test that pins its size.
+// Admitted: boot_command_allowed names this command, so an invoke reaches the
+// handler in a non-legacy process. Widening that list is only legitimate together
+// with the test that pins it, which asserts both directions.
 // The outcome is projected to a flat string: LocalOutcome is cfg-gated and must not
 // cross into the public surface.
+#[derive(Debug, Clone, Serialize)]
+struct NativeAccountLogout {
+    signed_out: bool,
+    database_closed: bool,
+    remote_acknowledged: bool,
+    storage_error: Option<String>,
+}
+
+// No.1871: wiring for the logout that is ALREADY written. No new logic - this calls
+// Runtime::logout_application, which assembles the application target and store and hands
+// them to the existing Runtime::logout. No second server wire arises: the transport is the
+// same AccountClient per (1882)(b), and (1883)(c) explicitly permits a command for Sign out
+// in lib.rs over native_account.rs.
+#[tauri::command]
+fn native_account_logout(
+    expected_context: String,
+    state: tauri::State<AppState>,
+) -> Result<NativeAccountLogout, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let transport =
+            native_account::AccountClient::new(native_account::TransportConfig::production())?;
+        let outcome = state.runtime.logout_application(&transport, &expected_context)?;
+        Ok(NativeAccountLogout {
+            signed_out: outcome.persisted_signed_out,
+            database_closed: outcome.database_closed,
+            remote_acknowledged: outcome.remote_acknowledged,
+            storage_error: outcome.storage_error.map(|code| code.to_string()),
+        })
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // UNKNOWN by measurement: this branch is not provable on this machine without a
+        // cross toolchain, and the stage says so rather than implying green.
+        let _ = (expected_context, state);
+        Err("native_unsupported".into())
+    }
+}
+
 #[tauri::command]
 fn native_account_login(
     email: String,
@@ -2522,6 +2563,7 @@ pub fn run() {
             get_settings,
             save_settings,
             native_account_login,
+            native_account_logout,
             open_external_url,
             sync_crewing_profile,
             forget_recent_vault,
@@ -3485,13 +3527,31 @@ mod native635_boot_tests {
         }
     }
     #[test]
+    fn native635_boot_logout_admitted_in_active_session_and_list_stays_closed() {
+        // No.1871. Domain is declared HERE, not inherited from blocked_modes() membership:
+        // No.1833 moves the active session into a new active_modes(), and a test resting on
+        // membership would stay GREEN while silently losing the one state the command exists
+        // for. Its text would not change - its domain would.
+        let mut active = native();
+        active.native_authorized = true;
+        assert_eq!(native_lifecycle::mode(&active, &[api::PRIMARY_API, api::RU_API]),
+            native_lifecycle::Mode::NativeSession, "fixture must be an ACTIVE session");
+        assert_eq!(boot_command_allowed(&active, "native_account_logout"), Ok(()));
+        // NEGATIVE half of the same pin, in the SAME state: the list stays closed and this
+        // addition did not throw it open. Without this half the pin would pass on a gate
+        // that admits everything.
+        for command in ["get_my_identity", "list_documents", "crewing_intake_open_saved"] {
+            assert_eq!(boot_command_allowed(&active, command), Err("login_required"), "{command}");
+        }
+    }
+    #[test]
     fn native635_boot_public_commands_and_legacy_dispatch_control() {
         for settings in blocked_modes() {
             // No.880 п.5: `open_external_url` допущена до входа намеренно — дверь
             // «Регистрация» живёт на развилке, то есть ИМЕННО в не-легаси процессе,
             // и отказ сделал бы регистрацию недостижимой для того, для кого эта
             // задача и существует.
-            for command in ["get_build_info","get_settings","save_settings","native_account_login","open_external_url"] {
+            for command in ["get_build_info","get_settings","save_settings","native_account_login","native_account_logout","open_external_url"] {
                 assert_eq!(boot_command_allowed(&settings,command),Ok(()));
             }
             // ОТРИЦАТЕЛЬНАЯ сторона того же пина: список закрыт, и команда вне
