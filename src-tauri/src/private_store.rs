@@ -49,6 +49,16 @@ pub(crate) fn atomic_write(path: &Path, bytes: &[u8]) -> Result<Durability, Pers
 }
 
 
+// An ancestor's group-write bit is tolerated only when that ancestor's group IS the
+// caller's own effective primary group (Debian/Ubuntu user-private-group default,
+// umask 002) and the ancestor carries no other-write bit. A UPG's sole member is the
+// user themself, so this is not a cross-uid admission gap; other-write always refuses
+// regardless of group ownership. Pure/no I/O so the boundary is testable without chown.
+#[cfg(target_os = "linux")]
+fn own_private_group_write_tolerated(mode: u32, gid: libc::gid_t, egid: libc::gid_t) -> bool {
+    mode & 0o002==0 && mode & 0o020!=0 && gid==egid
+}
+
 // Metadata admission for an explicit native Settings destination. No mkdir,
 // default-path resolution, reads of Settings bytes, chmod, backup or link adoption.
 // Caller exclusively owns all app writers in this namespace. This is not a
@@ -63,6 +73,7 @@ pub(crate) fn native_settings_destination(path: &Path) -> Result<(), PersistErro
     }
     let parent=path.parent().ok_or_else(fail)?;
     let uid=unsafe { libc::geteuid() };
+    let egid=unsafe { libc::getegid() };
     let mut prefix=PathBuf::new();
     for component in parent.components() {
         match component {
@@ -73,7 +84,8 @@ pub(crate) fn native_settings_destination(path: &Path) -> Result<(), PersistErro
         if !metadata.is_dir() || metadata.file_type().is_symlink()
             || (metadata.uid()!=0 && metadata.uid()!=uid) { return Err(fail()); }
         let sticky_system_ancestor=metadata.uid()==0 && metadata.mode() & 0o1000!=0 && prefix!=parent;
-        if metadata.mode() & 0o022!=0 && !sticky_system_ancestor { return Err(fail()); }
+        let own_private_group_write=own_private_group_write_tolerated(metadata.mode(), metadata.gid(), egid);
+        if metadata.mode() & 0o022!=0 && !sticky_system_ancestor && !own_private_group_write { return Err(fail()); }
     }
     let directory=fs::symlink_metadata(parent).map_err(|_|fail())?;
     if directory.uid()!=uid { return Err(fail()); }
@@ -226,6 +238,54 @@ mod tests {
             Ok(())
         }).unwrap_err();
         assert!(!error.cleanup_confirmed); f.old(); assert_eq!(fs::read(&f.temp).unwrap(), b"replacement synthetic marker");
+    }
+
+    // No.1947: a freshly created owner directory inherits mode 0o775 under the
+    // Debian/Ubuntu default umask 002 (confirmed live on the owner's machine:
+    // `stat -c '%u %g %a' ~/.config/skipi-crewing` -> 1000 1000 775, group `linux`
+    // with no other member). Before the fix this refused with `settings_storage_error`
+    // on a fully correct login; the directory here is created by the test itself (its
+    // group is always the test process's own egid), never the owner's real directory.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_destination_admits_owner_directory_with_group_write_bit() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("crewing1947-admission-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o775)).unwrap();
+        let path = root.join("settings.json");
+        let result = native_settings_destination(&path);
+        fs::remove_dir_all(&root).unwrap();
+        assert!(result.is_ok(), "0o775 owner-created directory must admit: {:?}", result);
+    }
+
+    // Other-write refuses regardless of group ownership, even though the directory's
+    // group is still the test process's own egid - the UPG exception never covers 0o002.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_destination_still_refuses_world_writable_owner_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("crewing1947-admission-world-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o777)).unwrap();
+        let path = root.join("settings.json");
+        let result = native_settings_destination(&path);
+        fs::remove_dir_all(&root).unwrap();
+        assert!(result.is_err(), "0o777 (other-write) must still refuse: {:?}", result);
+    }
+
+    // Pure boundary table for the extracted predicate: proves the exception is scoped
+    // to "group-write only, and the group IS my own egid" and nothing wider. A fixture
+    // directory can't portably carry a gid different from the creating process's own
+    // egid without extra OS privilege, so the "shared, non-own group" arm is checked
+    // here directly rather than by chown.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_own_private_group_write_tolerated_boundary_table() {
+        assert!(own_private_group_write_tolerated(0o775, 1000, 1000), "own-gid group-write only must admit");
+        assert!(!own_private_group_write_tolerated(0o777, 1000, 1000), "other-write must still refuse even at own gid");
+        assert!(!own_private_group_write_tolerated(0o775, 2000, 1000), "a shared/foreign group must still refuse");
+        assert!(!own_private_group_write_tolerated(0o755, 1000, 1000), "no write bits set is not the tolerated case");
     }
 }
 
