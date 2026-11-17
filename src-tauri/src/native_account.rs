@@ -4,24 +4,19 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-pub(crate) const ACCOUNT_ORIGIN: &str = "https://assistant.skipi.app";
-// Пилотная сборка (карточка 16.11). Origin пилота и ЕГО же доверие — только в
-// сборке, собранной с SKIPI_CREWING_PILOT=1. По умолчанию константы нет в деле:
-// `option_env!` читает КОМПИЛЯТОР, поэтому окружение запущенного приложения
-// ничего не меняет, а боевая сборка собирается без переменной и не знает пилота.
-// Почему не Cargo-фича: Cargo.toml релиз-чувствителен и не разрешён маршрутом
-// этой правки, а переменная сборки даёт ту же компиляционную границу.
-pub(crate) const PILOT_ACCOUNT_ORIGIN: &str = "https://api.skipi.app:8444";
-pub(crate) fn pilot_build() -> bool { option_env!("SKIPI_CREWING_PILOT") == Some("1") }
+// No.1959: boevой origin по умолчанию, без переменной сборки. Карточка
+// №1959 (ОТВЕТ «ДА») — контур «е» получает обычное имя на 443.
+pub(crate) const ACCOUNT_ORIGIN: &str = "https://crewing.skipi.app";
+// Пока серверный шаг (переключение SKIPI_PUBLIC_SERVER_URL) не подтверждён в
+// работе, сервер может возвращать либо новое имя, либо этот старый адрес —
+// оба остаются доверенными, чтобы переход был безопасен в любом порядке.
+// Снимается отдельным слайсом зачистки после подтверждённого переключения.
+pub(crate) const LEGACY_ACCOUNT_ORIGIN: &str = "https://api.skipi.app:8444";
 // ЕДИНСТВЕННЫЙ источник доверенных origin компании (F1 Супервайзора 16.11).
 // До этой функции пара была вшита в семи местах, а расширялась ровно в одном —
-// в конфиге транспорта, который читается ТОЛЬКО в bootstrap. Поэтому пилотная
-// сборка проходила вход и падала на первом же пост-логин перечтении.
+// в конфиге транспорта, который читается ТОЛЬКО в bootstrap.
 pub(crate) fn trusted_company_origins() -> Vec<&'static str> {
-    if pilot_build() {
-        return vec![crate::api::PRIMARY_API, crate::api::RU_API, PILOT_ACCOUNT_ORIGIN];
-    }
-    vec![crate::api::PRIMARY_API, crate::api::RU_API]
+    vec![crate::api::PRIMARY_API, crate::api::RU_API, ACCOUNT_ORIGIN, LEGACY_ACCOUNT_ORIGIN]
 }
 pub(crate) const COMPANY_SCOPES: [&str; 5] = [
     "vacancy:write", "mailing:write", "applications:read", "profile:write", "pubkey:write",
@@ -349,19 +344,38 @@ mod tests {
     }
 
     #[test]
-    fn native635_pilot_trusts_its_own_server_url_everywhere_production_rejects_it() {
-        // F1: доверие обязано быть ОДНИМ источником. Этот тест смотрит на путь
-        // ПОСЛЕ логина (validate_stored_shape), а не на bootstrap: именно там
-        // пилотная сборка падала в Unavailable -> settings_unavailable.
-        let mut v = wire();
-        v["connection"]["server_url"] = json!("https://api.skipi.app:8444");
-        let parsed: BootstrapResponse = serde_json::from_value(v).unwrap();
+    fn native1959_production_trusts_new_and_legacy_origin_everywhere_rejects_impostors() {
+        // No.1959: successor of F1's pilot/production split now that the pilot
+        // gate is gone — this still looks at the post-login path
+        // (validate_stored_shape), the same seam where the pilot regression hid.
         let origins = trusted_company_origins();
-        let got = parsed.validate_stored_shape("account-635", Some("company-635"), &origins);
-        if pilot_build() {
-            assert!(got.is_ok(), "pilot build must trust its own server_url after login");
-        } else {
-            assert!(got.is_err(), "production must reject the pilot server_url");
+        for trusted in ["https://crewing.skipi.app", "https://api.skipi.app:8444"] {
+            let mut v = wire();
+            v["connection"]["server_url"] = json!(trusted);
+            let parsed: BootstrapResponse = serde_json::from_value(v).unwrap();
+            assert!(parsed.validate_stored_shape("account-635", Some("company-635"), &origins).is_ok(),
+                "production must trust {trusted} after login");
+        }
+        for impostor in ["https://assistant.skipi.app", "https://crewing.skipi.app:8444",
+            "http://crewing.skipi.app", "https://evil.example"] {
+            let mut v = wire();
+            v["connection"]["server_url"] = json!(impostor);
+            let parsed: BootstrapResponse = serde_json::from_value(v).unwrap();
+            assert!(parsed.validate_stored_shape("account-635", Some("company-635"), &origins).is_err(),
+                "production must reject {impostor}");
+        }
+    }
+
+    #[test]
+    fn native1959_bootstrap_accepts_both_new_and_legacy_production_origin() {
+        // Task 3(a): either address the server might return today is accepted
+        // through the full active-admission path (validate), not just the shape.
+        let origins = trusted_company_origins();
+        for trusted in ["https://crewing.skipi.app", "https://api.skipi.app:8444"] {
+            let mut v = wire();
+            v["connection"]["server_url"] = json!(trusted);
+            let parsed: BootstrapResponse = serde_json::from_value(v).unwrap();
+            assert_eq!(parsed.validate("account-635", Some("company-635"), &origins, clock()), Ok(()), "{trusted}");
         }
     }
 
@@ -457,31 +471,12 @@ impl TransportConfig {
         #[cfg(debug_assertions)]
         if let Some(config) = option_env!("SKIPI_CREWING_DEV_ACCOUNT_ORIGIN")
             .and_then(Self::dev_origin_config) { return config; }
-        // Пилот: отдельный состав, и он ЕДИНСТВЕННОЕ место, где origin пилота
-        // попадает в доверие. Боевая сборка сюда не заходит — `pilot_build()`
-        // ложно без переменной сборки.
-        if let Some(config) = Self::pilot_build_config() { return config; }
         Self {
             #[cfg(debug_assertions)]
             direct_loopback_qa: false,
             account_origin: ACCOUNT_ORIGIN.to_owned(),
             company_origins: trusted_company_origins().into_iter().map(str::to_owned).collect(),
         }
-    }
-    // Состав пилотной сборки. Вынесен отдельной функцией по той же причине,
-    // что и dev_origin_config: иначе граница проверялась бы только пересборкой.
-    pub(crate) fn pilot_build_config() -> Option<Self> {
-        if !pilot_build() { return None; }
-        Some(Self {
-            #[cfg(debug_assertions)]
-            direct_loopback_qa: false,
-            account_origin: PILOT_ACCOUNT_ORIGIN.to_owned(),
-            // Доверие расширяется РОВНО на origin пилота и только здесь: ответ
-            // bootstrap валидируется против этого списка (см. bootstrap()), и без
-            // пилота в нём сервер пилота вернул бы собственный server_url как
-            // `invalid_response`.
-            company_origins: trusted_company_origins().into_iter().map(str::to_owned).collect(),
-        })
     }
     // Предикат вынесен, чтобы проверяться без пересборки с переменной: иначе
     // граница безопасности осталась бы непроверяемой.
@@ -614,32 +609,26 @@ mod transport_tests {
     use super::*;
     use serde_json::{json, Value};
     #[test]
-    fn native635_transport_production_has_one_fixed_account_origin() {
-        let config=TransportConfig::production();
+    fn native1959_transport_production_trusts_new_and_legacy_account_origin() {
+        let config = TransportConfig::production();
         // No.880 п.7: в отладочной сборке с SKIPI_CREWING_DEV_ACCOUNT_ORIGIN источник
-        // аккаунта намеренно иной. Пин говорит правду про ОБЕ сборки, а не
-        // притворяется, что переопределения нет: иначе прогон на стенде краснел бы
-        // «сам по себе» и это читали бы как поломку.
-        // Карточка 16.11: пин утверждает ОБА состава поимённо и не ослаблен до
-        // «любой». Пилотная сборка — ЕДИНСТВЕННАЯ, где origin пилота и доверие к
-        // нему вообще существуют; боевая обязана остаться с одним origin и двумя
-        // доверенными. Подмена боевой константы краснит именно эту проверку.
-        if pilot_build() {
-            assert_eq!(config.account_origin, "https://api.skipi.app:8444");
-            assert_eq!(config.company_origins, vec!["https://api.skipi.app",
-                "https://api-ru.skipi.app", "https://api.skipi.app:8444"]);
-        } else {
-            let expected = option_env!("SKIPI_CREWING_DEV_ACCOUNT_ORIGIN")
-                .filter(|origin| TransportConfig::dev_origin_config(origin).is_some())
-                .map(|origin| origin.trim_end_matches('/'))
-                .unwrap_or("https://assistant.skipi.app");
-            assert_eq!(config.account_origin, expected);
-            // Origin КОМПАНИИ переопределению не подлежат в НЕпилотной сборке.
-            assert_eq!(config.company_origins,vec!["https://api.skipi.app","https://api-ru.skipi.app"]);
-            // И пилотного origin в боевом доверии нет вовсе — отдельным утверждением,
-            // чтобы расширение списка не прошло «по невниманию».
-            assert!(!config.company_origins.iter().any(|o| o.contains(":8444")));
+        // аккаунта намеренно иной, и company-origin переопределению не подлежат —
+        // этот путь никогда не несёт боевого доверия к Крюингу вовсе.
+        if let Some(origin) = option_env!("SKIPI_CREWING_DEV_ACCOUNT_ORIGIN")
+            .filter(|origin| TransportConfig::dev_origin_config(origin).is_some())
+        {
+            assert_eq!(config.account_origin, origin.trim_end_matches('/'));
+            assert_eq!(config.company_origins, vec!["https://api.skipi.app", "https://api-ru.skipi.app"]);
+            return;
         }
+        // No.1959: по умолчанию, без переменной сборки, боевой account-origin —
+        // новое имя, и доверие несёт ОБА адреса (новый и старый) до подтверждённого
+        // серверного переключения. Подмена любой из констант краснит это утверждение.
+        assert_eq!(config.account_origin, "https://crewing.skipi.app");
+        assert_eq!(config.company_origins, vec!["https://api.skipi.app", "https://api-ru.skipi.app",
+            "https://crewing.skipi.app", "https://api.skipi.app:8444"]);
+        // Брошенный до-1959 origin не должен вернуться в доверие молча.
+        assert!(!config.company_origins.iter().any(|o| o == "https://assistant.skipi.app"));
     }
     // No.880 п.7 ((1608)): отладочная сборка может указать ИНОЙ источник аккаунта
     // — иначе стенд упирается в закрытый порт захардкоженного origin (измерено на
