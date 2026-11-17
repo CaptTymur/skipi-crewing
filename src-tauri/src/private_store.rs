@@ -49,6 +49,86 @@ pub(crate) fn atomic_write(path: &Path, bytes: &[u8]) -> Result<Durability, Pers
 }
 
 
+// A group-write bit is tolerated only when the object's group IS the caller's own
+// effective primary group (Debian/Ubuntu user-private-group default, umask 002) and
+// the object carries no other-write bit; other-write always refuses regardless of
+// group ownership. This is the SHAPE check only - whether gid==egid actually names a
+// single-member group is a separate, I/O-backed question (see group_write_admission
+// below). Pure/no I/O so the shape is testable without chown.
+#[cfg(target_os = "linux")]
+fn own_private_group_write_tolerated(mode: u32, gid: libc::gid_t, egid: libc::gid_t) -> bool {
+    mode & 0o002==0 && mode & 0o020!=0 && gid==egid
+}
+
+// No.1950 subject 2: `own_private_group_write_tolerated` assumes a UPG has no member
+// but the caller - a fact about today's `/etc/group` that the shape check above never
+// confirms. These three functions make the assumption checkable: two pure parsers over
+// `/etc/group`/`/etc/passwd`-shaped text (testable with synthetic text, no root, no
+// real group edits), and a thin production wrapper that reads the live files.
+
+// Parses `/etc/group`-shaped text (name:passwd:gid:member1,member2,...) and returns the
+// explicit supplementary member list for `gid`. `None` means `gid` was not found in
+// this source; NSS resolved only through LDAP/NIS/sssd is a separate, unmeasured case
+// and the caller fails closed on `None`.
+#[cfg(target_os = "linux")]
+fn group_file_members(text: &str, gid: libc::gid_t) -> Option<Vec<String>> {
+    for line in text.lines() {
+        let mut fields = line.split(':');
+        let (Some(_name), Some(_passwd), Some(gid_field), Some(members)) =
+            (fields.next(), fields.next(), fields.next(), fields.next()) else { continue };
+        if gid_field.parse::<libc::gid_t>() == Ok(gid) {
+            return Some(members.split(',').filter(|m| !m.is_empty()).map(str::to_owned).collect());
+        }
+    }
+    None
+}
+
+// Parses `/etc/passwd`-shaped text (name:passwd:uid:gid:gecos:home:shell) and reports
+// whether any account OTHER than `uid` carries `gid` as its PRIMARY group - the channel
+// `group_file_members` above cannot see, since primary membership lives in passwd, not
+// in the group file's member list.
+#[cfg(target_os = "linux")]
+fn passwd_file_has_other_primary_member(text: &str, gid: libc::gid_t, uid: libc::uid_t) -> bool {
+    for line in text.lines() {
+        let fields: Vec<&str> = line.split(':').collect();
+        if fields.len() < 4 { continue; }
+        let (Ok(pw_uid), Ok(pw_gid)) = (fields[2].parse::<libc::uid_t>(), fields[3].parse::<libc::gid_t>()) else { continue };
+        if pw_gid == gid && pw_uid != uid { return true; }
+    }
+    false
+}
+
+// Combines both sources: the UPG tolerance only holds while `gid` is genuinely
+// single-member - no supplementary member in the group file AND no other account's
+// primary gid matching it. An unresolvable `gid` fails closed (not confirmed
+// single-member), matching "unprovable ownership refuses".
+#[cfg(target_os = "linux")]
+fn single_member_group_from_sources(group_text: &str, passwd_text: &str, gid: libc::gid_t, uid: libc::uid_t) -> bool {
+    match group_file_members(group_text, gid) {
+        Some(members) if members.is_empty() => !passwd_file_has_other_primary_member(passwd_text, gid, uid),
+        _ => false,
+    }
+}
+
+// I/O: reads the live NSS flat files. NSS sources other than `/etc/group` and
+// `/etc/passwd` (LDAP, NIS, sssd) are UNKNOWN here and are not consulted - a group
+// resolved only through them reads as "not found" by single_member_group_from_sources
+// and fails closed. An unreadable file also fails closed.
+#[cfg(target_os = "linux")]
+fn confirmed_single_member_group(gid: libc::gid_t, uid: libc::uid_t) -> bool {
+    let group_text = match fs::read_to_string("/etc/group") { Ok(t) => t, Err(_) => return false };
+    let passwd_text = match fs::read_to_string("/etc/passwd") { Ok(t) => t, Err(_) => return false };
+    single_member_group_from_sources(&group_text, &passwd_text, gid, uid)
+}
+
+// The single admission call-sites use: narrows the pure shape check with the live
+// membership confirmation. `own_private_group_write_tolerated` itself stays called from
+// exactly this one place.
+#[cfg(target_os = "linux")]
+fn group_write_admission(mode: u32, gid: libc::gid_t, egid: libc::gid_t, uid: libc::uid_t) -> bool {
+    own_private_group_write_tolerated(mode, gid, egid) && confirmed_single_member_group(gid, uid)
+}
+
 // Metadata admission for an explicit native Settings destination. No mkdir,
 // default-path resolution, reads of Settings bytes, chmod, backup or link adoption.
 // Caller exclusively owns all app writers in this namespace. This is not a
@@ -63,6 +143,7 @@ pub(crate) fn native_settings_destination(path: &Path) -> Result<(), PersistErro
     }
     let parent=path.parent().ok_or_else(fail)?;
     let uid=unsafe { libc::geteuid() };
+    let egid=unsafe { libc::getegid() };
     let mut prefix=PathBuf::new();
     for component in parent.components() {
         match component {
@@ -73,7 +154,8 @@ pub(crate) fn native_settings_destination(path: &Path) -> Result<(), PersistErro
         if !metadata.is_dir() || metadata.file_type().is_symlink()
             || (metadata.uid()!=0 && metadata.uid()!=uid) { return Err(fail()); }
         let sticky_system_ancestor=metadata.uid()==0 && metadata.mode() & 0o1000!=0 && prefix!=parent;
-        if metadata.mode() & 0o022!=0 && !sticky_system_ancestor { return Err(fail()); }
+        let own_private_group_write=group_write_admission(metadata.mode(), metadata.gid(), egid, uid);
+        if metadata.mode() & 0o022!=0 && !sticky_system_ancestor && !own_private_group_write { return Err(fail()); }
     }
     let directory=fs::symlink_metadata(parent).map_err(|_|fail())?;
     if directory.uid()!=uid { return Err(fail()); }
@@ -81,7 +163,8 @@ pub(crate) fn native_settings_destination(path: &Path) -> Result<(), PersistErro
         Err(error) if error.kind()==io::ErrorKind::NotFound => Ok(()),
         Err(_) => Err(fail()),
         Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink()
-            && metadata.uid()==uid && metadata.nlink()==1 && metadata.mode() & 0o022==0 => Ok(()),
+            && metadata.uid()==uid && metadata.nlink()==1
+            && (metadata.mode() & 0o022==0 || group_write_admission(metadata.mode(), metadata.gid(), egid, uid)) => Ok(()),
         _ => Err(fail()),
     }
 }
@@ -226,6 +309,100 @@ mod tests {
             Ok(())
         }).unwrap_err();
         assert!(!error.cleanup_confirmed); f.old(); assert_eq!(fs::read(&f.temp).unwrap(), b"replacement synthetic marker");
+    }
+
+    // No.1947: a freshly created owner directory inherits mode 0o775 under the
+    // Debian/Ubuntu default umask 002 (confirmed live on the owner's machine:
+    // `stat -c '%u %g %a' ~/.config/skipi-crewing` -> 1000 1000 775, group `linux`
+    // with no other member). Before the fix this refused with `settings_storage_error`
+    // on a fully correct login; the directory here is created by the test itself (its
+    // group is always the test process's own egid), never the owner's real directory.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_destination_admits_owner_directory_with_group_write_bit() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("crewing1947-admission-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o775)).unwrap();
+        let path = root.join("settings.json");
+        let result = native_settings_destination(&path);
+        fs::remove_dir_all(&root).unwrap();
+        assert!(result.is_ok(), "0o775 owner-created directory must admit: {:?}", result);
+    }
+
+    // Other-write refuses regardless of group ownership, even though the directory's
+    // group is still the test process's own egid - the UPG exception never covers 0o002.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_destination_still_refuses_world_writable_owner_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("crewing1947-admission-world-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o777)).unwrap();
+        let path = root.join("settings.json");
+        let result = native_settings_destination(&path);
+        fs::remove_dir_all(&root).unwrap();
+        assert!(result.is_err(), "0o777 (other-write) must still refuse: {:?}", result);
+    }
+
+    // Pure boundary table for the extracted predicate: proves the exception is scoped
+    // to "group-write only, and the group IS my own egid" and nothing wider. A fixture
+    // directory can't portably carry a gid different from the creating process's own
+    // egid without extra OS privilege, so the "shared, non-own group" arm is checked
+    // here directly rather than by chown.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1947_own_private_group_write_tolerated_boundary_table() {
+        assert!(own_private_group_write_tolerated(0o775, 1000, 1000), "own-gid group-write only must admit");
+        assert!(!own_private_group_write_tolerated(0o777, 1000, 1000), "other-write must still refuse even at own gid");
+        assert!(!own_private_group_write_tolerated(0o775, 2000, 1000), "a shared/foreign group must still refuse");
+        assert!(!own_private_group_write_tolerated(0o755, 1000, 1000), "no write bits set is not the tolerated case");
+    }
+
+    // No.1950 subject 1: a settings.json written by code that never set an explicit
+    // mode (or carried over by rsync/cp -p from another machine) lands at 0o664 under
+    // the Debian/Ubuntu default umask 002 - the owner directory admission tolerates
+    // this shape (No.1947) but the EXISTING FILE branch (native_destination, the
+    // `fs::symlink_metadata(path)` match) never consulted the same predicate. Before
+    // the fix this refuses `settings_storage_error` on a file that is otherwise fully
+    // owned, single-linked and group-writable only by the caller's own UPG.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1950_destination_admits_existing_file_with_own_group_write_bit() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("crewing1950-file-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o700)).unwrap();
+        let path = root.join("settings.json");
+        fs::write(&path, br#"{"account":"synthetic-existing"}"#).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o664)).unwrap();
+        let result = native_settings_destination(&path);
+        fs::remove_dir_all(&root).unwrap();
+        assert!(result.is_ok(), "existing file with own-group write bit must admit: {:?}", result);
+    }
+
+    // No.1950 subject 2: `own_private_group_write_tolerated`'s "UPG has no other
+    // member" premise is checked here against synthetic `/etc/group`/`/etc/passwd`
+    // text, not the real OS state - no root or real group edits needed. The "own
+    // group, two members" case the (1947) boundary table could not cover: a second
+    // account sharing the gid as its PRIMARY group (passwd, not the group file's
+    // member list) must still refuse, exactly as a supplementary member must.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn native1950_single_member_group_from_sources_boundary_table() {
+        let group = "linux:x:1000:\nother:x:2000:someone-else\n";
+        let passwd_solo = "linux:x:1000:1000:Linux User:/home/linux:/bin/bash\n";
+        let passwd_shared_primary = "linux:x:1000:1000:Linux User:/home/linux:/bin/bash\nvisitor:x:1001:1000:Visitor:/home/visitor:/bin/bash\n";
+        let group_with_supplementary = "linux:x:1000:visitor\n";
+
+        assert!(single_member_group_from_sources(group, passwd_solo, 1000, 1000),
+            "sole UPG member, no supplementary, no shared primary -> must confirm single-member");
+        assert!(!single_member_group_from_sources(group_with_supplementary, passwd_solo, 1000, 1000),
+            "a supplementary member in the group file must refuse confirmation");
+        assert!(!single_member_group_from_sources(group, passwd_shared_primary, 1000, 1000),
+            "own group, two members: another account's PRIMARY gid matching ours must refuse confirmation");
+        assert!(!single_member_group_from_sources(group, passwd_solo, 9999, 1000),
+            "a gid absent from the group source is unresolved and fails closed");
     }
 }
 
