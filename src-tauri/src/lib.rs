@@ -145,6 +145,56 @@ impl NativePersistError {
     }
 }
 
+/// The application's own configuration directory must be private.
+///
+/// Task 006 (20.11.2026): on a clean install `create_dir_all` made
+/// `~/.config/skipi-crewing` with the user's umask — 0775 under Ubuntu's default
+/// 002 — and the first native login then failed as `fresh_namespace_unavailable`
+/// («Вход на новой установке пока недоступен»): the fresh-context allocator
+/// (native_database::Namespace::inspect) refuses any group- or world-writable
+/// ancestor, by design. The directory is created 0700, and an existing one that
+/// an earlier build left loose is tightened; nothing else about it is touched.
+fn ensure_private_config_dir(dir: &std::path::Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(dir);
+        if let Ok(meta) = std::fs::symlink_metadata(dir) {
+            if meta.is_dir() && !meta.file_type().is_symlink() && meta.permissions().mode() & 0o077 != 0 {
+                let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    { let _ = std::fs::create_dir_all(dir); }
+}
+
+#[cfg(all(test, unix))]
+mod config_dir_tests {
+    use std::os::unix::fs::PermissionsExt;
+    fn mode(p: &std::path::Path) -> u32 { std::fs::metadata(p).unwrap().permissions().mode() & 0o777 }
+    #[test]
+    fn task006_fresh_config_dir_is_private_regardless_of_umask() {
+        let root = std::env::temp_dir().join(format!("crewing006-config-{}", uuid::Uuid::new_v4()));
+        let dir = root.join("skipi-crewing");
+        super::ensure_private_config_dir(&dir);
+        assert_eq!(mode(&dir), 0o700, "a new config dir must not depend on the umask");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+    #[test]
+    fn task006_loose_config_dir_left_by_an_earlier_build_is_tightened() {
+        let root = std::env::temp_dir().join(format!("crewing006-config-{}", uuid::Uuid::new_v4()));
+        let dir = root.join("skipi-crewing");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o775)).unwrap();
+        std::fs::write(dir.join("settings.json"), b"{}").unwrap();
+        super::ensure_private_config_dir(&dir);
+        assert_eq!(mode(&dir), 0o700);
+        assert_eq!(std::fs::read(dir.join("settings.json")).unwrap(), b"{}", "contents are untouched");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+}
+
 impl Settings {
     fn config_path() -> PathBuf {
         #[cfg(target_os = "android")]
@@ -155,7 +205,7 @@ impl Settings {
             .unwrap_or_else(|| PathBuf::from("."))
             .join("skipi-crewing");
 
-        std::fs::create_dir_all(&dir).ok();
+        ensure_private_config_dir(&dir);
         dir.join("settings.json")
     }
 
