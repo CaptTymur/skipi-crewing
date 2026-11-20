@@ -196,6 +196,13 @@ pub(crate) struct LogoutOutcome {
 }
 
 
+// Задача 006 (слово владельца 20.11.2026, вариант A): печать снята. До этого
+// `LocalOnly` НИКОГДА не выдавал авторизацию — сессия после успешного входа и
+// bootstrap оставалась NativeLocked, и каждая команда арендатора отвечала
+// `login_required` (Crew Flow «не подключён», профили не грузятся, адрес
+// недоступен). Обе политики теперь авторизуют ровно тогда, когда локальный
+// коммит не заблокирован; различие между ними осталось одно — `LocalOnly`
+// требует привязки (binding) на Linux, см. commit_core.
 #[derive(Clone, Copy)]
 enum PublicationPolicy {
     LocalOnly,
@@ -204,7 +211,7 @@ enum PublicationPolicy {
 }
 impl PublicationPolicy {
     fn authorizes(self, unblocked: bool) -> bool {
-        match self { Self::LocalOnly => false, #[cfg(test)] Self::FoundationModel => unblocked }
+        match self { Self::LocalOnly => unblocked, #[cfg(test)] Self::FoundationModel => unblocked }
     }
 }
 struct CorePrepared<D> {
@@ -640,8 +647,8 @@ impl Runtime {
         };
         Ok(VerifiedLogin { identity, response, attempt })
     }
-    // Foundation authorization exists only in tests; production exposes the sealed
-    // commit_local entry point, whose policy is always LocalOnly.
+    // Production exposes the commit_local entry point (policy LocalOnly: binding
+    // required, authorizes when unblocked); this binding-free variant is test-only.
     #[cfg(test)]
     pub(crate) fn commit<D>(
         &self, proof: VerifiedLogin,

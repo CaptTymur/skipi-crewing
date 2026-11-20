@@ -32,7 +32,7 @@ impl Default for Effects {
 pub(crate) struct LocalError { pub code: &'static str, pub effects: Effects }
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum LocalOutcome {
-    CommittedInactive { durability: Durability, effects: Effects },
+    CommittedActive { durability: Durability, effects: Effects },
     CommittedBlocked { durability: Durability, reason: &'static str, database_closed: bool, effects: Effects },
     CommittedPublicationFailed { durability: Durability, reason: &'static str, database_closed: bool, effects: Effects },
 }
@@ -274,7 +274,7 @@ impl Runtime {
         let publication_ok=!matches!(outcome,CommitOutcome::CommittedPublicationFailed {..});
         if let SettingsEffect::Committed {published,..}=&mut effects.settings { *published=publication_ok; }
         Ok(match outcome {
-            CommitOutcome::Ready => LocalOutcome::CommittedInactive {durability:Durability::Confirmed,effects},
+            CommitOutcome::Ready => LocalOutcome::CommittedActive {durability:Durability::Confirmed,effects},
             CommitOutcome::CommittedBlocked {durability,reason,database_closed} =>
                 LocalOutcome::CommittedBlocked {durability,reason,database_closed,effects},
             CommitOutcome::CommittedPublicationFailed {durability,reason,database_closed} =>
