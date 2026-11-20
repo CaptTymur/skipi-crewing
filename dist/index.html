@@ -5847,6 +5847,10 @@ function crewFlowEnsureLiveQueue() {
     // Re-entering Crew Flow with the queue already in hand: still make sure the
     // names are there. Guarded by context key, so this is a no-op once resolved.
     try { crewFlowEnsureProfileNames(snapshot); } catch(_){}
+    // Task 006: an address issued or rotated on the intake screen in THIS session
+    // must show here on return. The reveal is generation-guarded, so this costs
+    // nothing while the address is unchanged.
+    try { crewFlowRevealAddress(); } catch(_){}
     return;
   }
   pilotLoadQueue(0);
@@ -5879,6 +5883,11 @@ function crewFlowRowKeydown(ev, intakeId) {
 }
 function crewFlowRerender() {
   if (pilotHostIsMobile()) { if (typeof mobileRenderCrewFlow === 'function') mobileRenderCrewFlow(); return; }
+  // Task 006: the loaders behind this (crewFlowEnsureProfileNames after a queue load)
+  // also fire while the operator is on the intake screen; painting the Crew Flow
+  // detail there replaced the address/identifier screen with Crew Flow's own text and
+  // left «open the intake screen to issue the address» pointing at itself.
+  if (!pilotCrewFlowHost()) { if (pilotViewActive()) renderIntakePilot(); return; }
   renderCrewFlowTreeBody();
   renderCrewFlowDetail();
 }
