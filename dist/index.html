@@ -1738,6 +1738,9 @@ async function entryAccountLogin(){
   if (box) { box.textContent = ''; box.hidden = true; }
   try {
     await nativeAccountLogin();
+    // Task 006: the commit changed the workspace (crewing_id, context, session) — the
+    // projection must be re-read, or every screen keeps the pre-login «not connected».
+    try { state.settings = await invoke('get_settings'); } catch(e) {}
     var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
     var next = __entryNext; __entryNext = null;
     if (typeof next === 'function') next();
@@ -17820,6 +17823,26 @@ function initLeftPanelResizer() {
 }
 
 // ------------- boot -------------
+// Task 006: the workspace credential (skn_) lives 14 minutes on the server. While the
+// account session is active the keeper renews it ahead of expiry; an already expired
+// one is renewed on the next tick. Either way the projection is re-read afterwards.
+var __nativeSessionKeeper = null;
+function startNativeSessionKeeper(){
+  if (__nativeSessionKeeper) return;
+  __nativeSessionKeeper = setInterval(async function(){
+    var s = state.settings || {};
+    var due = s.account_session === 'expired';
+    if (s.account_session === 'active' && s.token_expires_at) {
+      var left = Date.parse(s.token_expires_at) - Date.now();
+      due = !isNaN(left) && left < 4 * 60 * 1000;
+    }
+    if (!due) return;
+    try {
+      await invoke('native_account_refresh', { expectedContext: String(s.connection_context || '') });
+      state.settings = await invoke('get_settings');
+    } catch(e) { console.warn('native session refresh failed', e); }
+  }, 60000);
+}
 async function bootDesktopMain(){
   // №1918: предупреждение о демо рисуется ПЕРВЫМ. Выигрыш здесь РОВНО ОДИН и он
   // над `loadTaxonomy()`: это сетевой fetch, он ходит на хост, который сейчас
@@ -17837,6 +17860,7 @@ async function bootDesktopMain(){
   startAppDiagnostics();
   await loadTaxonomy();
   updateVaultLabel();
+  startNativeSessionKeeper();
   showView('crew_flow');
   setupFileDragDrop();
   setTimeout(checkForUpdates, 2000);

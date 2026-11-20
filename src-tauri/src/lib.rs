@@ -383,8 +383,10 @@ fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'stat
     // pinned by native635_boot_public_commands_and_legacy_dispatch_control below.
     // No.880 п.5: `open_external_url` в том же списке — дверь «Регистрация»
     // живёт на развилке, то есть в не-легаси процессе.
-    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "native_account_logout" | "open_external_url")
-        || startup_should_open_db(settings) { Ok(()) } else { Err("login_required") }
+    // Task 006: `native_account_refresh` is public for the same reason as login — it is
+    // what an EXPIRED session runs to become admitted again.
+    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "native_account_logout" | "native_account_refresh" | "open_external_url")
+        || workspace_admitted(settings) { Ok(()) } else { Err("login_required") }
 }
 // No.880 п.5 (1495). Дверь «Регистрация» ведёт на страницу Skipi, и открыть её
 // должно приложение, а не инструкция человеку. Открывает ТОЛЬКО эта команда.
@@ -738,7 +740,7 @@ fn account_session_state(settings: &Settings, origins: &[&str], now: chrono::Dat
 }
 fn settings_for_ui(settings: &Settings) -> PublicSettings {
     let empty = Settings::default();
-    let visible = if startup_should_open_db(settings) { settings } else { &empty };
+    let visible = if workspace_admitted(settings) { settings } else { &empty };
     PublicSettings {
         server_url: settings.server_url.clone(),
         has_bearer_token: !visible.bearer_token.trim().is_empty(),
@@ -776,7 +778,7 @@ fn merge_ui_settings(
     if !connection_context_matches(current, expected_context) {
         return Err("settings_changed".into());
     }
-    if !startup_should_open_db(current) {
+    if !workspace_admitted(current) {
         // A hidden public projection contains no workspace. Saving interface
         // preferences must preserve every private value, including an expired,
         // signed-out, malformed-native, or partial legacy binding.
@@ -933,27 +935,7 @@ fn native_account_login(
         let attempt = state.runtime.start_login(
             &expected_context, native_lifecycle::CreationPolicy::for_interactive_login())?;
         let proof = state.runtime.authenticate(&transport, &email, &password, attempt)?;
-        let target = native_lifecycle::NativeSettingsTarget::for_application()?;
-        let plan = native_lifecycle::LocalPlan::existing_application();
-        let outcome = state.runtime.commit_local(proof, plan, target)
-            .map_err(|error| error.code)?;
-        let local_outcome = match outcome {
-            native_lifecycle::LocalOutcome::CommittedActive { .. } =>
-                "committed_active".to_string(),
-            native_lifecycle::LocalOutcome::CommittedBlocked { reason, .. } =>
-                format!("committed_blocked:{reason}"),
-            native_lifecycle::LocalOutcome::CommittedPublicationFailed { reason, .. } =>
-                format!("committed_publication_failed:{reason}"),
-        };
-        let settings = state.settings.lock().map_err(|_| "settings_unavailable")?;
-        Ok(NativeAccountLogin {
-            server_url: settings.server_url.clone(),
-            scopes: settings.token_scopes.clone(),
-            expires_at: settings.token_expires_at.clone(),
-            entitlement_source: settings.native_account.as_ref()
-                .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
-            local_outcome,
-        })
+        commit_native_proof(proof, &state)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -961,6 +943,57 @@ fn native_account_login(
         let _ = (email, password, expected_context, state);
         Err("native_unsupported".into())
     }
+}
+
+// Task 006: the workspace credential (`skn_`) lives CREDENTIAL_TTL (14 minutes on
+// the server). This renews it through the account session (`Runtime::refresh`:
+// bootstrap with the app credential, no password) and commits exactly like a
+// login does. Without it an active session silently became `expired` a quarter
+// of an hour after signing in.
+#[tauri::command]
+fn native_account_refresh(
+    expected_context: String,
+    state: tauri::State<AppState>,
+) -> Result<NativeAccountLogin, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let transport =
+            native_account::AccountClient::new(native_account::TransportConfig::production())?;
+        let proof = state.runtime.refresh(&transport, &expected_context)?;
+        commit_native_proof(proof, &state)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (expected_context, state);
+        Err("native_unsupported".into())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn commit_native_proof(
+    proof: native_lifecycle::VerifiedLogin, state: &tauri::State<AppState>,
+) -> Result<NativeAccountLogin, String> {
+    let target = native_lifecycle::NativeSettingsTarget::for_application()?;
+    let plan = native_lifecycle::LocalPlan::existing_application();
+    let outcome = state.runtime.commit_local(proof, plan, target)
+        .map_err(|error| error.code)?;
+    let local_outcome = match outcome {
+        native_lifecycle::LocalOutcome::CommittedActive { .. } =>
+            "committed_active".to_string(),
+        native_lifecycle::LocalOutcome::CommittedBlocked { reason, .. } =>
+            format!("committed_blocked:{reason}"),
+        native_lifecycle::LocalOutcome::CommittedPublicationFailed { reason, .. } =>
+            format!("committed_publication_failed:{reason}"),
+    };
+    let settings = state.settings.lock().map_err(|_| "settings_unavailable")?;
+    Ok(NativeAccountLogin {
+        server_url: settings.server_url.clone(),
+        scopes: settings.token_scopes.clone(),
+        expires_at: settings.token_expires_at.clone(),
+        entitlement_source: settings.native_account.as_ref()
+            .map(|record| record.entitlement.source.clone()).unwrap_or_default(),
+        local_outcome,
+    })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -2589,6 +2622,16 @@ fn startup_should_open_db(settings: &Settings) -> bool {
     matches!(native_lifecycle::mode(settings, &native_account::trusted_company_origins()),
         native_lifecycle::Mode::LegacyConnected)
 }
+// Task 006 (20.11.2026): the workspace is admitted for the legacy company token AND
+// for an ACTIVE native session — record, stored bootstrap response, grant and
+// credential all valid (`private_access`). Before this the admission, the public
+// projection and the settings writer knew only the legacy process, so an
+// authorized native session still saw an empty workspace and `login_required`.
+// The native DB is the application's live connection (Store::for_application binds
+// db::CONN), so nothing here reaches a resource the commit did not install.
+fn workspace_admitted(settings: &Settings) -> bool {
+    native_lifecycle::private_access(settings, &native_account::trusted_company_origins(), chrono::Utc::now()).is_ok()
+}
 
 // The Linux view receives a fresh ephemeral browser context while blocked. This
 // preserves the old persistent store without exposing its cached values to this
@@ -2619,6 +2662,7 @@ pub fn run() {
             save_settings,
             native_account_login,
             native_account_logout,
+            native_account_refresh,
             open_external_url,
             sync_crewing_profile,
             forget_recent_vault,
@@ -3570,11 +3614,14 @@ mod native635_boot_tests {
     }
     fn blocked_modes() -> Vec<Settings> {
         let mut signed=native();signed.native_account.as_mut().unwrap().signed_out=true;
-        let mut authorized=native(); authorized.native_authorized=true;
+        // Task 006: an authorized session with an EXPIRED credential stays blocked —
+        // only `native_account_refresh` (public) can bring it back.
+        let mut expired=native(); expired.native_authorized=true;
+        expired.token_expires_at=Some((chrono::Utc::now()-chrono::Duration::minutes(1)).to_rfc3339());
         let mut orphan=legacy(); orphan.bearer_token=" skn_synthetic_orphan ".into();
         let mut uncertain=legacy(); uncertain.load_uncertain=true;
         let mut partial=legacy();partial.crewing_id.clear();
-        vec![Settings::default(),native(),signed,authorized,orphan,uncertain,partial]
+        vec![Settings::default(),native(),signed,expired,orphan,uncertain,partial]
     }
     #[test]
     fn native635_boot_private_dispatch_never_reaches_side_effects_in_blocked_modes() {
@@ -3600,12 +3647,25 @@ mod native635_boot_tests {
         assert_eq!(native_lifecycle::mode(&active, &[api::PRIMARY_API, api::RU_API]),
             native_lifecycle::Mode::NativeSession, "fixture must be an ACTIVE session");
         assert_eq!(boot_command_allowed(&active, "native_account_logout"), Ok(()));
-        // NEGATIVE half of the same pin, in the SAME state: the list stays closed and this
-        // addition did not throw it open. Without this half the pin would pass on a gate
-        // that admits everything.
+        // Task 006: an ACTIVE session is admitted to the workspace — the private
+        // commands run, and the public projection shows the workspace it runs on.
         for command in ["get_my_identity", "list_documents", "crewing_intake_open_saved"] {
-            assert_eq!(boot_command_allowed(&active, command), Err("login_required"), "{command}");
+            assert_eq!(boot_command_allowed(&active, command), Ok(()), "{command}");
         }
+        let shown = settings_for_ui(&active);
+        assert_eq!(shown.account_session, "active");
+        assert_eq!(shown.crewing_id, active.crewing_id, "the admitted workspace is visible");
+        assert!(shown.has_bearer_token);
+        // The same record with the flag down (restart, or a blocked commit) is NOT admitted
+        // and shows no workspace: the grant alone never opens the door.
+        let mut locked = active.clone(); locked.native_authorized = false;
+        for command in ["get_my_identity", "list_documents", "crewing_intake_open_saved"] {
+            assert_eq!(boot_command_allowed(&locked, command), Err("login_required"), "{command}");
+        }
+        let hidden = settings_for_ui(&locked);
+        assert_eq!(hidden.account_session, "locked");
+        assert_eq!(hidden.crewing_id, "");
+        assert_eq!(boot_command_allowed(&locked, "native_account_refresh"), Ok(()), "refresh stays reachable");
     }
     #[test]
     fn native635_boot_public_commands_and_legacy_dispatch_control() {
