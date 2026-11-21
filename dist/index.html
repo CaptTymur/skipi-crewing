@@ -1740,7 +1740,7 @@ async function entryAccountLogin(){
     await nativeAccountLogin();
     // Task 006: the commit changed the workspace (crewing_id, context, session) — the
     // projection must be re-read, or every screen keeps the pre-login «not connected».
-    try { state.settings = await invoke('get_settings'); } catch(e) {}
+    try { var refreshed = await invoke('get_settings'); state.settings = refreshed; applyTheme(); } catch(e) {}
     var o = document.getElementById('entry-choice-overlay'); if (o) o.remove();
     var next = __entryNext; __entryNext = null;
     if (typeof next === 'function') next();
@@ -6327,7 +6327,11 @@ async function crewFlowRevealAddressState() {
   var rows = Array.isArray(p.aliases) ? p.aliases : [], active = null;
   for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].state === 'active') active = rows[i];
   if (p.aliasError) return false;      // list failed: the block renders «unavailable» from that field
-  if (!active) { p.addressChecked = true; return true; }
+  // Task 006: «changed» is the answer, not «checked» — the caller re-renders on true,
+  // and Crew Flow's re-entry path now asks on every entry; answering true for an
+  // unchanged «no address» state re-rendered forever (measured: the c3b2 harness
+  // and a tenant without an active alias spun at 100% CPU).
+  if (!active) { var firstLook = !p.addressChecked; p.addressChecked = true; return firstLook; }
   var rv = p.revealedAddress;
   if (rv && rv.aliasId === active.id && rv.generation === active.generation) return false;
   if (p.revealPending) return false;
@@ -17570,52 +17574,20 @@ function mobileDraftFromTeamText() {
   mobileShow('draft');
 }
 
-// ---------- Two-week local trial gate ----------
-// The server holds authoritative entitlement state. This local clock only
-// controls staged desktop/mobile UX and cannot unlock server-side APIs.
-var TRIAL_STARTED_KEY = 'skipi_trial_started_at';
-var TRIAL_LICENSE_KEY = 'skipi_license_token';
-var TRIAL_DAYS = 14;
-var TRIAL_WARNING_FROM_DAY = 9;
-var TRIAL_CONTACT_EMAIL = 'info@tymur.org';
-var TRIAL_CONTACT_WA = '35797617412';
-var TRIAL_CONTACT_WA_URL = 'https://wa.me/35797617412';
-var TRIAL_CONTACT_PHONE = '+357 97 617 412';
-
-function trialStartedAt(){
-  var v = '';
-  try { v = localStorage.getItem(TRIAL_STARTED_KEY) || ''; } catch(e) {}
-  var parsed = v ? Date.parse(v) : NaN;
-  if (!Number.isFinite(parsed)) {
-    v = new Date().toISOString();
-    try { localStorage.setItem(TRIAL_STARTED_KEY, v); } catch(e) {}
-    parsed = Date.parse(v);
-  }
-  return parsed;
-}
-function trialDaysSince(){
-  return Math.max(0, Math.floor((Date.now() - trialStartedAt()) / 86400000));
-}
-function trialLocalPhase(){
-  var days = trialDaysSince();
-  if (days < TRIAL_WARNING_FROM_DAY) return 'free';
-  if (days < TRIAL_DAYS) return 'warn';
-  return 'blocked';
-}
+// ---------- Entitlement gate ----------
+// Owner's word 21.11.2026 (task 006): access is the ACCOUNT'S RIGHT, read from the Rust
+// projection, and it is renewed through the product — never through contacting the
+// owner. The previous two-week clock of the installation (localStorage since first run),
+// its warning banner and the «free period over — contact Captain Tymur Rudov» overlay are
+// gone: a spring installation showed that overlay to a holder whose right is unlimited.
+// Outcomes: a live right, or no account session yet → free (the entry fork and the
+// server decide the rest); an expired right → the sign-in screen, where the server names
+// the refusal (entitlement_expired) and no contact is offered.
 var trialServerStatus = { checked_at:0, phase:null, reason:'' };
-var trialActivationConfirmedAt = 0;
-// No.880 пункт 4. Платный слой живёт на ПРАВЕ аккаунта (`Entitlement { source,
-// expires_at }`), а не на сроке легаси-токена компании: по (1495) токена в
-// интерфейсе нет вовсе. Имя сменилось вслед за предметом — «срок токена» и
-// «срок права» это разные величины, и старое имя стало бы ложью.
-// Исходы: нет действующей сессии → null (решает местный отсчёт); право без
-// срока → 'free'; срок в будущем → 'free'; срок прошёл → 'blocked'.
+// Исходы: нет действующей сессии → null; право без срока → 'free'; срок в будущем →
+// 'free'; срок прошёл или Rust сказал 'expired' → 'blocked'.
 function trialEntitlementPhase(){
   var s = state.settings || {};
-  // 'expired' — право или соединение просрочены по оценке Rust: приложение
-  // блокируется, и выход ровно один — войти заново (No.105 сохранено).
-  // Схлопнуть этот исход в null было бы тихой регрессией: истёкшее право
-  // провалилось бы в местный отсчёт и могло прочитаться как 'free'.
   if (s.account_session === 'expired') return 'blocked';
   if (!crewingAccountSessionActive(s)) return null;
   if (!s.entitlement_expires_at) return 'free';
@@ -17623,9 +17595,8 @@ function trialEntitlementPhase(){
   if (!Number.isFinite(t)) return null;
   return t > Date.now() ? 'free' : 'blocked';
 }
-// Перечитывание проекции вместо отдельного запроса к серверу: оно и есть
-// «спросить свежее состояние права». Отказ не прячется — причина записывается
-// в trialServerStatus и читается отказным экраном.
+// Перечитывание проекции и есть «спросить свежее состояние права». Отказ не прячется —
+// причина записывается в trialServerStatus.
 async function trialRefreshEntitlement(force){
   if (typeof __demoMode !== 'undefined' && __demoMode) return { phase:'free', reason:'demo' };
   if (!force && trialServerStatus.phase && Date.now() - trialServerStatus.checked_at < 30000) return trialServerStatus;
@@ -17647,107 +17618,19 @@ async function trialPhase(opts){
   if (fresh.phase) return fresh.phase;
   var known = trialEntitlementPhase();
   if (known) return known;
-  if (trialActivationConfirmedAt && Date.now() - trialActivationConfirmedAt < 60000) return 'free';
-  var local = trialLocalPhase();
-  return local === 'blocked' ? 'blocked' : local;
+  // No account session: nothing to gate here — a failed read never blocks, a missing
+  // session is the entry fork's business.
+  return 'free';
 }
-function trialDaysLeft(){
-  return Math.max(0, TRIAL_DAYS - trialDaysSince());
-}
-function trialContactHtml(){
-  return '<a href="mailto:'+TRIAL_CONTACT_EMAIL+'" style="color:inherit;font-weight:700;">'+TRIAL_CONTACT_EMAIL+'</a>'
-    + ' или <a href="'+TRIAL_CONTACT_WA_URL+'" target="_blank" rel="noreferrer" style="color:inherit;font-weight:700;">'
-    + TRIAL_CONTACT_PHONE + ' (WhatsApp)</a>';
-}
-function trialRemoveBanner(){
-  var old = document.getElementById('trial-warning-banner');
-  if (old && old.parentNode) old.parentNode.removeChild(old);
-}
-function trialShowWarningBanner(){
-  trialRemoveBanner();
-  var div = document.createElement('div');
-  div.id = 'trial-warning-banner';
-  div.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99980;padding:10px 14px;'
-    + 'background:#fff3cd;color:#493800;border-bottom:1px solid #e2b93d;font-size:13px;text-align:center;'
-    + 'box-shadow:0 2px 10px rgba(0,0,0,.12);';
-  div.innerHTML = 'Бесплатный доступ заканчивается через ' + trialDaysLeft()
-    + ' дн. Продолжить — свяжитесь: ' + trialContactHtml();
-  document.body.appendChild(div);
-}
-function trialHideOverlay(){
-  var el = document.getElementById('trial-block-overlay');
-  if (el && el.parentNode) el.parentNode.removeChild(el);
-}
-// Navigate to the company-token connection screen (mobile + desktop), from the
-// trial blocked-overlay. On an UNCONNECTED device (empty crewing_id) the License
-// activation POST can never succeed (server requires account_id min_length=1), so
-// we route the user to connect a company token first via the EXISTING connection
-// path — no new screen. (BACKLOG №105)
-// No.880: вход аккаунтом живёт на развилке, а не в настройках. Действие
-// ОБЩЕЕ — его зовут и триал-оверлей, и отказ пилота, — чтобы «войти» в любом
-// отказе означало одно и то же место, а не два разных экрана.
 function goAccountSignIn(){
   if (isMobileShellActive()) { mobileShow('connection'); return; }
   renderEntryChoice(function(){});
   if (typeof entryShowLogin === 'function') entryShowLogin(true);
 }
-function trialGoSignIn(){
-  trialHideOverlay();
-  goAccountSignIn();
-}
-function trialShowBlockedOverlay(message){
-  trialRemoveBanner();
-  var s = state.settings || {};
-  // Unconnected device: crewing_id is empty → license activation cannot work
-  // (account_id would be empty → server 422). Show a connect-CTA instead of a
-  // dead license field.
-  var connected = !!s.crewing_id;
-  var el = document.getElementById('trial-block-overlay');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'trial-block-overlay';
-    el.style.cssText = 'position:fixed;inset:0;z-index:2147483200;display:flex;align-items:center;justify-content:center;'
-      + 'background:rgba(245,248,251,.96);backdrop-filter:blur(8px);padding:20px;';
-    var head =
-      '<div style="width:min(520px,100%);background:var(--panel,#fff);color:var(--text,#1a1f26);border:1px solid var(--border,#d8dde5);'
-      + 'border-radius:14px;padding:28px;box-shadow:0 24px 80px rgba(15,23,42,.24);">'
-      + '<div style="font-size:19px;font-weight:800;margin-bottom:8px;">Бесплатный период закончился.</div>'
-      + '<div style="font-size:13px;line-height:1.55;color:var(--text2,#5a6573);margin-bottom:18px;">'
-      + 'Свяжитесь с Captain Tymur Rudov: ' + trialContactHtml() + '</div>';
-    // No.880/(1495): право кончилось — приложение блокируется, но ни токена, ни
-    // лицензионного поля здесь больше нет. Человеку говорят, что делать: связаться
-    // и войти аккаунтом. Само перекрытие — единственное покрытие «истёкшее право
-    // блокирует приложение» — сохраняется.
-    var actionBranch =
-      '<div style="font-size:13px;line-height:1.55;color:var(--text2,#5a6573);margin-bottom:14px;">'
-      + escapeHtml(tr('settings.crewing.login.description')) + '</div>'
-      + '<button id="trial-signin-btn" onclick="trialGoSignIn()"'
-      + ' style="width:100%;padding:12px 14px;border:0;border-radius:8px;background:#004564;color:#fff;'
-      + 'font-weight:800;cursor:pointer;">' + escapeHtml(tr('settings.crewing.login.action')) + '</button>';
-    el.innerHTML = head + actionBranch
-      + '<div id="trial-block-error" style="min-height:18px;margin-top:10px;color:#ef4444;font-size:12px;">'
-      + escapeHtml(message || '') + '</div>'
-      + '</div>';
-    document.body.appendChild(el);
-  } else {
-    el.style.display = 'flex';
-    var err = document.getElementById('trial-block-error');
-    if (err) err.textContent = message || '';
-  }
-}
+function trialGoSignIn(){ goAccountSignIn(); }
 async function trialGateApply(){
   var phase = await trialPhase();
-  if (phase === 'free') {
-    trialRemoveBanner();
-    trialHideOverlay();
-    return phase;
-  }
-  if (phase === 'warn') {
-    trialShowWarningBanner();
-    trialHideOverlay();
-    return phase;
-  }
-  trialShowBlockedOverlay('');
+  if (phase === 'blocked') trialGoSignIn();
   return phase;
 }
 

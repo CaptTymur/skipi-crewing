@@ -1767,7 +1767,6 @@ section('635 real Settings and no manual credential entry');
     runInContext(scriptNoBoot + '\nglobalThis.__fixture = {' +
       'state, mobileState, openSettings, mobileOpenSettingsHome, mobileOpenSettings, mobileShow,' +
       'crewingSettingsHost, renderEntryChoice, entryShowLogin, entryOpenRegister,' +
-      'trialShowBlockedOverlay, trialHideOverlay,' +
       'getInstance: function(){return _skipiSettingsInstance;}};', context);
     const app = sandbox.__fixture;
     app.state.settings = JSON.parse(JSON.stringify(fixture));
@@ -1936,11 +1935,8 @@ section('635 real Settings and no manual credential entry');
               label + ' real fallback flag=' + flag + '/' + page);
           }
         }
-        if (phase === 'blocked' || phase === 'fresh') {
-          app.trialShowBlockedOverlay('fixture: access denied');
-          noManual(document.getElementById('trial-block-overlay')?.innerHTML || '', label + ' blocked-access overlay');
-          app.trialHideOverlay();
-        }
+        // Task 006 (owner 21.11.2026): the blocked-access overlay is retired — an expired right
+        // routes to the account sign-in, which the entry checks above already cover.
         await fixture.drainReads();
         ok(JSON.stringify(app.state.settings) === settingsBefore,
           label + ': renderer visits preserve internal credential, tenant and profile');
