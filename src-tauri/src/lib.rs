@@ -385,7 +385,7 @@ fn boot_command_allowed(settings: &Settings, command: &str) -> Result<(), &'stat
     // живёт на развилке, то есть в не-легаси процессе.
     // Task 006: `native_account_refresh` is public for the same reason as login — it is
     // what an EXPIRED session runs to become admitted again.
-    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "native_account_logout" | "native_account_refresh" | "open_external_url")
+    if matches!(command, "get_build_info" | "get_settings" | "save_settings" | "native_account_login" | "native_account_logout" | "native_account_refresh" | "native_account_forgot_password" | "open_external_url")
         || workspace_admitted(settings) { Ok(()) } else { Err("login_required") }
 }
 // No.880 п.5 (1495). Дверь «Регистрация» ведёт на страницу Skipi, и открыть её
@@ -967,6 +967,16 @@ fn native_account_refresh(
         let _ = (expected_context, state);
         Err("native_unsupported".into())
     }
+}
+
+// Task 006 (owner 21.11.2026): the «forgot password» door of the sign-in screen. Public
+// before any session, like login; carries only the email.
+#[tauri::command]
+fn native_account_forgot_password(email: String) -> Result<bool, String> {
+    let transport =
+        native_account::AccountClient::new(native_account::TransportConfig::production())?;
+    transport.forgot_password(&email)?;
+    Ok(true)
 }
 
 #[cfg(target_os = "linux")]
@@ -2663,6 +2673,7 @@ pub fn run() {
             native_account_login,
             native_account_logout,
             native_account_refresh,
+            native_account_forgot_password,
             open_external_url,
             sync_crewing_profile,
             forget_recent_vault,
@@ -3674,7 +3685,7 @@ mod native635_boot_tests {
             // «Регистрация» живёт на развилке, то есть ИМЕННО в не-легаси процессе,
             // и отказ сделал бы регистрацию недостижимой для того, для кого эта
             // задача и существует.
-            for command in ["get_build_info","get_settings","save_settings","native_account_login","native_account_logout","open_external_url"] {
+            for command in ["get_build_info","get_settings","save_settings","native_account_login","native_account_logout","native_account_refresh","native_account_forgot_password","open_external_url"] {
                 assert_eq!(boot_command_allowed(&settings,command),Ok(()));
             }
             // ОТРИЦАТЕЛЬНАЯ сторона того же пина: список закрыт, и команда вне

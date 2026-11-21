@@ -32,6 +32,9 @@ pub(crate) struct LoginResponse {
 }
 
 #[derive(Clone, Deserialize)]
+pub(crate) struct AckResponse { pub ok: bool }
+
+#[derive(Clone, Deserialize)]
 pub(crate) struct BootstrapResponse {
     pub account_id: String,
     pub connection: Connection,
@@ -529,6 +532,7 @@ fn response_json<T: serde::de::DeserializeOwned>(
             (400, "bad_email") => "bad_email",
             (403, "invalid_credentials") => "invalid_credentials",
             (429, "too_many_attempts") => "too_many_attempts",
+            (503, "mail_unavailable") => "mail_unavailable",
             _ => "upstream_unavailable",
         });
     }
@@ -595,6 +599,15 @@ impl AccountClient {
         let origins: Vec<&str> = self.config.company_origins.iter().map(String::as_str).collect();
         response.validate(account_id, existing_company, &origins, Utc::now())?;
         Ok(response)
+    }
+    // Task 006 (owner 21.11.2026): «Забыли пароль» — the server (re)issues the password
+    // of a known account and mails it. No credential travels; the answer is the same
+    // for a known and an unknown email, so nothing here can enumerate accounts.
+    pub(crate) fn forgot_password(&self, email: &str) -> Result<(), &'static str> {
+        let response: AckResponse = self.post("/api/app/password/forgot", None,
+            serde_json::json!({"email":email.trim()}), true)?;
+        if !response.ok { return Err("invalid_response"); }
+        Ok(())
     }
     pub(crate) fn logout(&self, app_credential: &str) -> Result<(), &'static str> {
         let response: LogoutResponse = self.post("/api/app/logout", Some(app_credential),
@@ -901,6 +914,21 @@ mod http_tests {
         assert_eq!(sent[2].target,"/api/app/logout");
         assert_eq!(sent[2].header("authorization"),Some("Bearer app_synthetic_http_635"));
         assert_eq!(sent[2].json(),serde_json::json!({}));
+    }
+    #[test]
+    fn native006_forgot_password_posts_the_email_only_and_maps_mail_unavailable() {
+        let _serial = HTTP_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        if isolated_child("native006_forgot_password_posts_the_email_only_and_maps_mail_unavailable","forgot") {return;}
+        let mut account=Server::start(ACCOUNT,vec![Reply::json(200,serde_json::json!({"ok":true})),
+            Reply::json(503,serde_json::json!({"error":"mail_unavailable"}))]);
+        let client=client();
+        assert_eq!(client.forgot_password(" holder@example.invalid "),Ok(()));
+        assert_eq!(client.forgot_password("holder@example.invalid"),Err("mail_unavailable"));
+        let (sent,errors)=account.finish(); assert!(errors.is_empty());
+        assert_eq!(sent.len(),2);
+        assert_eq!(sent[0].target,"/api/app/password/forgot");
+        assert!(sent[0].header("authorization").is_none(),"no credential travels with a forgot request");
+        assert_eq!(sent[0].json(),serde_json::json!({"email":"holder@example.invalid"}));
     }
     #[test]
     fn native635_http_redirect_never_forwards_app_bearer_to_live_sink() {
